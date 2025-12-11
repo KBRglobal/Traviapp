@@ -26,22 +26,22 @@ import {
 const contentItems = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/admin",
     icon: LayoutDashboard,
   },
   {
     title: "Attractions",
-    url: "/attractions",
+    url: "/admin/attractions",
     icon: MapPin,
   },
   {
     title: "Hotels",
-    url: "/hotels",
+    url: "/admin/hotels",
     icon: Building2,
   },
   {
     title: "Articles",
-    url: "/articles",
+    url: "/admin/articles",
     icon: FileText,
   },
 ];
@@ -49,17 +49,17 @@ const contentItems = [
 const managementItems = [
   {
     title: "RSS Feeds",
-    url: "/rss-feeds",
+    url: "/admin/rss-feeds",
     icon: Rss,
   },
   {
     title: "Affiliate Links",
-    url: "/affiliate-links",
+    url: "/admin/affiliate-links",
     icon: Link2,
   },
   {
     title: "Media Library",
-    url: "/media",
+    url: "/admin/media",
     icon: Image,
   },
 ];
@@ -67,7 +67,7 @@ const managementItems = [
 const systemItems = [
   {
     title: "Settings",
-    url: "/settings",
+    url: "/admin/settings",
     icon: Settings,
   },
 ];
@@ -76,14 +76,14 @@ export function AppSidebar() {
   const [location] = useLocation();
 
   const isActive = (url: string) => {
-    if (url === "/") return location === "/";
+    if (url === "/admin") return location === "/admin";
     return location.startsWith(url);
   };
 
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/admin" className="flex items-center gap-2">
           <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary text-primary-foreground">
             <Plane className="h-4 w-4" />
           </div>
