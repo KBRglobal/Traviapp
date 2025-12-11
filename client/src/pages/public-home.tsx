@@ -1,96 +1,123 @@
-import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Lightbulb, Compass, ArrowRight, Sparkles, Menu, Loader2 } from "lucide-react";
+import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Lightbulb, Compass, ArrowRight, Sparkles, Menu, MapPin, Star, Clock, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Content } from "@shared/schema";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
-const imgGroup1000007941 = "https://www.figma.com/api/mcp/asset/9591896e-0d82-4ec4-b0be-7fa80b7ddc89";
-const imgGroup47 = "https://www.figma.com/api/mcp/asset/3f9a6114-31fb-4ef6-93de-681f21bf4b3b";
 const imgGroup48 = "https://www.figma.com/api/mcp/asset/eb2c53d1-f6df-4038-8e21-ee0637ce9137";
 const imgGroup33 = "https://www.figma.com/api/mcp/asset/9f5220f9-18b3-4413-a5c9-173fed9f42f7";
-const imgGroup34 = "https://www.figma.com/api/mcp/asset/662ea7a5-8efe-434f-98b9-8a3ceacb961b";
-const imgBigDataAnalytics1 = "https://www.figma.com/api/mcp/asset/2f1a79c1-a91e-4b59-9a91-247961099723";
-const imgCyborg1 = "https://www.figma.com/api/mcp/asset/6646c10d-3d0d-4973-bd99-54abe2d37af1";
-const imgGrowthAudience1 = "https://www.figma.com/api/mcp/asset/de082f84-a0cf-4183-b601-343cb16e8255";
 
-const defaultPlaceholderImage = "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop";
-
-const cardColors = [
-  "bg-[#f0edfe]",
-  "bg-[#fff5ea]",
-  "bg-[#e6f9ff]",
-  "bg-[#e6f7ef]",
+const defaultPlaceholderImages = [
+  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1546412414-e1885259563a?w=600&h=400&fit=crop",
 ];
 
 const exploreCategories = [
-  { icon: Building2, title: "Dubai Hotels", subtitle: "Find your perfect stay", type: "hotel" },
-  { icon: Mountain, title: "Dubai Attractions", subtitle: "Must-see sights", type: "attraction" },
-  { icon: Landmark, title: "Dubai Areas & Districts", subtitle: "Explore neighborhoods", type: "attraction" },
-  { icon: BookOpen, title: "Dubai Travel Guides", subtitle: "In-depth handbooks", type: "article" },
-  { icon: Utensils, title: "Culture & Food in Dubai", subtitle: "Savor local experiences", type: "article" },
-  { icon: Bus, title: "Transportation in Dubai", subtitle: "Getting around made easy", type: "article" },
-  { icon: Lightbulb, title: "Dubai Travel Tips & Safety", subtitle: "Smart advice for journeys", type: "article" },
-  { icon: Compass, title: "Comparisons", subtitle: "Side-by-side analysis", type: "article" },
+  { icon: Building2, title: "Hotels", count: "500+" },
+  { icon: Mountain, title: "Attractions", count: "200+" },
+  { icon: Landmark, title: "Districts", count: "25" },
+  { icon: BookOpen, title: "Guides", count: "100+" },
+  { icon: Utensils, title: "Dining", count: "300+" },
+  { icon: Bus, title: "Transport", count: "50+" },
 ];
 
-const knowledgeItems = [
-  {
-    icon: imgBigDataAnalytics1,
-    iconBg: "bg-[#ffedf5]",
-    title: "Most Searched Dubai Hotels",
-    description: "Aggregating vast datasets from diverse global sources, ensuring comprehensive and real-time coverage.",
-  },
-  {
-    icon: imgCyborg1,
-    iconBg: "bg-[#fff5ea]",
-    title: "Most Asked Questions About Dubai",
-    description: "Advanced machine learning models process and analyze data, generating highly accurate future predictions.",
-  },
-  {
-    icon: imgGrowthAudience1,
-    iconBg: "bg-[#e6f9ff]",
-    title: "Most Searched Dubai Attractions",
-    description: "Translating complex data into clear, actionable recommendations for strategic planning and operational excellence.",
-  },
+const stats = [
+  { value: "1M+", label: "Happy Travelers" },
+  { value: "500+", label: "Hotels Listed" },
+  { value: "200+", label: "Attractions" },
+  { value: "4.9", label: "User Rating" },
 ];
 
 function ContentCard({ content, index }: { content: Content; index: number }) {
-  const bgColor = cardColors[index % cardColors.length];
-  const imageUrl = content.heroImage || defaultPlaceholderImage;
+  const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
   
   return (
-    <article
-      className={`${bgColor} border-2 border-[#24103e] rounded-[21px] shadow-[0px_4px_0px_0px_#24103e] p-4 sm:p-6 flex flex-col items-center gap-6 sm:gap-10 hover:-translate-y-1 transition-transform cursor-pointer`}
-      data-testid={`card-today-${content.id}`}
-    >
-      <div className="w-full max-w-[264px] h-[140px] sm:h-[160px] overflow-hidden rounded-lg">
-        <img src={imageUrl} alt={content.heroImageAlt || content.title} className="w-full h-full object-cover" />
+    <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer">
+      <div className="aspect-[4/3] overflow-hidden">
+        <img 
+          src={imageUrl} 
+          alt={content.heroImageAlt || content.title} 
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+        />
       </div>
-      <div className="text-center">
-        <h3 className="text-base sm:text-lg font-normal text-[#171a1f] leading-snug sm:leading-[25px] mb-2" style={{ fontFamily: "'Archivo', sans-serif" }}>
+      <div className="p-4">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+          <span className="px-2 py-0.5 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium capitalize">
+            {content.type}
+          </span>
+          <span className="flex items-center gap-1">
+            <Star className="w-3 h-3 fill-[#fdcd0a] text-[#fdcd0a]" />
+            4.8
+          </span>
+        </div>
+        <h3 className="font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
           {content.title}
         </h3>
-        <p className="text-sm text-[#565d6d] leading-5 line-clamp-3">
+        <p className="text-sm text-muted-foreground line-clamp-2">
           {content.metaDescription || "Explore this amazing destination in Dubai."}
         </p>
       </div>
-    </article>
+    </Card>
   );
 }
 
-function ContentCardSkeleton({ index }: { index: number }) {
-  const bgColor = cardColors[index % cardColors.length];
+function PlaceholderCard({ index }: { index: number }) {
+  const placeholderData = [
+    { title: "Burj Khalifa Experience", type: "attraction", desc: "Visit the world's tallest building and enjoy breathtaking views of Dubai" },
+    { title: "Desert Safari Adventure", type: "attraction", desc: "Experience dune bashing, camel rides, and traditional Bedouin hospitality" },
+    { title: "Dubai Marina Walk", type: "attraction", desc: "Stroll along the stunning waterfront promenade with dining and shopping" },
+    { title: "Palm Jumeirah", type: "hotel", desc: "Discover luxury resorts and pristine beaches on Dubai's iconic island" },
+  ];
+  const data = placeholderData[index];
+  const imageUrl = defaultPlaceholderImages[index];
   
   return (
-    <article
-      className={`${bgColor} border-2 border-[#24103e] rounded-[21px] shadow-[0px_4px_0px_0px_#24103e] p-4 sm:p-6 flex flex-col items-center gap-6 sm:gap-10 animate-pulse`}
-    >
-      <div className="w-full max-w-[264px] h-[140px] sm:h-[160px] overflow-hidden rounded-lg bg-black/10" />
-      <div className="text-center w-full">
-        <div className="h-5 bg-black/10 rounded mb-2 w-3/4 mx-auto" />
-        <div className="h-4 bg-black/10 rounded w-full mb-1" />
-        <div className="h-4 bg-black/10 rounded w-2/3 mx-auto" />
+    <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer">
+      <div className="aspect-[4/3] overflow-hidden">
+        <img 
+          src={imageUrl} 
+          alt={data.title} 
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+        />
       </div>
-    </article>
+      <div className="p-4">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+          <span className="px-2 py-0.5 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium capitalize">
+            {data.type}
+          </span>
+          <span className="flex items-center gap-1">
+            <Star className="w-3 h-3 fill-[#fdcd0a] text-[#fdcd0a]" />
+            4.8
+          </span>
+        </div>
+        <h3 className="font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
+          {data.title}
+        </h3>
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {data.desc}
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+function ContentCardSkeleton() {
+  return (
+    <Card className="overflow-hidden border-0 shadow-md animate-pulse">
+      <div className="aspect-[4/3] bg-muted" />
+      <div className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="h-5 w-16 bg-muted rounded-full" />
+          <div className="h-4 w-10 bg-muted rounded" />
+        </div>
+        <div className="h-5 bg-muted rounded mb-2 w-3/4" />
+        <div className="h-4 bg-muted rounded w-full mb-1" />
+        <div className="h-4 bg-muted rounded w-2/3" />
+      </div>
+    </Card>
   );
 }
 
@@ -103,144 +130,127 @@ export default function PublicHome() {
   });
 
   const featuredContent = publishedContent?.slice(0, 4) || [];
+  const hasContent = featuredContent.length > 0;
 
   return (
-    <div className="bg-white min-h-screen overflow-x-hidden">
+    <div className="bg-background min-h-screen overflow-x-hidden">
       {/* Navigation */}
-      <nav className="fixed top-2 sm:top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-[1408px] border border-[rgba(87,60,208,0.1)] rounded-full px-4 sm:px-8 py-2 sm:py-3 bg-white/80 backdrop-blur-md flex items-center justify-between gap-2" data-testid="nav-header">
-        {/* Mobile menu button */}
-        <button 
-          className="lg:hidden p-2 text-[#582898]"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          data-testid="button-mobile-menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b" data-testid="nav-header">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+              <img src={imgGroup48} alt="Travi Logo" className="h-10 w-auto" />
+              <img src={imgGroup33} alt="Travi" className="h-8 w-auto hidden sm:block" />
+            </div>
 
-        {/* Desktop nav links */}
-        <div className="hidden lg:flex items-center gap-8 text-[#582898] font-medium">
-          <a href="#" className="hover:opacity-80" data-testid="link-hotels">Hotels</a>
-          <a href="#" className="hover:opacity-80" data-testid="link-experiences">Experiences</a>
-          <a href="#" className="hover:opacity-80" data-testid="link-news">News</a>
-        </div>
+            {/* Desktop nav */}
+            <div className="hidden md:flex items-center gap-8">
+              <a href="#" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-hotels">Hotels</a>
+              <a href="#" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-attractions">Attractions</a>
+              <a href="#" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-guides">Guides</a>
+            </div>
 
-        {/* Logo - centered on mobile, left-aligned on desktop */}
-        <div className="flex items-center gap-1 sm:gap-2">
-          <img src={imgGroup48} alt="Travi Logo Icon" className="h-8 sm:h-12 w-auto" />
-          <img src={imgGroup33} alt="Travi Logo Text" className="h-6 sm:h-10 w-auto hidden sm:block" />
-        </div>
-
-        {/* CTA button */}
-        <button className="bg-[#fdcd0a] rounded-full flex items-center gap-1 sm:gap-3 pl-2 sm:pl-4 pr-0.5 sm:pr-1 py-0.5 sm:py-1 hover:opacity-90 transition" data-testid="button-travi-app">
-          <span className="text-[#573cd0] font-medium text-xs sm:text-sm whitespace-nowrap">Travi app</span>
-          <div className="bg-[#573cd0] rounded-full p-1.5 sm:p-2.5 flex items-center justify-center">
-            <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+            {/* CTA */}
+            <div className="flex items-center gap-3">
+              <Button className="bg-[#6443f4] hover:bg-[#5235d4] text-white rounded-full px-6" data-testid="button-get-app">
+                Get App
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+              <button 
+                className="md:hidden p-2 text-foreground"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                data-testid="button-mobile-menu"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+            </div>
           </div>
-        </button>
+        </div>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t bg-background p-4">
+            <div className="flex flex-col gap-2">
+              <a href="#" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" data-testid="link-hotels-mobile">Hotels</a>
+              <a href="#" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" data-testid="link-attractions-mobile">Attractions</a>
+              <a href="#" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" data-testid="link-guides-mobile">Guides</a>
+            </div>
+          </div>
+        )}
       </nav>
 
-      {/* Mobile menu dropdown */}
-      {mobileMenuOpen && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-1rem)] bg-white/95 backdrop-blur-md rounded-2xl border border-[rgba(87,60,208,0.1)] p-4 lg:hidden">
-          <div className="flex flex-col gap-3 text-[#582898] font-medium">
-            <a href="#" className="py-2 px-4 hover:bg-[#f0edfe] rounded-lg" data-testid="link-hotels-mobile">Hotels</a>
-            <a href="#" className="py-2 px-4 hover:bg-[#f0edfe] rounded-lg" data-testid="link-experiences-mobile">Experiences</a>
-            <a href="#" className="py-2 px-4 hover:bg-[#f0edfe] rounded-lg" data-testid="link-news-mobile">News</a>
-          </div>
-        </div>
-      )}
-
       {/* Hero Section */}
-      <section className="relative bg-[#6443f4] pt-20 sm:pt-24 pb-32 sm:pb-40 lg:pb-48 min-h-[500px] sm:min-h-[600px] lg:min-h-[785px] overflow-hidden" data-testid="section-hero">
-        <div className="absolute inset-x-0 bottom-0 h-32 sm:h-52 bg-[#775bf1]" />
-        <img src={imgGroup1000007941} alt="" className="absolute bottom-0 left-0 w-full min-w-[1200px] pointer-events-none opacity-80" />
-        <img src={imgGroup47} alt="Dubai Character" className="absolute bottom-0 left-0 w-48 sm:w-72 lg:w-[483px] pointer-events-none hidden sm:block" />
+      <section className="pt-24 pb-16 sm:pt-32 sm:pb-24 bg-gradient-to-br from-[#6443f4] via-[#7c5cf7] to-[#9b7bfa] relative overflow-hidden" data-testid="section-hero">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iNCIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
         
-        <div className="relative z-10 flex flex-col items-center pt-8 sm:pt-16 lg:pt-20 text-white px-4">
-          <div className="bg-white/10 border border-white rounded-full px-3 py-2 flex items-center gap-2 mb-4 sm:mb-6">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-xs sm:text-sm font-medium">Dubai Travel Experience</span>
-          </div>
-          <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-[120px] xl:text-[150px] font-semibold text-center leading-[0.9] sm:leading-[0.86] tracking-[-2px] sm:tracking-[-4px] lg:tracking-[-9px] max-w-5xl" style={{ fontFamily: "'Chillax', sans-serif" }}>
-            Discover Dubai by experience
-          </h1>
-        </div>
-
-        {/* Search Bar - responsive positioning */}
-        <div className="relative z-20 mt-8 sm:mt-12 lg:mt-16 px-4 max-w-3xl mx-auto">
-          <div className="bg-white rounded-xl shadow-[12px_15.6px_42px_0px_rgba(0,0,0,0.09)] backdrop-blur-md border-2 border-black/10 h-14 sm:h-16 lg:h-[72px] flex items-center px-4 sm:px-6 gap-3 sm:gap-4">
-            <Search className="w-5 h-5 sm:w-6 sm:h-6 text-black/50 shrink-0" />
-            <input
-              type="text"
-              placeholder="Search experiences..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 text-base sm:text-xl lg:text-2xl text-black placeholder:text-black/50 bg-transparent outline-none min-w-0"
-              data-testid="input-search"
-            />
-            <button className="bg-[#f8a900] rounded-md w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center hover:opacity-90 transition shrink-0" data-testid="button-search">
-              <Search className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Today in Dubai Section */}
-      <section className="bg-white rounded-[20px] mx-2 sm:mx-4 -mt-8 sm:-mt-12 relative z-10 px-4 sm:px-8 lg:px-14 py-10 sm:py-16 lg:py-20" data-testid="section-today">
-        <div className="mb-6 sm:mb-10">
-          <span className="inline-block bg-[rgba(100,67,244,0.1)] text-[#6443f4] px-4 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-semibold uppercase tracking-wide mb-3 sm:mb-4">
-            Features
-          </span>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#171a1f]" style={{ fontFamily: "'Chillax', sans-serif" }}>
-            Today in Dubai
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {isLoading ? (
-            <>
-              {[0, 1, 2, 3].map((index) => (
-                <ContentCardSkeleton key={index} index={index} />
-              ))}
-            </>
-          ) : featuredContent.length > 0 ? (
-            featuredContent.map((content, index) => (
-              <ContentCard key={content.id} content={content} index={index} />
-            ))
-          ) : (
-            <div className="col-span-full text-center py-12 text-[#565d6d]">
-              <p className="text-lg mb-2">No published content yet</p>
-              <p className="text-sm">Check back soon for exciting Dubai experiences!</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="text-center max-w-3xl mx-auto">
+            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-6">
+              <Sparkles className="w-4 h-4 text-[#fdcd0a]" />
+              <span className="text-white/90 text-sm font-medium">Your Dubai Travel Companion</span>
             </div>
-          )}
+            
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+              Discover the Magic of
+              <span className="block text-[#fdcd0a]">Dubai</span>
+            </h1>
+            
+            <p className="text-lg sm:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+              Explore world-class hotels, stunning attractions, and unforgettable experiences in the city of dreams.
+            </p>
+
+            {/* Search Bar */}
+            <div className="max-w-2xl mx-auto px-2">
+              <div className="bg-white rounded-2xl shadow-2xl p-2 flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2 sm:gap-3 px-2 sm:px-4 min-w-0">
+                  <Search className="w-5 h-5 text-muted-foreground shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1 text-foreground placeholder:text-muted-foreground bg-transparent outline-none py-3 text-sm sm:text-base min-w-0"
+                    data-testid="input-search"
+                  />
+                </div>
+                <Button className="bg-[#fdcd0a] hover:bg-[#e5b800] text-[#6443f4] font-semibold rounded-xl px-4 sm:px-6 py-6 shrink-0" data-testid="button-search">
+                  <Search className="w-5 h-5 sm:hidden" />
+                  <span className="hidden sm:inline">Search</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 max-w-4xl mx-auto">
+            {stats.map((stat, index) => (
+              <div key={index} className="text-center">
+                <div className="text-3xl sm:text-4xl font-bold text-white mb-1">{stat.value}</div>
+                <div className="text-white/70 text-sm sm:text-base">{stat.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Explore Section */}
-      <section className="bg-[#6443f4] rounded-[20px] mx-2 sm:mx-4 mt-4 px-4 sm:px-8 lg:px-16 py-10 sm:py-16 relative overflow-hidden" data-testid="section-explore">
-        <div className="relative z-10">
-          <div className="flex justify-center mb-8 sm:mb-16">
-            <span className="inline-block bg-[rgba(100,67,244,0.1)] text-[#e2d9fc] px-4 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-semibold uppercase tracking-wide">
-              Explore
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 max-w-[1280px] mx-auto">
+      {/* Categories */}
+      <section className="py-12 sm:py-16 bg-background" data-testid="section-categories">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
             {exploreCategories.map((category, index) => {
               const IconComponent = category.icon;
               return (
                 <div
                   key={index}
-                  className="bg-transparent border border-white rounded-2xl h-[140px] sm:h-[160px] lg:h-[180px] flex flex-col items-center justify-center px-3 sm:px-4 hover:bg-white/10 transition-colors cursor-pointer"
-                  data-testid={`card-explore-${index}`}
+                  className="flex flex-col items-center p-4 sm:p-6 rounded-2xl bg-card border hover:border-[#6443f4] hover:shadow-lg transition-all cursor-pointer group"
+                  data-testid={`card-category-${index}`}
                 >
-                  <IconComponent className="w-8 h-8 sm:w-10 sm:h-10 text-white mb-3 sm:mb-4" strokeWidth={1.5} />
-                  <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-white text-center" style={{ fontFamily: "'Archivo', sans-serif" }}>
-                    {category.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-white/80 text-center mt-1 hidden sm:block">
-                    {category.subtitle}
-                  </p>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-[#f0edfe] flex items-center justify-center mb-3 group-hover:bg-[#6443f4] transition-colors">
+                    <IconComponent className="w-6 h-6 sm:w-7 sm:h-7 text-[#6443f4] group-hover:text-white transition-colors" />
+                  </div>
+                  <span className="font-medium text-foreground text-sm sm:text-base">{category.title}</span>
+                  <span className="text-xs text-muted-foreground">{category.count}</span>
                 </div>
               );
             })}
@@ -248,60 +258,132 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* Knowledge Hub Section */}
-      <section className="bg-white rounded-[20px] mx-2 sm:mx-4 mt-4 px-4 sm:px-8 lg:px-14 py-10 sm:py-16 lg:py-20 flex flex-col lg:flex-row gap-8 lg:gap-16" data-testid="section-knowledge">
-        <div className="lg:w-[491px] lg:shrink-0">
-          <span className="inline-block bg-[#e2d9fc] text-[#6443f4] px-4 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-semibold uppercase tracking-wide mb-3 sm:mb-4">
-            Insights
-          </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-[56px] leading-tight lg:leading-none" style={{ fontFamily: "'Chillax', sans-serif" }}>
-            <span className="text-[#665878]">Dive in into</span>
-            <br />
-            <span className="text-[#6443f4]">the Knowledge hub</span>
-          </h2>
-        </div>
-
-        <div className="flex-1 flex flex-col gap-4 sm:gap-5">
-          {knowledgeItems.map((item, index) => (
-            <div key={index} className="flex items-center gap-3 sm:gap-5" data-testid={`card-knowledge-${index}`}>
-              <div className="text-[#6443f4] font-semibold text-base sm:text-lg w-8 sm:w-12 shrink-0">
-                0{index + 1}
-              </div>
-              <div className="flex-1 bg-white border-2 border-[#24103e] rounded-[20px] shadow-[0px_4px_0px_0px_#24103e] p-4 sm:p-6 flex items-center gap-4 sm:gap-5 hover:-translate-y-0.5 transition-transform cursor-pointer">
-                <div className={`${item.iconBg} rounded-[14px] w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center shrink-0`}>
-                  <img src={item.icon} alt="" className="w-6 h-6 sm:w-8 sm:h-8" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-base sm:text-xl font-semibold text-[#171a1f] mb-1 sm:mb-2" style={{ fontFamily: "'Archivo', sans-serif" }}>
-                    {item.title}
-                  </h3>
-                  <p className="text-sm sm:text-base text-[#5b4c6e] leading-snug sm:leading-[1.2] line-clamp-2">
-                    {item.description}
-                  </p>
-                </div>
-              </div>
+      {/* Featured Content */}
+      <section className="py-12 sm:py-16 bg-muted/30" data-testid="section-featured">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                Popular Destinations
+              </h2>
+              <p className="text-muted-foreground">Discover the best Dubai has to offer</p>
             </div>
-          ))}
+            <Button variant="ghost" className="text-[#6443f4] hover:text-[#5235d4] hidden sm:flex">
+              View All <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {isLoading ? (
+              <>
+                {[0, 1, 2, 3].map((index) => (
+                  <ContentCardSkeleton key={index} />
+                ))}
+              </>
+            ) : hasContent ? (
+              featuredContent.map((content, index) => (
+                <ContentCard key={content.id} content={content} index={index} />
+              ))
+            ) : (
+              [0, 1, 2, 3].map((index) => (
+                <PlaceholderCard key={index} index={index} />
+              ))
+            )}
+          </div>
+
+          <div className="mt-8 text-center sm:hidden">
+            <Button variant="outline" className="text-[#6443f4] border-[#6443f4]">
+              View All Destinations
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* Dubai Pilot Project Section */}
-      <section className="mx-2 sm:mx-4 mt-4 mb-8 py-10 sm:py-16 lg:py-20 flex flex-col lg:flex-row items-center gap-8 lg:gap-16 px-4 sm:px-8" data-testid="section-pilot">
-        <div className="w-full max-w-md lg:max-w-none lg:w-[633px] lg:shrink-0">
-          <img src={imgGroup34} alt="Travi Mascot" className="w-full h-auto" />
-        </div>
-        <div className="flex-1 max-w-[488px] text-center lg:text-left">
-          <p className="text-xl sm:text-2xl lg:text-[28px] text-[#6443f4] font-semibold leading-tight lg:leading-[0.9] mb-3 sm:mb-4" style={{ fontFamily: "'Chillax', sans-serif" }}>
-            Dubai Pilot Project
-          </p>
-          <h2 className="text-3xl sm:text-4xl lg:text-[56px] text-black font-semibold leading-tight lg:leading-[0.9] mb-6 sm:mb-8" style={{ fontFamily: "'Chillax', sans-serif" }}>
-            Enhancing Tourism Strategy
-          </h2>
-          <p className="text-base sm:text-lg lg:text-xl text-black font-medium leading-relaxed lg:leading-none mx-auto lg:mx-0 max-w-[330px]" style={{ fontFamily: "'Satoshi', sans-serif" }}>
-            TRAVI Insights partnered with Dubai Tourism Authority to optimize their seasonal marketing campaigns and infrastructure planning.
-          </p>
+      {/* Features */}
+      <section className="py-12 sm:py-16 bg-background" data-testid="section-features">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
+              Why Choose Travi?
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Your trusted companion for exploring Dubai's wonders
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card className="p-6 text-center border-0 shadow-md">
+              <div className="w-14 h-14 rounded-2xl bg-[#f0edfe] flex items-center justify-center mx-auto mb-4">
+                <MapPin className="w-7 h-7 text-[#6443f4]" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Curated Experiences</h3>
+              <p className="text-muted-foreground text-sm">
+                Hand-picked destinations and hidden gems verified by local experts
+              </p>
+            </Card>
+
+            <Card className="p-6 text-center border-0 shadow-md">
+              <div className="w-14 h-14 rounded-2xl bg-[#fff5ea] flex items-center justify-center mx-auto mb-4">
+                <Star className="w-7 h-7 text-[#f8a900]" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Trusted Reviews</h3>
+              <p className="text-muted-foreground text-sm">
+                Authentic ratings and reviews from real travelers worldwide
+              </p>
+            </Card>
+
+            <Card className="p-6 text-center border-0 shadow-md">
+              <div className="w-14 h-14 rounded-2xl bg-[#e6f9ff] flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-7 h-7 text-[#0ea5e9]" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Real-Time Updates</h3>
+              <p className="text-muted-foreground text-sm">
+                Latest information on events, offers, and travel advisories
+              </p>
+            </Card>
+          </div>
         </div>
       </section>
+
+      {/* CTA Section */}
+      <section className="py-16 sm:py-20 bg-gradient-to-r from-[#6443f4] to-[#9b7bfa]" data-testid="section-cta">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl sm:text-4xl font-bold text-white mb-4">
+            Ready to Explore Dubai?
+          </h2>
+          <p className="text-white/80 mb-8 max-w-xl mx-auto">
+            Download the Travi app and start planning your perfect Dubai adventure today.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button className="bg-[#fdcd0a] hover:bg-[#e5b800] text-[#6443f4] font-semibold rounded-full px-8 py-6 text-lg">
+              Download App
+            </Button>
+            <Button variant="outline" className="border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg">
+              Learn More
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 bg-[#1a1a2e] text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-2">
+              <img src={imgGroup48} alt="Travi Logo" className="h-10 w-auto brightness-0 invert" />
+              <img src={imgGroup33} alt="Travi" className="h-8 w-auto brightness-0 invert" />
+            </div>
+            <div className="flex items-center gap-6 text-white/60 text-sm">
+              <a href="#" className="hover:text-white transition-colors">Privacy</a>
+              <a href="#" className="hover:text-white transition-colors">Terms</a>
+              <a href="#" className="hover:text-white transition-colors">Contact</a>
+            </div>
+            <p className="text-white/40 text-sm">
+              2024 Travi. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
