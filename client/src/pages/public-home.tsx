@@ -1,10 +1,8 @@
-import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Lightbulb, Compass, ArrowRight, Sparkles, Menu } from "lucide-react";
+import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Lightbulb, Compass, ArrowRight, Sparkles, Menu, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { Content } from "@shared/schema";
 
-const imgImage = "https://www.figma.com/api/mcp/asset/405fd11a-0d66-485a-8bfc-0a87dcf39696";
-const imgImage1 = "https://www.figma.com/api/mcp/asset/81e2d17b-d2cd-4ff3-9786-ee654b04037a";
-const imgImage2 = "https://www.figma.com/api/mcp/asset/75aff459-1155-4526-9e9c-d5370cc7d7c9";
-const imgImage3 = "https://www.figma.com/api/mcp/asset/6cda54bf-0c87-423d-b9ac-7bc9d088bbd1";
 const imgGroup1000007941 = "https://www.figma.com/api/mcp/asset/9591896e-0d82-4ec4-b0be-7fa80b7ddc89";
 const imgGroup47 = "https://www.figma.com/api/mcp/asset/3f9a6114-31fb-4ef6-93de-681f21bf4b3b";
 const imgGroup48 = "https://www.figma.com/api/mcp/asset/eb2c53d1-f6df-4038-8e21-ee0637ce9137";
@@ -14,42 +12,24 @@ const imgBigDataAnalytics1 = "https://www.figma.com/api/mcp/asset/2f1a79c1-a91e-
 const imgCyborg1 = "https://www.figma.com/api/mcp/asset/6646c10d-3d0d-4973-bd99-54abe2d37af1";
 const imgGrowthAudience1 = "https://www.figma.com/api/mcp/asset/de082f84-a0cf-4183-b601-343cb16e8255";
 
-const exploreCategories = [
-  { icon: Building2, title: "Dubai Hotels", subtitle: "Find your perfect stay" },
-  { icon: Mountain, title: "Dubai Attractions", subtitle: "Must-see sights" },
-  { icon: Landmark, title: "Dubai Areas & Districts", subtitle: "Explore neighborhoods" },
-  { icon: BookOpen, title: "Dubai Travel Guides", subtitle: "In-depth handbooks" },
-  { icon: Utensils, title: "Culture & Food in Dubai", subtitle: "Savor local experiences" },
-  { icon: Bus, title: "Transportation in Dubai", subtitle: "Getting around made easy" },
-  { icon: Lightbulb, title: "Dubai Travel Tips & Safety", subtitle: "Smart advice for journeys" },
-  { icon: Compass, title: "Comparisons", subtitle: "Side-by-side analysis" },
+const defaultPlaceholderImage = "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop";
+
+const cardColors = [
+  "bg-[#f0edfe]",
+  "bg-[#fff5ea]",
+  "bg-[#e6f9ff]",
+  "bg-[#e6f7ef]",
 ];
 
-const todayCards = [
-  {
-    image: imgImage,
-    title: "Climbing the Heights: Burj Khalifa's Latest Innovations",
-    description: "Explore the architectural marvels and new visitor experiences at the world's tallest building.",
-    bgColor: "bg-[#f0edfe]",
-  },
-  {
-    image: imgImage1,
-    title: "Desert Safaris: Thrills and Tranquility in Dubai's Sands",
-    description: "From dune bashing to traditional Bedouin camps, find your perfect desert escapade.",
-    bgColor: "bg-[#fff5ea]",
-  },
-  {
-    image: imgImage2,
-    title: "A Culinary Journey: Discovering Dubai's Diverse",
-    description: "Taste the best of local and international cuisine with our curated guide to Dubai's food scene.",
-    bgColor: "bg-[#e6f9ff]",
-  },
-  {
-    image: imgImage3,
-    title: "Palm Jumeirah: An Island Paradise Unveiled",
-    description: "Dive into the opulent hotels, beaches, and entertainment on Dubai's man-made island.",
-    bgColor: "bg-[#e6f7ef]",
-  },
+const exploreCategories = [
+  { icon: Building2, title: "Dubai Hotels", subtitle: "Find your perfect stay", type: "hotel" },
+  { icon: Mountain, title: "Dubai Attractions", subtitle: "Must-see sights", type: "attraction" },
+  { icon: Landmark, title: "Dubai Areas & Districts", subtitle: "Explore neighborhoods", type: "attraction" },
+  { icon: BookOpen, title: "Dubai Travel Guides", subtitle: "In-depth handbooks", type: "article" },
+  { icon: Utensils, title: "Culture & Food in Dubai", subtitle: "Savor local experiences", type: "article" },
+  { icon: Bus, title: "Transportation in Dubai", subtitle: "Getting around made easy", type: "article" },
+  { icon: Lightbulb, title: "Dubai Travel Tips & Safety", subtitle: "Smart advice for journeys", type: "article" },
+  { icon: Compass, title: "Comparisons", subtitle: "Side-by-side analysis", type: "article" },
 ];
 
 const knowledgeItems = [
@@ -73,8 +53,56 @@ const knowledgeItems = [
   },
 ];
 
+function ContentCard({ content, index }: { content: Content; index: number }) {
+  const bgColor = cardColors[index % cardColors.length];
+  const imageUrl = content.heroImage || defaultPlaceholderImage;
+  
+  return (
+    <article
+      className={`${bgColor} border-2 border-[#24103e] rounded-[21px] shadow-[0px_4px_0px_0px_#24103e] p-4 sm:p-6 flex flex-col items-center gap-6 sm:gap-10 hover:-translate-y-1 transition-transform cursor-pointer`}
+      data-testid={`card-today-${content.id}`}
+    >
+      <div className="w-full max-w-[264px] h-[140px] sm:h-[160px] overflow-hidden rounded-lg">
+        <img src={imageUrl} alt={content.heroImageAlt || content.title} className="w-full h-full object-cover" />
+      </div>
+      <div className="text-center">
+        <h3 className="text-base sm:text-lg font-normal text-[#171a1f] leading-snug sm:leading-[25px] mb-2" style={{ fontFamily: "'Archivo', sans-serif" }}>
+          {content.title}
+        </h3>
+        <p className="text-sm text-[#565d6d] leading-5 line-clamp-3">
+          {content.metaDescription || "Explore this amazing destination in Dubai."}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+function ContentCardSkeleton({ index }: { index: number }) {
+  const bgColor = cardColors[index % cardColors.length];
+  
+  return (
+    <article
+      className={`${bgColor} border-2 border-[#24103e] rounded-[21px] shadow-[0px_4px_0px_0px_#24103e] p-4 sm:p-6 flex flex-col items-center gap-6 sm:gap-10 animate-pulse`}
+    >
+      <div className="w-full max-w-[264px] h-[140px] sm:h-[160px] overflow-hidden rounded-lg bg-black/10" />
+      <div className="text-center w-full">
+        <div className="h-5 bg-black/10 rounded mb-2 w-3/4 mx-auto" />
+        <div className="h-4 bg-black/10 rounded w-full mb-1" />
+        <div className="h-4 bg-black/10 rounded w-2/3 mx-auto" />
+      </div>
+    </article>
+  );
+}
+
 export default function PublicHome() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: publishedContent, isLoading } = useQuery<Content[]>({
+    queryKey: ["/api/contents?status=published"],
+  });
+
+  const featuredContent = publishedContent?.slice(0, 4) || [];
 
   return (
     <div className="bg-white min-h-screen overflow-x-hidden">
@@ -145,6 +173,8 @@ export default function PublicHome() {
             <input
               type="text"
               placeholder="Search experiences..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 text-base sm:text-xl lg:text-2xl text-black placeholder:text-black/50 bg-transparent outline-none min-w-0"
               data-testid="input-search"
             />
@@ -167,25 +197,22 @@ export default function PublicHome() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {todayCards.map((card, index) => (
-            <article
-              key={index}
-              className={`${card.bgColor} border-2 border-[#24103e] rounded-[21px] shadow-[0px_4px_0px_0px_#24103e] p-4 sm:p-6 flex flex-col items-center gap-6 sm:gap-10 hover:-translate-y-1 transition-transform cursor-pointer`}
-              data-testid={`card-today-${index}`}
-            >
-              <div className="w-full max-w-[264px] h-[140px] sm:h-[160px] overflow-hidden rounded-lg">
-                <img src={card.image} alt={card.title} className="w-full h-full object-cover" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-base sm:text-lg font-normal text-[#171a1f] leading-snug sm:leading-[25px] mb-2" style={{ fontFamily: "'Archivo', sans-serif" }}>
-                  {card.title}
-                </h3>
-                <p className="text-sm text-[#565d6d] leading-5">
-                  {card.description}
-                </p>
-              </div>
-            </article>
-          ))}
+          {isLoading ? (
+            <>
+              {[0, 1, 2, 3].map((index) => (
+                <ContentCardSkeleton key={index} index={index} />
+              ))}
+            </>
+          ) : featuredContent.length > 0 ? (
+            featuredContent.map((content, index) => (
+              <ContentCard key={content.id} content={content} index={index} />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12 text-[#565d6d]">
+              <p className="text-lg mb-2">No published content yet</p>
+              <p className="text-sm">Check back soon for exciting Dubai experiences!</p>
+            </div>
+          )}
         </div>
       </section>
 
