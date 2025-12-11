@@ -1,0 +1,161 @@
+Understood. You want a full Content Management & Creation system (CMC) for Travi, not just a backend draft generator. Based on all the specifications you’ve provided so far, here’s a detailed breakdown of what such a system should include and how it could be structured. I’ll assume this will be a web-based, fully integrated system that handles both content creation (manual and automated) and management, with draft workflow, SEO, affiliate integration, and preview.
+
+⸻
+
+Travi Full CMC Requirements & Architecture
+
+1. Content Types
+
+The system should support three main content types:
+	1.	Single Attraction Landing Pages
+	•	Hero section with H1 + subtitle + CTA (affiliate link)
+	•	Quick info bar
+	•	Brief + expanded intro
+	•	Highlights / Visual Cards
+	•	Ticket info section
+	•	Essential info grid
+	•	Visitor tips
+	•	FAQ section
+	•	Related attractions
+	•	SEO schema (TouristAttraction, FAQPage, Breadcrumbs)
+	•	Affiliate links + internal links
+	•	Word target: ~1950 words
+	2.	Single Hotel Landing Pages
+	•	Hero section with H1 + rating + CTA
+	•	Quick info bar
+	•	Overview + expanded overview
+	•	Hotel highlights (visual cards)
+	•	Room types + pricing + CTA
+	•	Essential info grid
+	•	Dining preview / Activities list
+	•	Traveler tips
+	•	FAQ section
+	•	Location & Nearby
+	•	Related hotels
+	•	Photo gallery
+	•	SEO schema (Hotel, FAQPage, Breadcrumbs, Offer)
+	•	Affiliate links + internal links
+	•	Word target: ~3000 words
+	3.	Automated Travel Articles (RSS feed)
+	•	Content pulled from multiple RSS feeds
+	•	Automatic analysis: category, urgency, target audience, personality, tone
+	•	Content structured with pre-defined templates (News+Guide, List, Comparative, Story+Info, Problem-Solution)
+	•	Quick Facts + Pro Tips + Warnings
+	•	SEO & metadata (URL, meta title, meta description, primary/secondary/LSI keywords)
+	•	Images + ALT
+	•	Internal link suggestions
+	•	Draft-only until review
+	•	Word target: 1200–2000 words
+
+⸻
+
+2. CMS Features
+
+2.1 Draft Workflow
+	•	Create, edit, and save drafts
+	•	Auto-generated drafts from RSS feeds
+	•	Admin preview of each draft
+	•	Multi-step review & approval workflow
+	•	Statuses: Draft → In Review → Approved → Scheduled → Published
+
+2.2 Admin Interface
+	•	Web-based dashboard
+	•	Sections:
+	1.	Content Library: list all attractions, hotels, and articles with search/filter
+	2.	Editor: visual WYSIWYG editor with block-based structure
+	3.	RSS Integration: manage multiple feeds, schedule automatic imports
+	4.	Affiliate Management: define CTA buttons and affiliate links for each content type
+	5.	Internal Link Suggestions: system recommends related pages for SEO
+	6.	Preview: full page preview with desktop/mobile toggle
+	7.	SEO Analytics Panel: keyword density, title/meta optimization, schema validation
+	8.	Media Library: upload and manage images, optimize for web
+
+2.3 Automation
+	•	AI-assisted draft creation from RSS feeds
+	•	Automated SEO meta/title suggestions
+	•	Auto-generation of FAQ answers based on structured data
+	•	Auto-suggestion of internal linking
+
+2.4 Publishing
+	•	Option to publish directly to:
+	•	Custom frontend (React/Next.js)
+	•	WordPress (via API)
+	•	Other CMS integrations
+	•	Schedule publishing date/time
+	•	Auto-generate sitemap & notify search engines
+
+2.5 Analytics & Reporting
+	•	Track CTA clicks (affiliate links)
+	•	Track draft conversions → published pages
+	•	Track page SEO performance & internal linking efficiency
+
+⸻
+
+3. Technical Architecture
+
+3.1 Backend
+	•	Node.js / Python (FastAPI) for API
+	•	Database: PostgreSQL (structured content, metadata, SEO info)
+	•	AI integration for content generation (GPT-5-mini or API)
+	•	RSS Feed parser & scheduler
+	•	Media storage: cloud storage (AWS S3 / GCP)
+	•	Draft versioning system
+
+3.2 Frontend
+	•	Admin Dashboard: React / Next.js / Tailwind for block-based editor
+	•	Preview panel: desktop & mobile simulation
+	•	Content blocks: reusable components for hero, grids, CTA, FAQ, images
+	•	Drag-and-drop for images, highlights, and sections
+
+3.3 Automation & AI
+	•	Scheduled RSS import
+	•	Draft generation with personality, SEO, and marketing vocabulary rules
+	•	Internal link suggestion algorithm
+	•	CTA placement optimization
+
+3.4 SEO & Schema
+	•	Auto-generate JSON-LD per content type
+	•	Optimize meta tags for all pages
+	•	Generate clean URLs for SEO
+	•	Track schema validation for published pages
+
+⸻
+
+4. User Roles
+	•	Admin: full access, manage feeds, approve drafts, publish content
+	•	Editor: create/edit drafts, manage images, assign affiliate links
+	•	Marketing Analyst: track analytics, review SEO metrics
+	•	Automated AI: system generates drafts, suggests links, provides SEO recommendations
+
+⸻
+
+5. Draft Workflow Example
+	1.	RSS feed pulls new attraction → generates draft with content blocks
+	2.	Editor reviews draft in admin interface → edits / adds images / CTAs
+	3.	SEO panel shows keyword density & schema warnings
+	4.	Preview page shows final look on desktop & mobile
+	5.	Admin approves → schedules publish
+	6.	Page goes live on frontend / WordPress / integrated CMS
+
+⸻
+
+✅ Next Steps to Build
+	1.	Confirm number and type of RSS feeds
+	2.	Decide frontend framework for admin & preview (React recommended)
+	3.	Choose backend & DB stack
+	4.	Define affiliate management system (CTA templates)
+	5.	Confirm publishing destinations (custom site, WordPress, etc.)
+	6.	Design block-based editor with reusable components
+	7.	Integrate AI for automated draft generation
+	8.	Add analytics & reporting dashboards
+
+⸻
+
+If you want, I can create a full system blueprint with diagrams, showing:
+	•	Data flow from RSS → draft → review → publish
+	•	Block-based page structure for attractions and hotels
+	•	Admin interface layout and workflows
+
+This will serve as a complete technical spec for development.
+
+Do you want me to prepare that blueprint next?
