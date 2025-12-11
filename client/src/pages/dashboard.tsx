@@ -30,7 +30,7 @@ export default function Dashboard() {
   });
 
   const { data: recentContent, isLoading: contentLoading } = useQuery<ContentWithRelations[]>({
-    queryKey: ["/api/contents", { limit: 5 }],
+    queryKey: ["/api/contents"],
   });
 
   return (

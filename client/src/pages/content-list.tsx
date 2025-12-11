@@ -67,7 +67,7 @@ export default function ContentList({ type }: ContentListProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const { data: contents, isLoading } = useQuery<ContentWithRelations[]>({
-    queryKey: ["/api/contents", { type }],
+    queryKey: [`/api/contents?type=${type}`],
   });
 
   const deleteMutation = useMutation({

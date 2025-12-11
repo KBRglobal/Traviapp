@@ -93,7 +93,7 @@ export default function ContentEditor() {
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | null>(null);
 
   const { data: content, isLoading } = useQuery<ContentWithRelations>({
-    queryKey: ["/api/contents", contentId],
+    queryKey: [`/api/contents/${contentId}`],
     enabled: !!contentId,
   });
 
@@ -114,15 +114,11 @@ export default function ContentEditor() {
   const saveMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
       if (contentId) {
-        return apiRequest(`/api/contents/${contentId}`, {
-          method: "PATCH",
-          body: JSON.stringify(data),
-        });
+        const res = await apiRequest("PATCH", `/api/contents/${contentId}`, data);
+        return res.json();
       } else {
-        return apiRequest("/api/contents", {
-          method: "POST",
-          body: JSON.stringify({ ...data, type: contentType }),
-        });
+        const res = await apiRequest("POST", "/api/contents", { ...data, type: contentType });
+        return res.json();
       }
     },
     onSuccess: (result) => {
