@@ -643,6 +643,155 @@ Format the response as JSON with the following structure:
     }
   });
 
+  // Comprehensive AI Article Generator - Full Spec Implementation
+  app.post("/api/ai/generate-article", async (req, res) => {
+    try {
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      }
+
+      const { title, summary, sourceUrl, sourceText, inputType = "title_only" } = req.body;
+
+      if (!title) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+
+      // Build context based on input type
+      let contextInfo = `Title: "${title}"`;
+      if (summary) contextInfo += `\nSummary: ${summary}`;
+      if (sourceText) contextInfo += `\nSource text: ${sourceText}`;
+      if (sourceUrl) contextInfo += `\nSource URL: ${sourceUrl}`;
+
+      const systemPrompt = `You are an expert Dubai travel news content writer for a CMS. You MUST follow ALL these rules:
+
+PERSONALITY BANK (A-E):
+A. Professional Travel Expert - authoritative, factual, trustworthy
+B. Enthusiastic Explorer - energetic, inspiring, adventure-focused  
+C. Luxury Curator - sophisticated, refined, premium-focused
+D. Practical Guide - helpful, organized, detail-oriented
+E. Local Insider - authentic, personal, culturally aware
+
+CONTENT CATEGORIES:
+A. Attractions & Activities
+B. Hotels  
+C. Dining/Food
+D. Transportation/Logistics
+E. Events/Festivals
+F. Tips/Guides
+G. News/Regulations
+H. Shopping & Deals
+
+URGENCY LEVELS:
+- Urgent (this week)
+- Relevant (1-2 months)
+- Evergreen
+
+AUDIENCE TYPES: Families, Couples, Budget, Luxury, Business
+
+STRICT RULES:
+1. No hallucinations about prices, laws, or dates - say "as of latest public information" if unsure
+2. No fake names or invented quotes
+3. Always traveler-focused and SEO-clean
+4. Maximum 5 marketing vocabulary words per article
+5. No duplicate sentences or unnatural keyword stuffing
+6. Article length: 800-1800 words depending on complexity
+7. Meta title: 50-65 characters
+8. Meta description: 150-160 characters
+9. Each FAQ answer: 100-150 words, SEO-rich, unique
+
+OUTPUT FORMAT - Return valid JSON matching this exact structure:
+{
+  "meta": {
+    "title": "SEO meta title 50-65 chars",
+    "description": "SEO meta description 150-160 chars",
+    "slug": "url-friendly-slug",
+    "keywords": ["keyword1", "keyword2"],
+    "ogTitle": "Open Graph title",
+    "ogDescription": "Open Graph description"
+  },
+  "analysis": {
+    "category": "A-H code and name",
+    "tone": "enthusiastic/practical/serious/enticing/friendly",
+    "personality": "A-E code and description",
+    "structure": "news_guide/story_info/comparative/updates/lists",
+    "uniqueAngle": "What makes this article valuable",
+    "marketingWords": ["max", "5", "words"],
+    "primaryKeyword": "main keyword",
+    "secondaryKeywords": ["secondary1", "secondary2"],
+    "lsiKeywords": ["lsi1", "lsi2", "lsi3"],
+    "urgency": "urgent/relevant/evergreen",
+    "audience": ["target", "audiences"]
+  },
+  "article": {
+    "h1": "SEO-optimized clickable headline",
+    "intro": "2-3 sentences with primary keyword, answering what happened and why travelers should care",
+    "quickFacts": [
+      {"label": "Location", "value": "..."},
+      {"label": "Price/Cost", "value": "..."},
+      {"label": "Hours", "value": "..."},
+      {"label": "Best For", "value": "..."},
+      {"label": "Getting There", "value": "..."},
+      {"label": "Time Needed", "value": "..."},
+      {"label": "Booking Notes", "value": "..."},
+      {"label": "Best Time", "value": "..."}
+    ],
+    "sections": [
+      {"heading": "Section H2", "body": "Detailed content following personality/tone..."}
+    ],
+    "proTips": ["Genuine, specific tip 1", "Genuine, specific tip 2"],
+    "goodToKnow": ["Warning/restriction 1", "Seasonality note", "Local insight"],
+    "faq": [
+      {"q": "SEO-rich question?", "a": "100-150 word unique answer..."}
+    ],
+    "internalLinks": [
+      {"anchor": "suggested anchor text", "suggestedTopic": "related topic to link"}
+    ],
+    "altTexts": ["Hero image alt", "Detail section alt", "Atmosphere photo alt"],
+    "closing": "Short, practical, traveler-focused conclusion"
+  },
+  "suggestions": {
+    "alternativeHeadlines": ["Option 1", "Option 2", "Option 3"],
+    "alternativeIntros": ["Alternative intro 1", "Alternative intro 2"],
+    "alternativeCta": "Alternative call to action if relevant"
+  }
+}`;
+
+      const userPrompt = `Generate a complete Dubai travel news article based on:
+
+${contextInfo}
+
+Input type: ${inputType}
+
+Follow ALL steps from the spec:
+1. Perform internal analysis (category A-H, urgency, audience, personality A-E, tone, unique angle, structure, marketing words, keywords)
+2. Generate all meta and structure data
+3. Create the complete article with all required sections
+4. Apply SEO optimization rules
+5. Provide editor suggestions (3 alternative headlines, 2 alternative intros, alternative CTA)
+
+Generate 4-8 FAQ items, each 100-150 words.
+Ensure article is 800-1800 words total.
+Return valid JSON only.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 4096,
+      });
+
+      const generatedArticle = JSON.parse(response.choices[0].message.content || "{}");
+      res.json(generatedArticle);
+    } catch (error) {
+      console.error("Error generating AI article:", error);
+      res.status(500).json({ error: "Failed to generate article" });
+    }
+  });
+
   app.post("/api/ai/generate-seo-schema", async (req, res) => {
     try {
       const openai = getOpenAIClient();
