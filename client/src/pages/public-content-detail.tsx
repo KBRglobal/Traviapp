@@ -336,10 +336,6 @@ export default function PublicContentDetail() {
               </div>
               
               <div className="flex items-center gap-2">
-                <Link href="/admin" className="hidden sm:block">
-                  <Button variant="outline" size="sm" data-testid="link-admin">Admin</Button>
-                </Link>
-                
                 <Button
                   variant="ghost"
                   size="icon"
@@ -374,9 +370,6 @@ export default function PublicContentDetail() {
                     {link.label}
                   </Link>
                 ))}
-                <Link href="/admin" className="block sm:hidden">
-                  <Button variant="outline" className="w-full mt-2" data-testid="link-admin-mobile">Admin</Button>
-                </Link>
               </div>
             </div>
           )}

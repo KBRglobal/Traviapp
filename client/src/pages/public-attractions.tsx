@@ -171,23 +171,18 @@ export default function PublicAttractions() {
                 <Link href="/attractions" className="text-primary font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-2 py-1">Attractions</Link>
                 <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-2 py-1">Articles</Link>
               </div>
-              <div className="flex items-center gap-2">
-                <Link href="/admin">
-                  <Button variant="outline" size="sm" data-testid="button-admin">Admin</Button>
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden"
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-                  aria-expanded={mobileMenuOpen}
-                  aria-controls="mobile-menu"
-                  data-testid="button-mobile-menu"
-                >
-                  {mobileMenuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-menu"
+                data-testid="button-mobile-menu"
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
+              </Button>
             </div>
             {mobileMenuOpen && (
               <div id="mobile-menu" className="md:hidden py-4 border-t">

@@ -102,9 +102,6 @@ export default function PublicBudget() {
               <Link href="/tools/budget" className="text-primary font-medium">Budget</Link>
               <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">Articles</Link>
             </div>
-            <Link href="/admin">
-              <Button variant="outline" size="sm">Admin</Button>
-            </Link>
           </div>
         </div>
       </nav>

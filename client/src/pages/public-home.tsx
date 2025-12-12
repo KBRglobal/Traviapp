@@ -531,24 +531,16 @@ export default function PublicHome() {
                 <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors" data-testid="link-articles">Articles</Link>
               </div>
 
-              {/* CTA */}
-              <div className="flex items-center gap-3">
-                <Link href="/admin">
-                  <Button variant="outline" className="hidden sm:flex" data-testid="button-admin">
-                    Admin
-                  </Button>
-                </Link>
-                <button 
-                  className="md:hidden p-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md"
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  data-testid="button-mobile-menu"
-                  aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-                  aria-expanded={mobileMenuOpen}
-                  aria-controls="mobile-menu"
-                >
-                  {mobileMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
-                </button>
-              </div>
+              <button 
+                className="md:hidden p-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                data-testid="button-mobile-menu"
+                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-menu"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
+              </button>
             </div>
           </div>
 
@@ -562,8 +554,6 @@ export default function PublicHome() {
                 <Link href="/districts" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-districts-mobile" onClick={() => setMobileMenuOpen(false)}>Districts</Link>
                 <Link href="/transport" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-transport-mobile" onClick={() => setMobileMenuOpen(false)}>Transport</Link>
                 <Link href="/articles" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-articles-mobile" onClick={() => setMobileMenuOpen(false)}>Articles</Link>
-                <div className="border-t my-2" />
-                <Link href="/admin" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-admin-mobile" onClick={() => setMobileMenuOpen(false)}>Admin Panel</Link>
               </div>
             </nav>
           )}
@@ -1029,7 +1019,6 @@ export default function PublicHome() {
               <nav className="flex flex-col gap-2 text-white/60 text-sm" aria-label="Legal links">
                 <Link href="/privacy" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Privacy Policy</Link>
                 <Link href="/terms" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Terms of Service</Link>
-                <Link href="/admin" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Admin</Link>
               </nav>
             </div>
           </div>

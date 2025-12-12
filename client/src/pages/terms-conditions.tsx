@@ -21,11 +21,6 @@ export default function TermsConditions() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Link href="/admin">
-                <Button variant="outline" className="hidden sm:flex" data-testid="button-admin">
-                  Admin
-                </Button>
-              </Link>
               <button 
                 className="md:hidden p-2 text-foreground"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

@@ -146,9 +146,6 @@ export default function PublicTransport() {
               <Link href="/transport" className="text-primary font-medium">Transport</Link>
               <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">Articles</Link>
             </div>
-            <Link href="/admin">
-              <Button variant="outline" size="sm">Admin</Button>
-            </Link>
           </div>
         </div>
       </nav>
