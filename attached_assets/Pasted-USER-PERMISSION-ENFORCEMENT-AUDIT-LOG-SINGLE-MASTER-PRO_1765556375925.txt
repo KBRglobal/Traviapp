@@ -1,0 +1,266 @@
+USER PERMISSION ENFORCEMENT + AUDIT LOG – SINGLE MASTER PROMPT (STRICT)
+
+You are building a CMS with STRICT, NON-NEGOTIABLE PERMISSION BOUNDARIES
+AND A FULL, IMMUTABLE AUDIT LOG SYSTEM.
+
+Both systems are mandatory and MUST work together.
+Permissions and logging are foundational, not optional features.
+
+────────────────────────────────
+CORE RULE
+────────────────────────────────
+
+A user who has permissions ONLY for content writing MUST be:
+- Technically restricted
+- Visually restricted
+- Functionally restricted
+
+Access is limited to the content creation area ONLY.
+No access. No visibility. No workaround.
+
+Every action by every user MUST be logged.
+
+────────────────────────────────
+CONTENT-ONLY USER DEFINITION
+────────────────────────────────
+
+Role examples:
+CONTENT WRITER
+AUTHOR
+CONTRIBUTOR
+
+Purpose:
+Writing content only. Nothing else.
+
+────────────────────────────────
+ABSOLUTE ACCESS LIMITATIONS
+────────────────────────────────
+
+A content-only user:
+
+- CANNOT access system settings
+- CANNOT see system settings menu
+- CANNOT access SEO global settings
+- CANNOT access schema settings
+- CANNOT access affiliate management
+- CANNOT access analytics
+- CANNOT access user management
+- CANNOT access audit logs
+- CANNOT access media library globally
+- CANNOT access site structure or navigation
+- CANNOT access page templates or layouts
+- CANNOT delete content (own or others)
+- CANNOT publish content
+- CANNOT schedule publishing
+- CANNOT edit content after submission
+- CANNOT see admin-only fields (even read-only)
+
+If the user does not need it for writing,
+it MUST NOT EXIST in their UI or API responses.
+
+────────────────────────────────
+ALLOWED ACCESS – CONTENT ONLY
+────────────────────────────────
+
+A content-only user CAN:
+
+- Access ONLY the Content Creation Area
+- Create new articles
+- Edit OWN drafts only (before submission)
+- Use the text editor (headings, paragraphs, lists)
+- Insert predefined content blocks ONLY
+- Add internal links from approved content
+- Click “Generate Image”
+- Save drafts
+- Submit content for review
+
+────────────────────────────────
+UI ISOLATION (CRITICAL)
+────────────────────────────────
+
+When a content-only user is logged in:
+
+Sidebar shows ONLY:
+- Create Content
+- My Drafts
+- Submitted for Review
+
+Sidebar MUST NOT show:
+- Settings
+- Users
+- Media Library
+- SEO
+- Affiliates
+- Pages
+- Templates
+- System
+- Logs
+
+Direct URL access to restricted routes MUST be blocked.
+API endpoints MUST enforce identical restrictions.
+No hidden fields returned under any circumstance.
+
+Security enforcement layers:
+- UI
+- API
+- Database / authorization layer
+
+────────────────────────────────
+EDITOR RESTRICTIONS
+────────────────────────────────
+
+Editor behaves as:
+“A Word processor inside a locked design system”
+
+Inside the editor, the user:
+
+- Sees ONLY writing-related fields
+- DOES NOT see:
+  - Meta title
+  - Meta description
+  - Slug
+  - Canonical URL
+  - Schema
+  - Affiliate IDs
+  - Tracking parameters
+  - Layout controls
+  - Style controls
+  - Custom HTML/CSS/JS
+
+- Cannot remove required blocks
+- Cannot change layout structure
+- Cannot break design consistency
+
+────────────────────────────────
+IMAGE HANDLING (CONTENT-ONLY USERS)
+────────────────────────────────
+
+- User cannot upload arbitrary images
+- User can only:
+  - Click “Generate Image”
+  - System generates image prompt from content context
+  - System enforces correct dimensions automatically
+  - System auto-fits / crops if needed
+  - System auto-generates:
+    - Filename
+    - ALT text
+    - Caption
+    - Schema image object
+
+User CANNOT break layout via image size or format.
+
+────────────────────────────────
+SUBMISSION & LOCKING
+────────────────────────────────
+
+Once content is submitted for review:
+
+- Content becomes READ-ONLY for the writer
+- Writer cannot edit unless returned to Draft
+- Writer cannot delete content
+- Writer cannot duplicate content
+
+────────────────────────────────
+AUDIT LOG – MANDATORY & IMMUTABLE
+────────────────────────────────
+
+Every action by every user MUST be logged.
+
+Logs are:
+- Append-only
+- Read-only
+- Cannot be edited
+- Cannot be deleted
+- Cannot be disabled
+
+If an action changes state, data, visibility, or configuration → it MUST be logged.
+
+────────────────────────────────
+WHAT MUST BE LOGGED
+────────────────────────────────
+
+CONTENT
+- Create, edit, submit, approve, reject
+- Publish, unpublish, schedule
+- Image generated or replaced
+- CTA or affiliate link changes
+
+USERS & PERMISSIONS
+- User created
+- Role or permission changed
+- Login / logout
+- Failed login attempts
+
+SYSTEM & SETTINGS
+- Any settings change
+- SEO or schema change
+- Template or layout change
+- Affiliate configuration change
+
+SECURITY
+- Unauthorized access attempt
+- Blocked route access
+- Permission violation attempt
+
+────────────────────────────────
+LOG ENTRY STRUCTURE (MINIMUM)
+────────────────────────────────
+
+Each log entry MUST include:
+
+- Log ID
+- Timestamp (ISO)
+- User ID
+- User name/email
+- User role at time of action
+- Action type
+- Entity type
+- Entity ID
+- Human-readable description
+- Before state (snapshot or diff)
+- After state (snapshot or diff)
+- IP address
+- User agent
+
+────────────────────────────────
+AUDIT LOG ACCESS CONTROL
+────────────────────────────────
+
+Audit logs are visible ONLY to:
+- Super Admin
+- System Admin
+- Owner
+
+Audit logs are COMPLETELY INVISIBLE to:
+- Content writers
+- Contributors
+- Authors
+
+────────────────────────────────
+FAIL-SAFE RULE (NON-NEGOTIABLE)
+────────────────────────────────
+
+If ANY of the following occur, THE SYSTEM IS BROKEN:
+
+- Content-only user sees admin/system UI
+- Content-only user accesses restricted routes
+- Content-only user modifies SEO/schema/affiliates
+- Content-only user deletes content
+- Content-only user changes layout/design
+- Any action occurs without being logged
+- Logs can be modified, deleted, or disabled
+
+────────────────────────────────
+SYSTEM PHILOSOPHY
+────────────────────────────────
+
+Content writers should feel:
+“I am inside a clean writing studio.”
+
+They should NEVER feel:
+“I am inside an admin panel.”
+
+This is a professional publishing CMS.
+No blurred permissions.
+No shared interfaces.
+No shortcuts.

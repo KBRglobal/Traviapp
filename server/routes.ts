@@ -602,20 +602,16 @@ export async function registerRoutes(
 
   app.get("/api/contents", async (req, res) => {
     try {
-      const { type, status, search, includeExtensions } = req.query;
+      const { type, status, search } = req.query;
       const filters = {
         type: type as string | undefined,
         status: status as string | undefined,
         search: search as string | undefined,
       };
       
-      if (includeExtensions === "true") {
-        const contents = await storage.getContentsWithRelations(filters);
-        res.json(contents);
-      } else {
-        const contents = await storage.getContents(filters);
-        res.json(contents);
-      }
+      // Always include relations (author, type-specific extensions) for consistency
+      const contents = await storage.getContentsWithRelations(filters);
+      res.json(contents);
     } catch (error) {
       console.error("Error fetching contents:", error);
       res.status(500).json({ error: "Failed to fetch contents" });

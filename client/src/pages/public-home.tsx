@@ -1,8 +1,8 @@
-import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Sparkles, Menu, MapPin, Star, Clock, ChevronRight, X, Bed, FileText } from "lucide-react";
+import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Sparkles, Menu, MapPin, Star, Clock, ChevronRight, X, Bed, FileText, User } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
-import type { Content } from "@shared/schema";
+import type { Content, ContentWithRelations } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ interface HomepagePromotion {
   isActive: boolean;
   customTitle: string | null;
   customImage: string | null;
-  content?: Content;
+  content?: ContentWithRelations;
 }
 
 const defaultPlaceholderImages = [
@@ -195,9 +195,10 @@ function AttractionCard({ content, index }: { content: Content; index: number })
   );
 }
 
-function ArticleCard({ content, index, featured = false }: { content: Content; index: number; featured?: boolean }) {
+function ArticleCard({ content, index, featured = false }: { content: ContentWithRelations; index: number; featured?: boolean }) {
   const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
   const contentPath = `/articles/${content.slug}`;
+  const authorName = content.author ? `${content.author.firstName || ''} ${content.author.lastName || ''}`.trim() : null;
   
   if (featured) {
     return (
@@ -223,9 +224,15 @@ function ArticleCard({ content, index, featured = false }: { content: Content; i
                 <h3 className="font-heading text-xl font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
                   {content.title}
                 </h3>
-                <p className="text-sm text-muted-foreground line-clamp-3">
+                <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
                   {content.metaDescription || "Discover insights and tips for your Dubai adventure."}
                 </p>
+                {authorName && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <User className="w-3 h-3" aria-hidden="true" />
+                    <span data-testid="text-author-name">{authorName}</span>
+                  </div>
+                )}
               </div>
             </div>
           </Card>
@@ -256,6 +263,12 @@ function ArticleCard({ content, index, featured = false }: { content: Content; i
             <h3 className="font-heading font-semibold text-foreground line-clamp-2 text-sm group-hover:text-primary transition-colors">
               {content.title}
             </h3>
+            {authorName && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                <User className="w-3 h-3" aria-hidden="true" />
+                <span data-testid="text-author-name">{authorName}</span>
+              </div>
+            )}
           </div>
         </Card>
       </article>
@@ -298,12 +311,12 @@ export default function PublicHome() {
   });
 
   // Fallback to published content if no promotions
-  const { data: publishedContent } = useQuery<Content[]>({
+  const { data: publishedContent } = useQuery<ContentWithRelations[]>({
     queryKey: ["/api/contents?status=published"],
   });
 
   // Get active content from promotions
-  const getActiveContent = (promotions: HomepagePromotion[]): Content[] => {
+  const getActiveContent = (promotions: HomepagePromotion[]): ContentWithRelations[] => {
     return promotions
       .filter(p => p.isActive && p.content)
       .map(p => p.content!)

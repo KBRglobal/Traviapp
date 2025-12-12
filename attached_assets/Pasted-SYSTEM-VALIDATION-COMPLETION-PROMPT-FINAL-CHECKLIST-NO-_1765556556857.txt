@@ -1,0 +1,194 @@
+SYSTEM VALIDATION & COMPLETION PROMPT – FINAL CHECKLIST (NO QUESTIONS)
+
+You are continuing development of the CMS with expanded roles, permissions, analytics,
+and content features as previously discussed.
+
+Before considering the work complete, you MUST verify and CONFIRM
+that ALL items below are fully implemented, connected, and working together as one system.
+
+────────────────────────────────
+BASELINE CONFIRMATION
+────────────────────────────────
+
+The system previously had:
+- Roles: admin, editor, viewer
+- Basic permissions only
+
+You have now expanded the system.
+You must ensure NOTHING from the old system contradicts the new rules.
+
+────────────────────────────────
+1) AUTHORS / WRITERS SYSTEM
+────────────────────────────────
+
+Ensure the following are implemented:
+
+- Content table includes:
+  - authorId (foreign key)
+  - author name resolved from users table
+- Each article displays:
+  - Author name publicly
+  - Author linked to profile (if exists)
+- Admin can:
+  - Create new authors
+  - Assign authors to content
+- Authors are NOT limited to a single email/user
+- Author assignment is logged in audit log
+- Author cannot be changed by content-only users
+
+────────────────────────────────
+2) USER ROLES & PERMISSIONS (STRICT)
+────────────────────────────────
+
+Ensure roles behave EXACTLY as defined:
+
+ADMIN:
+- Full access
+- Can manage users, permissions, settings, logs
+
+EDITOR:
+- Can review content
+- Can approve/reject
+- Can edit SEO, schema, affiliates
+- Cannot change system-level settings
+
+CONTENT WRITER / AUTHOR / CONTRIBUTOR:
+- Access ONLY content creation area
+- Cannot publish
+- Cannot delete
+- Cannot see settings, logs, analytics, users
+- Cannot access via direct URL
+- Cannot access via API
+- Locked editor (no layout/design/SEO access)
+
+VIEWER:
+- Read-only access if exists
+- No creation or editing
+
+All permission checks enforced at:
+UI
+API
+Database / middleware
+
+────────────────────────────────
+3) AUDIT LOG SYSTEM (MANDATORY)
+────────────────────────────────
+
+Verify that:
+
+- EVERY action is logged
+- Logs are append-only
+- Logs cannot be edited, deleted, or disabled
+- Logs include:
+  - User
+  - Role at time of action
+  - Timestamp
+  - Entity
+  - Before/after state
+  - IP + user agent
+
+Confirm logs exist for:
+- Content creation
+- Content edits
+- Author assignment
+- Permission changes
+- Login/logout
+- Blocked access attempts
+- Image generation
+- Publishing actions
+
+Audit logs visible ONLY to admin/system roles.
+
+────────────────────────────────
+4) ANALYTICS PANEL (ADMIN ONLY)
+────────────────────────────────
+
+Ensure analytics system includes:
+
+- View count per article
+- Visitor statistics
+- Internal analytics dashboard
+- Charts and tables
+- Integration with Google Analytics
+- Analytics NOT visible to content writers
+- Analytics access logged in audit log
+
+────────────────────────────────
+5) CONTENT EDITOR (ELEMENTOR-LIKE, LOCKED)
+────────────────────────────────
+
+Ensure the editor:
+
+- Works like a word processor
+- Preserves design system
+- Prevents layout breaking
+- Auto-fits images to required sizes
+- Has “Generate Image” button:
+  - Reads content context
+  - Generates image prompt
+  - Generates filename, ALT, caption
+- Does NOT allow:
+  - Custom HTML/CSS/JS
+  - Layout or style changes
+  - Removing required blocks
+
+────────────────────────────────
+6) HOME PAGE & CONTENT DISPLAY
+────────────────────────────────
+
+Ensure homepage includes:
+
+- Main featured article (hero)
+- Secondary articles grid
+- Category sections
+- Trending content
+- Dynamic content population from CMS
+- All links route correctly to content pages
+
+────────────────────────────────
+7) HOT ATTRACTIONS SECTION
+────────────────────────────────
+
+Ensure:
+
+- Dedicated “Hot Attractions” section exists
+- Data pulled from attractions content type
+- Each card includes CTA to affiliate booking
+- Section is editable via admin CMS
+- Clicks tracked (analytics + logs)
+
+────────────────────────────────
+8) SYSTEM INTEGRATION CHECK
+────────────────────────────────
+
+Verify that:
+
+- Roles, permissions, editor, analytics, logs all work together
+- No role can access what it should not
+- No feature bypasses permissions
+- No action occurs without logging
+- No UI element appears without permission
+- No API endpoint bypasses rules
+
+────────────────────────────────
+FINAL DELIVERY REQUIREMENT
+────────────────────────────────
+
+After completion, provide a CLEAR CONFIRMATION LIST:
+
+- [ ] Authors system complete
+- [ ] Permissions enforced everywhere
+- [ ] Audit log complete and immutable
+- [ ] Analytics working and restricted
+- [ ] Editor locked and stable
+- [ ] Homepage sections working
+- [ ] Hot attractions live
+- [ ] No security or permission gaps
+
+If ANY checkbox cannot be honestly checked,
+the system is NOT ready.
+
+This is a production-grade CMS.
+Everything must connect.
+Everything must be enforced.
+Everything must be logged.

@@ -17,6 +17,7 @@ import {
   contentVersions,
   translations,
   contentFingerprints,
+  contentViews,
   type User,
   type InsertUser,
   type UpsertUser,
@@ -54,6 +55,8 @@ import {
   type HomepagePromotion,
   type InsertHomepagePromotion,
   type HomepageSection,
+  type ContentView,
+  type InsertContentView,
   homepagePromotions,
 } from "@shared/schema";
 
@@ -262,6 +265,12 @@ export class DatabaseStorage implements IStorage {
         const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, content.id));
         result.itinerary = itinerary;
       }
+
+      // Fetch author if authorId exists
+      if (content.authorId) {
+        const [author] = await db.select().from(users).where(eq(users.id, content.authorId));
+        result.author = author;
+      }
       
       results.push(result);
     }
@@ -295,6 +304,12 @@ export class DatabaseStorage implements IStorage {
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, id));
     result.translations = await db.select().from(translations).where(eq(translations.contentId, id));
 
+    // Fetch author if authorId exists
+    if (content.authorId) {
+      const [author] = await db.select().from(users).where(eq(users.id, content.authorId));
+      result.author = author;
+    }
+
     return result;
   }
 
@@ -323,6 +338,12 @@ export class DatabaseStorage implements IStorage {
 
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, content.id));
     result.translations = await db.select().from(translations).where(eq(translations.contentId, content.id));
+
+    // Fetch author if authorId exists
+    if (content.authorId) {
+      const [author] = await db.select().from(users).where(eq(users.id, content.authorId));
+      result.author = author;
+    }
 
     return result;
   }
