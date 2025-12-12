@@ -45,9 +45,26 @@ interface AuditLogsResponse {
   offset: number;
 }
 
-interface Permissions {
+interface PermissionsResponse {
+  role?: string;
+  permissions?: {
+    canViewAuditLogs?: boolean;
+    [key: string]: boolean | undefined;
+  };
+  // Support flat permissions for backward compatibility
   canViewAuditLogs?: boolean;
-  [key: string]: boolean | undefined;
+  [key: string]: boolean | string | { [key: string]: boolean | undefined } | undefined;
+}
+
+// Helper to extract canViewAuditLogs from response
+function getCanViewAuditLogs(response: PermissionsResponse | undefined): boolean {
+  if (!response) return false;
+  // Handle nested permissions object from API
+  if (response.permissions?.canViewAuditLogs !== undefined) {
+    return response.permissions.canViewAuditLogs === true;
+  }
+  // Handle flat permissions for backward compatibility
+  return response.canViewAuditLogs === true;
 }
 
 const ACTION_ICONS: Record<string, typeof Plus> = {
@@ -92,9 +109,11 @@ export default function AuditLogs() {
   const [page, setPage] = useState(0);
   const pageSize = 25;
 
-  const { data: permissions, isLoading: permissionsLoading } = useQuery<Permissions>({
+  const { data: permissionsResponse, isLoading: permissionsLoading } = useQuery<PermissionsResponse>({
     queryKey: ["/api/user/permissions"],
   });
+
+  const canViewAuditLogs = getCanViewAuditLogs(permissionsResponse);
 
   const { data, isLoading } = useQuery<AuditLogsResponse>({
     queryKey: ["/api/audit-logs", { 
@@ -103,10 +122,10 @@ export default function AuditLogs() {
       limit: pageSize, 
       offset: page * pageSize 
     }],
-    enabled: permissions?.canViewAuditLogs === true,
+    enabled: canViewAuditLogs,
   });
 
-  if (!permissionsLoading && permissions && !permissions.canViewAuditLogs) {
+  if (!permissionsLoading && permissionsResponse && !canViewAuditLogs) {
     return <Redirect to="/access-denied" />;
   }
 

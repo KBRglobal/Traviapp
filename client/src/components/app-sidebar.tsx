@@ -45,8 +45,13 @@ type PermissionKey =
   | "canViewAnalytics" | "canViewAuditLogs" | "canAccessMediaLibrary" 
   | "canAccessAffiliates" | "canViewAll";
 
-interface Permissions {
-  [key: string]: boolean;
+interface PermissionsResponse {
+  role?: string;
+  permissions?: {
+    [key: string]: boolean;
+  };
+  // Also support flat permissions for backward compatibility
+  [key: string]: boolean | string | { [key: string]: boolean } | undefined;
 }
 
 const contentItems = [
@@ -171,17 +176,28 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const [location, setLocation] = useLocation();
 
   // Fetch user permissions
-  const { data: permissions, isLoading: permissionsLoading } = useQuery<Permissions>({
+  const { data: permissionsResponse, isLoading: permissionsLoading } = useQuery<PermissionsResponse>({
     queryKey: ["/api/user/permissions"],
     enabled: !!user,
   });
+
+  // Helper to check permission - handles both nested { role, permissions: {...} } and flat {...} formats
+  const hasPermission = (permission: PermissionKey): boolean => {
+    if (!permissionsResponse) return false;
+    // First check nested permissions object (current API format)
+    if (permissionsResponse.permissions?.[permission] !== undefined) {
+      return permissionsResponse.permissions[permission] === true;
+    }
+    // Fallback to flat permissions for backward compatibility
+    return permissionsResponse[permission] === true;
+  };
 
   // Filter management items based on permissions (hide restricted items while loading for security)
   const visibleManagementItems = permissionsLoading 
     ? managementItems.filter((item) => !item.requiredPermission) // Only show items without permission requirements while loading
     : managementItems.filter((item) => {
         if (!item.requiredPermission) return true;
-        return permissions?.[item.requiredPermission] === true;
+        return hasPermission(item.requiredPermission);
       });
 
   // Filter system items based on permissions (hide restricted items while loading for security)
@@ -189,11 +205,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
     ? systemItems.filter((item) => !item.requiredPermission) // Only show items without permission requirements while loading
     : systemItems.filter((item) => {
         if (!item.requiredPermission) return true;
-        return permissions?.[item.requiredPermission] === true;
+        return hasPermission(item.requiredPermission);
       });
 
   // Check if user can manage users (hide while loading for security)
-  const canManageUsers = !permissionsLoading && permissions?.canManageUsers;
+  const canManageUsers = !permissionsLoading && hasPermission("canManageUsers");
 
   const logoutMutation = useMutation({
     mutationFn: async () => {

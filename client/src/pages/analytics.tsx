@@ -87,38 +87,57 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-interface Permissions {
+interface PermissionsResponse {
+  role?: string;
+  permissions?: {
+    canViewAnalytics?: boolean;
+    [key: string]: boolean | undefined;
+  };
+  // Support flat permissions for backward compatibility
   canViewAnalytics?: boolean;
-  [key: string]: boolean | undefined;
+  [key: string]: boolean | string | { [key: string]: boolean | undefined } | undefined;
+}
+
+// Helper to extract canViewAnalytics from response
+function getCanViewAnalytics(response: PermissionsResponse | undefined): boolean {
+  if (!response) return false;
+  // Handle nested permissions object from API
+  if (response.permissions?.canViewAnalytics !== undefined) {
+    return response.permissions.canViewAnalytics === true;
+  }
+  // Handle flat permissions for backward compatibility
+  return response.canViewAnalytics === true;
 }
 
 export default function Analytics() {
-  const { data: permissions, isLoading: permissionsLoading } = useQuery<Permissions>({
+  const { data: permissionsResponse, isLoading: permissionsLoading } = useQuery<PermissionsResponse>({
     queryKey: ["/api/user/permissions"],
   });
 
+  const canViewAnalytics = getCanViewAnalytics(permissionsResponse);
+
   const { data: overview, isLoading: overviewLoading } = useQuery<AnalyticsOverview>({
     queryKey: ["/api/analytics/overview"],
-    enabled: permissions?.canViewAnalytics === true,
+    enabled: canViewAnalytics,
   });
 
   const { data: viewsOverTime, isLoading: viewsLoading } = useQuery<ViewsOverTime[]>({
     queryKey: ["/api/analytics/views-over-time", { days: 30 }],
-    enabled: permissions?.canViewAnalytics === true,
+    enabled: canViewAnalytics,
   });
 
   const { data: topContent, isLoading: topLoading } = useQuery<TopContent[]>({
     queryKey: ["/api/analytics/top-content", { limit: 10 }],
-    enabled: permissions?.canViewAnalytics === true,
+    enabled: canViewAnalytics,
   });
 
   const { data: viewsByType, isLoading: typeLoading } = useQuery<ViewsByType[]>({
     queryKey: ["/api/analytics/by-content-type"],
-    enabled: permissions?.canViewAnalytics === true,
+    enabled: canViewAnalytics,
   });
 
   // Redirect if user doesn't have permission
-  if (!permissionsLoading && permissions && !permissions.canViewAnalytics) {
+  if (!permissionsLoading && permissionsResponse && !canViewAnalytics) {
     return <Redirect to="/access-denied" />;
   }
 

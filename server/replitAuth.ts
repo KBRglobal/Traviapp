@@ -75,7 +75,12 @@ export async function setupAuth(app: Express) {
     verified: passport.AuthenticateCallback
   ) => {
     const claims = tokens.claims();
-    const email = claims["email"];
+    if (!claims) {
+      console.log(`Login rejected: no claims provided`);
+      return verified(new Error("Authentication claims are required."), undefined);
+    }
+    
+    const email = claims["email"] as string | undefined;
     
     if (!email) {
       console.log(`Login rejected: no email provided`);
