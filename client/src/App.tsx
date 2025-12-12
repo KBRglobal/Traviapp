@@ -15,6 +15,8 @@ import PublicDistricts from "@/pages/public-districts";
 import PublicTransport from "@/pages/public-transport";
 import PublicSearch from "@/pages/public-search";
 import PublicContentDetail from "@/pages/public-content-detail";
+import PublicCurrency from "@/pages/public-currency";
+import PublicBudget from "@/pages/public-budget";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsConditions from "@/pages/terms-conditions";
 import Dashboard from "@/pages/dashboard";
@@ -111,6 +113,8 @@ function App() {
             <Route path="/transport" component={PublicTransport} />
             <Route path="/transport/:slug" component={PublicContentDetail} />
             <Route path="/search" component={PublicSearch} />
+            <Route path="/tools/currency" component={PublicCurrency} />
+            <Route path="/tools/budget" component={PublicBudget} />
             <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/terms" component={TermsConditions} />
             <Route component={NotFound} />
