@@ -33,6 +33,7 @@ import RssFeeds from "@/pages/rss-feeds";
 import AffiliateLinks from "@/pages/affiliate-links";
 import MediaLibrary from "@/pages/media-library";
 import Settings from "@/pages/settings";
+import AIArticleGenerator from "@/pages/ai-article-generator";
 import NotFound from "@/pages/not-found";
 
 function AdminRouter() {
@@ -58,6 +59,7 @@ function AdminRouter() {
       <Route path="/admin/articles/new" component={ContentEditor} />
       <Route path="/admin/articles/:id" component={ContentEditor} />
       <Route path="/admin/rss-feeds" component={RssFeeds} />
+      <Route path="/admin/ai-generator" component={AIArticleGenerator} />
       <Route path="/admin/affiliate-links" component={AffiliateLinks} />
       <Route path="/admin/media" component={MediaLibrary} />
       <Route path="/admin/settings" component={Settings} />

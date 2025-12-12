@@ -23,6 +23,7 @@ import {
   UtensilsCrossed,
   Map,
   Train,
+  Sparkles,
 } from "lucide-react";
 import { Mascot } from "@/components/logo";
 
@@ -65,6 +66,11 @@ const contentItems = [
 ];
 
 const managementItems = [
+  {
+    title: "AI Generator",
+    url: "/admin/ai-generator",
+    icon: Sparkles,
+  },
   {
     title: "RSS Feeds",
     url: "/admin/rss-feeds",
