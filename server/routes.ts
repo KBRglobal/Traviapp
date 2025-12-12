@@ -133,6 +133,207 @@ async function parseRssFeed(url: string): Promise<{ title: string; link: string;
   }
 }
 
+// Persist DALL-E image to object storage (DALL-E URLs expire in ~1 hour)
+async function persistImageToStorage(imageUrl: string, filename: string): Promise<string | null> {
+  const client = getObjectStorageClient();
+  if (!client) {
+    console.warn("Object storage not configured, cannot persist image");
+    return null;
+  }
+  
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      console.error(`Failed to fetch image: ${response.status}`);
+      return null;
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    const storagePath = `public/generated/${filename}`;
+    await client.uploadFromBytes(storagePath, buffer);
+    
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : '';
+    
+    return `${baseUrl}/api/media/public/${encodeURIComponent(storagePath)}`;
+  } catch (error) {
+    console.error("Error persisting image to storage:", error);
+    return null;
+  }
+}
+
+// Validate and normalize AI-generated content blocks
+interface ContentBlock {
+  type: string;
+  data: Record<string, unknown>;
+}
+
+function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBlock[] {
+  if (!Array.isArray(blocks) || blocks.length === 0) {
+    return createDefaultBlocks(title);
+  }
+  
+  const normalizedBlocks: ContentBlock[] = [];
+  const blockTypes = new Set<string>();
+  
+  for (const block of blocks) {
+    if (typeof block !== 'object' || !block) continue;
+    const b = block as Record<string, unknown>;
+    if (typeof b.type !== 'string' || !b.data) continue;
+    
+    const normalized = normalizeBlock(b.type, b.data as Record<string, unknown>);
+    if (normalized) {
+      normalizedBlocks.push(normalized);
+      blockTypes.add(normalized.type);
+    }
+  }
+  
+  // Ensure required block types exist
+  if (!blockTypes.has('hero')) {
+    normalizedBlocks.unshift({
+      type: 'hero',
+      data: { title, subtitle: 'Discover Dubai Travel', overlayText: '' }
+    });
+  }
+  
+  if (!blockTypes.has('highlights')) {
+    normalizedBlocks.push({
+      type: 'highlights',
+      data: { 
+        title: 'Key Highlights',
+        items: ['Key attraction feature', 'Unique experience offered', 'Must-see element', 'Popular activity', 'Essential stop', 'Notable landmark']
+      }
+    });
+  }
+  
+  if (!blockTypes.has('tips')) {
+    normalizedBlocks.push({
+      type: 'tips',
+      data: { 
+        title: 'Expert Tips',
+        tips: ['Plan your visit during cooler months', 'Book tickets in advance', 'Arrive early to avoid crowds', 'Bring comfortable walking shoes', 'Stay hydrated', 'Check dress codes beforehand', 'Consider guided tours for insights']
+      }
+    });
+  }
+  
+  if (!blockTypes.has('faq')) {
+    normalizedBlocks.push({
+      type: 'faq',
+      data: { 
+        title: 'Frequently Asked Questions',
+        faqs: [
+          { question: 'What are the opening hours?', answer: 'Opening hours vary by season. Check the official website for current timings.' },
+          { question: 'How much does entry cost?', answer: 'Pricing varies depending on the package selected. Visit the official website for current rates.' },
+          { question: 'Is parking available?', answer: 'Yes, parking is available on-site for visitors.' },
+          { question: 'Are there any accessibility options?', answer: 'Wheelchair access and accessibility services are available.' },
+          { question: 'Can I bring food and drinks?', answer: 'Outside food may be restricted. Check venue policies before visiting.' }
+        ]
+      }
+    });
+  }
+  
+  if (!blockTypes.has('cta')) {
+    normalizedBlocks.push({
+      type: 'cta',
+      data: { 
+        title: 'Plan Your Visit',
+        content: 'Ready to experience this amazing destination? Book your trip today!',
+        buttonText: 'Book Now',
+        buttonLink: '#'
+      }
+    });
+  }
+  
+  return normalizedBlocks;
+}
+
+function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlock | null {
+  switch (type) {
+    case 'hero':
+      return { type, data };
+      
+    case 'text':
+      return { type, data };
+      
+    case 'highlights':
+      // Ensure items array exists with at least 4 items
+      let items = data.items;
+      if (!Array.isArray(items) || items.length < 4) {
+        items = items && Array.isArray(items) ? items : [];
+        while (items.length < 4) {
+          items.push(`Key highlight ${items.length + 1}`);
+        }
+      }
+      return { type, data: { ...data, items } };
+      
+    case 'tips':
+      // Normalize tips array - accept "tips" or "items"
+      let tips = data.tips || data.items;
+      if (!Array.isArray(tips) || tips.length < 5) {
+        tips = tips && Array.isArray(tips) ? tips : [];
+        const defaultTips = ['Visit during off-peak hours', 'Book in advance', 'Wear comfortable clothing', 'Stay hydrated', 'Check local customs', 'Download offline maps', 'Carry local currency'];
+        while (tips.length < 5) {
+          tips.push(defaultTips[tips.length] || `Tip ${tips.length + 1}`);
+        }
+      }
+      return { type, data: { ...data, tips } };
+      
+    case 'faq':
+      // Normalize FAQ structure - accept "faqs" or "items"
+      let faqs = data.faqs || data.items;
+      if (!Array.isArray(faqs) || faqs.length < 3) {
+        faqs = faqs && Array.isArray(faqs) ? faqs : [];
+        const defaultFaqs = [
+          { question: 'What is the best time to visit?', answer: 'The best time to visit is during the cooler months from November to March.' },
+          { question: 'How do I get there?', answer: 'You can reach the destination via taxi, metro, or private transfer.' },
+          { question: 'What should I wear?', answer: 'Dress modestly and wear comfortable shoes for walking.' }
+        ];
+        while (faqs.length < 3) {
+          faqs.push(defaultFaqs[faqs.length] || { question: `Question ${faqs.length + 1}?`, answer: 'Please check with the venue for more details.' });
+        }
+      }
+      // Ensure each FAQ has question and answer
+      faqs = faqs.map((faq: unknown) => {
+        if (typeof faq !== 'object' || !faq) return { question: 'Question?', answer: 'Answer pending.' };
+        const f = faq as Record<string, unknown>;
+        return {
+          question: f.question || f.q || 'Question?',
+          answer: f.answer || f.a || 'Answer pending.'
+        };
+      });
+      return { type, data: { ...data, faqs } };
+      
+    case 'cta':
+      return { type, data };
+      
+    case 'image':
+    case 'gallery':
+    case 'info_grid':
+      return { type, data };
+      
+    default:
+      return { type, data };
+  }
+}
+
+function createDefaultBlocks(title: string): ContentBlock[] {
+  return [
+    { type: 'hero', data: { title, subtitle: 'Discover Dubai Travel', overlayText: '' } },
+    { type: 'text', data: { heading: 'Overview', content: 'Content generation incomplete. Please edit this article to add more details.' } },
+    { type: 'highlights', data: { title: 'Key Highlights', items: ['Feature 1', 'Feature 2', 'Feature 3', 'Feature 4', 'Feature 5', 'Feature 6'] } },
+    { type: 'tips', data: { title: 'Expert Tips', tips: ['Plan ahead', 'Book in advance', 'Visit early morning', 'Stay hydrated', 'Respect local customs', 'Bring camera', 'Check weather'] } },
+    { type: 'faq', data: { title: 'FAQ', faqs: [
+      { question: 'What are the opening hours?', answer: 'Check official website for current hours.' },
+      { question: 'Is there parking?', answer: 'Yes, parking is available.' },
+      { question: 'What should I bring?', answer: 'Comfortable shoes, sunscreen, and water.' }
+    ] } },
+    { type: 'cta', data: { title: 'Book Your Visit', content: 'Plan your trip today!', buttonText: 'Book Now', buttonLink: '#' } }
+  ];
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -1792,48 +1993,92 @@ OUTPUT FORMAT - Return valid JSON matching this exact structure:
   "title": "SEO-optimized article title (50-65 chars)",
   "metaDescription": "Compelling meta description (150-160 chars)",
   "slug": "url-friendly-slug",
+  "heroImageAlt": "Descriptive alt text for hero image",
   "blocks": [
     {
       "type": "hero",
       "data": {
         "title": "Main article headline",
-        "subtitle": "Engaging subtitle"
+        "subtitle": "Engaging subtitle",
+        "overlayText": "Brief tagline or context"
       }
     },
     {
       "type": "text",
       "data": {
-        "heading": "Section heading",
-        "content": "Detailed paragraph content with proper formatting..."
+        "heading": "Introduction",
+        "content": "Engaging introduction paragraph (200-300 words)..."
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "heading": "Section 2 heading",
+        "content": "Detailed paragraph content (200-300 words)..."
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "heading": "Section 3 heading",
+        "content": "Detailed paragraph content (200-300 words)..."
       }
     },
     {
       "type": "highlights",
       "data": {
         "title": "Key Highlights",
-        "items": ["Highlight 1", "Highlight 2", "Highlight 3"]
+        "items": ["Highlight 1", "Highlight 2", "Highlight 3", "Highlight 4", "Highlight 5", "Highlight 6"]
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "heading": "Practical Information",
+        "content": "Useful practical details for travelers..."
+      }
+    },
+    {
+      "type": "tips",
+      "data": {
+        "title": "Expert Tips",
+        "tips": ["Detailed tip 1", "Detailed tip 2", "Detailed tip 3", "Detailed tip 4", "Detailed tip 5", "Detailed tip 6", "Detailed tip 7"]
       }
     },
     {
       "type": "faq",
       "data": {
         "title": "Frequently Asked Questions",
-        "items": [
-          {"question": "Q1?", "answer": "Detailed answer 1..."},
-          {"question": "Q2?", "answer": "Detailed answer 2..."}
+        "faqs": [
+          {"question": "Q1?", "answer": "Detailed answer (100-150 words)..."},
+          {"question": "Q2?", "answer": "Detailed answer (100-150 words)..."},
+          {"question": "Q3?", "answer": "Detailed answer (100-150 words)..."},
+          {"question": "Q4?", "answer": "Detailed answer (100-150 words)..."},
+          {"question": "Q5?", "answer": "Detailed answer (100-150 words)..."}
         ]
+      }
+    },
+    {
+      "type": "cta",
+      "data": {
+        "heading": "Ready to explore?",
+        "text": "Compelling call to action",
+        "buttonText": "Learn More",
+        "buttonLink": "#"
       }
     }
   ]
 }
 
 RULES:
-1. Article should be 800-1500 words
-2. Include 3-5 text sections with detailed content
-3. Add a highlights block with key takeaways
-4. Include 3-5 FAQ items with comprehensive answers
-5. Make content traveler-focused and SEO-optimized
-6. No fake data, invented prices, or unverifiable facts`;
+1. Article should be 1200-1800 words total across all text blocks
+2. Include 4-5 text sections with detailed content
+3. Add a highlights block with 6 key takeaways
+4. Include a tips block with 7 actionable expert tips - THIS IS REQUIRED
+5. Include 5 FAQ items with comprehensive 100-150 word answers - THIS IS REQUIRED
+6. Make content traveler-focused and SEO-optimized
+7. No fake data, invented prices, or unverifiable facts
+8. Include a CTA block at the end`;
 
       const userPrompt = `Generate a complete article for this Dubai travel topic:
 
@@ -1856,14 +2101,9 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
 
       const generated = JSON.parse(response.choices[0].message.content || "{}");
 
-      // Validate and ensure blocks array has content
-      let blocks = generated.blocks;
-      if (!Array.isArray(blocks) || blocks.length === 0) {
-        blocks = [
-          { type: "hero", data: { title: generated.title || topic.title, subtitle: topic.category || "" } },
-          { type: "text", data: { heading: "Overview", content: "Content generation incomplete. Please edit this article." } }
-        ];
-      }
+      // Validate and normalize blocks to ensure all required sections exist
+      const blocks = validateAndNormalizeBlocks(generated.blocks || [], generated.title || topic.title);
+      console.log(`Validated ${blocks.length} content blocks with types: ${blocks.map(b => b.type).join(', ')}`);
 
       // Create the content in the database
       const slug = generated.slug || topic.title
@@ -1871,12 +2111,41 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
 
+      // Generate hero image for the article and persist to storage
+      let heroImageUrl = null;
+      let generatedImages: GeneratedImage[] = [];
+      try {
+        console.log(`Generating images for article: ${generated.title || topic.title}`);
+        generatedImages = await generateContentImages({
+          contentType: 'article',
+          title: generated.title || topic.title,
+          description: generated.metaDescription || topic.title,
+          generateHero: true,
+          generateContentImages: false,
+        });
+        
+        if (generatedImages.length > 0) {
+          const heroImage = generatedImages.find(img => img.type === 'hero');
+          if (heroImage) {
+            // Persist to object storage (DALL-E URLs expire in ~1 hour)
+            const persistedUrl = await persistImageToStorage(heroImage.url, heroImage.filename);
+            heroImageUrl = persistedUrl || heroImage.url; // Fallback to temp URL if persist fails
+            console.log(`Hero image persisted: ${heroImageUrl}`);
+          }
+        }
+      } catch (imageError) {
+        console.error("Error generating images for article:", imageError);
+        // Continue without images - don't fail the whole article generation
+      }
+
       const content = await storage.createContent({
         title: generated.title || topic.title,
         slug: `${slug}-${Date.now()}`,
         type: "article",
         status: "draft",
         metaDescription: generated.metaDescription || null,
+        heroImage: heroImageUrl,
+        heroImageAlt: generated.heroImageAlt || `${generated.title || topic.title} - Dubai Travel`,
         blocks: blocks,
       });
 
@@ -1888,6 +2157,7 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
       res.status(201).json({ 
         content, 
         generated,
+        images: generatedImages,
         message: "Article generated successfully from topic"
       });
     } catch (error) {
@@ -1942,8 +2212,10 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
                 role: "system",
                 content: `You are an expert Dubai travel content writer. Generate a complete, SEO-optimized article.
 
-Return JSON with: title, metaDescription, slug, blocks (array with hero, text sections, highlights, faq).
-Article should be 800-1500 words, traveler-focused, no fake data.`,
+Return JSON with: title, metaDescription, slug, heroImageAlt, blocks (array with hero, 4-5 text sections, highlights with 6 items, tips with 7 tips, faq with 5 items using "faqs" key, cta).
+Article should be 1200-1800 words, traveler-focused, no fake data.
+IMPORTANT: Include a "tips" block with "tips" array containing 7 actionable tips.
+IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with "question" and "answer" keys.`,
               },
               {
                 role: "user",
@@ -1961,13 +2233,31 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/^-|-$/g, "");
 
-          // Validate and ensure blocks array has content
-          let blocks = generated.blocks;
-          if (!Array.isArray(blocks) || blocks.length === 0) {
-            blocks = [
-              { type: "hero", data: { title: generated.title || topic.title, subtitle: topic.category || "" } },
-              { type: "text", data: { heading: "Overview", content: "Content generation incomplete. Please edit this article." } }
-            ];
+          // Validate and normalize blocks to ensure all required sections exist
+          const blocks = validateAndNormalizeBlocks(generated.blocks || [], generated.title || topic.title);
+
+          // Generate hero image for the article and persist to storage
+          let heroImageUrl = null;
+          try {
+            console.log(`Generating images for batch article: ${generated.title || topic.title}`);
+            const batchImages = await generateContentImages({
+              contentType: 'article',
+              title: generated.title || topic.title,
+              description: generated.metaDescription || topic.title,
+              generateHero: true,
+              generateContentImages: false,
+            });
+            
+            if (batchImages.length > 0) {
+              const heroImage = batchImages.find(img => img.type === 'hero');
+              if (heroImage) {
+                // Persist to object storage (DALL-E URLs expire in ~1 hour)
+                const persistedUrl = await persistImageToStorage(heroImage.url, heroImage.filename);
+                heroImageUrl = persistedUrl || heroImage.url;
+              }
+            }
+          } catch (imageError) {
+            console.error(`Error generating images for batch article ${topic.title}:`, imageError);
           }
 
           const content = await storage.createContent({
@@ -1976,13 +2266,15 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
             type: "article",
             status: "draft",
             metaDescription: generated.metaDescription || null,
+            heroImage: heroImageUrl,
+            heroImageAlt: generated.heroImageAlt || `${generated.title || topic.title} - Dubai Travel`,
             blocks: blocks,
           });
 
           await storage.createArticle({ contentId: content.id, category: topic.category });
           await storage.incrementTopicUsage(topic.id);
 
-          results.push({ topicId: topic.id, topicTitle: topic.title, contentId: content.id, success: true });
+          results.push({ topicId: topic.id, topicTitle: topic.title, contentId: content.id, hasImage: !!heroImageUrl, success: true });
         } catch (err) {
           console.error(`Error generating from topic ${topic.id}:`, err);
           results.push({ topicId: topic.id, topicTitle: topic.title, success: false, error: (err as Error).message });
