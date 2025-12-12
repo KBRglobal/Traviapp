@@ -1,0 +1,414 @@
+You are building a complete Admin CMS Editing System.
+For every page type (Hotels, Attractions, Dining, Districts, Transport, Articles, Homepage, Category Pages, Search Page, 404), the admin must be able to manually edit 100% of the page content.
+Do not generate design or content—create only the editable fields, structure, validation rules, and admin workflows.
+
+⸻
+
+GLOBAL EDITING RULES (APPLY TO ALL PAGE TYPES)
+
+SEO FIELDS (required for all pages):
+	•	Meta Title (55–60 chars, validator)
+	•	Meta Description (150–155 chars, validator)
+	•	Canonical URL
+	•	Slug editor
+	•	OG Title
+	•	OG Description
+	•	OG Image (upload)
+	•	Index/Noindex toggle
+	•	Auto SEO score indicator (keyword, length, readability)
+
+HERO SECTION:
+	•	Hero Image (upload + alt + title)
+	•	H1
+	•	Subtitle / Tagline
+	•	Primary CTA text
+	•	Primary CTA link
+	•	Optional badges / labels (rating, category, “from price”)
+
+QUICK INFO BAR:
+Each item editable:
+	•	Icon selector
+	•	Label
+	•	Value
+	•	Optional tooltip
+	•	Optional link
+
+OVERVIEW SECTION:
+	•	Short visible intro (3–4 sentences)
+	•	Expandable long intro (150–200 words)
+	•	WYSIWYG editor
+	•	Word count validator
+	•	Keyword density validator
+
+FEATURE / HIGHLIGHT CARDS:
+Admin can:
+	•	Add / delete / reorder cards
+Each card fields:
+	•	Icon or image upload
+	•	ALT text
+	•	Title (H3)
+	•	Short description (1–2 sentences)
+
+ESSENTIAL INFO GRID:
+Admin can edit:
+	•	Grid layout
+	•	Each card: Icon, Title, Value, Optional small notes
+
+FAQ EDITOR:
+	•	Add / delete / reorder questions
+	•	Question field
+	•	Answer field (100–200 words)
+	•	Word count validator
+	•	Auto FAQ schema generator
+
+RELATED ITEMS:
+	•	Manual selection OR auto-mode
+	•	Editable CTA text
+	•	Ability to override card data
+	•	Reorder items
+
+FINAL CTA SECTION:
+	•	CTA headline
+	•	CTA button text
+	•	CTA link
+	•	Benefit bullet list (editable)
+	•	Style options (background, layout)
+
+SCHEMA MARKUP BUILDER:
+	•	Auto-generate JSON-LD for page type
+	•	Editable override for all fields
+	•	Types supported: Hotel, TouristAttraction, Restaurant, Article, District, Transport, FAQPage, BreadcrumbList
+
+MEDIA MANAGER:
+	•	Upload JPG/PNG/WebP
+	•	Auto-optimize (compress + resize)
+	•	Editable: ALT, caption, title, filenames
+	•	Replace image option
+
+PUBLISHING WORKFLOW:
+	•	Save Draft
+	•	Preview (desktop + mobile)
+	•	Version history + restore
+	•	Publish now
+	•	Schedule publish
+
+⸻
+
+PAGE TYPE: HOTELS – EDITABLE FIELDS
+
+HERO:
+	•	Image, H1, rating badge, area badge, CTA button + affiliate link
+
+QUICK INFO:
+	•	Location
+	•	Star rating
+	•	Facilities summary
+	•	Airport distance
+	•	“From price”
+	•	Review count
+
+OVERVIEW:
+	•	Short + long intro
+
+HIGHLIGHTS SECTION:
+	•	6–8 cards editable (icon/image/title/desc)
+
+ROOM TYPES:
+Repeatable block:
+	•	Room name
+	•	Room size (sqm)
+	•	Bed types
+	•	Features list (bullets)
+	•	Price-from text
+	•	Room image (upload)
+	•	Affiliate CTA link
+
+ESSENTIAL INFO GRID:
+	•	Check-in / Check-out
+	•	Parking
+	•	Pools
+	•	WiFi
+	•	Dining options
+	•	Family features
+	•	Fitness/spa
+(All editable)
+
+DINING SECTION:
+	•	Add restaurants
+	•	Restaurant name
+	•	Cuisine type
+	•	Signature dishes
+	•	Optional CTA
+
+ACTIVITIES SECTION:
+Editable highlights
+
+TRAVELER TIPS:
+	•	Add / reorder bullets
+
+FAQ:
+Editable
+
+RELATED HOTELS:
+Manual or auto
+
+⸻
+
+PAGE TYPE: ATTRACTIONS – EDITABLE FIELDS
+
+HERO:
+	•	Image
+	•	H1
+	•	Subtitle
+	•	CTA button (tickets)
+
+QUICK INFO:
+	•	Location
+	•	Opening hours
+	•	Price-from
+	•	Duration
+	•	Rating
+	•	Accessibility
+
+OVERVIEW:
+Short + long intro
+
+TICKET INFO:
+Repeatable:
+	•	Ticket type
+	•	Price
+	•	Notes
+	•	CTA affiliate link
+
+WHAT TO EXPECT:
+Editable highlight cards (image + title + desc)
+
+VISITOR TIPS:
+Editable bullets
+
+FAQ:
+Editable
+
+RELATED ATTRACTIONS:
+Selector
+
+⸻
+
+PAGE TYPE: DINING – EDITABLE FIELDS
+
+HERO:
+	•	Hero image
+	•	Restaurant tagline
+	•	CTA: Reserve Table
+
+QUICK INFO:
+	•	Location
+	•	Price range
+	•	Cuisine type
+	•	Dress code
+	•	Opening hours
+	•	Alcohol served toggle
+
+OVERVIEW:
+Short + long intro
+
+HIGHLIGHTS:
+Interior, chef, signature dishes, ambience (cards)
+
+MENU PREVIEW:
+Category + dishes + price
+
+BEST FOR:
+Checkbox list:
+	•	Couples
+	•	Families
+	•	Business
+	•	Groups
+
+FAQ:
+Editable
+
+RELATED RESTAURANTS:
+Selector
+
+⸻
+
+PAGE TYPE: DISTRICTS – EDITABLE FIELDS
+
+HERO:
+	•	Image
+	•	Subtitle
+
+QUICK INFO:
+	•	Geographic location
+	•	Area type
+	•	Best for (tags)
+	•	Access options
+
+OVERVIEW:
+Short + long intro
+
+HIGHLIGHTS:
+Landmarks
+Shopping
+Hotels
+Dining
+Activities
+(Editable cards)
+
+TOP HOTELS:
+Selector
+
+TOP DINING:
+Selector
+
+THINGS TO DO:
+Editable list with icons
+
+HOW TO GET THERE:
+Transport list
+
+FAQ:
+Editable
+
+RELATED DISTRICTS:
+Selector
+
+⸻
+
+PAGE TYPE: TRANSPORT – EDITABLE FIELDS
+
+HERO:
+	•	Hero image
+	•	CTA (Map, Book Taxi, etc.)
+
+QUICK INFO:
+	•	Operating hours
+	•	Coverage area
+	•	Price range
+	•	Best for
+
+OVERVIEW:
+Short + long intro
+
+FEATURES:
+Editable cards
+
+PRICING TABLE:
+Editable rows + columns
+
+HOW TO USE:
+Steps editor
+
+RESTRICTIONS:
+Editable list
+
+WARNINGS:
+Editable list
+
+FAQ:
+Editable
+
+RELATED CONTENT:
+Selector
+
+⸻
+
+PAGE TYPE: ARTICLES (RSS + Manual Editing)
+
+ALL AUTO-GENERATED TEXT MUST BE FULLY EDITABLE.
+
+EDITABLE FIELDS:
+	•	Title
+	•	Subtitle
+	•	Hero image
+	•	Intro paragraph
+	•	Section headers
+	•	Body content blocks
+	•	Quick Facts box
+	•	Pro Tips
+	•	Warnings
+	•	Image captions
+	•	FAQ (if used)
+	•	Related Articles
+
+INTERNAL ANALYSIS FIELDS (auto but editable):
+	•	Category selected (A–H)
+	•	Personality chosen
+	•	Tone
+	•	Structure used
+	•	Keywords used
+	•	Marketing words used
+
+UTILITIES:
+	•	Word count checker
+	•	Readability score
+	•	Duplicate-content warning
+	•	Keyword validator
+	•	Preview mode
+
+⸻
+
+PAGE TYPE: HOMEPAGE – EDITABLE FIELDS
+	•	Hero image
+	•	Tagline
+	•	Search bar placeholder text
+	•	Featured hotels (manual selection)
+	•	Featured attractions
+	•	Featured dining
+	•	Featured articles
+	•	SEO intro block
+	•	Footer links
+
+⸻
+
+PAGE TYPE: CATEGORY INDEX PAGES – EDITABLE FIELDS
+	•	Category header image
+	•	Page intro
+	•	Expandable long intro
+	•	Filters (toggle on/off)
+	•	Sorting logic (price, rating, popularity, A–Z)
+	•	Grid layout selector
+	•	Default thumbnail image override
+
+⸻
+
+PAGE TYPE: SEARCH RESULTS – EDITABLE FIELDS
+	•	Empty state text
+	•	Filters visibility toggles
+	•	Items per category
+	•	Ranking order rules
+	•	Ability to pin specific results
+
+⸻
+
+PAGE TYPE: 404 PAGE – EDITABLE FIELDS
+	•	Title text
+	•	Subtitle text
+	•	CTA button text + link
+	•	Suggested link list
+	•	Illustration image upload
+
+⸻
+
+CONTENT STORAGE FORMAT
+
+All page types must output JSON structures:
+
+{
+“hero”: {},
+“quickInfo”: [],
+“overview”: { “short”: “”, “long”: “” },
+“highlights”: [],
+“faq”: [],
+“related”: []
+}
+
+All blocks must be:
+	•	Editable
+	•	Reorderable
+	•	Version-controlled
+
+⸻
+
+END OF PROMPT

@@ -218,6 +218,18 @@ export const contentsRelations = relations(contents, ({ one, many }) => ({
     fields: [contents.id],
     references: [articles.contentId],
   }),
+  diningData: one(dining, {
+    fields: [contents.id],
+    references: [dining.contentId],
+  }),
+  district: one(districts, {
+    fields: [contents.id],
+    references: [districts.contentId],
+  }),
+  transport: one(transports, {
+    fields: [contents.id],
+    references: [transports.contentId],
+  }),
   affiliateLinks: many(affiliateLinks),
   sourceInternalLinks: many(internalLinks, { relationName: "sourceLinks" }),
   targetInternalLinks: many(internalLinks, { relationName: "targetLinks" }),
@@ -356,6 +368,18 @@ export const insertArticleSchema = createInsertSchema(articles).omit({
   id: true,
 });
 
+export const insertDiningSchema = createInsertSchema(dining).omit({
+  id: true,
+});
+
+export const insertDistrictSchema = createInsertSchema(districts).omit({
+  id: true,
+});
+
+export const insertTransportSchema = createInsertSchema(transports).omit({
+  id: true,
+});
+
 export const insertRssFeedSchema = createInsertSchema(rssFeeds).omit({
   id: true,
   createdAt: true,
@@ -388,6 +412,12 @@ export type InsertHotel = z.infer<typeof insertHotelSchema>;
 export type Hotel = typeof hotels.$inferSelect;
 export type InsertArticle = z.infer<typeof insertArticleSchema>;
 export type Article = typeof articles.$inferSelect;
+export type InsertDining = z.infer<typeof insertDiningSchema>;
+export type Dining = typeof dining.$inferSelect;
+export type InsertDistrict = z.infer<typeof insertDistrictSchema>;
+export type District = typeof districts.$inferSelect;
+export type InsertTransport = z.infer<typeof insertTransportSchema>;
+export type Transport = typeof transports.$inferSelect;
 export type InsertRssFeed = z.infer<typeof insertRssFeedSchema>;
 export type RssFeed = typeof rssFeeds.$inferSelect;
 export type InsertAffiliateLink = z.infer<typeof insertAffiliateLinkSchema>;
@@ -402,5 +432,8 @@ export type ContentWithRelations = Content & {
   attraction?: Attraction;
   hotel?: Hotel;
   article?: Article;
+  diningData?: Dining;
+  district?: District;
+  transport?: Transport;
   affiliateLinks?: AffiliateLink[];
 };
