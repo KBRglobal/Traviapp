@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Lightbulb, Trash2, Edit2, TrendingUp, Clock } from "lucide-react";
+import { Plus, Lightbulb, Trash2, Edit2, TrendingUp, Clock, Sparkles, Loader2 } from "lucide-react";
 import type { TopicBank } from "@shared/schema";
 
 type TopicCategory = "attractions" | "hotels" | "food" | "transport" | "events" | "tips" | "shopping" | "news";
@@ -22,6 +22,7 @@ export default function TopicBankPage() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<TopicBank | null>(null);
+  const [generatingTopicId, setGeneratingTopicId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<TopicCategory | "">("");
   const [keywords, setKeywords] = useState("");
@@ -72,6 +73,27 @@ export default function TopicBankPage() {
       apiRequest("PATCH", `/api/topic-bank/${id}`, { isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/topic-bank"] });
+    },
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setGeneratingTopicId(id);
+      const response = await apiRequest("POST", `/api/topic-bank/${id}/generate`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setGeneratingTopicId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/topic-bank"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
+      toast({ 
+        title: "Article Generated", 
+        description: `Created draft article: ${data.content?.title}` 
+      });
+    },
+    onError: () => {
+      setGeneratingTopicId(null);
+      toast({ title: "Failed to generate article", variant: "destructive" });
     },
   });
 
@@ -292,14 +314,26 @@ export default function TopicBankPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
                     size="sm"
                     className="flex-1"
+                    onClick={() => generateMutation.mutate(topic.id)}
+                    disabled={generatingTopicId !== null}
+                    data-testid={`button-generate-${topic.id}`}
+                  >
+                    {generatingTopicId === topic.id ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3 w-3 mr-1" />
+                    )}
+                    Generate
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => openEditDialog(topic)}
                     data-testid={`button-edit-${topic.id}`}
                   >
-                    <Edit2 className="h-3 w-3 mr-1" />
-                    Edit
+                    <Edit2 className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="outline"

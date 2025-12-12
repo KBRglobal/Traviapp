@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Sparkles,
@@ -55,6 +56,7 @@ const suggestions: SuggestionChip[] = [
 ];
 
 export function AIAssistant() {
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -65,7 +67,11 @@ export function AIAssistant() {
   const chatMutation = useMutation({
     mutationFn: async (prompt: string) => {
       const response = await apiRequest("POST", "/api/ai/assistant", { prompt });
-      return response.json();
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      return data;
     },
     onSuccess: (data) => {
       const assistantMessage: Message = {
@@ -77,13 +83,11 @@ export function AIAssistant() {
       setMessages((prev) => [...prev, assistantMessage]);
     },
     onError: (error) => {
-      const errorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: `I encountered an error: ${error.message}. Please try again.`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      toast({
+        title: "AI Assistant Error",
+        description: error.message || "Failed to get response. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 

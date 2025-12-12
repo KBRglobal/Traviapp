@@ -907,6 +907,11 @@ Return valid JSON-LD that can be embedded in a webpage.`,
   // AI Assistant Chat
   app.post("/api/ai/assistant", async (req, res) => {
     try {
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(500).json({ error: "OpenAI not configured" });
+      }
+
       const { prompt } = req.body;
 
       if (!prompt || typeof prompt !== "string") {
@@ -1018,6 +1023,242 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     } catch (error) {
       console.error("Error incrementing topic usage:", error);
       res.status(500).json({ error: "Failed to increment topic usage" });
+    }
+  });
+
+  // Auto-generate article from Topic Bank item
+  app.post("/api/topic-bank/:id/generate", async (req, res) => {
+    try {
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      }
+
+      const topic = await storage.getTopicBankItem(req.params.id);
+      if (!topic) {
+        return res.status(404).json({ error: "Topic not found" });
+      }
+
+      const keywordsContext = topic.keywords?.length 
+        ? `Target Keywords: ${topic.keywords.join(", ")}` 
+        : "";
+      
+      const outlineContext = topic.outline 
+        ? `Content Outline:\n${topic.outline}` 
+        : "";
+
+      const systemPrompt = `You are an expert Dubai travel content writer. Generate a complete, SEO-optimized article based on the provided topic information.
+
+OUTPUT FORMAT - Return valid JSON matching this exact structure:
+{
+  "title": "SEO-optimized article title (50-65 chars)",
+  "metaDescription": "Compelling meta description (150-160 chars)",
+  "slug": "url-friendly-slug",
+  "blocks": [
+    {
+      "type": "hero",
+      "data": {
+        "title": "Main article headline",
+        "subtitle": "Engaging subtitle"
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "heading": "Section heading",
+        "content": "Detailed paragraph content with proper formatting..."
+      }
+    },
+    {
+      "type": "highlights",
+      "data": {
+        "title": "Key Highlights",
+        "items": ["Highlight 1", "Highlight 2", "Highlight 3"]
+      }
+    },
+    {
+      "type": "faq",
+      "data": {
+        "title": "Frequently Asked Questions",
+        "items": [
+          {"question": "Q1?", "answer": "Detailed answer 1..."},
+          {"question": "Q2?", "answer": "Detailed answer 2..."}
+        ]
+      }
+    }
+  ]
+}
+
+RULES:
+1. Article should be 800-1500 words
+2. Include 3-5 text sections with detailed content
+3. Add a highlights block with key takeaways
+4. Include 3-5 FAQ items with comprehensive answers
+5. Make content traveler-focused and SEO-optimized
+6. No fake data, invented prices, or unverifiable facts`;
+
+      const userPrompt = `Generate a complete article for this Dubai travel topic:
+
+Topic: ${topic.title}
+Category: ${topic.category}
+${keywordsContext}
+${outlineContext}
+
+Create engaging, informative content that would appeal to Dubai travelers. Return valid JSON only.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 4096,
+      });
+
+      const generated = JSON.parse(response.choices[0].message.content || "{}");
+
+      // Validate and ensure blocks array has content
+      let blocks = generated.blocks;
+      if (!Array.isArray(blocks) || blocks.length === 0) {
+        blocks = [
+          { type: "hero", data: { title: generated.title || topic.title, subtitle: topic.category || "" } },
+          { type: "text", data: { heading: "Overview", content: "Content generation incomplete. Please edit this article." } }
+        ];
+      }
+
+      // Create the content in the database
+      const slug = generated.slug || topic.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      const content = await storage.createContent({
+        title: generated.title || topic.title,
+        slug: `${slug}-${Date.now()}`,
+        type: "article",
+        status: "draft",
+        metaDescription: generated.metaDescription || null,
+        blocks: blocks,
+      });
+
+      await storage.createArticle({ contentId: content.id, category: topic.category });
+      
+      // Increment topic usage
+      await storage.incrementTopicUsage(req.params.id);
+
+      res.status(201).json({ 
+        content, 
+        generated,
+        message: "Article generated successfully from topic"
+      });
+    } catch (error) {
+      console.error("Error generating article from topic:", error);
+      res.status(500).json({ error: "Failed to generate article from topic" });
+    }
+  });
+
+  // Batch auto-generate from priority topics (for when RSS lacks content)
+  app.post("/api/topic-bank/auto-generate", async (req, res) => {
+    try {
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      }
+
+      const { count = 1, category } = req.body;
+      const limit = Math.min(Math.max(1, count), 5); // Max 5 at a time
+
+      // Get high-priority active topics that haven't been used much
+      const topics = await storage.getTopicBankItems({ 
+        category, 
+        isActive: true 
+      });
+      
+      // Sort by priority (high first) and usage count (low first)
+      const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+      const sortedTopics = topics.sort((a, b) => {
+        const priorityDiff = (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
+        if (priorityDiff !== 0) return priorityDiff;
+        return (a.usageCount || 0) - (b.usageCount || 0);
+      }).slice(0, limit);
+
+      if (sortedTopics.length === 0) {
+        return res.json({ 
+          generated: [], 
+          message: "No active topics available for generation" 
+        });
+      }
+
+      const results = [];
+      for (const topic of sortedTopics) {
+        try {
+          const keywordsContext = topic.keywords?.length 
+            ? `Target Keywords: ${topic.keywords.join(", ")}` 
+            : "";
+          
+          const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              {
+                role: "system",
+                content: `You are an expert Dubai travel content writer. Generate a complete, SEO-optimized article.
+
+Return JSON with: title, metaDescription, slug, blocks (array with hero, text sections, highlights, faq).
+Article should be 800-1500 words, traveler-focused, no fake data.`,
+              },
+              {
+                role: "user",
+                content: `Generate article for: ${topic.title}\nCategory: ${topic.category}\n${keywordsContext}`,
+              },
+            ],
+            response_format: { type: "json_object" },
+            max_tokens: 4096,
+          });
+
+          const generated = JSON.parse(response.choices[0].message.content || "{}");
+          
+          const slug = generated.slug || topic.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
+
+          // Validate and ensure blocks array has content
+          let blocks = generated.blocks;
+          if (!Array.isArray(blocks) || blocks.length === 0) {
+            blocks = [
+              { type: "hero", data: { title: generated.title || topic.title, subtitle: topic.category || "" } },
+              { type: "text", data: { heading: "Overview", content: "Content generation incomplete. Please edit this article." } }
+            ];
+          }
+
+          const content = await storage.createContent({
+            title: generated.title || topic.title,
+            slug: `${slug}-${Date.now()}`,
+            type: "article",
+            status: "draft",
+            metaDescription: generated.metaDescription || null,
+            blocks: blocks,
+          });
+
+          await storage.createArticle({ contentId: content.id, category: topic.category });
+          await storage.incrementTopicUsage(topic.id);
+
+          results.push({ topicId: topic.id, topicTitle: topic.title, contentId: content.id, success: true });
+        } catch (err) {
+          console.error(`Error generating from topic ${topic.id}:`, err);
+          results.push({ topicId: topic.id, topicTitle: topic.title, success: false, error: (err as Error).message });
+        }
+      }
+
+      res.json({ 
+        generated: results.filter(r => r.success),
+        failed: results.filter(r => !r.success),
+        message: `Generated ${results.filter(r => r.success).length} of ${sortedTopics.length} articles`
+      });
+    } catch (error) {
+      console.error("Error in batch topic generation:", error);
+      res.status(500).json({ error: "Failed to batch generate from topics" });
     }
   });
 
