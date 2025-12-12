@@ -167,6 +167,19 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/contents/slug/:slug", async (req, res) => {
+    try {
+      const content = await storage.getContentBySlug(req.params.slug);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      res.json(content);
+    } catch (error) {
+      console.error("Error fetching content by slug:", error);
+      res.status(500).json({ error: "Failed to fetch content" });
+    }
+  });
+
   app.post("/api/contents", requirePermission("canCreate"), async (req, res) => {
     try {
       const parsed = insertContentSchema.parse(req.body);

@@ -1,12 +1,158 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
-import { ArrowLeft, Star, MapPin, Clock, Share2, Heart, Menu, X } from "lucide-react";
-import type { Content } from "@shared/schema";
+import { ArrowLeft, Star, MapPin, Clock, Share2, Heart, Menu, X, Building2, ExternalLink } from "lucide-react";
+import type { ContentWithRelations, ContentBlock } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
+import { ContentBlocksRenderer } from "@/components/content-blocks-renderer";
+
+function generateJsonLd(content: ContentWithRelations, imageUrl: string): object | null {
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const pageUrl = `${baseUrl}/${content.slug}`;
+  
+  const schemas: object[] = [];
+  
+  // Base schema based on content type
+  if (content.type === 'hotel' && content.hotel) {
+    const hotelSchema: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": "Hotel",
+      name: content.title,
+      url: pageUrl,
+      image: imageUrl,
+    };
+    
+    if (content.metaDescription) {
+      hotelSchema.description = content.metaDescription;
+    }
+    if (content.hotel.location) {
+      hotelSchema.address = {
+        "@type": "PostalAddress",
+        addressLocality: content.hotel.location,
+        addressCountry: "UAE"
+      };
+    }
+    if (content.hotel.starRating) {
+      hotelSchema.starRating = {
+        "@type": "Rating",
+        ratingValue: content.hotel.starRating,
+        bestRating: 5
+      };
+    }
+    if (content.hotel.amenities && content.hotel.amenities.length > 0) {
+      hotelSchema.amenityFeature = content.hotel.amenities.map(amenity => ({
+        "@type": "LocationFeatureSpecification",
+        name: amenity
+      }));
+    }
+    if (content.hotel.numberOfRooms) {
+      hotelSchema.numberOfRooms = content.hotel.numberOfRooms;
+    }
+    if (content.hotel.checkInTime) {
+      hotelSchema.checkinTime = content.hotel.checkInTime;
+    }
+    if (content.hotel.checkOutTime) {
+      hotelSchema.checkoutTime = content.hotel.checkOutTime;
+    }
+    
+    schemas.push(hotelSchema);
+  } else if (content.type === 'attraction' && content.attraction) {
+    const attractionSchema: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": "TouristAttraction",
+      name: content.title,
+      url: pageUrl,
+      image: imageUrl,
+    };
+    
+    if (content.metaDescription) {
+      attractionSchema.description = content.metaDescription;
+    }
+    if (content.attraction.location) {
+      attractionSchema.address = {
+        "@type": "PostalAddress",
+        addressLocality: content.attraction.location,
+        addressCountry: "UAE"
+      };
+    }
+    if (content.attraction.targetAudience && content.attraction.targetAudience.length > 0) {
+      attractionSchema.touristType = content.attraction.targetAudience;
+    }
+    
+    schemas.push(attractionSchema);
+  } else if (content.type === 'article') {
+    const articleSchema: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: content.title,
+      url: pageUrl,
+      image: imageUrl,
+      author: {
+        "@type": "Organization",
+        name: "Dubai Travel"
+      },
+      publisher: {
+        "@type": "Organization",
+        name: "Dubai Travel"
+      }
+    };
+    
+    if (content.metaDescription) {
+      articleSchema.description = content.metaDescription;
+    }
+    if (content.createdAt) {
+      articleSchema.datePublished = content.createdAt;
+    }
+    if (content.updatedAt) {
+      articleSchema.dateModified = content.updatedAt;
+    }
+    
+    schemas.push(articleSchema);
+  }
+  
+  // Add FAQPage schema if there are FAQ blocks
+  const blocks = content.blocks as ContentBlock[] | undefined;
+  if (blocks && Array.isArray(blocks) && blocks.length > 0) {
+    const faqBlocks = blocks.filter(block => block.type === 'faq');
+    
+    if (faqBlocks.length > 0) {
+      const faqItems: { question: string; answer: string }[] = [];
+      faqBlocks.forEach(block => {
+        const data = block.data as { items?: { question: string; answer: string }[] } | undefined;
+        if (data?.items && Array.isArray(data.items)) {
+          data.items.forEach((item) => {
+            if (item.question && item.answer) {
+              faqItems.push(item);
+            }
+          });
+        }
+      });
+      
+      if (faqItems.length > 0) {
+        schemas.push({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqItems.map(item => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: item.answer
+            }
+          }))
+        });
+      }
+    }
+  }
+  
+  // Return null if no schemas, array if multiple, single object if one
+  if (schemas.length === 0) return null;
+  return schemas.length === 1 ? schemas[0] : schemas;
+}
 
 const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&h=600&fit=crop",
@@ -18,11 +164,11 @@ export default function PublicContentDetail() {
   const slug = params.slug;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  const { data: allContent, isLoading } = useQuery<Content[]>({
-    queryKey: ["/api/contents?status=published"],
+  const { data: content, isLoading } = useQuery<ContentWithRelations>({
+    queryKey: ["/api/contents/slug", slug],
+    enabled: !!slug,
   });
 
-  const content = allContent?.find(c => c.slug === slug);
   const contentType = content?.type || 'attraction';
   
   function getBackLink(type: string) {
@@ -57,6 +203,35 @@ export default function PublicContentDetail() {
     ogImage: imageUrl,
     ogType: "article",
   });
+
+  // Inject JSON-LD structured data into document head
+  useEffect(() => {
+    if (!content) return;
+    
+    const jsonLd = generateJsonLd(content, imageUrl);
+    
+    // Remove existing script if present
+    const existingScript = document.getElementById('json-ld-schema');
+    if (existingScript) {
+      existingScript.remove();
+    }
+    
+    // Only add script if we have valid JSON-LD data
+    if (jsonLd) {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.id = 'json-ld-schema';
+      script.textContent = JSON.stringify(jsonLd);
+      document.head.appendChild(script);
+    }
+    
+    return () => {
+      const scriptToRemove = document.getElementById('json-ld-schema');
+      if (scriptToRemove) {
+        scriptToRemove.remove();
+      }
+    };
+  }, [content, imageUrl]);
 
   const navLinks = [
     { href: "/hotels", label: "Hotels", type: "hotel" },
@@ -230,24 +405,35 @@ export default function PublicContentDetail() {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 mb-6">
-            <span className="px-3 py-1 bg-primary/10 text-primary rounded-full font-medium capitalize text-sm">
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <Badge variant="secondary" className="capitalize">
               {content.type}
-            </span>
-            <span className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Star className="w-4 h-4 fill-[#fdcd0a] text-[#fdcd0a]" aria-hidden="true" />
-              <span>4.8 Rating</span>
-              <span className="sr-only">out of 5 stars</span>
-            </span>
-            <span className="flex items-center gap-1 text-sm text-muted-foreground">
-              <MapPin className="w-4 h-4" aria-hidden="true" />
-              <span>Dubai, UAE</span>
-            </span>
-            {contentType === 'attraction' && (
+            </Badge>
+            {content.hotel?.starRating && (
+              <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                {Array.from({ length: content.hotel.starRating }).map((_, i) => (
+                  <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" aria-hidden="true" />
+                ))}
+                <span className="sr-only">{content.hotel.starRating} star hotel</span>
+              </span>
+            )}
+            {(content.attraction?.location || content.hotel?.location) && (
+              <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                <MapPin className="w-4 h-4" aria-hidden="true" />
+                <span>{content.attraction?.location || content.hotel?.location}</span>
+              </span>
+            )}
+            {content.attraction?.duration && (
               <span className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Clock className="w-4 h-4" aria-hidden="true" />
-                <span>2-4 hours</span>
+                <span>{content.attraction.duration}</span>
                 <span className="sr-only">typical visit duration</span>
+              </span>
+            )}
+            {content.hotel?.numberOfRooms && (
+              <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Building2 className="w-4 h-4" aria-hidden="true" />
+                <span>{content.hotel.numberOfRooms} rooms</span>
               </span>
             )}
           </div>
@@ -261,9 +447,21 @@ export default function PublicContentDetail() {
           </p>
 
           <div className="flex flex-wrap items-center gap-3 mb-12">
-            <Button className="bg-primary hover:bg-primary/90" data-testid="button-book-now">
-              Book Now
-            </Button>
+            {content.attraction?.primaryCta && (
+              <Button className="bg-primary hover:bg-primary/90" data-testid="button-primary-cta">
+                {content.attraction.primaryCta}
+              </Button>
+            )}
+            {content.hotel?.primaryCta && (
+              <Button className="bg-primary hover:bg-primary/90" data-testid="button-primary-cta">
+                {content.hotel.primaryCta}
+              </Button>
+            )}
+            {!content.attraction?.primaryCta && !content.hotel?.primaryCta && (
+              <Button className="bg-primary hover:bg-primary/90" data-testid="button-book-now">
+                Book Now
+              </Button>
+            )}
             <Button variant="outline" size="icon" aria-label="Save to favorites" data-testid="button-favorite">
               <Heart className="w-5 h-5" aria-hidden="true" />
             </Button>
@@ -272,46 +470,92 @@ export default function PublicContentDetail() {
             </Button>
           </div>
 
-          <div className="space-y-8">
-            <section aria-labelledby="about-heading">
+          {content.blocks && content.blocks.length > 0 ? (
+            <ContentBlocksRenderer blocks={content.blocks} />
+          ) : (
+            <div className="space-y-8">
               <Card className="p-6">
-                <h2 id="about-heading" className="font-heading text-xl font-semibold mb-4">About</h2>
+                <h2 className="font-heading text-xl font-semibold mb-4">About</h2>
                 <p className="text-muted-foreground">
-                  {content.metaDescription || "Experience the best of Dubai with this amazing destination. Perfect for travelers seeking unforgettable moments in the city of dreams."}
+                  {content.metaDescription || "Experience the best of Dubai with this amazing destination."}
                 </p>
               </Card>
-            </section>
+            </div>
+          )}
 
-            <section aria-labelledby="highlights-heading">
+          {content.hotel?.amenities && content.hotel.amenities.length > 0 && (
+            <section className="mt-8" aria-labelledby="amenities-heading">
               <Card className="p-6">
-                <h2 id="highlights-heading" className="font-heading text-xl font-semibold mb-4">Highlights</h2>
-                <ul className="space-y-2 text-muted-foreground" role="list">
-                  <li className="flex items-start gap-2" role="listitem">
-                    <Star className="w-5 h-5 text-[#fdcd0a] shrink-0 mt-0.5" aria-hidden="true" />
-                    <span>World-class experience in the heart of Dubai</span>
-                  </li>
-                  <li className="flex items-start gap-2" role="listitem">
-                    <Star className="w-5 h-5 text-[#fdcd0a] shrink-0 mt-0.5" aria-hidden="true" />
-                    <span>Stunning views and memorable moments</span>
-                  </li>
-                  <li className="flex items-start gap-2" role="listitem">
-                    <Star className="w-5 h-5 text-[#fdcd0a] shrink-0 mt-0.5" aria-hidden="true" />
-                    <span>Easy access and convenient location</span>
-                  </li>
-                </ul>
+                <h2 id="amenities-heading" className="font-heading text-xl font-semibold mb-4">Amenities</h2>
+                <div className="flex flex-wrap gap-2">
+                  {content.hotel.amenities.map((amenity, index) => (
+                    <Badge key={index} variant="outline">{amenity}</Badge>
+                  ))}
+                </div>
               </Card>
             </section>
+          )}
 
-            <section aria-labelledby="location-heading">
+          {content.attraction?.ticketInfo && content.attraction.ticketInfo.length > 0 && (
+            <section className="mt-8" aria-labelledby="tickets-heading">
+              <Card className="p-6">
+                <h2 id="tickets-heading" className="font-heading text-xl font-semibold mb-4">Ticket Information</h2>
+                <div className="space-y-3">
+                  {content.attraction.ticketInfo.map((ticket, index) => (
+                    <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
+                      <span className="font-medium">{ticket.label}</span>
+                      <span className="text-muted-foreground">{ticket.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </section>
+          )}
+
+          {content.affiliateLinks && content.affiliateLinks.length > 0 && (
+            <section className="mt-8" aria-labelledby="booking-heading">
+              <Card className="p-6">
+                <h2 id="booking-heading" className="font-heading text-xl font-semibold mb-4">Book Now</h2>
+                <div className="space-y-3">
+                  {content.affiliateLinks.map((link) => (
+                    <a
+                      key={link.id}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                      data-testid={`affiliate-link-${link.id}`}
+                    >
+                      <div>
+                        <div className="font-medium">{link.label}</div>
+                        {link.provider && (
+                          <div className="text-sm text-muted-foreground">via {link.provider}</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {link.price && (
+                          <span className="font-bold text-primary">{link.price}</span>
+                        )}
+                        <ExternalLink className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </Card>
+            </section>
+          )}
+
+          {(content.attraction?.location || content.hotel?.location) && (
+            <section className="mt-8" aria-labelledby="location-heading">
               <Card className="p-6">
                 <h2 id="location-heading" className="font-heading text-xl font-semibold mb-4">Location</h2>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <MapPin className="w-5 h-5 text-primary" aria-hidden="true" />
-                  <span>Dubai, United Arab Emirates</span>
+                  <span>{content.attraction?.location || content.hotel?.location}</span>
                 </div>
               </Card>
             </section>
-          </div>
+          )}
         </article>
       </main>
 
