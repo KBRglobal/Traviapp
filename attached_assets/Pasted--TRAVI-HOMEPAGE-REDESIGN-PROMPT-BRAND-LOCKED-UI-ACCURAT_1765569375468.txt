@@ -1,0 +1,250 @@
+🎨 TRAVI – HOMEPAGE REDESIGN PROMPT
+
+BRAND-LOCKED, UI-ACCURATE, EDITORIAL-FIRST
+
+CONTEXT
+
+You are redesigning ONLY the Travi homepage.
+Do not redesign inner pages, CMS, or admin.
+
+This is a full visual and structural redesign, not a refactor.
+
+The goal is a premium, editorial, destination-first homepage for a Dubai travel brand.
+
+⸻
+
+1. BRAND SYSTEM — MUST BE APPLIED EVERYWHERE
+
+Color Palette (STRICT)
+
+Use ONLY these colors and their logical gradients:
+
+Primary Gradient (Hero / Major Sections):
+	•	#6C5CE7 → #A855F7 → #EC4899
+(smooth diagonal or vertical gradient, subtle noise allowed)
+
+Accent / CTA:
+	•	#FACC15 (gold/yellow accent)
+	•	#EC4899 (pink for secondary CTA or emphasis)
+
+Neutrals:
+	•	White backgrounds: #FFFFFF
+	•	Light background sections: #F8FAFC
+	•	Text primary: #0F172A
+	•	Text secondary: #475569
+
+❌ No random blues, greys, or Material defaults
+❌ No muted corporate palettes
+
+⸻
+
+Typography
+	•	Primary Font: Rounded, modern, friendly (Inter / Poppins style)
+	•	Headlines: Bold, large, confident
+	•	Body text: relaxed line-height, editorial feel
+	•	Avoid “dashboard typography”
+
+Hierarchy example:
+	•	H1: very large, emotional
+	•	H2: editorial section headers
+	•	Body: readable, calm
+	•	Labels: soft pills, rounded
+
+⸻
+
+2. HOMEPAGE STRUCTURE (MANDATORY ORDER)
+
+SECTION 1 — HERO (Above the Fold)
+
+Purpose: Emotional hook. Brand statement. Not a search tool first.
+
+Layout:
+	•	Full viewport height
+	•	Background: gradient (brand primary) + subtle texture/noise
+	•	Centered content
+
+Content:
+	•	Small pill badge above headline
+“✨ Your Dubai Travel Companion”
+	•	H1 (2 lines max):
+“Discover the Magic of Dubai”
+	•	“Dubai” highlighted in gold (#FACC15)
+	•	Short subheading (1 sentence):
+“World-class hotels, iconic attractions, and expert travel guides — curated for you.”
+
+Search:
+	•	Large rounded search bar
+	•	Placeholder:
+“Search hotels, attractions, or guides…”
+	•	CTA button: Search (pink or gold)
+
+❌ No stats counters here
+❌ No clutter
+❌ No grid below hero
+
+⸻
+
+SECTION 2 — EXPLORE DUBAI (Primary Navigation as Cards)
+
+Purpose: Replace boring menus with visual navigation.
+
+Layout:
+	•	Light background (#FFFFFF)
+	•	Horizontal row of large rounded cards
+
+Cards (exact order):
+	•	Hotels
+	•	Attractions
+	•	Districts
+	•	Articles (rename “News & Guides”)
+	•	Dining
+	•	Transport
+
+Each card:
+	•	Gradient icon circle (brand colors)
+	•	Title
+	•	Small count text (“500+ hotels”)
+	•	Hover: subtle lift + glow
+
+⸻
+
+SECTION 3 — FEATURED / HOT RIGHT NOW
+
+Purpose: Editorial curation, not listings.
+
+Layout:
+	•	White background
+	•	Left-aligned section title:
+“Hot Right Now”
+	•	Subtitle:
+“Trending places everyone’s talking about”
+
+Content:
+	•	ONE large featured card
+	•	Image dominant (cinematic ratio)
+	•	Overlay gradient
+	•	Badges:
+	•	“🔥 Trending”
+	•	Rating
+	•	Title
+	•	One-line description
+	•	CTA: “Explore”
+
+❌ No grids
+❌ No multiple cards here
+
+⸻
+
+SECTION 4 — POPULAR DESTINATIONS (Editorial Grid)
+
+Purpose: Visual inspiration.
+
+Layout:
+	•	4-card horizontal grid
+	•	Large images
+	•	Soft rounded corners
+
+Each card:
+	•	Image
+	•	Category badge (Hotel / Attraction / District / Dining)
+	•	Rating
+	•	Title
+	•	Short teaser text
+
+This should feel like a magazine spread, not ecommerce.
+
+⸻
+
+SECTION 5 — LATEST NEWS & GUIDES (Editorial Highlight)
+
+Purpose: Authority + SEO.
+
+Layout:
+	•	Light grey background (#F8FAFC)
+
+Content:
+	•	ONE very large featured article
+	•	Full-width image
+	•	Overlay text:
+	•	“FEATURED”
+	•	Category
+	•	Article title
+	•	Read time + views
+	•	Below: optional secondary articles as compact list
+
+CTA: “All Articles →”
+
+⸻
+
+SECTION 6 — WHY CHOOSE TRAVI
+
+Purpose: Trust, but still visual.
+
+Layout:
+	•	White background
+	•	3 cards, centered
+
+Cards:
+	•	Curated Experiences
+	•	Trusted Reviews
+	•	Real-Time Updates
+
+Each:
+	•	Large icon in brand gradient
+	•	Title
+	•	Short description
+
+❌ No corporate tone
+❌ No long paragraphs
+
+⸻
+
+SECTION 7 — FINAL CTA (Emotional Close)
+
+Purpose: Convert curiosity into action.
+
+Layout:
+	•	Full-width brand gradient
+	•	Centered content
+
+Content:
+	•	Headline:
+“Ready to Explore Dubai?”
+	•	Subtext:
+“Plan your perfect trip with Travi’s curated guides and experiences.”
+	•	Buttons:
+	•	Primary: Browse Hotels (gold)
+	•	Secondary: Explore Attractions (outlined / pink)
+
+⸻
+
+FOOTER (Simple & Dark)
+	•	Dark gradient or deep purple background
+	•	Logo + short brand sentence
+	•	3 columns:
+	•	Explore
+	•	Discover
+	•	Legal
+
+⸻
+
+3. DESIGN RULES (CRITICAL)
+	•	❌ No repeated identical sections
+	•	❌ No generic grids everywhere
+	•	❌ No admin/dashboard UI patterns
+	•	✅ Strong vertical rhythm
+	•	✅ Editorial spacing
+	•	✅ Visual storytelling
+	•	✅ Brand gradients everywhere they matter
+
+⸻
+
+4. DELIVERABLE EXPECTATION
+
+The output should look like:
+	•	A premium travel brand homepage
+	•	Investor-ready
+	•	SEO-friendly
+	•	Emotional, not mechanical
+
+If something looks like a directory or SaaS dashboard, it is wrong.
