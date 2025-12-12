@@ -1725,6 +1725,62 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
     }
   });
 
+  // Bulk import keywords
+  app.post("/api/keywords/bulk-import", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { keywords } = req.body;
+      if (!Array.isArray(keywords) || keywords.length === 0) {
+        return res.status(400).json({ error: "Keywords array is required" });
+      }
+
+      const results = { created: 0, skipped: 0, errors: [] as string[] };
+      
+      for (const kw of keywords) {
+        try {
+          const existingKeywords = await storage.getKeywords({ search: kw.keyword });
+          const exists = existingKeywords.some(
+            (k: { keyword: string }) => k.keyword.toLowerCase() === kw.keyword.toLowerCase()
+          );
+          
+          if (exists) {
+            results.skipped++;
+            continue;
+          }
+
+          await storage.createKeyword({
+            keyword: kw.keyword,
+            type: kw.type || "primary",
+            category: kw.category || null,
+            searchVolume: kw.searchVolume || null,
+            competition: kw.competition || null,
+            relatedKeywords: kw.relatedKeywords || [],
+            priority: kw.priority || 0,
+            notes: kw.notes || null,
+            isActive: true,
+          });
+          results.created++;
+        } catch (err: any) {
+          if (err?.code === "23505") {
+            results.skipped++;
+          } else {
+            results.errors.push(`Failed to import "${kw.keyword}": ${err?.message || "Unknown error"}`);
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        created: results.created,
+        skipped: results.skipped,
+        errors: results.errors.slice(0, 10),
+        totalErrors: results.errors.length,
+      });
+    } catch (error) {
+      console.error("Error bulk importing keywords:", error);
+      res.status(500).json({ error: "Failed to bulk import keywords" });
+    }
+  });
+
   // Get scheduled content ready for publishing
   app.get("/api/scheduled-content", async (req, res) => {
     try {
