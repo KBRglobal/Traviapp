@@ -153,24 +153,28 @@ export default function PublicDistricts() {
         </div>
       </nav>
 
-      <section className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="bg-gradient-to-br from-[#047857] via-[#059669] to-[#34d399] py-16 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNCIgPjxjaXJjbGUgY3g9IjMwIiBjeT0iMTUiIHI9IjQiLz48Y2lyY2xlIGN4PSIxNSIgY3k9IjMwIiByPSI0Ii8+PGNpcmNsZSBjeD0iNDUiIGN5PSIzMCIgcj0iNCIvPjxjaXJjbGUgY3g9IjMwIiBjeT0iNDUiIHI9IjQiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50" />
+        <div className="absolute top-10 left-10 w-36 h-36 bg-[#6ee7b7] rounded-full blur-3xl opacity-20" />
+        <div className="absolute bottom-5 right-20 w-32 h-32 bg-[#065f46] rounded-full blur-3xl opacity-25" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Link>
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-              <Landmark className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#6ee7b7] to-[#059669] flex items-center justify-center shadow-lg">
+              <Landmark className="w-8 h-8 text-[#064e3b]" />
             </div>
             <div>
-              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white">Districts of Dubai</h1>
-              <p className="text-white/80">Explore the diverse neighborhoods of Dubai</p>
+              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white drop-shadow-lg">Dubai Neighborhoods</h1>
+              <p className="text-white/90">Discover the unique character of each district</p>
             </div>
           </div>
           
           <div className="mt-8 max-w-xl">
-            <div className="bg-white rounded-xl p-2 flex items-center gap-2">
+            <div className="bg-white rounded-xl p-2 flex items-center gap-2 shadow-xl">
               <Search className="w-5 h-5 text-muted-foreground ml-3" />
               <input
                 type="text"

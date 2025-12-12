@@ -153,24 +153,28 @@ export default function PublicDining() {
         </div>
       </nav>
 
-      <section className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="bg-gradient-to-br from-[#9a3412] via-[#ea580c] to-[#fb923c] py-16 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iOCIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
+        <div className="absolute top-5 left-10 w-36 h-36 bg-[#fcd34d] rounded-full blur-3xl opacity-20" />
+        <div className="absolute bottom-10 right-20 w-32 h-32 bg-[#fdba74] rounded-full blur-3xl opacity-25" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Link>
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-              <Utensils className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#fcd34d] to-[#f97316] flex items-center justify-center shadow-lg">
+              <Utensils className="w-8 h-8 text-[#7c2d12]" />
             </div>
             <div>
-              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white">Dining in Dubai</h1>
-              <p className="text-white/80">Discover world-class restaurants and culinary experiences</p>
+              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white drop-shadow-lg">Culinary Dubai</h1>
+              <p className="text-white/90">World-class restaurants and unforgettable dining experiences</p>
             </div>
           </div>
           
           <div className="mt-8 max-w-xl">
-            <div className="bg-white rounded-xl p-2 flex items-center gap-2">
+            <div className="bg-white rounded-xl p-2 flex items-center gap-2 shadow-xl">
               <Search className="w-5 h-5 text-muted-foreground ml-3" />
               <input
                 type="text"

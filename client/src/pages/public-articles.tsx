@@ -152,24 +152,28 @@ export default function PublicArticles() {
         </div>
       </nav>
 
-      <section className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="bg-gradient-to-br from-[#0c5d73] via-[#0891b2] to-[#22d3ee] py-16 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNCI+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMzAiIGhlaWdodD0iMyIvPjxyZWN0IHg9IjEwIiB5PSIyMCIgd2lkdGg9IjI1IiBoZWlnaHQ9IjIiLz48cmVjdCB4PSIxMCIgeT0iMjgiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
+        <div className="absolute top-10 right-10 w-32 h-32 bg-[#67e8f9] rounded-full blur-3xl opacity-25" />
+        <div className="absolute bottom-10 left-20 w-40 h-40 bg-[#0e7490] rounded-full blur-3xl opacity-20" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Link>
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-              <BookOpen className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#67e8f9] to-[#0891b2] flex items-center justify-center shadow-lg">
+              <BookOpen className="w-8 h-8 text-[#164e63]" />
             </div>
             <div>
-              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white">Travel Articles</h1>
-              <p className="text-white/80">Tips, guides, and inspiration for your Dubai trip</p>
+              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white drop-shadow-lg">Travel Articles & Guides</h1>
+              <p className="text-white/90">Expert tips and inspiration for your Dubai adventure</p>
             </div>
           </div>
           
           <div className="mt-8 max-w-xl">
-            <div className="bg-white rounded-xl p-2 flex items-center gap-2">
+            <div className="bg-white rounded-xl p-2 flex items-center gap-2 shadow-xl">
               <Search className="w-5 h-5 text-muted-foreground ml-3" />
               <input
                 type="text"

@@ -152,28 +152,32 @@ export default function PublicHotels() {
         </div>
       </nav>
 
-      <section className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="bg-gradient-to-br from-[#8B6914] via-[#B8860B] to-[#D4A526] py-16 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTIwIDIwaDIwdjIwSDIweiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
+        <div className="absolute top-10 right-20 w-32 h-32 bg-[#FFD112] rounded-full blur-3xl opacity-25" />
+        <div className="absolute bottom-10 left-10 w-40 h-40 bg-[#fef3c7] rounded-full blur-3xl opacity-20" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Link>
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-              <Building2 className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FFD112] to-[#F59E0B] flex items-center justify-center shadow-lg">
+              <Building2 className="w-8 h-8 text-[#78350f]" />
             </div>
             <div>
-              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white">Hotels in Dubai</h1>
-              <p className="text-white/80">Find your perfect stay in the city of dreams</p>
+              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white drop-shadow-lg">Luxury Hotels in Dubai</h1>
+              <p className="text-white/90">Experience world-class hospitality in the city of dreams</p>
             </div>
           </div>
           
           <div className="mt-8 max-w-xl">
-            <div className="bg-white rounded-xl p-2 flex items-center gap-2">
+            <div className="bg-white rounded-xl p-2 flex items-center gap-2 shadow-xl">
               <Search className="w-5 h-5 text-muted-foreground ml-3" />
               <input
                 type="text"
-                placeholder="Search hotels..."
+                placeholder="Search luxury hotels..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-transparent outline-none py-2 text-foreground"
