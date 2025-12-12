@@ -1,143 +1,34 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Building2, Star, MapPin, ArrowLeft, Search } from "lucide-react";
+import { Star, MapPin, Search } from "lucide-react";
 import type { ContentWithRelations } from "@shared/schema";
-import { Card } from "@/components/ui/card";
 import { PublicNav } from "@/components/public-nav";
-import { Logo } from "@/components/logo";
+import { PublicFooter } from "@/components/public-footer";
+import { CompactHero } from "@/components/image-hero";
+import { FeaturedCard, EditorialCard, ContentGrid, SectionHeader } from "@/components/editorial-cards";
 import { useState } from "react";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 
-const defaultPlaceholderImages = [
-  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=600&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=600&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&h=400&fit=crop",
-];
+const heroImage = "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1920&h=600&fit=crop";
 
-function HotelCard({ content, index }: { content: ContentWithRelations; index: number }) {
-  const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
-  const starRating = content.hotel?.starRating || 5;
-  const location = content.hotel?.location || "Dubai, UAE";
-  const ctaText = content.hotel?.primaryCta || "View Details";
-  
-  return (
-    <article role="listitem" data-testid={`card-hotel-${content.id}`}>
-      <Link href={`/hotels/${content.slug}`}>
-        <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer">
-          <div className="aspect-[16/10] overflow-hidden">
-            <img 
-              src={imageUrl} 
-              alt={content.heroImageAlt || content.title} 
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-              width={600}
-              height={400}
-            />
-          </div>
-          <div className="p-5">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span className="flex items-center gap-1">
-                {[...Array(starRating)].map((_, i) => (
-                  <Star key={i} className="w-3.5 h-3.5 fill-[#fdcd0a] text-[#fdcd0a]" aria-hidden="true" />
-                ))}
-                <span className="sr-only">{starRating} star hotel</span>
-              </span>
-              <span className="text-muted-foreground/50" aria-hidden="true">|</span>
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
-                {location}
-              </span>
-            </div>
-            <h3 className="font-heading font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-              {content.title}
-            </h3>
-            <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-              {content.metaDescription || "Experience luxury and comfort in the heart of Dubai."}
-            </p>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">Starting from</span>
-              <span className="font-bold text-primary">{ctaText}</span>
-            </div>
-          </div>
-        </Card>
-      </Link>
-    </article>
-  );
-}
+const defaultPlaceholderImages = [
+  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&h=600&fit=crop",
+  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&h=600&fit=crop",
+];
 
 function HotelCardSkeleton() {
   return (
-    <div aria-hidden="true" role="listitem">
-      <Card className="overflow-hidden border-0 shadow-md animate-pulse">
-        <div className="aspect-[16/10] bg-muted" />
-        <div className="p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-4 w-12 bg-muted rounded" />
-            <div className="h-4 w-20 bg-muted rounded" />
-          </div>
-          <div className="h-6 bg-muted rounded mb-2 w-3/4" />
-          <div className="h-4 bg-muted rounded w-full mb-1" />
-          <div className="h-4 bg-muted rounded w-2/3 mb-4" />
-          <div className="flex items-center justify-between gap-2">
-            <div className="h-4 w-16 bg-muted rounded" />
-            <div className="h-4 w-20 bg-muted rounded" />
-          </div>
-        </div>
-      </Card>
+    <div aria-hidden="true" className="animate-pulse">
+      <div className="aspect-[16/10] bg-muted rounded-lg mb-4" />
+      <div className="space-y-2">
+        <div className="h-4 w-20 bg-muted rounded" />
+        <div className="h-6 bg-muted rounded w-3/4" />
+        <div className="h-4 bg-muted rounded w-full" />
+        <div className="h-4 bg-muted rounded w-1/2" />
+      </div>
     </div>
-  );
-}
-
-function PlaceholderHotelCard({ index }: { index: number }) {
-  const placeholderData = [
-    { title: "Atlantis The Palm", desc: "Iconic luxury resort on Palm Jumeirah with aquarium and waterpark" },
-    { title: "Burj Al Arab", desc: "The world's most luxurious hotel with stunning architecture" },
-    { title: "Address Downtown", desc: "Modern luxury in the heart of Downtown Dubai" },
-    { title: "One&Only Royal Mirage", desc: "Arabian palace resort with pristine beach access" },
-  ];
-  const data = placeholderData[index % placeholderData.length];
-  const imageUrl = defaultPlaceholderImages[index % defaultPlaceholderImages.length];
-  
-  return (
-    <article role="listitem" data-testid={`card-hotel-placeholder-${index}`}>
-      <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer">
-        <div className="aspect-[16/10] overflow-hidden">
-          <img 
-            src={imageUrl} 
-            alt={data.title} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-            width={600}
-            height={400}
-          />
-        </div>
-        <div className="p-5">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <span className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 fill-[#fdcd0a] text-[#fdcd0a]" aria-hidden="true" />
-              <span className="font-medium">4.9</span>
-              <span className="sr-only">out of 5 stars</span>
-            </span>
-            <span className="text-muted-foreground/50" aria-hidden="true">|</span>
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
-              Dubai, UAE
-            </span>
-          </div>
-          <h3 className="font-heading font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-            {data.title}
-          </h3>
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-            {data.desc}
-          </p>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">Starting from</span>
-            <span className="font-bold text-primary">View Details</span>
-          </div>
-        </div>
-      </Card>
-    </article>
   );
 }
 
@@ -161,8 +52,18 @@ export default function PublicHotels() {
     ? hotels.filter(h => h.title.toLowerCase().includes(searchQuery.toLowerCase()))
     : hotels;
 
+  const featuredHotel = filteredHotels[0];
+  const remainingHotels = filteredHotels.slice(1);
+
+  const placeholderHotels = [
+    { title: "Atlantis The Palm", desc: "Iconic luxury resort on Palm Jumeirah with aquarium and waterpark", location: "Palm Jumeirah", rating: 5 },
+    { title: "Burj Al Arab", desc: "The world's most luxurious hotel with stunning architecture", location: "Jumeirah Beach", rating: 5 },
+    { title: "Address Downtown", desc: "Modern luxury in the heart of Downtown Dubai", location: "Downtown Dubai", rating: 5 },
+    { title: "One&Only Royal Mirage", desc: "Arabian palace resort with pristine beach access", location: "Al Sufouh", rating: 5 },
+  ];
+
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-screen flex flex-col">
       <a 
         href="#main-content" 
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
@@ -172,97 +73,130 @@ export default function PublicHotels() {
       
       <PublicNav />
 
-      <main id="main-content">
-        <section className="bg-gradient-to-br from-[#8B6914] via-[#B8860B] to-[#D4A526] py-16 relative overflow-hidden" aria-labelledby="hotels-heading">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTIwIDIwaDIwdjIwSDIweiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" aria-hidden="true" />
-          <div className="absolute top-10 right-20 w-32 h-32 bg-[#FFD112] rounded-full blur-3xl opacity-25" aria-hidden="true" />
-          <div className="absolute bottom-10 left-10 w-40 h-40 bg-[#fef3c7] rounded-full blur-3xl opacity-20" aria-hidden="true" />
-          
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-            <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50 rounded-md px-2 py-1">
-              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-              Back to Home
-            </Link>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FFD112] to-[#F59E0B] flex items-center justify-center shadow-lg" aria-hidden="true">
-                <Building2 className="w-8 h-8 text-[#78350f]" />
+      <main id="main-content" className="flex-1">
+        <CompactHero 
+          backgroundImage={heroImage}
+          title="Luxury Hotels in Dubai"
+          subtitle="Experience world-class hospitality in the city of dreams"
+        />
+
+        <section className="py-8 bg-background" aria-label="Search hotels">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <form role="search" onSubmit={(e) => e.preventDefault()} className="max-w-xl">
+              <label htmlFor="hotel-search" className="sr-only">Search hotels</label>
+              <div className="bg-card border rounded-lg p-2 flex items-center gap-2">
+                <Search className="w-5 h-5 text-muted-foreground ml-3" aria-hidden="true" />
+                <input
+                  id="hotel-search"
+                  type="text"
+                  placeholder="Search luxury hotels..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 bg-transparent outline-none py-2 text-foreground"
+                  data-testid="input-search-hotels"
+                />
               </div>
-              <div>
-                <h1 id="hotels-heading" className="font-heading text-3xl sm:text-4xl font-bold text-white drop-shadow-lg">Luxury Hotels in Dubai</h1>
-                <p className="text-white/90">Experience world-class hospitality in the city of dreams</p>
+            </form>
+            <p className="mt-4 text-muted-foreground text-sm" aria-live="polite" data-testid="text-hotels-count">
+              {isLoading ? "Loading..." : `${filteredHotels.length} hotels found`}
+            </p>
+          </div>
+        </section>
+
+        {isLoading ? (
+          <section className="py-12" aria-label="Loading hotels">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {[0, 1, 2, 3].map((i) => (
+                  <HotelCardSkeleton key={i} />
+                ))}
               </div>
             </div>
-            
-            <div className="mt-8 max-w-xl">
-              <form role="search" onSubmit={(e) => e.preventDefault()}>
-                <label htmlFor="hotel-search" className="sr-only">Search hotels</label>
-                <div className="bg-white rounded-xl p-2 flex items-center gap-2 shadow-xl">
-                  <Search className="w-5 h-5 text-muted-foreground ml-3" aria-hidden="true" />
-                  <input
-                    id="hotel-search"
-                    type="text"
-                    placeholder="Search luxury hotels..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 bg-transparent outline-none py-2 text-foreground focus:outline-none"
-                    data-testid="input-search-hotels"
+          </section>
+        ) : filteredHotels.length > 0 ? (
+          <>
+            {featuredHotel && (
+              <section className="py-8" aria-label="Featured hotel">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <FeaturedCard
+                    title={featuredHotel.title}
+                    description={featuredHotel.metaDescription || "Experience luxury and comfort in the heart of Dubai."}
+                    image={featuredHotel.heroImage || defaultPlaceholderImages[0]}
+                    href={`/hotels/${featuredHotel.slug}`}
+                    category="Featured Hotel"
+                    categoryColor="bg-amber-600"
+                    location={featuredHotel.hotel?.location || "Dubai, UAE"}
+                    rating={featuredHotel.hotel?.starRating || 5}
                   />
                 </div>
-              </form>
-            </div>
-          </div>
-        </section>
+              </section>
+            )}
 
-        <section className="py-12" aria-labelledby="hotels-list-heading">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mb-6">
-              <h2 id="hotels-list-heading" className="sr-only">Hotel Listings</h2>
-              <p className="text-muted-foreground" aria-live="polite" data-testid="text-hotels-count">
-                {isLoading ? (
-                  <>
-                    <span className="sr-only">Loading hotels...</span>
-                    Loading...
-                  </>
-                ) : `${filteredHotels.length} hotels found`}
-              </p>
+            {remainingHotels.length > 0 && (
+              <section className="py-12" aria-labelledby="all-hotels-heading">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <SectionHeader 
+                    title="All Luxury Hotels"
+                    subtitle="Handpicked accommodations for discerning travelers"
+                  />
+                  <ContentGrid columns={2}>
+                    {remainingHotels.map((hotel, index) => (
+                      <EditorialCard
+                        key={hotel.id}
+                        title={hotel.title}
+                        excerpt={hotel.metaDescription || "Experience luxury and comfort in Dubai."}
+                        image={hotel.heroImage || defaultPlaceholderImages[(index + 1) % defaultPlaceholderImages.length]}
+                        href={`/hotels/${hotel.slug}`}
+                        category={`${hotel.hotel?.starRating || 5} Star`}
+                        categoryColor="text-amber-600"
+                        size="large"
+                        data-testid={`card-hotel-${hotel.id}`}
+                      />
+                    ))}
+                  </ContentGrid>
+                </div>
+              </section>
+            )}
+          </>
+        ) : (
+          <section className="py-12" aria-label="Sample hotels">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <SectionHeader 
+                title="Discover Dubai Hotels"
+                subtitle="Our curated collection of the finest accommodations"
+              />
+              <div className="mb-12">
+                <FeaturedCard
+                  title={placeholderHotels[0].title}
+                  description={placeholderHotels[0].desc}
+                  image={defaultPlaceholderImages[0]}
+                  href="#"
+                  category="Featured"
+                  categoryColor="bg-amber-600"
+                  location={placeholderHotels[0].location}
+                  rating={placeholderHotels[0].rating}
+                />
+              </div>
+              <ContentGrid columns={2}>
+                {placeholderHotels.slice(1).map((hotel, index) => (
+                  <EditorialCard
+                    key={index}
+                    title={hotel.title}
+                    excerpt={hotel.desc}
+                    image={defaultPlaceholderImages[(index + 1) % defaultPlaceholderImages.length]}
+                    href="#"
+                    category={`${hotel.rating} Star`}
+                    categoryColor="text-amber-600"
+                    size="large"
+                  />
+                ))}
+              </ContentGrid>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" role="list" aria-label="Hotels list">
-              {isLoading ? (
-                [0, 1, 2, 3, 4, 5].map((index) => (
-                  <HotelCardSkeleton key={index} />
-                ))
-              ) : filteredHotels.length > 0 ? (
-                filteredHotels.map((hotel, index) => (
-                  <HotelCard key={hotel.id} content={hotel} index={index} />
-                ))
-              ) : (
-                [0, 1, 2, 3].map((index) => (
-                  <PlaceholderHotelCard key={index} index={index} />
-                ))
-              )}
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
 
-      <footer className="py-8 border-t mt-auto" role="contentinfo">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <Logo variant="primary" height={28} />
-            <nav className="flex items-center gap-6 text-muted-foreground text-sm" aria-label="Footer navigation">
-              <Link href="/hotels" className="hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-md px-1">Hotels</Link>
-              <Link href="/attractions" className="hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-md px-1">Attractions</Link>
-              <Link href="/articles" className="hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-md px-1">Articles</Link>
-            </nav>
-            <div className="flex items-center gap-4 text-muted-foreground text-sm">
-              <Link href="/privacy" className="hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-md px-1">Privacy</Link>
-              <Link href="/terms" className="hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-md px-1">Terms</Link>
-              <span>2024 Travi</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

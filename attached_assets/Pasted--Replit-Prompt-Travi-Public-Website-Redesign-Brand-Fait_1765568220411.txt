@@ -1,0 +1,192 @@
+🔹 Replit Prompt – Travi Public Website Redesign (Brand-Faithful)
+
+Context
+
+You are redesigning the public-facing Travi website only (homepage + category/listing pages + article layout).
+Do NOT touch the CMS / admin system.
+This is a visual + UX redesign, not a backend or feature rewrite.
+
+The site currently works functionally but feels:
+	•	too generic
+	•	too grid-repetitive
+	•	not expressive enough of the Travi brand
+
+Your goal is to elevate it to a premium, playful, editorial travel brand, fully aligned with the official Travi Brandbook.
+
+⸻
+
+🔹 Non-Negotiable Brand Rules (From Brandbook)
+
+You must strictly follow these:
+
+Brand Personality
+	•	Super colorful, playful, surreal, joyful
+	•	Premium but not corporate
+	•	Editorial, experiential, travel-inspired
+	•	NOT minimal, NOT flat SaaS, NOT Elementor-like
+
+Colors
+
+Primary colors only:
+	•	Purple #6443F4
+	•	Orange #FF9327
+	•	Pink #F94498
+	•	Green #02A65C
+
+Usage rules:
+	•	Neutral (white / near-white): 40–60%
+	•	Main brand colors: 30–50%
+	•	Secondary accents: 10–30%
+	•	Accent gradients / swirls: 5–15%
+	•	Use gradients, overlays, and color transitions generously but intentionally
+
+Typography
+	•	Headlines: Chillax
+	•	Sub-headlines + body: Satoshi
+	•	Strong hierarchy:
+	•	Big expressive hero headlines
+	•	Editorial spacing
+	•	More vertical breathing room
+
+Visual Language
+	•	Large imagery
+	•	Editorial layouts
+	•	Rounded corners
+	•	Soft shadows
+	•	No tight grids repeated endlessly
+	•	Sections must feel curated, not auto-generated
+
+⸻
+
+🔹 Global Redesign Principles
+
+Apply to all public pages:
+	1.	Break the grid monotony
+	•	Alternate layouts (full-width → split → cards → editorial blocks)
+	•	Avoid repeating the same card grid every section
+	2.	Image-first design
+	•	Large hero images with gradient overlays
+	•	Editorial featured cards
+	•	Magazine-style article presentation
+	3.	Clear visual rhythm
+	•	Each section must feel distinct
+	•	Vary background colors, spacing, and layout density
+	4.	Premium travel feel
+	•	Luxury, aspiration, discovery
+	•	Think “editorial travel magazine”, not “booking directory”
+
+⸻
+
+🔹 Phase-Based Redesign Tasks
+
+Phase 1 – Header & Navigation
+	•	Redesign public header (desktop + mobile)
+	•	Navigation items:
+	•	Hotels
+	•	Attractions
+	•	News (rename from Articles)
+	•	Districts
+	•	Dining
+	•	Logo left, navigation right
+	•	Clean, airy, premium
+	•	Sticky on scroll (subtle)
+
+⸻
+
+Phase 2 – Shared Components (Core System)
+
+Create reusable components:
+	1.	Image Hero Component
+	•	Full-width background image
+	•	Brand gradient overlay (purple/pink/orange)
+	•	Headline + sub-headline
+	•	Optional search or CTA
+	•	Used on homepage + category pages
+	2.	Featured Card
+	•	Large visual card
+	•	Used to highlight one main item per page
+	•	Editorial typography overlay on image
+	3.	Editorial Card
+	•	Better image ratios (not square)
+	•	Strong title
+	•	Short teaser
+	•	Soft hover animation
+	•	Used for hotels, attractions, news
+
+⸻
+
+Phase 3 – Homepage Redesign
+
+Redesign homepage sections with varied layouts:
+	1.	Hero section
+	•	Full-screen or near full-screen
+	•	Strong editorial headline
+	•	Background image + gradient overlay
+	2.	Featured attraction (large, dominant)
+	3.	Hotels section
+	•	Premium styling
+	•	1 featured + smaller supporting cards
+	4.	News / Guides section
+	•	Editorial, text-forward
+	•	Large featured article + compact list
+	5.	Why Travi section
+	•	Icons + short copy
+	•	Light, friendly, playful
+	6.	Final CTA section
+	•	Gradient background
+	•	Bold headline
+	•	Clear exploration CTA
+
+⸻
+
+Phase 4 – Category & Listing Pages
+
+Each category page must feel unique, not recolored clones.
+
+Hotels
+	•	Luxury tone
+	•	One featured hotel at top
+	•	Curated grid below
+	•	Spacious layout
+
+Attractions
+	•	Experiential & visual
+	•	Image-driven
+	•	Dynamic layout
+
+News / Guides
+	•	Editorial magazine feel
+	•	Large featured article
+	•	Text-forward list
+	•	Reading-first UX
+
+⸻
+
+Phase 5 – Polish & Consistency
+	•	Increase vertical spacing
+	•	Refine typography scale
+	•	Ensure consistent rounded corners, shadows, hover states
+	•	Smooth transitions between sections
+	•	Ensure every page feels intentional and premium
+
+⸻
+
+🔹 Explicitly Out of Scope
+
+Do NOT:
+	•	Touch CMS / admin UI
+	•	Change backend APIs
+	•	Add new features
+	•	Redesign data models
+	•	Introduce new colors or fonts
+	•	Turn this into a generic website builder layout
+
+⸻
+
+🔹 Final Goal
+
+Deliver a brand-faithful, premium public website redesign that:
+	•	Feels unique and recognizable as Travi
+	•	Matches the brandbook visually and emotionally
+	•	Elevates trust, aspiration, and editorial quality
+	•	Is ready for investors, partners, and real users
