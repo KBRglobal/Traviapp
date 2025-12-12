@@ -58,6 +58,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
 
   getContents(filters?: { type?: string; status?: string; search?: string }): Promise<Content[]>;
+  getContentsWithRelations(filters?: { type?: string; status?: string; search?: string }): Promise<ContentWithRelations[]>;
   getContent(id: string): Promise<ContentWithRelations | undefined>;
   getContentBySlug(slug: string): Promise<ContentWithRelations | undefined>;
   createContent(content: InsertContent): Promise<Content>;
@@ -187,6 +188,37 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await query.orderBy(desc(contents.createdAt));
+  }
+
+  async getContentsWithRelations(filters?: { type?: string; status?: string; search?: string }): Promise<ContentWithRelations[]> {
+    const baseContents = await this.getContents(filters);
+    
+    const results: ContentWithRelations[] = [];
+    
+    for (const content of baseContents) {
+      const result: ContentWithRelations = { ...content };
+      
+      if (content.type === "attraction") {
+        const [attraction] = await db.select().from(attractions).where(eq(attractions.contentId, content.id));
+        result.attraction = attraction;
+      } else if (content.type === "hotel") {
+        const [hotel] = await db.select().from(hotels).where(eq(hotels.contentId, content.id));
+        result.hotel = hotel;
+      } else if (content.type === "article") {
+        const [article] = await db.select().from(articles).where(eq(articles.contentId, content.id));
+        result.article = article;
+      } else if (content.type === "event") {
+        const [event] = await db.select().from(events).where(eq(events.contentId, content.id));
+        result.event = event;
+      } else if (content.type === "itinerary") {
+        const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, content.id));
+        result.itinerary = itinerary;
+      }
+      
+      results.push(result);
+    }
+    
+    return results;
   }
 
   async getContent(id: string): Promise<ContentWithRelations | undefined> {

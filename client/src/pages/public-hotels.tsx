@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Building2, Star, MapPin, ArrowLeft, Search, Menu, X } from "lucide-react";
-import type { Content } from "@shared/schema";
+import type { ContentWithRelations } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
@@ -15,8 +15,11 @@ const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&h=400&fit=crop",
 ];
 
-function HotelCard({ content, index }: { content: Content; index: number }) {
+function HotelCard({ content, index }: { content: ContentWithRelations; index: number }) {
   const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  const starRating = content.hotel?.starRating || 5;
+  const location = content.hotel?.location || "Dubai, UAE";
+  const ctaText = content.hotel?.primaryCta || "View Details";
   
   return (
     <article role="listitem" data-testid={`card-hotel-${content.id}`}>
@@ -35,14 +38,15 @@ function HotelCard({ content, index }: { content: Content; index: number }) {
           <div className="p-5">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
               <span className="flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 fill-[#fdcd0a] text-[#fdcd0a]" aria-hidden="true" />
-                <span className="font-medium">4.8</span>
-                <span className="sr-only">out of 5 stars</span>
+                {[...Array(starRating)].map((_, i) => (
+                  <Star key={i} className="w-3.5 h-3.5 fill-[#fdcd0a] text-[#fdcd0a]" aria-hidden="true" />
+                ))}
+                <span className="sr-only">{starRating} star hotel</span>
               </span>
               <span className="text-muted-foreground/50" aria-hidden="true">|</span>
               <span className="flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
-                Dubai, UAE
+                {location}
               </span>
             </div>
             <h3 className="font-heading font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
@@ -53,7 +57,7 @@ function HotelCard({ content, index }: { content: Content; index: number }) {
             </p>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">Starting from</span>
-              <span className="font-bold text-primary">View Details</span>
+              <span className="font-bold text-primary">{ctaText}</span>
             </div>
           </div>
         </Card>
@@ -149,8 +153,8 @@ export default function PublicHotels() {
     ogType: "website",
   });
   
-  const { data: allContent, isLoading } = useQuery<Content[]>({
-    queryKey: ["/api/contents?status=published"],
+  const { data: allContent, isLoading } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/contents?status=published&includeExtensions=true"],
   });
 
   const hotels = allContent?.filter(c => c.type === "hotel") || [];

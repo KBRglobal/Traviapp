@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Mountain, Star, MapPin, ArrowLeft, Search, Clock, Menu, X } from "lucide-react";
-import type { Content } from "@shared/schema";
+import { Mountain, MapPin, ArrowLeft, Search, Clock, Menu, X } from "lucide-react";
+import type { ContentWithRelations } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
@@ -15,8 +15,10 @@ const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1546412414-e1885259563a?w=600&h=400&fit=crop",
 ];
 
-function AttractionCard({ content, index }: { content: Content; index: number }) {
+function AttractionCard({ content, index }: { content: ContentWithRelations; index: number }) {
   const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  const duration = content.attraction?.duration || "2-4 hours";
+  const location = content.attraction?.location || "Dubai, UAE";
   
   return (
     <article role="listitem" data-testid={`card-attraction-${content.id}`}>
@@ -35,14 +37,13 @@ function AttractionCard({ content, index }: { content: Content; index: number })
           <div className="p-5">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
               <span className="flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 fill-[#fdcd0a] text-[#fdcd0a]" aria-hidden="true" />
-                <span className="font-medium">4.8</span>
-                <span className="sr-only">out of 5 stars</span>
+                <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+                {duration}
               </span>
               <span className="text-muted-foreground/50" aria-hidden="true">|</span>
               <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-                2-4 hours
+                <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
+                {location}
               </span>
             </div>
             <h3 className="font-heading font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
@@ -51,10 +52,6 @@ function AttractionCard({ content, index }: { content: Content; index: number })
             <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
               {content.metaDescription || "Discover this amazing attraction in Dubai."}
             </p>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-              <span className="text-sm text-muted-foreground">Dubai, UAE</span>
-            </div>
           </div>
         </Card>
       </Link>
@@ -146,8 +143,8 @@ export default function PublicAttractions() {
     ogType: "website",
   });
   
-  const { data: allContent, isLoading } = useQuery<Content[]>({
-    queryKey: ["/api/contents?status=published"],
+  const { data: allContent, isLoading } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/contents?status=published&includeExtensions=true"],
   });
 
   const attractions = allContent?.filter(c => c.type === "attraction") || [];

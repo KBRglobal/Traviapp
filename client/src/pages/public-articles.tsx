@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { BookOpen, ArrowLeft, Search, Calendar, User, Menu, X } from "lucide-react";
-import type { Content } from "@shared/schema";
+import type { ContentWithRelations } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 import { useState } from "react";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
+import { format } from "date-fns";
 
 const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop",
@@ -15,8 +16,25 @@ const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1546412414-e1885259563a?w=600&h=400&fit=crop",
 ];
 
-function ArticleCard({ content, index }: { content: Content; index: number }) {
+function ArticleCard({ content, index }: { content: ContentWithRelations; index: number }) {
   const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  const category = content.article?.category || "tips";
+  const categoryLabels: Record<string, string> = {
+    attractions: "Attractions",
+    hotels: "Hotels",
+    food: "Food & Dining",
+    transport: "Transport",
+    events: "Events",
+    tips: "Travel Tips",
+    news: "News",
+    shopping: "Shopping",
+  };
+  const displayCategory = categoryLabels[category] || "Travel Guide";
+  const publishDate = content.publishedAt 
+    ? format(new Date(content.publishedAt), "MMM yyyy")
+    : content.createdAt 
+      ? format(new Date(content.createdAt), "MMM yyyy")
+      : "Recent";
   
   return (
     <article role="listitem" data-testid={`card-article-${content.id}`}>
@@ -35,11 +53,11 @@ function ArticleCard({ content, index }: { content: Content; index: number }) {
           <div className="p-5 flex-1">
             <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3 flex-wrap">
               <span className="px-2 py-1 bg-primary/10 text-primary rounded-full font-medium">
-                Travel Guide
+                {displayCategory}
               </span>
               <span className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
-                Dec 2024
+                {publishDate}
               </span>
             </div>
             <h3 className="font-heading font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
@@ -147,8 +165,8 @@ export default function PublicArticles() {
     ogType: "website",
   });
   
-  const { data: allContent, isLoading } = useQuery<Content[]>({
-    queryKey: ["/api/contents?status=published"],
+  const { data: allContent, isLoading } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/contents?status=published&includeExtensions=true"],
   });
 
   const articles = allContent?.filter(c => c.type === "article") || [];
