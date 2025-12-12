@@ -43,6 +43,7 @@ import TopicBankPage from "@/pages/topic-bank";
 import KeywordsPage from "@/pages/keywords";
 import UsersPage from "@/pages/users";
 import HomepagePromotions from "@/pages/homepage-promotions";
+import Analytics from "@/pages/analytics";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import AccessDenied from "@/pages/access-denied";
@@ -79,6 +80,7 @@ function AdminRouter() {
       <Route path="/admin/settings" component={Settings} />
       <Route path="/admin/users" component={UsersPage} />
       <Route path="/admin/homepage-promotions" component={HomepagePromotions} />
+      <Route path="/admin/analytics" component={Analytics} />
       <Route component={NotFound} />
     </Switch>
   );

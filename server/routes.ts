@@ -2624,5 +2624,67 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // Analytics Routes
+  app.get("/api/analytics/overview", requireAuth, async (req, res) => {
+    try {
+      const overview = await storage.getAnalyticsOverview();
+      res.json(overview);
+    } catch (error) {
+      console.error("Error fetching analytics overview:", error);
+      res.status(500).json({ error: "Failed to fetch analytics overview" });
+    }
+  });
+
+  app.get("/api/analytics/views-over-time", requireAuth, async (req, res) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const views = await storage.getViewsOverTime(Math.min(days, 90));
+      res.json(views);
+    } catch (error) {
+      console.error("Error fetching views over time:", error);
+      res.status(500).json({ error: "Failed to fetch views over time" });
+    }
+  });
+
+  app.get("/api/analytics/top-content", requireAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const topContent = await storage.getTopContent(Math.min(limit, 50));
+      res.json(topContent);
+    } catch (error) {
+      console.error("Error fetching top content:", error);
+      res.status(500).json({ error: "Failed to fetch top content" });
+    }
+  });
+
+  app.get("/api/analytics/by-content-type", requireAuth, async (req, res) => {
+    try {
+      const byType = await storage.getViewsByContentType();
+      res.json(byType);
+    } catch (error) {
+      console.error("Error fetching views by content type:", error);
+      res.status(500).json({ error: "Failed to fetch views by content type" });
+    }
+  });
+
+  app.post("/api/analytics/record-view/:contentId", async (req, res) => {
+    try {
+      const { contentId } = req.params;
+      const content = await storage.getContent(contentId);
+      if (!content) {
+        return res.json({ success: true });
+      }
+      await storage.recordContentView(contentId, {
+        userAgent: req.headers["user-agent"],
+        referrer: req.headers.referer,
+        sessionId: req.sessionID,
+      });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error recording content view:", error);
+      res.json({ success: true });
+    }
+  });
+
   return httpServer;
 }

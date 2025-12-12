@@ -29,6 +29,7 @@ import {
   Users,
   LogOut,
   Home,
+  BarChart3,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -80,6 +81,11 @@ const managementItems = [
     title: "Homepage",
     url: "/admin/homepage-promotions",
     icon: Home,
+  },
+  {
+    title: "Analytics",
+    url: "/admin/analytics",
+    icon: BarChart3,
   },
   {
     title: "AI Generator",
