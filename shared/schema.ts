@@ -235,6 +235,19 @@ export const keywordRepository = pgTable("keyword_repository", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Content Versions table - for tracking content history
+export const contentVersions = pgTable("content_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  versionNumber: integer("version_number").notNull(),
+  title: text("title").notNull(),
+  blocks: jsonb("blocks").$type<ContentBlock[]>().default([]),
+  metaDescription: text("meta_description"),
+  changedBy: varchar("changed_by"),
+  changeNote: text("change_note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({
   attraction: one(attractions, {
@@ -475,6 +488,13 @@ export type InsertTopicBank = z.infer<typeof insertTopicBankSchema>;
 export type TopicBank = typeof topicBank.$inferSelect;
 export type InsertKeywordRepository = z.infer<typeof insertKeywordRepositorySchema>;
 export type KeywordRepository = typeof keywordRepository.$inferSelect;
+
+export const insertContentVersionSchema = createInsertSchema(contentVersions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertContentVersion = z.infer<typeof insertContentVersionSchema>;
+export type ContentVersion = typeof contentVersions.$inferSelect;
 
 // Full content types with relations
 export type ContentWithRelations = Content & {

@@ -163,7 +163,19 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Content not found" });
       }
 
-      const { attraction, hotel, article, ...contentData } = req.body;
+      // Auto-create version before update
+      const latestVersion = await storage.getLatestVersionNumber(req.params.id);
+      await storage.createContentVersion({
+        contentId: req.params.id,
+        versionNumber: latestVersion + 1,
+        title: existingContent.title,
+        blocks: existingContent.blocks || [],
+        metaDescription: existingContent.metaDescription,
+        changedBy: req.body.changedBy || null,
+        changeNote: req.body.changeNote || null,
+      });
+
+      const { attraction, hotel, article, changedBy, changeNote, ...contentData } = req.body;
       
       const updatedContent = await storage.updateContent(req.params.id, contentData);
 
@@ -180,6 +192,34 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating content:", error);
       res.status(500).json({ error: "Failed to update content" });
+    }
+  });
+
+  // Content Version History Routes
+  app.get("/api/contents/:id/versions", async (req, res) => {
+    try {
+      const content = await storage.getContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      const versions = await storage.getContentVersions(req.params.id);
+      res.json(versions);
+    } catch (error) {
+      console.error("Error fetching content versions:", error);
+      res.status(500).json({ error: "Failed to fetch content versions" });
+    }
+  });
+
+  app.get("/api/contents/:id/versions/:versionId", async (req, res) => {
+    try {
+      const version = await storage.getContentVersion(req.params.versionId);
+      if (!version) {
+        return res.status(404).json({ error: "Version not found" });
+      }
+      res.json(version);
+    } catch (error) {
+      console.error("Error fetching content version:", error);
+      res.status(500).json({ error: "Failed to fetch content version" });
     }
   });
 

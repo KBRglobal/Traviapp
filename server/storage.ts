@@ -12,6 +12,7 @@ import {
   internalLinks,
   topicBank,
   keywordRepository,
+  contentVersions,
   type User,
   type InsertUser,
   type Content,
@@ -35,6 +36,8 @@ import {
   type InsertTopicBank,
   type KeywordRepository,
   type InsertKeywordRepository,
+  type ContentVersion,
+  type InsertContentVersion,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -105,6 +108,11 @@ export interface IStorage {
   updateKeyword(id: string, data: Partial<InsertKeywordRepository>): Promise<KeywordRepository | undefined>;
   deleteKeyword(id: string): Promise<boolean>;
   incrementKeywordUsage(id: string): Promise<KeywordRepository | undefined>;
+
+  getContentVersions(contentId: string): Promise<ContentVersion[]>;
+  getContentVersion(id: string): Promise<ContentVersion | undefined>;
+  createContentVersion(version: InsertContentVersion): Promise<ContentVersion>;
+  getLatestVersionNumber(contentId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -467,6 +475,32 @@ export class DatabaseStorage implements IStorage {
       .where(eq(keywordRepository.id, id))
       .returning();
     return item;
+  }
+
+  async getContentVersions(contentId: string): Promise<ContentVersion[]> {
+    return await db
+      .select()
+      .from(contentVersions)
+      .where(eq(contentVersions.contentId, contentId))
+      .orderBy(desc(contentVersions.versionNumber));
+  }
+
+  async getContentVersion(id: string): Promise<ContentVersion | undefined> {
+    const [version] = await db.select().from(contentVersions).where(eq(contentVersions.id, id));
+    return version;
+  }
+
+  async createContentVersion(insertVersion: InsertContentVersion): Promise<ContentVersion> {
+    const [version] = await db.insert(contentVersions).values(insertVersion).returning();
+    return version;
+  }
+
+  async getLatestVersionNumber(contentId: string): Promise<number> {
+    const [result] = await db
+      .select({ maxVersion: sql<number>`COALESCE(MAX(${contentVersions.versionNumber}), 0)` })
+      .from(contentVersions)
+      .where(eq(contentVersions.contentId, contentId));
+    return result?.maxVersion ?? 0;
   }
 }
 
