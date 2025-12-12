@@ -14,7 +14,9 @@ import {
   insertMediaFileSchema,
   insertTopicBankSchema,
   insertKeywordRepositorySchema,
+  insertTranslationSchema,
   ROLE_PERMISSIONS,
+  SUPPORTED_LOCALES,
   type UserRole,
 } from "@shared/schema";
 import { z } from "zod";
@@ -259,6 +261,93 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching content version:", error);
       res.status(500).json({ error: "Failed to fetch content version" });
+    }
+  });
+
+  // Localization Routes
+  app.get("/api/locales", (req, res) => {
+    res.json(SUPPORTED_LOCALES);
+  });
+
+  app.get("/api/contents/:id/translations", async (req, res) => {
+    try {
+      const content = await storage.getContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      const translations = await storage.getTranslationsByContentId(req.params.id);
+      res.json(translations);
+    } catch (error) {
+      console.error("Error fetching translations:", error);
+      res.status(500).json({ error: "Failed to fetch translations" });
+    }
+  });
+
+  app.get("/api/translations/:id", async (req, res) => {
+    try {
+      const translation = await storage.getTranslation(req.params.id);
+      if (!translation) {
+        return res.status(404).json({ error: "Translation not found" });
+      }
+      res.json(translation);
+    } catch (error) {
+      console.error("Error fetching translation:", error);
+      res.status(500).json({ error: "Failed to fetch translation" });
+    }
+  });
+
+  app.post("/api/contents/:id/translations", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const content = await storage.getContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      const parsed = insertTranslationSchema.parse({ ...req.body, contentId: req.params.id });
+      const translation = await storage.createTranslation(parsed);
+      res.status(201).json(translation);
+    } catch (error) {
+      console.error("Error creating translation:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation error", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create translation" });
+    }
+  });
+
+  const updateTranslationSchema = z.object({
+    status: z.enum(["pending", "in_progress", "completed", "needs_review"]).optional(),
+    title: z.string().optional(),
+    metaTitle: z.string().optional(),
+    metaDescription: z.string().optional(),
+    blocks: z.array(z.any()).optional(),
+    translatedBy: z.string().optional(),
+    reviewedBy: z.string().optional(),
+  });
+
+  app.patch("/api/translations/:id", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const parsed = updateTranslationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation error", details: parsed.error.errors });
+      }
+      const translation = await storage.updateTranslation(req.params.id, parsed.data);
+      if (!translation) {
+        return res.status(404).json({ error: "Translation not found" });
+      }
+      res.json(translation);
+    } catch (error) {
+      console.error("Error updating translation:", error);
+      res.status(500).json({ error: "Failed to update translation" });
+    }
+  });
+
+  app.delete("/api/translations/:id", requirePermission("canDelete"), async (req, res) => {
+    try {
+      await storage.deleteTranslation(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting translation:", error);
+      res.status(500).json({ error: "Failed to delete translation" });
     }
   });
 

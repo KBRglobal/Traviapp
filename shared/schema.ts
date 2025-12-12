@@ -283,6 +283,28 @@ export const contentVersions = pgTable("content_versions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Supported locales enum
+export const localeEnum = pgEnum("locale", ["en", "ar", "zh", "ru", "de", "fr", "es", "hi", "ja", "ko"]);
+export const translationStatusEnum = pgEnum("translation_status", ["pending", "in_progress", "completed", "needs_review"]);
+
+// Translations table - for multi-language content
+export const translations = pgTable("translations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  locale: localeEnum("locale").notNull(),
+  status: translationStatusEnum("status").notNull().default("pending"),
+  title: text("title"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  blocks: jsonb("blocks").$type<ContentBlock[]>().default([]),
+  translatedBy: varchar("translated_by"),
+  reviewedBy: varchar("reviewed_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueContentLocale: sql`UNIQUE (${table.contentId}, ${table.locale})`,
+}));
+
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({
   attraction: one(attractions, {
@@ -531,6 +553,30 @@ export const insertContentVersionSchema = createInsertSchema(contentVersions).om
 export type InsertContentVersion = z.infer<typeof insertContentVersionSchema>;
 export type ContentVersion = typeof contentVersions.$inferSelect;
 
+export const insertTranslationSchema = createInsertSchema(translations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTranslation = z.infer<typeof insertTranslationSchema>;
+export type Translation = typeof translations.$inferSelect;
+
+export type Locale = "en" | "ar" | "zh" | "ru" | "de" | "fr" | "es" | "hi" | "ja" | "ko";
+export type TranslationStatus = "pending" | "in_progress" | "completed" | "needs_review";
+
+export const SUPPORTED_LOCALES: { code: Locale; name: string; nativeName: string }[] = [
+  { code: "en", name: "English", nativeName: "English" },
+  { code: "ar", name: "Arabic", nativeName: "العربية" },
+  { code: "zh", name: "Chinese", nativeName: "中文" },
+  { code: "ru", name: "Russian", nativeName: "Русский" },
+  { code: "de", name: "German", nativeName: "Deutsch" },
+  { code: "fr", name: "French", nativeName: "Français" },
+  { code: "es", name: "Spanish", nativeName: "Español" },
+  { code: "hi", name: "Hindi", nativeName: "हिन्दी" },
+  { code: "ja", name: "Japanese", nativeName: "日本語" },
+  { code: "ko", name: "Korean", nativeName: "한국어" },
+];
+
 // Full content types with relations
 export type ContentWithRelations = Content & {
   attraction?: Attraction;
@@ -540,4 +586,5 @@ export type ContentWithRelations = Content & {
   district?: District;
   transport?: Transport;
   affiliateLinks?: AffiliateLink[];
+  translations?: Translation[];
 };

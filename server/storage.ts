@@ -13,6 +13,7 @@ import {
   topicBank,
   keywordRepository,
   contentVersions,
+  translations,
   type User,
   type InsertUser,
   type Content,
@@ -38,6 +39,8 @@ import {
   type InsertKeywordRepository,
   type ContentVersion,
   type InsertContentVersion,
+  type Translation,
+  type InsertTranslation,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -113,6 +116,12 @@ export interface IStorage {
   getContentVersion(id: string): Promise<ContentVersion | undefined>;
   createContentVersion(version: InsertContentVersion): Promise<ContentVersion>;
   getLatestVersionNumber(contentId: string): Promise<number>;
+
+  getTranslationsByContentId(contentId: string): Promise<Translation[]>;
+  getTranslation(id: string): Promise<Translation | undefined>;
+  createTranslation(translation: InsertTranslation): Promise<Translation>;
+  updateTranslation(id: string, data: Partial<InsertTranslation>): Promise<Translation | undefined>;
+  deleteTranslation(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -170,6 +179,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, id));
+    result.translations = await db.select().from(translations).where(eq(translations.contentId, id));
 
     return result;
   }
@@ -501,6 +511,34 @@ export class DatabaseStorage implements IStorage {
       .from(contentVersions)
       .where(eq(contentVersions.contentId, contentId));
     return result?.maxVersion ?? 0;
+  }
+
+  async getTranslationsByContentId(contentId: string): Promise<Translation[]> {
+    return await db.select().from(translations).where(eq(translations.contentId, contentId));
+  }
+
+  async getTranslation(id: string): Promise<Translation | undefined> {
+    const [translation] = await db.select().from(translations).where(eq(translations.id, id));
+    return translation;
+  }
+
+  async createTranslation(insertTranslation: InsertTranslation): Promise<Translation> {
+    const [translation] = await db.insert(translations).values(insertTranslation).returning();
+    return translation;
+  }
+
+  async updateTranslation(id: string, updateData: Partial<InsertTranslation>): Promise<Translation | undefined> {
+    const [translation] = await db
+      .update(translations)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(translations.id, id))
+      .returning();
+    return translation;
+  }
+
+  async deleteTranslation(id: string): Promise<boolean> {
+    await db.delete(translations).where(eq(translations.id, id));
+    return true;
   }
 }
 
