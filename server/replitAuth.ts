@@ -70,13 +70,25 @@ export async function setupAuth(app: Express) {
 
   const config = await getOidcConfig();
 
+  // Only allow this email to log in
+  const ALLOWED_EMAIL = "traviquackson@gmail.com";
+
   const verify: VerifyFunction = async (
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
+    const claims = tokens.claims();
+    const email = claims["email"];
+    
+    // Restrict login to only the allowed email
+    if (!email || email.toLowerCase() !== ALLOWED_EMAIL.toLowerCase()) {
+      console.log(`Login rejected for email: ${email}`);
+      return verified(new Error("Access denied. This application is restricted."), undefined);
+    }
+    
     const user = {};
     updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
+    await upsertUser(claims);
     verified(null, user);
   };
 
