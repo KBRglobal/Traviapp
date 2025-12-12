@@ -45,11 +45,14 @@ export interface GeneratedHotelContent {
     secondaryKeywords: string[];
     lsiKeywords: string[];
     heroImageAlt: string;
+    heroImageCaption?: string;
     blocks: ContentBlock[];
     seoSchema: Record<string, unknown>;
+    images?: ContentImage[];
   };
   hotel: {
     location: string;
+    fullAddress?: string;
     starRating: number;
     numberOfRooms: number;
     amenities: string[];
@@ -134,153 +137,267 @@ export interface GeneratedArticleContent {
   };
 }
 
-const HOTEL_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive hotel pages for Dubai Travel website.
+const HOTEL_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized hotel pages for Dubai Travel website.
 
-Your output must be a valid JSON object matching this exact structure. Generate realistic, SEO-optimized content.
+CONTENT REQUIREMENTS:
+- Total word count: 1200-2000 words across all text blocks
+- Every piece of content must be accurate, engaging, and valuable for travelers
+- Include natural keyword placement throughout the content
+- Write in a professional yet inviting hospitality tone
+
+Your output must be a valid JSON object matching this exact structure:
 
 OUTPUT STRUCTURE:
 {
   "content": {
-    "title": "Hotel Name - Dubai | Luxury/Budget Resort",
+    "title": "Hotel Name Dubai | Luxury 5-Star Resort & Spa 2025",
     "slug": "hotel-name-dubai",
-    "metaTitle": "Hotel Name Dubai | Book Best Rates [Year]",
-    "metaDescription": "150-160 char compelling description with call to action",
+    "metaTitle": "Hotel Name Dubai - Best Rates & Booking 2025",
+    "metaDescription": "150-160 char description with primary keyword, key amenities, star rating, and compelling booking call to action",
     "primaryKeyword": "hotel name dubai",
-    "secondaryKeywords": ["dubai hotels", "luxury dubai resort", "beach hotel dubai"],
-    "lsiKeywords": ["accommodation", "stay", "rooms", "amenities"],
-    "heroImageAlt": "Descriptive alt text for hero image",
+    "secondaryKeywords": ["hotel name booking", "dubai luxury hotels", "stay at hotel name", "hotel name resort"],
+    "lsiKeywords": ["accommodation", "resort", "stay", "rooms", "suites", "amenities", "booking"],
+    "heroImageAlt": "Stunning exterior view of [Hotel Name] Dubai showing [specific architectural feature or view]",
+    "heroImageCaption": "Captivating description for hero image highlighting the property",
     "blocks": [
       {
-        "id": "unique_id",
-        "type": "text",
+        "id": "hero_block",
+        "type": "hero",
         "data": {
-          "heading": "Overview",
-          "content": "3 engaging sentences about the hotel (visible). Then expand with 200+ words covering unique features, location benefits, guest experience."
+          "title": "Welcome to [Hotel Name]",
+          "subtitle": "One compelling sentence about the hotel experience and location",
+          "overlayText": "Dubai's Premier [Luxury/Beachfront/Urban] Retreat"
         },
         "order": 0
       },
       {
-        "id": "unique_id2",
-        "type": "highlights",
+        "id": "overview_text",
+        "type": "text",
         "data": {
-          "title": "Hotel Highlights",
-          "items": ["Waterpark", "Private Beach", "Spa", "Kids Club", "Fine Dining", "Pool"]
+          "heading": "About [Hotel Name]",
+          "content": "Write 250-350 words. Start with 2-3 engaging sentences as the visible intro that capture the essence of the property. Then expand covering: what makes this hotel unique in Dubai's competitive hospitality scene, architectural design and aesthetic, the guest experience from arrival to departure, signature amenities and services, location advantages, views and surroundings, who this hotel is ideal for."
         },
         "order": 1
       },
       {
-        "id": "unique_id3",
-        "type": "text",
+        "id": "highlights_block",
+        "type": "highlights",
         "data": {
-          "heading": "Dining Experience",
-          "content": "Description of restaurant options, cuisines available, signature dishes"
+          "title": "Hotel Highlights",
+          "items": ["6 key property highlights - be specific about signature features, experiences, and amenities"]
         },
         "order": 2
       },
       {
-        "id": "unique_id4",
-        "type": "tips",
+        "id": "accommodation_text",
+        "type": "text",
         "data": {
-          "title": "Traveler Tips",
-          "tips": ["5-7 practical tips for guests"]
+          "heading": "Rooms & Suites",
+          "content": "Write 150-200 words describing accommodation options: room categories, suite offerings, signature room features, views available, in-room amenities, bedding quality, bathroom features, technology amenities."
         },
         "order": 3
       },
       {
-        "id": "unique_id5",
-        "type": "faq",
+        "id": "dining_text",
+        "type": "text",
         "data": {
-          "title": "Frequently Asked Questions",
-          "faqs": [{"question": "...", "answer": "..."}]
+          "heading": "Dining Experience",
+          "content": "Write 150-200 words covering: number of restaurants and bars, cuisine types, signature restaurants and chefs, breakfast experience, room service, poolside dining, special dining experiences, dress codes, reservation recommendations."
         },
         "order": 4
       },
       {
-        "id": "unique_id6",
+        "id": "wellness_text",
+        "type": "text",
+        "data": {
+          "heading": "Wellness & Recreation",
+          "content": "Write 100-150 words about: spa and wellness facilities, gym and fitness center, pools, beach access, sports facilities, activities and experiences, kids facilities, entertainment options."
+        },
+        "order": 5
+      },
+      {
+        "id": "location_text",
+        "type": "text",
+        "data": {
+          "heading": "Location & Surroundings",
+          "content": "Write 100-150 words about: exact location and neighborhood, nearby attractions and landmarks, shopping options, transportation connections, airport distance and transfer options, what guests can explore in the area."
+        },
+        "order": 6
+      },
+      {
+        "id": "tips_block",
+        "type": "tips",
+        "data": {
+          "title": "Guest Tips & Insider Advice",
+          "tips": ["7 detailed practical tips for guests - each should be actionable and specific to this property"]
+        },
+        "order": 7
+      },
+      {
+        "id": "faq_block",
+        "type": "faq",
+        "data": {
+          "title": "Frequently Asked Questions",
+          "faqs": [
+            {"question": "Question 1?", "answer": "100-200 word detailed answer with practical information"},
+            {"question": "Question 2?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 3?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 4?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 5?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 6?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 7?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 8?", "answer": "100-200 word detailed answer"}
+          ]
+        },
+        "order": 8
+      },
+      {
+        "id": "cta_block",
         "type": "cta",
         "data": {
-          "heading": "Ready to Book?",
-          "text": "Book your stay at [Hotel Name] today",
+          "heading": "Ready to Experience [Hotel Name]?",
+          "text": "Book your stay today and discover Dubai's finest hospitality",
           "buttonText": "Check Availability",
           "buttonLink": "#book"
         },
-        "order": 5
+        "order": 9
       }
     ],
     "seoSchema": {
       "@context": "https://schema.org",
       "@type": "Hotel",
       "name": "Hotel Name",
-      "description": "...",
-      "starRating": {"@type": "Rating", "ratingValue": "5"},
-      "address": {"@type": "PostalAddress", "addressLocality": "Dubai", "addressCountry": "AE"}
-    }
+      "description": "Comprehensive 150-200 word description for SEO schema covering property, location, and amenities",
+      "url": "https://dubaitravel.com/hotels/hotel-name-dubai",
+      "image": {
+        "@type": "ImageObject",
+        "url": "",
+        "caption": "Hotel Name Dubai"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Full street address",
+        "addressLocality": "Dubai",
+        "addressRegion": "Dubai",
+        "addressCountry": "AE",
+        "postalCode": "00000"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "25.XXXX",
+        "longitude": "55.XXXX"
+      },
+      "starRating": {
+        "@type": "Rating",
+        "ratingValue": "5",
+        "bestRating": "5"
+      },
+      "numberOfRooms": 300,
+      "petsAllowed": false,
+      "checkinTime": "15:00",
+      "checkoutTime": "12:00",
+      "amenityFeature": [
+        {"@type": "LocationFeatureSpecification", "name": "Swimming Pool", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Spa", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Fitness Center", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Free WiFi", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Restaurant", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Room Service", "value": true}
+      ],
+      "priceRange": "AED 1,200 - 15,000",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "reviewCount": "5000"
+      }
+    },
+    "images": [
+      {"filename": "hotel-name-exterior.jpg", "alt": "Exterior view of [Hotel Name] Dubai with [specific details]", "caption": "The stunning facade of [Hotel Name]"},
+      {"filename": "hotel-name-lobby.jpg", "alt": "Grand lobby interior of [Hotel Name]", "caption": "Experience our elegant arrival experience"},
+      {"filename": "hotel-name-room.jpg", "alt": "[Room type] at [Hotel Name] featuring [view/feature]", "caption": "Luxurious accommodations with [feature]"},
+      {"filename": "hotel-name-pool.jpg", "alt": "[Pool description] at [Hotel Name]", "caption": "Relax at our [pool feature]"},
+      {"filename": "hotel-name-dining.jpg", "alt": "[Restaurant name] at [Hotel Name] showing [cuisine/ambiance]", "caption": "Culinary excellence at [Restaurant name]"}
+    ]
   },
   "hotel": {
-    "location": "Palm Jumeirah, Dubai",
+    "location": "Palm Jumeirah, Dubai - Full area name",
+    "fullAddress": "Complete street address, area, Dubai, UAE",
     "starRating": 5,
     "numberOfRooms": 300,
-    "amenities": ["Pool", "Spa", "Gym", "Beach", "WiFi", "Restaurant", "Bar", "Kids Club"],
-    "targetAudience": ["Families", "Couples", "Business Travelers"],
+    "amenities": ["Pool", "Spa", "Gym", "Beach Access", "WiFi", "Multiple Restaurants", "Bar", "Kids Club", "Business Center", "Concierge"],
+    "targetAudience": ["Luxury Travelers", "Families", "Couples", "Business Travelers", "Honeymooners"],
     "primaryCta": "Book Now - Best Rate Guarantee",
     "quickInfoBar": [
       {"icon": "MapPin", "label": "Location", "value": "Palm Jumeirah"},
-      {"icon": "Star", "label": "Rating", "value": "5-Star"},
+      {"icon": "Star", "label": "Rating", "value": "5-Star Luxury"},
       {"icon": "Waves", "label": "Beach", "value": "Private Beach"},
       {"icon": "Utensils", "label": "Dining", "value": "8 Restaurants"},
-      {"icon": "Plane", "label": "Airport", "value": "25 min"}
+      {"icon": "Plane", "label": "Airport", "value": "25 min transfer"},
+      {"icon": "Clock", "label": "Check-in", "value": "3:00 PM"},
+      {"icon": "Wifi", "label": "WiFi", "value": "Complimentary"},
+      {"icon": "Car", "label": "Parking", "value": "Valet available"}
     ],
     "highlights": [
-      {"image": "", "title": "Waterpark", "description": "World-class aquatic adventures"},
-      {"image": "", "title": "Private Beach", "description": "Pristine white sand beach"},
-      {"image": "", "title": "Spa & Wellness", "description": "Award-winning treatments"},
-      {"image": "", "title": "Kids Club", "description": "Supervised activities"},
-      {"image": "", "title": "Fine Dining", "description": "Celebrity chef restaurants"},
-      {"image": "", "title": "Pools", "description": "Multiple temperature-controlled pools"}
+      {"image": "", "title": "Signature Feature 1", "description": "50-80 word description of this unique hotel feature or experience"},
+      {"image": "", "title": "Signature Feature 2", "description": "50-80 word description"},
+      {"image": "", "title": "Signature Feature 3", "description": "50-80 word description"},
+      {"image": "", "title": "Signature Feature 4", "description": "50-80 word description"},
+      {"image": "", "title": "Signature Feature 5", "description": "50-80 word description"},
+      {"image": "", "title": "Signature Feature 6", "description": "50-80 word description"}
     ],
     "roomTypes": [
-      {"image": "", "title": "Deluxe Room", "features": ["Sea View", "King Bed", "Balcony"], "price": "From AED 1,200/night"},
-      {"image": "", "title": "Premium Suite", "features": ["Ocean View", "Living Area", "Butler Service"], "price": "From AED 2,500/night"},
-      {"image": "", "title": "Royal Suite", "features": ["Panoramic Views", "Private Pool", "Full Kitchen"], "price": "From AED 5,000/night"}
+      {"image": "", "title": "Deluxe Room", "features": ["Sea View", "King Bed", "Balcony", "45 sqm"], "price": "From AED 1,200/night"},
+      {"image": "", "title": "Premium Suite", "features": ["Ocean View", "Living Area", "Butler Service", "85 sqm"], "price": "From AED 2,500/night"},
+      {"image": "", "title": "Presidential Suite", "features": ["Panoramic Views", "Private Pool", "Full Kitchen", "200 sqm"], "price": "From AED 8,000/night"},
+      {"image": "", "title": "Family Room", "features": ["Garden View", "Two Queen Beds", "Kids Amenities", "55 sqm"], "price": "From AED 1,500/night"}
     ],
     "essentialInfo": [
-      {"icon": "MapPin", "label": "Location", "value": "Address details"},
-      {"icon": "Clock", "label": "Check-in", "value": "3:00 PM"},
-      {"icon": "Clock", "label": "Check-out", "value": "12:00 PM"},
-      {"icon": "DollarSign", "label": "Price Range", "value": "AED 1,200 - 15,000"},
-      {"icon": "Plane", "label": "Airport Distance", "value": "25 minutes"},
-      {"icon": "Waves", "label": "Pools", "value": "5 pools"},
-      {"icon": "Utensils", "label": "Dining", "value": "8 restaurants"},
-      {"icon": "Wifi", "label": "WiFi", "value": "Complimentary"},
-      {"icon": "Accessibility", "label": "Accessibility", "value": "Wheelchair accessible"},
-      {"icon": "Car", "label": "Parking", "value": "Valet available"},
-      {"icon": "Baby", "label": "Family", "value": "Kids club, babysitting"},
-      {"icon": "Dumbbell", "label": "Fitness", "value": "24-hour gym"}
+      {"icon": "MapPin", "label": "Address", "value": "Full street address, Dubai, UAE"},
+      {"icon": "Clock", "label": "Check-in", "value": "3:00 PM (early check-in on request)"},
+      {"icon": "Clock", "label": "Check-out", "value": "12:00 PM (late check-out on request)"},
+      {"icon": "DollarSign", "label": "Price Range", "value": "AED 1,200 - 15,000/night"},
+      {"icon": "Plane", "label": "Airport Distance", "value": "25 minutes by car"},
+      {"icon": "Waves", "label": "Pools", "value": "5 pools including kids pool"},
+      {"icon": "Utensils", "label": "Dining", "value": "8 restaurants, 4 bars"},
+      {"icon": "Wifi", "label": "WiFi", "value": "Complimentary high-speed"},
+      {"icon": "Accessibility", "label": "Accessibility", "value": "Fully wheelchair accessible"},
+      {"icon": "Car", "label": "Parking", "value": "Complimentary valet parking"},
+      {"icon": "Baby", "label": "Family", "value": "Kids club ages 4-12, babysitting"},
+      {"icon": "Dumbbell", "label": "Fitness", "value": "24-hour gym with personal trainers"}
     ],
     "diningPreview": [
-      {"name": "Main Restaurant", "cuisine": "International Buffet", "description": "All-day dining"},
-      {"name": "Specialty Restaurant", "cuisine": "Fine Dining", "description": "Reservation recommended"}
+      {"name": "Main Restaurant", "cuisine": "International Buffet", "description": "All-day dining with global flavors and live cooking stations"},
+      {"name": "Signature Restaurant", "cuisine": "Fine Dining", "description": "Michelin-quality experience with celebrity chef creations"},
+      {"name": "Pool Bar", "cuisine": "Light Bites & Cocktails", "description": "Refreshing poolside service throughout the day"},
+      {"name": "Specialty Restaurant", "cuisine": "Asian Fusion", "description": "Authentic flavors in an elegant setting"}
     ],
-    "activities": ["Swimming", "Spa treatments", "Water sports", "Tennis", "Kids activities"],
+    "activities": ["Swimming", "Spa treatments", "Water sports", "Tennis", "Fitness classes", "Kids activities", "Beach activities", "Golf nearby"],
     "travelerTips": [
-      "Book pool cabanas in advance during peak season",
-      "Request a room on higher floors for better views",
-      "The breakfast buffet opens at 6:30 AM for early risers"
+      "Book pool cabanas in advance during peak season (November-March) as they sell out quickly",
+      "Request a room on higher floors for better views - corner rooms offer the best panoramas",
+      "The breakfast buffet opens at 6:30 AM for early risers, but the 9-10 AM slot is most popular",
+      "Join the hotel loyalty program before booking for instant upgrades and late checkout",
+      "Book specialty restaurants at least 48 hours in advance, especially for weekend dinners",
+      "Ask concierge about complimentary shuttle services to nearby attractions",
+      "Early evening is the best time for beach photos as the lighting is perfect"
     ],
     "faq": [
-      {"question": "What time is check-in?", "answer": "Check-in is at 3:00 PM, early check-in available on request."},
-      {"question": "Is parking available?", "answer": "Yes, complimentary valet parking for all guests."},
-      {"question": "Is the beach private?", "answer": "Yes, the hotel has a private beach for guests only."},
-      {"question": "Are pets allowed?", "answer": "Unfortunately, pets are not permitted."},
-      {"question": "Is there a kids club?", "answer": "Yes, supervised kids club for ages 4-12."},
-      {"question": "What dining options are available?", "answer": "8 restaurants and bars serving international cuisine."}
+      {"question": "What time is check-in and check-out at [Hotel Name]?", "answer": "Write 100-200 words covering: standard times, early/late options, luggage storage, express check-in for members, online check-in availability."},
+      {"question": "Is parking available at [Hotel Name]?", "answer": "Write 100-200 words covering: valet vs self-parking, costs, EV charging, taxi/ride-share options, hotel transfers."},
+      {"question": "Does [Hotel Name] have a private beach?", "answer": "Write 100-200 words covering: beach details, facilities, service, water activities, best times."},
+      {"question": "Are pets allowed at [Hotel Name]?", "answer": "Write 100-200 words covering: pet policy, alternatives, nearby pet services."},
+      {"question": "What family facilities does [Hotel Name] offer?", "answer": "Write 100-200 words covering: kids club, babysitting, family rooms, children's menus, age policies."},
+      {"question": "What dining options are available at [Hotel Name]?", "answer": "Write 100-200 words covering: all F&B outlets, cuisines, hours, dress codes, reservations."},
+      {"question": "How do I get from Dubai Airport to [Hotel Name]?", "answer": "Write 100-200 words covering: transfer options, taxi costs, hotel shuttle, public transport, journey time."},
+      {"question": "Does [Hotel Name] offer spa and wellness facilities?", "answer": "Write 100-200 words covering: spa details, treatments, gym, classes, pool facilities, operating hours."}
     ],
     "locationNearby": [
-      {"name": "Dubai Mall", "distance": "15 min", "type": "Shopping"},
-      {"name": "Burj Khalifa", "distance": "20 min", "type": "Attraction"},
-      {"name": "Dubai Marina", "distance": "10 min", "type": "District"}
+      {"name": "Dubai Mall", "distance": "15 min by car", "type": "Shopping"},
+      {"name": "Burj Khalifa", "distance": "20 min by car", "type": "Attraction"},
+      {"name": "Dubai Marina", "distance": "10 min by car", "type": "District"},
+      {"name": "Mall of the Emirates", "distance": "12 min by car", "type": "Shopping"}
     ],
-    "trustSignals": ["TripAdvisor Certificate of Excellence", "Forbes 5-Star", "Booking.com Traveller Review Award"]
+    "trustSignals": ["TripAdvisor Certificate of Excellence 2024", "Forbes 5-Star Rating", "Booking.com Traveller Review Award 9.4", "Condé Nast Traveler Gold List"]
   }
 }
 
