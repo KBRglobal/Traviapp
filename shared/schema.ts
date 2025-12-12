@@ -287,6 +287,17 @@ export const contentVersions = pgTable("content_versions", {
 export const localeEnum = pgEnum("locale", ["en", "ar", "zh", "ru", "de", "fr", "es", "hi", "ja", "ko"]);
 export const translationStatusEnum = pgEnum("translation_status", ["pending", "in_progress", "completed", "needs_review"]);
 
+// Content Fingerprints table - for RSS deduplication
+export const contentFingerprints = pgTable("content_fingerprints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").references(() => contents.id, { onDelete: "cascade" }),
+  fingerprint: text("fingerprint").notNull().unique(),
+  sourceUrl: text("source_url"),
+  sourceTitle: text("source_title"),
+  rssFeedId: varchar("rss_feed_id").references(() => rssFeeds.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Translations table - for multi-language content
 export const translations = pgTable("translations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -552,6 +563,13 @@ export const insertContentVersionSchema = createInsertSchema(contentVersions).om
 });
 export type InsertContentVersion = z.infer<typeof insertContentVersionSchema>;
 export type ContentVersion = typeof contentVersions.$inferSelect;
+
+export const insertContentFingerprintSchema = createInsertSchema(contentFingerprints).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertContentFingerprint = z.infer<typeof insertContentFingerprintSchema>;
+export type ContentFingerprint = typeof contentFingerprints.$inferSelect;
 
 export const insertTranslationSchema = createInsertSchema(translations).omit({
   id: true,

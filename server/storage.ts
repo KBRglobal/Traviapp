@@ -14,6 +14,7 @@ import {
   keywordRepository,
   contentVersions,
   translations,
+  contentFingerprints,
   type User,
   type InsertUser,
   type Content,
@@ -41,6 +42,8 @@ import {
   type InsertContentVersion,
   type Translation,
   type InsertTranslation,
+  type ContentFingerprint,
+  type InsertContentFingerprint,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -122,6 +125,11 @@ export interface IStorage {
   createTranslation(translation: InsertTranslation): Promise<Translation>;
   updateTranslation(id: string, data: Partial<InsertTranslation>): Promise<Translation | undefined>;
   deleteTranslation(id: string): Promise<boolean>;
+
+  getContentFingerprintByHash(fingerprint: string): Promise<ContentFingerprint | undefined>;
+  getContentFingerprintsByFeedId(rssFeedId: string): Promise<ContentFingerprint[]>;
+  createContentFingerprint(fingerprint: InsertContentFingerprint): Promise<ContentFingerprint>;
+  checkDuplicateFingerprints(fingerprints: string[]): Promise<ContentFingerprint[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -539,6 +547,29 @@ export class DatabaseStorage implements IStorage {
   async deleteTranslation(id: string): Promise<boolean> {
     await db.delete(translations).where(eq(translations.id, id));
     return true;
+  }
+
+  async getContentFingerprintByHash(fingerprint: string): Promise<ContentFingerprint | undefined> {
+    const [result] = await db.select().from(contentFingerprints).where(eq(contentFingerprints.fingerprint, fingerprint));
+    return result;
+  }
+
+  async getContentFingerprintsByFeedId(rssFeedId: string): Promise<ContentFingerprint[]> {
+    return await db.select().from(contentFingerprints).where(eq(contentFingerprints.rssFeedId, rssFeedId));
+  }
+
+  async createContentFingerprint(insertFingerprint: InsertContentFingerprint): Promise<ContentFingerprint> {
+    const [fingerprint] = await db.insert(contentFingerprints).values(insertFingerprint).returning();
+    return fingerprint;
+  }
+
+  async checkDuplicateFingerprints(fingerprints: string[]): Promise<ContentFingerprint[]> {
+    if (fingerprints.length === 0) return [];
+    const results = await db
+      .select()
+      .from(contentFingerprints)
+      .where(sql`${contentFingerprints.fingerprint} = ANY(${fingerprints})`);
+    return results;
   }
 }
 

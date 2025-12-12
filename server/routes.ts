@@ -453,6 +453,19 @@ export async function registerRoutes(
     items: z.array(rssImportItemSchema).min(1).max(50),
   });
 
+  // Helper function to generate content fingerprint from title and URL
+  function generateFingerprint(title: string, url?: string): string {
+    const normalized = `${title.toLowerCase().trim()}|${(url || '').toLowerCase().trim()}`;
+    // Simple hash function for fingerprinting
+    let hash = 0;
+    for (let i = 0; i < normalized.length; i++) {
+      const char = normalized.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return `fp_${Math.abs(hash).toString(36)}`;
+  }
+
   app.post("/api/rss-feeds/:id/import", async (req, res) => {
     try {
       const feed = await storage.getRssFeed(req.params.id);
@@ -466,8 +479,47 @@ export async function registerRoutes(
       }
 
       const { items } = parsed.data;
+      
+      // Generate fingerprints for all items
+      const itemsWithFingerprints = items.map(item => ({
+        ...item,
+        fingerprint: generateFingerprint(item.title, item.link)
+      }));
+      
+      // Check for existing duplicates in database
+      const fingerprints = itemsWithFingerprints.map(i => i.fingerprint);
+      const existingFingerprints = await storage.checkDuplicateFingerprints(fingerprints);
+      const existingFingerprintSet = new Set(existingFingerprints.map(fp => fp.fingerprint));
+      
+      // Separate duplicates from new items, also track in-batch duplicates
+      const duplicates: { title: string; link?: string; existingContentId?: string | null; reason: string }[] = [];
+      const newItems: typeof itemsWithFingerprints = [];
+      const seenInBatch = new Set<string>();
+      
+      for (const item of itemsWithFingerprints) {
+        if (existingFingerprintSet.has(item.fingerprint)) {
+          const existing = existingFingerprints.find(fp => fp.fingerprint === item.fingerprint);
+          duplicates.push({
+            title: item.title,
+            link: item.link,
+            existingContentId: existing?.contentId,
+            reason: "already_imported"
+          });
+        } else if (seenInBatch.has(item.fingerprint)) {
+          duplicates.push({
+            title: item.title,
+            link: item.link,
+            existingContentId: null,
+            reason: "duplicate_in_batch"
+          });
+        } else {
+          seenInBatch.add(item.fingerprint);
+          newItems.push(item);
+        }
+      }
+
       const createdContents = [];
-      for (const item of items) {
+      for (const item of newItems) {
         const slug = item.title
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
@@ -490,7 +542,21 @@ export async function registerRoutes(
           ],
         });
 
-        await storage.createArticle({ contentId: content.id });
+        await storage.createArticle({ 
+          contentId: content.id,
+          sourceRssFeedId: req.params.id,
+          sourceUrl: item.link || null
+        });
+        
+        // Store fingerprint for future deduplication
+        await storage.createContentFingerprint({
+          contentId: content.id,
+          fingerprint: item.fingerprint,
+          sourceUrl: item.link || null,
+          sourceTitle: item.title,
+          rssFeedId: req.params.id
+        });
+        
         createdContents.push(content);
       }
 
@@ -498,7 +564,15 @@ export async function registerRoutes(
         lastFetched: new Date(),
       });
 
-      res.status(201).json({ imported: createdContents.length, contents: createdContents });
+      res.status(201).json({ 
+        imported: createdContents.length, 
+        contents: createdContents,
+        duplicates: duplicates,
+        duplicateCount: duplicates.length,
+        message: duplicates.length > 0 
+          ? `Imported ${createdContents.length} items. Skipped ${duplicates.length} duplicate(s).`
+          : `Successfully imported ${createdContents.length} items.`
+      });
     } catch (error) {
       console.error("Error importing RSS feed items:", error);
       res.status(500).json({ error: "Failed to import RSS feed items" });
