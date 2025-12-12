@@ -239,11 +239,17 @@ export const districts = pgTable("districts", {
   contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
   location: text("location"),
   neighborhood: text("neighborhood"),
+  subcategory: text("subcategory"),
   targetAudience: jsonb("target_audience").$type<string[]>().default([]),
   primaryCta: text("primary_cta"),
+  introText: text("intro_text"),
+  expandedIntroText: text("expanded_intro_text"),
   quickInfoBar: jsonb("quick_info_bar").$type<QuickInfoItem[]>().default([]),
   highlights: jsonb("highlights").$type<HighlightItem[]>().default([]),
   thingsToDo: jsonb("things_to_do").$type<ThingsToDoItem[]>().default([]),
+  attractionsGrid: jsonb("attractions_grid").$type<DistrictAttractionItem[]>().default([]),
+  diningHighlights: jsonb("dining_highlights").$type<DiningHighlightItem[]>().default([]),
+  realEstateInfo: jsonb("real_estate_info").$type<RealEstateInfoItem>(),
   essentialInfo: jsonb("essential_info").$type<EssentialInfoItem[]>().default([]),
   localTips: jsonb("local_tips").$type<string[]>().default([]),
   faq: jsonb("faq").$type<FaqItem[]>().default([]),
@@ -671,6 +677,29 @@ export interface ExperienceItem {
   icon: string;
   title: string;
   description: string;
+}
+
+export interface DistrictAttractionItem {
+  name: string;
+  description: string;
+  image?: string;
+  type: string;
+  isNew?: boolean;
+}
+
+export interface DiningHighlightItem {
+  name: string;
+  cuisine: string;
+  description: string;
+  image?: string;
+  priceRange?: string;
+}
+
+export interface RealEstateInfoItem {
+  overview: string;
+  priceRange?: string;
+  highlights: string[];
+  targetBuyers?: string[];
 }
 
 // Insert schemas
