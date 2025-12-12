@@ -45,6 +45,7 @@ import UsersPage from "@/pages/users";
 import HomepagePromotions from "@/pages/homepage-promotions";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
+import AccessDenied from "@/pages/access-denied";
 import { AIAssistant } from "@/components/ai-assistant";
 
 function AdminRouter() {
@@ -161,6 +162,7 @@ function App() {
             <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/terms" component={TermsConditions} />
             <Route path="/login" component={Login} />
+            <Route path="/access-denied" component={AccessDenied} />
             <Route component={NotFound} />
           </Switch>
         )}

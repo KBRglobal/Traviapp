@@ -124,10 +124,27 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+    passport.authenticate(`replitauth:${req.hostname}`, (err: any, user: any) => {
+      if (err || !user) {
+        // Redirect to access denied page with error message
+        return res.redirect("/access-denied");
+      }
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          return res.redirect("/access-denied");
+        }
+        return res.redirect("/");
+      });
     })(req, res, next);
+  });
+
+  // Access denied page
+  app.get("/api/access-denied-info", (req, res) => {
+    res.json({ 
+      error: "Access denied", 
+      message: "This application is restricted to authorized users only.",
+      allowedEmail: "traviquackson@gmail.com"
+    });
   });
 
   app.get("/api/logout", (req, res) => {
