@@ -178,17 +178,17 @@ export default function AIArticleGenerator() {
       ];
       
       const categoryMap: Record<string, string> = {
-        "A": "attractions_activities",
+        "A": "attractions",
         "B": "hotels",
-        "C": "dining_food",
-        "D": "transportation",
-        "E": "events_festivals",
-        "F": "tips_guides",
-        "G": "news_regulations",
-        "H": "shopping_deals",
+        "C": "food",
+        "D": "transport",
+        "E": "events",
+        "F": "tips",
+        "G": "news",
+        "H": "shopping",
       };
       const categoryCode = editedData.analysis.category?.charAt(0) || "F";
-      const mappedCategory = categoryMap[categoryCode] || "tips_guides";
+      const mappedCategory = categoryMap[categoryCode] || "tips";
 
       const response = await apiRequest("POST", "/api/contents", {
         title: editedData.article.h1,
@@ -414,6 +414,32 @@ export default function AIArticleGenerator() {
 
           {editedData && !generateMutation.isPending && (
             <>
+              <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-primary/5 border border-primary/20 mb-4">
+                <div>
+                  <h3 className="font-medium text-sm">Ready to save?</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Create a draft article in the CMS
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => createDraftMutation.mutate()}
+                  disabled={createDraftMutation.isPending}
+                  data-testid="button-create-draft"
+                >
+                  {createDraftMutation.isPending ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Create Draft Article
+                    </>
+                  )}
+                </Button>
+              </div>
+
               <Tabs defaultValue="article" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="article" data-testid="tab-article">
@@ -899,36 +925,6 @@ export default function AIArticleGenerator() {
                   </div>
                 </TabsContent>
               </Tabs>
-
-              <Card className="bg-primary/5 border-primary/20">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div>
-                      <h3 className="font-medium">Ready to save?</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Create a draft article in the CMS from this generated content
-                      </p>
-                    </div>
-                    <Button 
-                      onClick={() => createDraftMutation.mutate()}
-                      disabled={createDraftMutation.isPending}
-                      data-testid="button-create-draft"
-                    >
-                      {createDraftMutation.isPending ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Create Draft Article
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </>
           )}
 
