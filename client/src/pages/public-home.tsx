@@ -1,12 +1,24 @@
-import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Sparkles, Menu, MapPin, Star, Clock, ChevronRight, X } from "lucide-react";
+import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Sparkles, Menu, MapPin, Star, Clock, ChevronRight, X, Bed, FileText } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import type { Content } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
+
+interface HomepagePromotion {
+  id: string;
+  section: string;
+  contentId: string | null;
+  position: number;
+  isActive: boolean;
+  customTitle: string | null;
+  customImage: string | null;
+  content?: Content;
+}
 
 const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop",
@@ -93,6 +105,164 @@ function ContentCardSkeleton() {
   );
 }
 
+function HotelCard({ content, index }: { content: Content; index: number }) {
+  const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  const contentPath = `/hotels/${content.slug}`;
+  
+  return (
+    <Link href={contentPath}>
+      <article>
+        <Card className="group overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300 cursor-pointer">
+          <div className="aspect-[16/10] overflow-hidden relative">
+            <img 
+              src={imageUrl} 
+              alt={content.heroImageAlt || content.title} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              width={600}
+              height={375}
+            />
+            <div className="absolute top-3 left-3">
+              <Badge className="bg-[#6443F4] text-white text-xs">
+                <Bed className="w-3 h-3 mr-1" aria-hidden="true" />
+                Hotel
+              </Badge>
+            </div>
+          </div>
+          <div className="p-4">
+            <h3 className="font-heading font-semibold text-foreground line-clamp-1 mb-1 group-hover:text-primary transition-colors">
+              {content.title}
+            </h3>
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+              {content.metaDescription || "Experience luxury and comfort in Dubai."}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400" aria-hidden="true" />
+                4.8
+              </span>
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3 h-3" aria-hidden="true" />
+                Dubai
+              </span>
+            </div>
+          </div>
+        </Card>
+      </article>
+    </Link>
+  );
+}
+
+function AttractionCard({ content, index }: { content: Content; index: number }) {
+  const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  const contentPath = `/attractions/${content.slug}`;
+  
+  return (
+    <Link href={contentPath}>
+      <article>
+        <Card className="group overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300 cursor-pointer">
+          <div className="aspect-[4/3] overflow-hidden relative">
+            <img 
+              src={imageUrl} 
+              alt={content.heroImageAlt || content.title} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              width={600}
+              height={450}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            <div className="absolute bottom-3 left-3 right-3">
+              <h3 className="font-heading font-semibold text-white line-clamp-2 drop-shadow-lg">
+                {content.title}
+              </h3>
+            </div>
+          </div>
+          <div className="p-3">
+            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Mountain className="w-3 h-3 text-[#F94498]" aria-hidden="true" />
+                Attraction
+              </span>
+              <span className="flex items-center gap-1">
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400" aria-hidden="true" />
+                4.9
+              </span>
+            </div>
+          </div>
+        </Card>
+      </article>
+    </Link>
+  );
+}
+
+function ArticleCard({ content, index, featured = false }: { content: Content; index: number; featured?: boolean }) {
+  const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  const contentPath = `/articles/${content.slug}`;
+  
+  if (featured) {
+    return (
+      <Link href={contentPath}>
+        <article>
+          <Card className="group overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300 cursor-pointer h-full">
+            <div className="flex flex-col md:flex-row h-full">
+              <div className="md:w-1/2 aspect-[16/9] md:aspect-auto overflow-hidden">
+                <img 
+                  src={imageUrl} 
+                  alt={content.heroImageAlt || content.title} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                  width={600}
+                  height={400}
+                />
+              </div>
+              <div className="md:w-1/2 p-6 flex flex-col justify-center">
+                <Badge variant="outline" className="w-fit mb-3 text-xs">
+                  <FileText className="w-3 h-3 mr-1" aria-hidden="true" />
+                  Article
+                </Badge>
+                <h3 className="font-heading text-xl font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                  {content.title}
+                </h3>
+                <p className="text-sm text-muted-foreground line-clamp-3">
+                  {content.metaDescription || "Discover insights and tips for your Dubai adventure."}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </article>
+      </Link>
+    );
+  }
+  
+  return (
+    <Link href={contentPath}>
+      <article>
+        <Card className="group overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300 cursor-pointer flex gap-4 p-4">
+          <div className="w-24 h-24 shrink-0 overflow-hidden rounded-lg">
+            <img 
+              src={imageUrl} 
+              alt={content.heroImageAlt || content.title} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              width={96}
+              height={96}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <Badge variant="outline" className="text-xs mb-2">
+              <FileText className="w-3 h-3 mr-1" aria-hidden="true" />
+              Article
+            </Badge>
+            <h3 className="font-heading font-semibold text-foreground line-clamp-2 text-sm group-hover:text-primary transition-colors">
+              {content.title}
+            </h3>
+          </div>
+        </Card>
+      </article>
+    </Link>
+  );
+}
+
 export default function PublicHome() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -106,15 +276,57 @@ export default function PublicHome() {
     ogType: "website",
   });
 
-  const { data: publishedContent, isLoading } = useQuery<Content[]>({
-    queryKey: ["/api/contents?status=published"],
-  });
-
   const { data: statsData } = useQuery<StatsData>({
     queryKey: ["/api/stats"],
   });
 
-  const featuredContent = publishedContent?.slice(0, 4) || [];
+  // Fetch homepage promotions for each section
+  const { data: featuredPromotions = [], isLoading: featuredLoading } = useQuery<HomepagePromotion[]>({
+    queryKey: ["/api/homepage-promotions/featured"],
+  });
+
+  const { data: attractionsPromotions = [], isLoading: attractionsLoading } = useQuery<HomepagePromotion[]>({
+    queryKey: ["/api/homepage-promotions/attractions"],
+  });
+
+  const { data: hotelsPromotions = [], isLoading: hotelsLoading } = useQuery<HomepagePromotion[]>({
+    queryKey: ["/api/homepage-promotions/hotels"],
+  });
+
+  const { data: articlesPromotions = [], isLoading: articlesLoading } = useQuery<HomepagePromotion[]>({
+    queryKey: ["/api/homepage-promotions/articles"],
+  });
+
+  // Fallback to published content if no promotions
+  const { data: publishedContent } = useQuery<Content[]>({
+    queryKey: ["/api/contents?status=published"],
+  });
+
+  // Get active content from promotions
+  const getActiveContent = (promotions: HomepagePromotion[]): Content[] => {
+    return promotions
+      .filter(p => p.isActive && p.content)
+      .map(p => p.content!)
+      .slice(0, 4);
+  };
+
+  const featuredContent = getActiveContent(featuredPromotions).length > 0 
+    ? getActiveContent(featuredPromotions) 
+    : (publishedContent?.slice(0, 4) || []);
+  
+  const attractionsContent = getActiveContent(attractionsPromotions).length > 0
+    ? getActiveContent(attractionsPromotions)
+    : (publishedContent?.filter(c => c.type === "attraction").slice(0, 4) || []);
+  
+  const hotelsContent = getActiveContent(hotelsPromotions).length > 0
+    ? getActiveContent(hotelsPromotions)
+    : (publishedContent?.filter(c => c.type === "hotel").slice(0, 4) || []);
+  
+  const articlesContent = getActiveContent(articlesPromotions).length > 0
+    ? getActiveContent(articlesPromotions)
+    : (publishedContent?.filter(c => c.type === "article").slice(0, 3) || []);
+
+  const isLoading = featuredLoading;
   const hasContent = featuredContent.length > 0;
 
   const displayStats = [
@@ -350,6 +562,130 @@ export default function PublicHome() {
             </div>
           </div>
         </section>
+
+        {/* Hotels Section */}
+        {hotelsContent.length > 0 && (
+          <section className="py-12 sm:py-16 bg-background" data-testid="section-hotels" aria-labelledby="hotels-heading">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between gap-4 mb-8">
+                <div>
+                  <h2 id="hotels-heading" className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                    Top Hotels
+                  </h2>
+                  <p className="text-muted-foreground">Luxury stays for every budget</p>
+                </div>
+                <Link href="/hotels">
+                  <Button variant="ghost" className="text-primary hidden sm:flex">
+                    View All <ChevronRight className="w-4 h-4 ml-1" aria-hidden="true" />
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" role="list" aria-label="Featured hotels">
+                {hotelsLoading ? (
+                  [0, 1, 2, 3].map((index) => <ContentCardSkeleton key={index} />)
+                ) : (
+                  hotelsContent.map((content, index) => (
+                    <HotelCard key={content.id} content={content} index={index} />
+                  ))
+                )}
+              </div>
+
+              <div className="mt-8 text-center sm:hidden">
+                <Link href="/hotels">
+                  <Button variant="outline" className="text-primary border-primary">
+                    View All Hotels
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Attractions Section */}
+        {attractionsContent.length > 0 && (
+          <section className="py-12 sm:py-16 bg-muted/30" data-testid="section-attractions" aria-labelledby="attractions-heading">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between gap-4 mb-8">
+                <div>
+                  <h2 id="attractions-heading" className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                    Must-See Attractions
+                  </h2>
+                  <p className="text-muted-foreground">Iconic landmarks and hidden gems</p>
+                </div>
+                <Link href="/attractions">
+                  <Button variant="ghost" className="text-primary hidden sm:flex">
+                    View All <ChevronRight className="w-4 h-4 ml-1" aria-hidden="true" />
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" role="list" aria-label="Featured attractions">
+                {attractionsLoading ? (
+                  [0, 1, 2, 3].map((index) => <ContentCardSkeleton key={index} />)
+                ) : (
+                  attractionsContent.map((content, index) => (
+                    <AttractionCard key={content.id} content={content} index={index} />
+                  ))
+                )}
+              </div>
+
+              <div className="mt-8 text-center sm:hidden">
+                <Link href="/attractions">
+                  <Button variant="outline" className="text-primary border-primary">
+                    View All Attractions
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Articles Section */}
+        {articlesContent.length > 0 && (
+          <section className="py-12 sm:py-16 bg-background" data-testid="section-articles" aria-labelledby="articles-heading">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between gap-4 mb-8">
+                <div>
+                  <h2 id="articles-heading" className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                    Travel Guides & Tips
+                  </h2>
+                  <p className="text-muted-foreground">Expert advice for your Dubai journey</p>
+                </div>
+                <Link href="/articles">
+                  <Button variant="ghost" className="text-primary hidden sm:flex">
+                    View All <ChevronRight className="w-4 h-4 ml-1" aria-hidden="true" />
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" role="list" aria-label="Featured articles">
+                {articlesLoading ? (
+                  [0, 1].map((index) => <ContentCardSkeleton key={index} />)
+                ) : (
+                  <>
+                    {articlesContent[0] && (
+                      <ArticleCard content={articlesContent[0]} index={0} featured />
+                    )}
+                    <div className="space-y-4">
+                      {articlesContent.slice(1, 4).map((content, index) => (
+                        <ArticleCard key={content.id} content={content} index={index + 1} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="mt-8 text-center sm:hidden">
+                <Link href="/articles">
+                  <Button variant="outline" className="text-primary border-primary">
+                    View All Articles
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Features */}
         <section className="py-12 sm:py-16 bg-gradient-to-b from-background to-muted/30" data-testid="section-features" aria-labelledby="features-heading">
