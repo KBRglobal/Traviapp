@@ -68,6 +68,12 @@ export interface GeneratedHotelContent {
   };
 }
 
+export interface ContentImage {
+  filename: string;
+  alt: string;
+  caption: string;
+}
+
 export interface GeneratedAttractionContent {
   content: {
     title: string;
@@ -78,12 +84,16 @@ export interface GeneratedAttractionContent {
     secondaryKeywords: string[];
     lsiKeywords: string[];
     heroImageAlt: string;
+    heroImageCaption?: string;
     blocks: ContentBlock[];
     seoSchema: Record<string, unknown>;
+    images?: ContentImage[];
   };
   attraction: {
     location: string;
+    fullAddress?: string;
     duration: string;
+    bestTimeToVisit?: string;
     targetAudience: string[];
     primaryCta: string;
     quickInfoBar: QuickInfoItem[];
@@ -92,7 +102,9 @@ export interface GeneratedAttractionContent {
     essentialInfo: EssentialInfoItem[];
     visitorTips: string[];
     faq: FaqItem[];
+    nearbyAttractions?: NearbyItem[];
     trustSignals: string[];
+    relatedKeywords?: string[];
   };
 }
 
@@ -274,130 +286,255 @@ OUTPUT STRUCTURE:
 
 Generate unique IDs for each block. Make content engaging, accurate for Dubai hotels, and SEO-optimized.`;
 
-const ATTRACTION_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive attraction pages for Dubai Travel website.
+const ATTRACTION_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized attraction pages for Dubai Travel website.
 
-Your output must be a valid JSON object matching this exact structure. Generate realistic, SEO-optimized content.
+CONTENT REQUIREMENTS:
+- Total word count: 1200-2000 words across all text blocks
+- Every piece of content must be accurate, engaging, and valuable for tourists
+- Include natural keyword placement throughout the content
+- Write in an informative yet engaging tone
+
+Your output must be a valid JSON object matching this exact structure:
 
 OUTPUT STRUCTURE:
 {
   "content": {
-    "title": "Attraction Name Dubai | Guide & Tickets [Year]",
+    "title": "Attraction Name Dubai | Complete Guide & Tickets 2025",
     "slug": "attraction-name-dubai",
-    "metaTitle": "Attraction Name Dubai - Tickets, Hours & Tips [Year]",
-    "metaDescription": "150-160 char description with key info and call to action",
+    "metaTitle": "Attraction Name Dubai - Tickets, Hours & Tips 2025",
+    "metaDescription": "150-160 char description with primary keyword, key info (price, hours), and compelling call to action",
     "primaryKeyword": "attraction name dubai",
-    "secondaryKeywords": ["dubai attractions", "things to do dubai", "dubai tickets"],
-    "lsiKeywords": ["visit", "tickets", "experience", "tour"],
-    "heroImageAlt": "Descriptive alt text for hero image",
+    "secondaryKeywords": ["attraction name tickets", "dubai attractions", "things to do dubai", "visit attraction name"],
+    "lsiKeywords": ["experience", "tour", "visit", "explore", "entry fee", "opening hours"],
+    "heroImageAlt": "Stunning view of [Attraction Name] in Dubai showing [specific visual element]",
+    "heroImageCaption": "Captivating description for hero image",
     "blocks": [
       {
-        "id": "unique_id",
-        "type": "text",
+        "id": "hero_block",
+        "type": "hero",
         "data": {
-          "heading": "About [Attraction]",
-          "content": "3 engaging sentences (visible intro). Then 150+ words covering what makes it special, what visitors experience, best times to visit."
+          "title": "Discover [Attraction Name]",
+          "subtitle": "One compelling sentence about the experience",
+          "overlayText": "Dubai's Iconic [Category] Experience"
         },
         "order": 0
       },
       {
-        "id": "unique_id2",
-        "type": "highlights",
+        "id": "intro_text",
+        "type": "text",
         "data": {
-          "title": "What to Expect",
-          "items": ["3-4 key experience highlights"]
+          "heading": "About [Attraction Name]",
+          "content": "Write 250-350 words. Start with 2-3 engaging sentences as the visible intro that hook the reader. Then expand covering: what makes this attraction special and unique to Dubai, the complete visitor experience from arrival to departure, architectural or design significance, historical context if relevant, atmosphere and ambiance, best times to visit for optimal experience, what makes it worth visiting compared to similar attractions."
         },
         "order": 1
       },
       {
-        "id": "unique_id3",
-        "type": "tips",
+        "id": "experience_text",
+        "type": "text",
         "data": {
-          "title": "Visitor Tips",
-          "tips": ["5 practical tips for visitors"]
+          "heading": "The Complete Experience",
+          "content": "Write 200-300 words. Describe the full visitor journey: what you see, do, and feel. Include specific details about exhibits, activities, or zones. Mention photo opportunities, interactive elements, and memorable moments."
         },
         "order": 2
       },
       {
-        "id": "unique_id4",
-        "type": "faq",
+        "id": "highlights_block",
+        "type": "highlights",
         "data": {
-          "title": "Frequently Asked Questions",
-          "faqs": [{"question": "...", "answer": "..."}]
+          "title": "Top Experiences & Highlights",
+          "items": ["6 key experience highlights - be specific about what visitors will see and do"]
         },
         "order": 3
       },
       {
-        "id": "unique_id5",
-        "type": "cta",
+        "id": "planning_text",
+        "type": "text",
         "data": {
-          "heading": "Book Your Visit",
-          "text": "Get tickets for [Attraction]",
-          "buttonText": "Buy Tickets",
-          "buttonLink": "#tickets"
+          "heading": "Planning Your Visit",
+          "content": "Write 150-200 words. Cover practical planning information: how to get there (metro, taxi, parking), best time of day to visit, how to avoid crowds, what to wear, what to bring, accessibility information."
         },
         "order": 4
+      },
+      {
+        "id": "tips_block",
+        "type": "tips",
+        "data": {
+          "title": "Insider Tips from Frequent Visitors",
+          "tips": ["7 detailed practical tips - each should be actionable and specific, not generic advice"]
+        },
+        "order": 5
+      },
+      {
+        "id": "nearby_text",
+        "type": "text",
+        "data": {
+          "heading": "Nearby Attractions & Dining",
+          "content": "Write 100-150 words about what else visitors can do in the area. Suggest combining with other nearby attractions, restaurants, or activities to make a full day trip."
+        },
+        "order": 6
+      },
+      {
+        "id": "faq_block",
+        "type": "faq",
+        "data": {
+          "title": "Frequently Asked Questions",
+          "faqs": [
+            {"question": "Question 1?", "answer": "100-200 word detailed answer with practical information"},
+            {"question": "Question 2?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 3?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 4?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 5?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 6?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 7?", "answer": "100-200 word detailed answer"},
+            {"question": "Question 8?", "answer": "100-200 word detailed answer"}
+          ]
+        },
+        "order": 7
+      },
+      {
+        "id": "cta_block",
+        "type": "cta",
+        "data": {
+          "heading": "Ready to Experience [Attraction Name]?",
+          "text": "Book your tickets now and discover why millions visit every year",
+          "buttonText": "Get Tickets",
+          "buttonLink": "#tickets"
+        },
+        "order": 8
       }
     ],
     "seoSchema": {
       "@context": "https://schema.org",
       "@type": "TouristAttraction",
       "name": "Attraction Name",
-      "description": "...",
-      "address": {"@type": "PostalAddress", "addressLocality": "Dubai", "addressCountry": "AE"}
-    }
+      "description": "Comprehensive 150-200 word description for SEO schema",
+      "url": "https://dubaitravel.com/attractions/attraction-name-dubai",
+      "image": {
+        "@type": "ImageObject",
+        "url": "",
+        "caption": "Attraction Name in Dubai"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Full street address",
+        "addressLocality": "Dubai",
+        "addressRegion": "Dubai",
+        "addressCountry": "AE"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "25.XXXX",
+        "longitude": "55.XXXX"
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "10:00",
+          "closes": "22:00"
+        }
+      ],
+      "priceRange": "AED 150-500",
+      "isAccessibleForFree": false,
+      "publicAccess": true,
+      "touristType": ["Family", "Couples", "Solo Travelers"],
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "reviewCount": "10000"
+      }
+    },
+    "images": [
+      {"filename": "attraction-name-exterior.jpg", "alt": "Exterior view of [Attraction Name] with [specific details]", "caption": "The stunning exterior of [Attraction Name]"},
+      {"filename": "attraction-name-interior.jpg", "alt": "Inside [Attraction Name] showing [specific feature]", "caption": "Experience the [specific area] inside"},
+      {"filename": "attraction-name-highlight.jpg", "alt": "[Specific highlight] at [Attraction Name]", "caption": "Don't miss the [highlight feature]"},
+      {"filename": "attraction-name-view.jpg", "alt": "Panoramic view from [Attraction Name]", "caption": "Breathtaking views from [location]"},
+      {"filename": "attraction-name-experience.jpg", "alt": "Visitors enjoying [activity] at [Attraction Name]", "caption": "[Activity description]"}
+    ]
   },
   "attraction": {
-    "location": "Downtown Dubai / Palm Jumeirah / etc",
+    "location": "Downtown Dubai / Palm Jumeirah / etc - Full area name",
+    "fullAddress": "Complete street address, area, Dubai, UAE",
     "duration": "2-3 hours",
-    "targetAudience": ["Families", "Couples", "Solo Travelers", "Photography Enthusiasts"],
-    "primaryCta": "Book Tickets Now",
+    "bestTimeToVisit": "Early morning or late afternoon for fewer crowds",
+    "targetAudience": ["Families with children", "Couples", "Solo Travelers", "Photography Enthusiasts", "First-time Dubai Visitors"],
+    "primaryCta": "Book Tickets - Skip the Line",
     "quickInfoBar": [
       {"icon": "MapPin", "label": "Location", "value": "Downtown Dubai"},
-      {"icon": "Clock", "label": "Hours", "value": "10 AM - 10 PM"},
+      {"icon": "Clock", "label": "Hours", "value": "10 AM - 10 PM Daily"},
       {"icon": "DollarSign", "label": "Price", "value": "From AED 150"},
       {"icon": "Timer", "label": "Duration", "value": "2-3 hours"},
-      {"icon": "Star", "label": "Rating", "value": "4.8/5"}
+      {"icon": "Star", "label": "Rating", "value": "4.8/5 (10K+ reviews)"},
+      {"icon": "Users", "label": "Best For", "value": "Families, Couples"},
+      {"icon": "Calendar", "label": "Best Time", "value": "Weekday mornings"},
+      {"icon": "Accessibility", "label": "Access", "value": "Wheelchair Friendly"}
     ],
     "highlights": [
-      {"image": "", "title": "Main Experience", "description": "Description of main attraction"},
-      {"image": "", "title": "Secondary Experience", "description": "Another highlight"},
-      {"image": "", "title": "Photo Spot", "description": "Instagram-worthy moments"}
+      {"image": "", "title": "Main Experience Title", "description": "50-80 word description of this highlight experience"},
+      {"image": "", "title": "Second Experience", "description": "50-80 word description"},
+      {"image": "", "title": "Photo Opportunity", "description": "50-80 word description of best photo spots"},
+      {"image": "", "title": "Unique Feature", "description": "50-80 word description"},
+      {"image": "", "title": "Interactive Element", "description": "50-80 word description"},
+      {"image": "", "title": "Hidden Gem", "description": "50-80 word description of lesser-known feature"}
     ],
     "ticketInfo": [
-      {"type": "Standard Entry", "description": "General admission with all main attractions", "price": "AED 150"},
-      {"type": "Premium Experience", "description": "Skip-the-line + exclusive access", "price": "AED 300"},
-      {"type": "Family Package", "description": "2 adults + 2 children", "price": "AED 450"}
+      {"type": "Standard Entry", "description": "General admission with access to all main attractions. Includes entry to all zones and exhibits.", "price": "AED 150", "includes": ["All main areas", "Standard photo spots"]},
+      {"type": "Premium Experience", "description": "Skip-the-line access plus exclusive areas and priority seating for shows.", "price": "AED 300", "includes": ["Fast-track entry", "VIP areas", "Guided tour"]},
+      {"type": "Family Package", "description": "2 adults + 2 children (ages 3-12). Best value for families.", "price": "AED 450", "includes": ["All standard access", "Kids activity pack"]},
+      {"type": "Combo Package", "description": "Combined ticket with nearby attraction for a full day experience.", "price": "AED 400", "includes": ["Two attractions", "Valid for 7 days"]}
     ],
     "essentialInfo": [
-      {"icon": "MapPin", "label": "Location", "value": "Full address"},
-      {"icon": "Clock", "label": "Hours", "value": "10:00 AM - 10:00 PM"},
-      {"icon": "DollarSign", "label": "Entry Fee", "value": "From AED 150"},
-      {"icon": "Accessibility", "label": "Accessibility", "value": "Fully accessible"},
-      {"icon": "Timer", "label": "Duration", "value": "2-3 hours recommended"},
-      {"icon": "Users", "label": "Good For", "value": "Families, Couples"},
-      {"icon": "Camera", "label": "Photography", "value": "Allowed"},
-      {"icon": "Wheelchair", "label": "Accessibility", "value": "Wheelchair accessible"}
+      {"icon": "MapPin", "label": "Address", "value": "Full street address, area, Dubai"},
+      {"icon": "Clock", "label": "Opening Hours", "value": "10:00 AM - 10:00 PM (Last entry 9 PM)"},
+      {"icon": "DollarSign", "label": "Entry Fee", "value": "From AED 150 per adult"},
+      {"icon": "Baby", "label": "Children", "value": "Free under 3, discounted 3-12"},
+      {"icon": "Timer", "label": "Recommended Duration", "value": "2-3 hours for full experience"},
+      {"icon": "Users", "label": "Best For", "value": "Families, Couples, Photographers"},
+      {"icon": "Camera", "label": "Photography", "value": "Allowed, no flash"},
+      {"icon": "Accessibility", "label": "Accessibility", "value": "Fully wheelchair accessible"},
+      {"icon": "Car", "label": "Parking", "value": "Available nearby, AED 20/hour"},
+      {"icon": "Train", "label": "Metro", "value": "Nearest station name, 5 min walk"},
+      {"icon": "Shirt", "label": "Dress Code", "value": "Smart casual recommended"},
+      {"icon": "Utensils", "label": "Dining", "value": "Cafes and restaurants on-site"}
     ],
     "visitorTips": [
-      "Book tickets online to skip queues",
-      "Visit during weekdays for fewer crowds",
-      "Wear comfortable shoes",
-      "Arrive 30 minutes before your time slot",
-      "Check the website for seasonal promotions"
+      "Book tickets online at least 24 hours in advance to secure your preferred time slot and skip the ticket counter queue",
+      "Visit on weekday mornings (Tuesday-Thursday before 11 AM) for the best experience with fewer crowds",
+      "Wear comfortable walking shoes as you'll be on your feet for 2-3 hours exploring the attraction",
+      "Download the official app before your visit for interactive guides, maps, and real-time wait times",
+      "Arrive 30 minutes before your scheduled time slot to clear security and start on time",
+      "Check the website for seasonal promotions and combo deals that can save up to 30% on tickets",
+      "Bring a light jacket as the air conditioning inside can be quite cool compared to outdoor temperatures"
     ],
     "faq": [
-      {"question": "What are the opening hours?", "answer": "Open daily from 10 AM to 10 PM, last entry at 9 PM."},
-      {"question": "How much are tickets?", "answer": "Standard tickets start from AED 150 per person."},
-      {"question": "Is it suitable for children?", "answer": "Yes, suitable for all ages with activities for children."},
-      {"question": "How long should I plan for my visit?", "answer": "Allow 2-3 hours for the full experience."},
-      {"question": "Is there parking available?", "answer": "Yes, paid parking available nearby."},
-      {"question": "Can I bring food and drinks?", "answer": "Outside food is not permitted, but cafes are available inside."}
+      {"question": "What are the opening hours of [Attraction Name]?", "answer": "Write 100-200 words covering: daily hours, seasonal variations, last entry times, best times to visit for crowds, holiday hours, any special extended hours events."},
+      {"question": "How much do tickets cost and what's included?", "answer": "Write 100-200 words covering: all ticket types, what each includes, child/senior discounts, where to buy, online vs on-site pricing differences, combo packages available."},
+      {"question": "Is [Attraction Name] suitable for children and families?", "answer": "Write 100-200 words covering: age recommendations, specific family activities, stroller access, baby changing facilities, kids menu at restaurants, family packages."},
+      {"question": "How long should I plan for my visit?", "answer": "Write 100-200 words covering: minimum time needed, recommended duration, factors affecting visit length, suggested itinerary for different durations."},
+      {"question": "What's the best way to get to [Attraction Name]?", "answer": "Write 100-200 words covering: metro directions, taxi/Uber options, parking availability and costs, walking from nearby landmarks."},
+      {"question": "Can I bring food and drinks inside?", "answer": "Write 100-200 words covering: food policy, available dining options, price ranges, dietary accommodations, water bottle policy."},
+      {"question": "Is photography allowed at [Attraction Name]?", "answer": "Write 100-200 words covering: general photo policy, restricted areas, professional equipment rules, best photo spots, tips for great shots."},
+      {"question": "Are there any discounts or special offers available?", "answer": "Write 100-200 words covering: current promotions, student/resident discounts, group rates, seasonal deals, credit card offers."}
     ],
-    "trustSignals": ["TripAdvisor Top Rated", "Over 1 Million Visitors", "Award-Winning Experience"]
+    "nearbyAttractions": [
+      {"name": "Nearby Attraction 1", "distance": "5 min walk", "type": "Attraction"},
+      {"name": "Popular Restaurant", "distance": "2 min walk", "type": "Dining"},
+      {"name": "Shopping Mall", "distance": "10 min walk", "type": "Shopping"},
+      {"name": "Another Landmark", "distance": "15 min drive", "type": "Attraction"}
+    ],
+    "trustSignals": ["TripAdvisor Travelers' Choice 2024", "Over 1 Million Annual Visitors", "Google 4.8 Star Rating", "Dubai Tourism Award Winner"],
+    "relatedKeywords": ["attractions", "tourism", "sightseeing", "landmarks", "experiences"]
   }
 }
 
-Generate unique IDs for each block. Make content accurate for Dubai attractions and SEO-optimized.`;
+IMPORTANT GUIDELINES:
+1. Generate unique random IDs for each block (e.g., "abc123", "xyz789")
+2. Total content should be 1200-2000 words across all text blocks
+3. FAQ answers must each be 100-200 words - comprehensive and helpful
+4. Include 7 specific, actionable visitor tips
+5. All information must be accurate for Dubai attractions
+6. Use natural keyword placement - don't stuff keywords
+7. Write engaging content that helps tourists plan their visit`;
 
 const ARTICLE_SYSTEM_PROMPT = `You are a Dubai travel content expert creating engaging articles for Dubai Travel website.
 
@@ -582,16 +719,29 @@ export async function generateAttractionContent(attractionName: string): Promise
         { role: "system", content: ATTRACTION_SYSTEM_PROMPT },
         { 
           role: "user", 
-          content: `Generate complete content for a Dubai attraction called "${attractionName}".
+          content: `Generate comprehensive content for a Dubai attraction called "${attractionName}".
 
-Make it realistic and comprehensive. Generate all sections including:
-- Full SEO metadata
-- About text block (150+ words)
-- 3-4 highlights with descriptions
-- 2-3 ticket options with pricing
-- 8 essential info items
-- 5 visitor tips
-- 6+ FAQ items
+REQUIREMENTS (VERY IMPORTANT):
+- Total word count: 1200-2000 words across all text blocks
+- Write engaging, SEO-optimized content that helps tourists plan their visit
+- All information must be accurate and realistic for Dubai
+
+Generate ALL sections including:
+- Hero block with title and subtitle
+- About text block (250-350 words) - detailed introduction
+- Complete Experience text block (200-300 words) - visitor journey
+- 6 highlights with 50-80 word descriptions each
+- Planning Your Visit text block (150-200 words)
+- 7 detailed, actionable visitor tips
+- Nearby Attractions text block (100-150 words)
+- 8 FAQ items with 100-200 word answers EACH (this is critical!)
+- 4 ticket options with descriptions and pricing
+- 12 essential info items
+- 8 quick info bar items
+- 5 image descriptions with SEO alt text and captions
+- Comprehensive TouristAttraction JSON-LD schema with geo coordinates
+- 4 nearby attractions
+- Trust signals and related keywords
 
 Output valid JSON only, no markdown code blocks.`
         }
