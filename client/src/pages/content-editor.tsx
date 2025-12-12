@@ -100,8 +100,10 @@ export default function ContentEditor() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
-  const contentId = attractionMatch?.id || hotelMatch?.id || articleMatch?.id || diningMatch?.id || districtMatch?.id || transportMatch?.id;
   const isNew = !!(attractionNewMatch || hotelNewMatch || articleNewMatch || diningNewMatch || districtNewMatch || transportNewMatch);
+  
+  // Only set contentId if we're NOT on a /new route - the :id route also matches "new" as an id
+  const contentId = isNew ? undefined : (attractionMatch?.id || hotelMatch?.id || articleMatch?.id || diningMatch?.id || districtMatch?.id || transportMatch?.id);
   
   // Determine content type based on route
   const getContentType = (): ContentType => {

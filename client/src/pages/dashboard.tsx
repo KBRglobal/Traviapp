@@ -43,13 +43,13 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/attractions/new">
+          <Link href="/admin/attractions/new">
             <Button data-testid="button-new-attraction">
               <Plus className="h-4 w-4 mr-2" />
               New Attraction
             </Button>
           </Link>
-          <Link href="/hotels/new">
+          <Link href="/admin/hotels/new">
             <Button variant="outline" data-testid="button-new-hotel">
               <Plus className="h-4 w-4 mr-2" />
               New Hotel
