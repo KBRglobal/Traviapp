@@ -86,16 +86,16 @@ function AttractionCard({ rank, title, description, image, href, category, locat
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <div className="absolute top-3 left-3 flex items-center gap-2">
-            <Badge className="bg-white/90 text-foreground font-semibold">
+            <Badge variant="secondary" className="font-semibold">
               #{rank}
             </Badge>
-            <Badge variant="secondary" className="bg-violet-600 text-white">
+            <Badge variant="default">
               {category}
             </Badge>
           </div>
           {priceFrom && (
             <div className="absolute bottom-3 right-3">
-              <Badge className="bg-green-600 text-white flex items-center gap-1">
+              <Badge variant="outline" className="bg-background/90 flex items-center gap-1">
                 <Ticket className="w-3 h-3" />
                 From AED {priceFrom}
               </Badge>
@@ -103,7 +103,7 @@ function AttractionCard({ rank, title, description, image, href, category, locat
           )}
         </div>
         <div className="p-4 space-y-2">
-          <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-violet-600 transition-colors" data-testid={`text-attraction-title-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-primary transition-colors" data-testid={`text-attraction-title-${title.toLowerCase().replace(/\s+/g, '-')}`}>
             {title}
           </h3>
           <p className="text-sm text-muted-foreground line-clamp-2">
@@ -134,7 +134,7 @@ export default function PublicAttractions() {
   });
   
   const { data: allContent, isLoading } = useQuery<ContentWithRelations[]>({
-    queryKey: ["/api/contents?status=published&includeExtensions=true"],
+    queryKey: ["/api/public/contents?includeExtensions=true"],
   });
 
   const attractions = allContent?.filter(c => c.type === "attraction") || [];
@@ -144,8 +144,9 @@ export default function PublicAttractions() {
       ? a.title.toLowerCase().includes(searchQuery.toLowerCase())
       : true;
     
-    const attractionCategory = a.attraction?.category?.toLowerCase().replace(/\s+/g, '-') || '';
-    const matchesCategory = selectedCategory === "all" || attractionCategory === selectedCategory;
+    const attractionCategory = a.attraction?.category || '';
+    const normalizedCategory = attractionCategory.toLowerCase().replace(/\s+/g, '-');
+    const matchesCategory = selectedCategory === "all" || normalizedCategory === selectedCategory;
     
     return matchesSearch && matchesCategory;
   });
@@ -206,7 +207,6 @@ export default function PublicAttractions() {
                   role="tab"
                   aria-selected={selectedCategory === category.id}
                   data-testid={`button-category-${category.id}`}
-                  className={selectedCategory === category.id ? "bg-violet-600 hover:bg-violet-700" : ""}
                 >
                   {category.label}
                 </Button>
