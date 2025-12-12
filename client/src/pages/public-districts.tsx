@@ -29,7 +29,7 @@ const VIBE_CARDS = [
     title: "Beach Life", 
     description: "Sun, sand, and stunning coastlines",
     icon: Palmtree,
-    gradient: "from-cyan-500 to-blue-500",
+    gradient: "from-[#01BEFF] to-[#6443F4]",
     tags: ["JBR", "Jumeirah", "Palm Jumeirah", "Marina"]
   },
   { 
@@ -37,7 +37,7 @@ const VIBE_CARDS = [
     title: "Urban Energy", 
     description: "Skyscrapers, nightlife, and endless entertainment",
     icon: Building2,
-    gradient: "from-purple-500 to-pink-500",
+    gradient: "from-[#6443F4] to-[#F94498]",
     tags: ["Downtown", "DIFC", "Business Bay", "Marina"]
   },
   { 
@@ -45,7 +45,7 @@ const VIBE_CARDS = [
     title: "Creative & Culture", 
     description: "Art galleries, heritage sites, and authentic vibes",
     icon: Sparkles,
-    gradient: "from-amber-500 to-orange-500",
+    gradient: "from-[#FF9327] to-[#FFD112]",
     tags: ["Al Quoz", "Deira", "Old Dubai", "City Walk"]
   },
   { 
@@ -53,7 +53,7 @@ const VIBE_CARDS = [
     title: "Family Friendly", 
     description: "Parks, schools, and community living",
     icon: Users,
-    gradient: "from-green-500 to-emerald-500",
+    gradient: "from-[#02A65C] to-[#59ED63]",
     tags: ["Arabian Ranches", "Dubai Hills", "JVC", "Al Barsha"]
   },
   { 
@@ -61,7 +61,7 @@ const VIBE_CARDS = [
     title: "Business & Ambition", 
     description: "Corporate hubs and professional networks",
     icon: Briefcase,
-    gradient: "from-slate-600 to-slate-800",
+    gradient: "from-[#504065] to-[#24103E]",
     tags: ["DIFC", "Business Bay", "Downtown", "JLT"]
   },
   { 
@@ -69,7 +69,7 @@ const VIBE_CARDS = [
     title: "Ultra Luxury", 
     description: "Exclusive addresses and premium lifestyle",
     icon: Gem,
-    gradient: "from-yellow-500 to-amber-600",
+    gradient: "from-[#FFD112] to-[#FF9327]",
     tags: ["Palm Jumeirah", "Emirates Hills", "Downtown", "Jumeirah"]
   },
 ];
@@ -439,25 +439,25 @@ const MAP_REGIONS = [
     name: "Dubai Coast", 
     areas: ["Dubai Marina", "JBR", "Palm Jumeirah", "Bluewaters Island"],
     icon: Waves,
-    color: "from-cyan-500 to-blue-500"
+    color: "from-[#01BEFF] to-[#6443F4]"
   },
   { 
     name: "Downtown & Business", 
     areas: ["Downtown Dubai", "DIFC", "Business Bay"],
     icon: Building2,
-    color: "from-purple-500 to-indigo-500"
+    color: "from-[#6443F4] to-[#9077EF]"
   },
   { 
     name: "Historic Dubai", 
     areas: ["Deira", "Old Dubai", "Al Quoz"],
     icon: Sparkles,
-    color: "from-amber-500 to-orange-500"
+    color: "from-[#FF9327] to-[#FFD112]"
   },
   { 
     name: "Suburban Living", 
     areas: ["Dubai Hills", "JVC", "Arabian Ranches", "Al Barsha"],
     icon: Users,
-    color: "from-green-500 to-emerald-500"
+    color: "from-[#02A65C] to-[#59ED63]"
   }
 ];
 

@@ -22,7 +22,7 @@ const DUBAI_AREAS = [
     description: "Man-made island with luxury beach resorts",
     icon: TreePalm,
     image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
-    gradient: "from-cyan-500 to-blue-600",
+    gradient: "from-[#01BEFF] to-[#6443F4]",
     hotelCount: 25,
     featured: true,
   },
@@ -33,7 +33,7 @@ const DUBAI_AREAS = [
     description: "Waterfront district with beach resorts",
     icon: Waves,
     image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&h=600&fit=crop",
-    gradient: "from-blue-500 to-indigo-600",
+    gradient: "from-[#6443F4] to-[#9077EF]",
     hotelCount: 23,
     featured: true,
   },
@@ -44,7 +44,7 @@ const DUBAI_AREAS = [
     description: "City center around Burj Khalifa",
     icon: Building2,
     image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&h=600&fit=crop",
-    gradient: "from-purple-500 to-pink-600",
+    gradient: "from-[#6443F4] to-[#F94498]",
     hotelCount: 27,
     featured: true,
   },
@@ -55,7 +55,7 @@ const DUBAI_AREAS = [
     description: "Ultra-luxury coastal resorts",
     icon: Crown,
     image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&h=600&fit=crop",
-    gradient: "from-amber-500 to-orange-600",
+    gradient: "from-[#FF9327] to-[#FFD112]",
     hotelCount: 11,
     featured: true,
   },
@@ -66,7 +66,7 @@ const DUBAI_AREAS = [
     description: "Financial district hotels",
     icon: Building,
     image: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&h=600&fit=crop",
-    gradient: "from-slate-600 to-slate-800",
+    gradient: "from-[#504065] to-[#24103E]",
     hotelCount: 19,
     featured: false,
   },
@@ -77,7 +77,7 @@ const DUBAI_AREAS = [
     description: "Old Dubai and airport vicinity",
     icon: Plane,
     image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&h=600&fit=crop",
-    gradient: "from-teal-500 to-emerald-600",
+    gradient: "from-[#02A65C] to-[#01BEFF]",
     hotelCount: 19,
     featured: false,
   },
@@ -88,7 +88,7 @@ const DUBAI_AREAS = [
     description: "Historic creek-side hotels",
     icon: Ship,
     image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop",
-    gradient: "from-rose-500 to-red-600",
+    gradient: "from-[#F94498] to-[#FDA9E5]",
     hotelCount: 12,
     featured: false,
   },
@@ -99,7 +99,7 @@ const DUBAI_AREAS = [
     description: "Unique desert experiences",
     icon: Mountain,
     image: "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=800&h=600&fit=crop",
-    gradient: "from-orange-500 to-amber-600",
+    gradient: "from-[#FF9327] to-[#F2CCA6]",
     hotelCount: 9,
     featured: false,
   },
@@ -524,7 +524,7 @@ export default function PublicHotels() {
           
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
             Find your perfect
-            <span className="block bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+            <span className="block bg-gradient-to-r from-[#FF9327] to-[#F94498] bg-clip-text text-transparent">
               Dubai stay
             </span>
           </h1>

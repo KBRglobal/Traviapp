@@ -21,7 +21,7 @@ const DUBAI_DINING_DISTRICTS = [
     tagline: "Dubai's culinary powerhouse",
     description: "Financial district with world-class restaurants",
     icon: Building2,
-    gradient: "from-slate-600 to-slate-800",
+    gradient: "from-[#504065] to-[#24103E]",
     restaurantCount: 50,
     featured: true,
   },
@@ -31,7 +31,7 @@ const DUBAI_DINING_DISTRICTS = [
     tagline: "Dining with Burj Khalifa views",
     description: "Premium restaurants around Dubai Mall",
     icon: Star,
-    gradient: "from-purple-500 to-pink-600",
+    gradient: "from-[#6443F4] to-[#F94498]",
     restaurantCount: 45,
     featured: true,
   },
@@ -41,7 +41,7 @@ const DUBAI_DINING_DISTRICTS = [
     tagline: "Waterfront dining at its finest",
     description: "Marina-side restaurants and lounges",
     icon: Wine,
-    gradient: "from-blue-500 to-indigo-600",
+    gradient: "from-[#6443F4] to-[#9077EF]",
     restaurantCount: 40,
     featured: true,
   },
@@ -51,7 +51,7 @@ const DUBAI_DINING_DISTRICTS = [
     tagline: "Resort dining on the iconic Palm",
     description: "Beachfront and hotel restaurants",
     icon: Utensils,
-    gradient: "from-cyan-500 to-blue-600",
+    gradient: "from-[#01BEFF] to-[#6443F4]",
     restaurantCount: 35,
     featured: true,
   },
@@ -61,7 +61,7 @@ const DUBAI_DINING_DISTRICTS = [
     tagline: "Beachside elegance",
     description: "Premium dining along the coast",
     icon: Fish,
-    gradient: "from-amber-500 to-orange-600",
+    gradient: "from-[#FF9327] to-[#FFD112]",
     restaurantCount: 30,
     featured: false,
   },
@@ -71,7 +71,7 @@ const DUBAI_DINING_DISTRICTS = [
     tagline: "Modern dining hub",
     description: "Contemporary restaurants and cafes",
     icon: Coffee,
-    gradient: "from-teal-500 to-emerald-600",
+    gradient: "from-[#02A65C] to-[#01BEFF]",
     restaurantCount: 28,
     featured: false,
   },
@@ -81,7 +81,7 @@ const DUBAI_DINING_DISTRICTS = [
     tagline: "Dining at Ain Dubai",
     description: "Entertainment island restaurants",
     icon: Globe,
-    gradient: "from-rose-500 to-red-600",
+    gradient: "from-[#F94498] to-[#FDA9E5]",
     restaurantCount: 15,
     featured: false,
   },
@@ -91,7 +91,7 @@ const DUBAI_DINING_DISTRICTS = [
     tagline: "Mall and golf club dining",
     description: "Family-friendly restaurants",
     icon: Leaf,
-    gradient: "from-green-500 to-emerald-600",
+    gradient: "from-[#02A65C] to-[#59ED63]",
     restaurantCount: 20,
     featured: false,
   },
@@ -384,7 +384,7 @@ export default function PublicDining() {
           
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
             The home of
-            <span className="block bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+            <span className="block bg-gradient-to-r from-[#FF9327] to-[#F94498] bg-clip-text text-transparent">
               Dubai dining
             </span>
           </h1>

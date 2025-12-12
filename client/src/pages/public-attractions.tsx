@@ -21,7 +21,7 @@ const EXPERIENCE_TYPES = [
     title: "Iconic Dubai", 
     description: "Must-see landmarks that define the city",
     icon: Star,
-    gradient: "from-amber-500 to-orange-500",
+    gradient: "from-[#FF9327] to-[#FFD112]",
     keywords: ["burj", "khalifa", "fountain", "frame", "palm"]
   },
   { 
@@ -29,7 +29,7 @@ const EXPERIENCE_TYPES = [
     title: "Family & Kids", 
     description: "Fun for the whole family",
     icon: Users,
-    gradient: "from-green-500 to-emerald-500",
+    gradient: "from-[#02A65C] to-[#59ED63]",
     keywords: ["kids", "family", "children", "theme park", "aquarium", "zoo"]
   },
   { 
@@ -37,7 +37,7 @@ const EXPERIENCE_TYPES = [
     title: "Thrill & Adventure", 
     description: "Adrenaline-pumping experiences",
     icon: Zap,
-    gradient: "from-red-500 to-rose-500",
+    gradient: "from-[#F94498] to-[#FDA9E5]",
     keywords: ["adventure", "thrill", "extreme", "desert", "skydive", "safari"]
   },
   { 
@@ -45,7 +45,7 @@ const EXPERIENCE_TYPES = [
     title: "Culture & History", 
     description: "Heritage and authentic Emirati experiences",
     icon: Sparkles,
-    gradient: "from-amber-600 to-yellow-500",
+    gradient: "from-[#FF9327] to-[#F2CCA6]",
     keywords: ["museum", "heritage", "history", "culture", "traditional", "souk"]
   },
   { 
@@ -53,7 +53,7 @@ const EXPERIENCE_TYPES = [
     title: "Night & After Dark", 
     description: "Dubai comes alive at night",
     icon: Moon,
-    gradient: "from-indigo-600 to-purple-600",
+    gradient: "from-[#6443F4] to-[#9077EF]",
     keywords: ["night", "evening", "dinner", "cruise", "show", "fountain"]
   },
   { 
@@ -61,7 +61,7 @@ const EXPERIENCE_TYPES = [
     title: "Relax & Scenic", 
     description: "Peaceful escapes and stunning views",
     icon: Waves,
-    gradient: "from-cyan-500 to-blue-500",
+    gradient: "from-[#01BEFF] to-[#6443F4]",
     keywords: ["beach", "spa", "view", "observation", "garden", "park"]
   },
   { 
@@ -69,7 +69,7 @@ const EXPERIENCE_TYPES = [
     title: "Budget Friendly", 
     description: "Amazing experiences without breaking the bank",
     icon: Heart,
-    gradient: "from-teal-500 to-green-500",
+    gradient: "from-[#02A65C] to-[#01BEFF]",
     keywords: ["free", "cheap", "budget", "affordable"]
   },
   { 
@@ -77,7 +77,7 @@ const EXPERIENCE_TYPES = [
     title: "Luxury Experiences", 
     description: "Premium and exclusive adventures",
     icon: Gem,
-    gradient: "from-purple-600 to-pink-500",
+    gradient: "from-[#6443F4] to-[#F94498]",
     keywords: ["luxury", "premium", "vip", "private", "exclusive", "yacht"]
   },
 ];
@@ -375,7 +375,7 @@ export default function PublicAttractions() {
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-16">
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
             Experiences that
-            <span className="block bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+            <span className="block bg-gradient-to-r from-[#FF9327] to-[#F94498] bg-clip-text text-transparent">
               take your breath away
             </span>
           </h1>
