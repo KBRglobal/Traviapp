@@ -2,6 +2,7 @@ import { eq, desc, sql, and, ilike } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
+  otpCodes,
   contents,
   attractions,
   hotels,
@@ -19,6 +20,8 @@ import {
   contentFingerprints,
   type User,
   type InsertUser,
+  type OtpCode,
+  type InsertOtpCode,
   type Content,
   type InsertContent,
   type Attraction,
@@ -54,8 +57,16 @@ import {
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
+
+  createOtpCode(otp: InsertOtpCode): Promise<OtpCode>;
+  getValidOtpCode(email: string, code: string): Promise<OtpCode | undefined>;
+  markOtpAsUsed(id: string): Promise<boolean>;
+  cleanupExpiredOtps(): Promise<number>;
 
   getContents(filters?: { type?: string; status?: string; search?: string }): Promise<Content[]>;
   getContentsWithRelations(filters?: { type?: string; status?: string; search?: string }): Promise<ContentWithRelations[]>;
@@ -159,14 +170,59 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db.update(users).set(data).where(eq(users.id, id)).returning();
+    return user;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return true;
+  }
+
+  async createOtpCode(otp: InsertOtpCode): Promise<OtpCode> {
+    const [code] = await db.insert(otpCodes).values(otp).returning();
+    return code;
+  }
+
+  async getValidOtpCode(email: string, code: string): Promise<OtpCode | undefined> {
+    const [otp] = await db.select().from(otpCodes).where(
+      and(
+        eq(otpCodes.email, email),
+        eq(otpCodes.code, code),
+        eq(otpCodes.used, false)
+      )
+    );
+    if (otp && new Date(otp.expiresAt) > new Date()) {
+      return otp;
+    }
+    return undefined;
+  }
+
+  async markOtpAsUsed(id: string): Promise<boolean> {
+    await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, id));
+    return true;
+  }
+
+  async cleanupExpiredOtps(): Promise<number> {
+    const result = await db.delete(otpCodes).where(
+      sql`${otpCodes.expiresAt} < NOW() OR ${otpCodes.used} = true`
+    );
+    return 0;
   }
 
   async getContents(filters?: { type?: string; status?: string; search?: string }): Promise<Content[]> {

@@ -44,12 +44,24 @@ export const ROLE_PERMISSIONS = {
 export type UserRole = "admin" | "editor" | "viewer";
 export type RolePermissions = typeof ROLE_PERMISSIONS[UserRole];
 
-// Users table
+// Users table - email-based authentication with OTP
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  email: text("email").notNull().unique(),
+  name: text("name"),
   role: userRoleEnum("role").notNull().default("editor"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// OTP codes table for passwordless authentication
+export const otpCodes = pgTable("otp_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  code: varchar("code", { length: 6 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Content table - base table for all content types
@@ -507,9 +519,14 @@ export interface ItineraryDay {
 }
 
 // Insert schemas
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertOtpCodeSchema = createInsertSchema(otpCodes).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertContentSchema = createInsertSchema(contents).omit({
@@ -588,6 +605,8 @@ export const insertKeywordRepositorySchema = createInsertSchema(keywordRepositor
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;
+export type OtpCode = typeof otpCodes.$inferSelect;
 export type InsertContent = z.infer<typeof insertContentSchema>;
 export type Content = typeof contents.$inferSelect;
 export type InsertAttraction = z.infer<typeof insertAttractionSchema>;
