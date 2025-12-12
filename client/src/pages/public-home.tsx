@@ -260,18 +260,32 @@ export default function PublicHome() {
       {/* Categories */}
       <section className="py-12 sm:py-16 bg-background" data-testid="section-categories">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-2">
+              Explore Dubai
+            </h2>
+            <p className="text-muted-foreground">Find exactly what you're looking for</p>
+          </div>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
             {exploreCategories.map((category, index) => {
               const IconComponent = category.icon;
+              const gradients = [
+                "from-[#6443F4] to-[#8f6cfa]",
+                "from-[#F94498] to-[#fb6eb0]",
+                "from-[#FF9327] to-[#ffb35c]",
+                "from-[#02A65C] to-[#1ed47f]",
+                "from-[#6443F4] to-[#F94498]",
+                "from-[#FFD112] to-[#FF9327]",
+              ];
               return (
                 <Link
                   key={index}
                   href={category.href}
-                  className="flex flex-col items-center p-4 sm:p-6 rounded-2xl bg-card border hover:border-primary hover:shadow-lg transition-all cursor-pointer group"
+                  className="flex flex-col items-center p-4 sm:p-6 rounded-2xl bg-card border hover:border-primary/50 hover:shadow-xl transition-all duration-300 cursor-pointer group"
                   data-testid={`card-category-${index}`}
                 >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary transition-colors">
-                    <IconComponent className="w-6 h-6 sm:w-7 sm:h-7 text-primary group-hover:text-white transition-colors" />
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br ${gradients[index]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-md`}>
+                    <IconComponent className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                   </div>
                   <span className="font-medium text-foreground text-sm sm:text-base">{category.title}</span>
                   <span className="text-xs text-muted-foreground">{category.count}</span>
@@ -328,7 +342,7 @@ export default function PublicHome() {
       </section>
 
       {/* Features */}
-      <section className="py-12 sm:py-16 bg-background" data-testid="section-features">
+      <section className="py-12 sm:py-16 bg-gradient-to-b from-background to-muted/30" data-testid="section-features">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-4">
@@ -340,9 +354,9 @@ export default function PublicHome() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="p-6 text-center border-0 shadow-md">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <MapPin className="w-7 h-7 text-primary" />
+            <Card className="p-6 text-center border-0 shadow-[var(--shadow-level-2)] hover:shadow-[var(--shadow-level-3)] transition-shadow">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#5335d4] to-[#6443F4] flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <MapPin className="w-7 h-7 text-white" />
               </div>
               <h3 className="font-heading font-semibold text-lg mb-2">Curated Experiences</h3>
               <p className="text-muted-foreground text-sm">
@@ -350,9 +364,9 @@ export default function PublicHome() {
               </p>
             </Card>
 
-            <Card className="p-6 text-center border-0 shadow-md">
-              <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-4">
-                <Star className="w-7 h-7 text-amber-500" />
+            <Card className="p-6 text-center border-0 shadow-[var(--shadow-level-2)] hover:shadow-[var(--shadow-level-3)] transition-shadow">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#8a4509] to-[#a85c10] flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Star className="w-7 h-7 text-white" />
               </div>
               <h3 className="font-heading font-semibold text-lg mb-2">Trusted Reviews</h3>
               <p className="text-muted-foreground text-sm">
@@ -360,9 +374,9 @@ export default function PublicHome() {
               </p>
             </Card>
 
-            <Card className="p-6 text-center border-0 shadow-md">
-              <div className="w-14 h-14 rounded-2xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-7 h-7 text-sky-500" />
+            <Card className="p-6 text-center border-0 shadow-[var(--shadow-level-2)] hover:shadow-[var(--shadow-level-3)] transition-shadow">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#9a2358] to-[#b82868] flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Clock className="w-7 h-7 text-white" />
               </div>
               <h3 className="font-heading font-semibold text-lg mb-2">Real-Time Updates</h3>
               <p className="text-muted-foreground text-sm">
@@ -374,22 +388,26 @@ export default function PublicHome() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 sm:py-20 bg-gradient-to-r from-primary to-primary/70" data-testid="section-cta">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="font-heading text-2xl sm:text-4xl font-bold text-white mb-4">
+      <section className="py-16 sm:py-20 bg-gradient-to-br from-[#6443F4] via-[#7c5cf7] to-[#F94498] relative overflow-hidden" data-testid="section-cta">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iNCIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
+        <div className="absolute top-10 right-20 w-40 h-40 bg-[#FFD112] rounded-full blur-3xl opacity-20" />
+        <div className="absolute bottom-10 left-20 w-32 h-32 bg-[#FF9327] rounded-full blur-3xl opacity-20" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
+          <h2 className="font-heading text-2xl sm:text-4xl font-bold text-white mb-4 drop-shadow-lg">
             Ready to Explore Dubai?
           </h2>
-          <p className="text-white/80 mb-8 max-w-xl mx-auto">
+          <p className="text-white/90 mb-8 max-w-xl mx-auto text-lg">
             Browse our collection of hotels, attractions, and travel guides to plan your perfect Dubai adventure.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/hotels">
-              <Button className="bg-[#fdcd0a] hover:bg-[#e5b800] text-[#6443f4] font-semibold rounded-full px-8 py-6 text-lg">
+              <Button className="bg-gradient-to-r from-[#FFD112] to-[#FF9327] hover:from-[#e5b800] hover:to-[#e87e1c] text-[#1a1a2e] font-semibold rounded-full px-8 py-6 text-lg shadow-xl">
                 Browse Hotels
               </Button>
             </Link>
             <Link href="/attractions">
-              <Button variant="outline" className="border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg">
+              <Button variant="outline" className="border-2 border-white/80 text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg backdrop-blur-sm">
                 Explore Attractions
               </Button>
             </Link>
