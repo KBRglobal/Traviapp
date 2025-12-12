@@ -34,7 +34,10 @@ import AffiliateLinks from "@/pages/affiliate-links";
 import MediaLibrary from "@/pages/media-library";
 import Settings from "@/pages/settings";
 import AIArticleGenerator from "@/pages/ai-article-generator";
+import TopicBankPage from "@/pages/topic-bank";
+import KeywordsPage from "@/pages/keywords";
 import NotFound from "@/pages/not-found";
+import { AIAssistant } from "@/components/ai-assistant";
 
 function AdminRouter() {
   return (
@@ -60,6 +63,8 @@ function AdminRouter() {
       <Route path="/admin/articles/:id" component={ContentEditor} />
       <Route path="/admin/rss-feeds" component={RssFeeds} />
       <Route path="/admin/ai-generator" component={AIArticleGenerator} />
+      <Route path="/admin/topic-bank" component={TopicBankPage} />
+      <Route path="/admin/keywords" component={KeywordsPage} />
       <Route path="/admin/affiliate-links" component={AffiliateLinks} />
       <Route path="/admin/media" component={MediaLibrary} />
       <Route path="/admin/settings" component={Settings} />
@@ -87,6 +92,7 @@ function AdminLayout() {
             <AdminRouter />
           </main>
         </div>
+        <AIAssistant />
       </div>
     </SidebarProvider>
   );

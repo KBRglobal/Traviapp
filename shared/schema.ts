@@ -204,6 +204,37 @@ export const internalLinks = pgTable("internal_links", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Topic Bank table - for auto-generating articles when RSS lacks content
+export const topicBank = pgTable("topic_bank", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  category: articleCategoryEnum("category"),
+  keywords: jsonb("keywords").$type<string[]>().default([]),
+  outline: text("outline"),
+  priority: integer("priority").default(0),
+  lastUsed: timestamp("last_used"),
+  timesUsed: integer("times_used").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Keyword Repository table - SEO Bible for the system
+export const keywordRepository = pgTable("keyword_repository", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  keyword: text("keyword").notNull().unique(),
+  type: text("type").notNull(),
+  category: text("category"),
+  searchVolume: text("search_volume"),
+  competition: text("competition"),
+  relatedKeywords: jsonb("related_keywords").$type<string[]>().default([]),
+  usageCount: integer("usage_count").default(0),
+  priority: integer("priority").default(0),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({
   attraction: one(attractions, {
@@ -401,6 +432,20 @@ export const insertInternalLinkSchema = createInsertSchema(internalLinks).omit({
   createdAt: true,
 });
 
+export const insertTopicBankSchema = createInsertSchema(topicBank).omit({
+  id: true,
+  createdAt: true,
+  lastUsed: true,
+  timesUsed: true,
+});
+
+export const insertKeywordRepositorySchema = createInsertSchema(keywordRepository).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usageCount: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -426,6 +471,10 @@ export type InsertMediaFile = z.infer<typeof insertMediaFileSchema>;
 export type MediaFile = typeof mediaFiles.$inferSelect;
 export type InsertInternalLink = z.infer<typeof insertInternalLinkSchema>;
 export type InternalLink = typeof internalLinks.$inferSelect;
+export type InsertTopicBank = z.infer<typeof insertTopicBankSchema>;
+export type TopicBank = typeof topicBank.$inferSelect;
+export type InsertKeywordRepository = z.infer<typeof insertKeywordRepositorySchema>;
+export type KeywordRepository = typeof keywordRepository.$inferSelect;
 
 // Full content types with relations
 export type ContentWithRelations = Content & {

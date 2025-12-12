@@ -24,6 +24,8 @@ import {
   Map,
   Train,
   Sparkles,
+  Lightbulb,
+  Search,
 } from "lucide-react";
 import { Mascot } from "@/components/logo";
 
@@ -70,6 +72,16 @@ const managementItems = [
     title: "AI Generator",
     url: "/admin/ai-generator",
     icon: Sparkles,
+  },
+  {
+    title: "Topic Bank",
+    url: "/admin/topic-bank",
+    icon: Lightbulb,
+  },
+  {
+    title: "Keywords",
+    url: "/admin/keywords",
+    icon: Search,
   },
   {
     title: "RSS Feeds",

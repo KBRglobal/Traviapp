@@ -12,6 +12,8 @@ import {
   insertRssFeedSchema,
   insertAffiliateLinkSchema,
   insertMediaFileSchema,
+  insertTopicBankSchema,
+  insertKeywordRepositorySchema,
 } from "@shared/schema";
 import { z } from "zod";
 import * as fs from "fs";
@@ -835,6 +837,266 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     } catch (error) {
       console.error("Error generating SEO schema:", error);
       res.status(500).json({ error: "Failed to generate SEO schema" });
+    }
+  });
+
+  app.post("/api/ai/block-action", async (req, res) => {
+    try {
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      }
+
+      const { action, content, context, targetLanguage } = req.body;
+
+      if (!action || !content) {
+        return res.status(400).json({ error: "Action and content are required" });
+      }
+
+      const validActions = ["rewrite", "expand", "shorten", "translate", "seo_optimize", "improve_grammar", "add_examples"];
+      if (!validActions.includes(action)) {
+        return res.status(400).json({ error: "Invalid action" });
+      }
+
+      let systemPrompt = "You are a professional content editor for a Dubai travel website.";
+      let userPrompt = "";
+
+      switch (action) {
+        case "rewrite":
+          userPrompt = `Rewrite the following text in a fresh, engaging way while keeping the same meaning and key information:\n\n${content}`;
+          break;
+        case "expand":
+          userPrompt = `Expand the following text with more details, examples, and engaging information. Make it at least 50% longer while maintaining quality:\n\n${content}`;
+          break;
+        case "shorten":
+          userPrompt = `Condense the following text to be more concise while keeping all important information. Aim for about half the length:\n\n${content}`;
+          break;
+        case "translate":
+          const lang = targetLanguage || "Arabic";
+          userPrompt = `Translate the following text to ${lang}. Maintain the tone and style:\n\n${content}`;
+          break;
+        case "seo_optimize":
+          systemPrompt = "You are an SEO expert and content writer for a Dubai travel website.";
+          userPrompt = `Optimize the following text for SEO. Improve keyword usage, add relevant terms naturally, and make it more search-engine friendly while keeping it readable and engaging:\n\n${content}${context ? `\n\nContext/Keywords to target: ${context}` : ""}`;
+          break;
+        case "improve_grammar":
+          userPrompt = `Fix any grammar, spelling, or punctuation errors in the following text. Also improve sentence flow where needed:\n\n${content}`;
+          break;
+        case "add_examples":
+          userPrompt = `Enhance the following text by adding relevant examples, specific details, or practical tips that would help travelers:\n\n${content}`;
+          break;
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+      });
+
+      const result = response.choices[0].message.content || "";
+      res.json({ result, action });
+    } catch (error) {
+      console.error("Error in AI block action:", error);
+      res.status(500).json({ error: "Failed to process AI action" });
+    }
+  });
+
+  // AI Assistant Chat
+  app.post("/api/ai/assistant", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful AI assistant for a Dubai travel content management system called "Travi CMS". 
+You help content creators with:
+- Generating topic ideas for articles about Dubai tourism
+- Creating content outlines and structures
+- Suggesting SEO keywords and optimization strategies
+- Writing tips for engaging travel content
+- General guidance on content management best practices
+
+Keep responses concise but helpful. Use bullet points and formatting when appropriate.
+Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.`,
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+
+      const result = response.choices[0].message.content || "";
+      res.json({ response: result });
+    } catch (error) {
+      console.error("Error in AI assistant:", error);
+      res.status(500).json({ error: "Failed to process assistant request" });
+    }
+  });
+
+  // Topic Bank CRUD
+  app.get("/api/topic-bank", async (req, res) => {
+    try {
+      const { category, isActive } = req.query;
+      const items = await storage.getTopicBankItems({
+        category: category as string | undefined,
+        isActive: isActive === undefined ? undefined : isActive === "true",
+      });
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching topic bank items:", error);
+      res.status(500).json({ error: "Failed to fetch topic bank items" });
+    }
+  });
+
+  app.get("/api/topic-bank/:id", async (req, res) => {
+    try {
+      const item = await storage.getTopicBankItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Topic not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error fetching topic bank item:", error);
+      res.status(500).json({ error: "Failed to fetch topic bank item" });
+    }
+  });
+
+  app.post("/api/topic-bank", async (req, res) => {
+    try {
+      const parsed = insertTopicBankSchema.parse(req.body);
+      const item = await storage.createTopicBankItem(parsed);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating topic bank item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation error", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create topic bank item" });
+    }
+  });
+
+  app.patch("/api/topic-bank/:id", async (req, res) => {
+    try {
+      const item = await storage.updateTopicBankItem(req.params.id, req.body);
+      if (!item) {
+        return res.status(404).json({ error: "Topic not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating topic bank item:", error);
+      res.status(500).json({ error: "Failed to update topic bank item" });
+    }
+  });
+
+  app.delete("/api/topic-bank/:id", async (req, res) => {
+    try {
+      await storage.deleteTopicBankItem(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting topic bank item:", error);
+      res.status(500).json({ error: "Failed to delete topic bank item" });
+    }
+  });
+
+  app.post("/api/topic-bank/:id/use", async (req, res) => {
+    try {
+      const item = await storage.incrementTopicUsage(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Topic not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error incrementing topic usage:", error);
+      res.status(500).json({ error: "Failed to increment topic usage" });
+    }
+  });
+
+  // Keyword Repository CRUD
+  app.get("/api/keywords", async (req, res) => {
+    try {
+      const { type, category, isActive } = req.query;
+      const items = await storage.getKeywords({
+        type: type as string | undefined,
+        category: category as string | undefined,
+        isActive: isActive === undefined ? undefined : isActive === "true",
+      });
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching keywords:", error);
+      res.status(500).json({ error: "Failed to fetch keywords" });
+    }
+  });
+
+  app.get("/api/keywords/:id", async (req, res) => {
+    try {
+      const item = await storage.getKeyword(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Keyword not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error fetching keyword:", error);
+      res.status(500).json({ error: "Failed to fetch keyword" });
+    }
+  });
+
+  app.post("/api/keywords", async (req, res) => {
+    try {
+      const parsed = insertKeywordRepositorySchema.parse(req.body);
+      const item = await storage.createKeyword(parsed);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating keyword:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation error", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create keyword" });
+    }
+  });
+
+  app.patch("/api/keywords/:id", async (req, res) => {
+    try {
+      const item = await storage.updateKeyword(req.params.id, req.body);
+      if (!item) {
+        return res.status(404).json({ error: "Keyword not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating keyword:", error);
+      res.status(500).json({ error: "Failed to update keyword" });
+    }
+  });
+
+  app.delete("/api/keywords/:id", async (req, res) => {
+    try {
+      await storage.deleteKeyword(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting keyword:", error);
+      res.status(500).json({ error: "Failed to delete keyword" });
+    }
+  });
+
+  app.post("/api/keywords/:id/use", async (req, res) => {
+    try {
+      const item = await storage.incrementKeywordUsage(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Keyword not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error incrementing keyword usage:", error);
+      res.status(500).json({ error: "Failed to increment keyword usage" });
     }
   });
 

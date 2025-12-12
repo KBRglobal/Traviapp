@@ -32,7 +32,26 @@ import {
   Smartphone,
   X,
   Sparkles,
+  Wand2,
+  RefreshCw,
+  Maximize2,
+  Minimize2,
+  Languages,
+  Search,
+  CheckCircle,
+  BookOpen,
+  Loader2,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { ContentWithRelations, ContentBlock } from "@shared/schema";
 
 type ContentType = "attraction" | "hotel" | "article";
@@ -91,6 +110,7 @@ export default function ContentEditor() {
   const [status, setStatus] = useState<string>("draft");
   const [activeTab, setActiveTab] = useState("content");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | null>(null);
+  const [aiProcessingBlock, setAiProcessingBlock] = useState<string | null>(null);
 
   const { data: content, isLoading } = useQuery<ContentWithRelations>({
     queryKey: [`/api/contents/${contentId}`],
@@ -140,6 +160,49 @@ export default function ContentEditor() {
       });
     },
   });
+
+  const aiBlockMutation = useMutation({
+    mutationFn: async (data: { blockId: string; action: string; content: string; targetLanguage?: string }) => {
+      const res = await apiRequest("POST", "/api/ai/block-action", {
+        action: data.action,
+        content: data.content,
+        context: primaryKeyword,
+        targetLanguage: data.targetLanguage,
+      });
+      return res.json();
+    },
+    onSuccess: (result, variables) => {
+      if (result.result) {
+        updateBlock(variables.blockId, { content: result.result });
+        toast({
+          title: "AI Action Complete",
+          description: `Content ${variables.action === "rewrite" ? "rewritten" : variables.action === "expand" ? "expanded" : variables.action === "shorten" ? "shortened" : variables.action === "translate" ? "translated" : variables.action === "seo_optimize" ? "SEO optimized" : variables.action === "improve_grammar" ? "grammar improved" : "updated"} successfully.`,
+        });
+      }
+      setAiProcessingBlock(null);
+    },
+    onError: () => {
+      toast({
+        title: "AI Error",
+        description: "Failed to process AI action. Please try again.",
+        variant: "destructive",
+      });
+      setAiProcessingBlock(null);
+    },
+  });
+
+  const handleAiAction = (blockId: string, action: string, content: string, targetLanguage?: string) => {
+    if (!content.trim()) {
+      toast({
+        title: "No Content",
+        description: "Please add some text before using AI actions.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setAiProcessingBlock(blockId);
+    aiBlockMutation.mutate({ blockId, action, content, targetLanguage });
+  };
 
   const handleSave = () => {
     const wordCount = blocks.reduce((count, block) => {
@@ -438,13 +501,128 @@ export default function ContentEditor() {
                           </Button>
                         </div>
                         {block.type === "text" && (
-                          <Textarea
-                            value={String(block.data?.content || "")}
-                            onChange={(e) => updateBlock(block.id, { content: e.target.value })}
-                            placeholder="Enter text content..."
-                            className="min-h-[100px]"
-                            data-testid={`textarea-${block.id}`}
-                          />
+                          <div className="space-y-2">
+                            <Textarea
+                              value={String(block.data?.content || "")}
+                              onChange={(e) => updateBlock(block.id, { content: e.target.value })}
+                              placeholder="Enter text content..."
+                              className="min-h-[100px]"
+                              data-testid={`textarea-${block.id}`}
+                              disabled={aiProcessingBlock === block.id}
+                            />
+                            <div className="flex items-center gap-2">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={aiProcessingBlock === block.id}
+                                    data-testid={`button-ai-actions-${block.id}`}
+                                  >
+                                    {aiProcessingBlock === block.id ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Wand2 className="h-4 w-4 mr-2" />
+                                    )}
+                                    AI Actions
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  <DropdownMenuItem
+                                    onClick={() => handleAiAction(block.id, "rewrite", String(block.data?.content || ""))}
+                                    data-testid={`ai-rewrite-${block.id}`}
+                                  >
+                                    <RefreshCw className="h-4 w-4 mr-2" />
+                                    Rewrite
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleAiAction(block.id, "expand", String(block.data?.content || ""))}
+                                    data-testid={`ai-expand-${block.id}`}
+                                  >
+                                    <Maximize2 className="h-4 w-4 mr-2" />
+                                    Expand
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleAiAction(block.id, "shorten", String(block.data?.content || ""))}
+                                    data-testid={`ai-shorten-${block.id}`}
+                                  >
+                                    <Minimize2 className="h-4 w-4 mr-2" />
+                                    Shorten
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleAiAction(block.id, "seo_optimize", String(block.data?.content || ""))}
+                                    data-testid={`ai-seo-${block.id}`}
+                                  >
+                                    <Search className="h-4 w-4 mr-2" />
+                                    SEO Optimize
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleAiAction(block.id, "improve_grammar", String(block.data?.content || ""))}
+                                    data-testid={`ai-grammar-${block.id}`}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Improve Grammar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleAiAction(block.id, "add_examples", String(block.data?.content || ""))}
+                                    data-testid={`ai-examples-${block.id}`}
+                                  >
+                                    <BookOpen className="h-4 w-4 mr-2" />
+                                    Add Examples
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger data-testid={`ai-translate-trigger-${block.id}`}>
+                                      <Languages className="h-4 w-4 mr-2" />
+                                      Translate
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuSubContent>
+                                      <DropdownMenuItem
+                                        onClick={() => handleAiAction(block.id, "translate", String(block.data?.content || ""), "Arabic")}
+                                        data-testid={`ai-translate-arabic-${block.id}`}
+                                      >
+                                        Arabic
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleAiAction(block.id, "translate", String(block.data?.content || ""), "French")}
+                                        data-testid={`ai-translate-french-${block.id}`}
+                                      >
+                                        French
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleAiAction(block.id, "translate", String(block.data?.content || ""), "German")}
+                                        data-testid={`ai-translate-german-${block.id}`}
+                                      >
+                                        German
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleAiAction(block.id, "translate", String(block.data?.content || ""), "Spanish")}
+                                        data-testid={`ai-translate-spanish-${block.id}`}
+                                      >
+                                        Spanish
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleAiAction(block.id, "translate", String(block.data?.content || ""), "Chinese")}
+                                        data-testid={`ai-translate-chinese-${block.id}`}
+                                      >
+                                        Chinese
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleAiAction(block.id, "translate", String(block.data?.content || ""), "Russian")}
+                                        data-testid={`ai-translate-russian-${block.id}`}
+                                      >
+                                        Russian
+                                      </DropdownMenuItem>
+                                    </DropdownMenuSubContent>
+                                  </DropdownMenuSub>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              {aiProcessingBlock === block.id && (
+                                <span className="text-sm text-muted-foreground">Processing...</span>
+                              )}
+                            </div>
+                          </div>
                         )}
                         {block.type === "hero" && (
                           <div className="grid gap-3 sm:grid-cols-2">
