@@ -316,10 +316,11 @@ export interface GeneratedItineraryContent {
 const HOTEL_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized hotel pages for Dubai Travel website.
 
 CONTENT REQUIREMENTS:
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Every piece of content must be accurate, engaging, and valuable for travelers
 - Include natural keyword placement throughout the content
 - Write in a professional yet inviting hospitality tone
+- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
 
 Your output must be a valid JSON object matching this exact structure:
 
@@ -351,7 +352,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "About [Hotel Name]",
-          "content": "Write 250-350 words. Start with 2-3 engaging sentences as the visible intro that capture the essence of the property. Then expand covering: what makes this hotel unique in Dubai's competitive hospitality scene, architectural design and aesthetic, the guest experience from arrival to departure, signature amenities and services, location advantages, views and surroundings, who this hotel is ideal for."
+          "content": "Write 350-450 words. Start with 2-3 engaging sentences as the visible intro that capture the essence of the property. Then expand covering: what makes this hotel unique in Dubai's competitive hospitality scene, architectural design and aesthetic, the guest experience from arrival to departure, signature amenities and services, location advantages, views and surroundings, who this hotel is ideal for."
         },
         "order": 1
       },
@@ -369,7 +370,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "Rooms & Suites",
-          "content": "Write 150-200 words describing accommodation options: room categories, suite offerings, signature room features, views available, in-room amenities, bedding quality, bathroom features, technology amenities."
+          "content": "Write 200-250 words describing accommodation options: room categories, suite offerings, signature room features, views available, in-room amenities, bedding quality, bathroom features, technology amenities."
         },
         "order": 3
       },
@@ -378,7 +379,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "Dining Experience",
-          "content": "Write 150-200 words covering: number of restaurants and bars, cuisine types, signature restaurants and chefs, breakfast experience, room service, poolside dining, special dining experiences, dress codes, reservation recommendations."
+          "content": "Write 200-250 words covering: number of restaurants and bars, cuisine types, signature restaurants and chefs, breakfast experience, room service, poolside dining, special dining experiences, dress codes, reservation recommendations."
         },
         "order": 4
       },
@@ -387,7 +388,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "Wellness & Recreation",
-          "content": "Write 100-150 words about: spa and wellness facilities, gym and fitness center, pools, beach access, sports facilities, activities and experiences, kids facilities, entertainment options."
+          "content": "Write 150-200 words about: spa and wellness facilities, gym and fitness center, pools, beach access, sports facilities, activities and experiences, kids facilities, entertainment options."
         },
         "order": 5
       },
@@ -396,7 +397,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "Location & Surroundings",
-          "content": "Write 100-150 words about: exact location and neighborhood, nearby attractions and landmarks, shopping options, transportation connections, airport distance and transfer options, what guests can explore in the area."
+          "content": "Write 150-200 words about: exact location and neighborhood, nearby attractions and landmarks, shopping options, transportation connections, airport distance and transfer options, what guests can explore in the area."
         },
         "order": 6
       },
@@ -582,10 +583,11 @@ Generate unique IDs for each block. Make content engaging, accurate for Dubai ho
 const ATTRACTION_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized attraction pages for Dubai Travel website.
 
 CONTENT REQUIREMENTS:
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Every piece of content must be accurate, engaging, and valuable for tourists
 - Include natural keyword placement throughout the content
 - Write in an informative yet engaging tone
+- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
 
 Your output must be a valid JSON object matching this exact structure:
 
@@ -617,7 +619,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "About [Attraction Name]",
-          "content": "Write 250-350 words. Start with 2-3 engaging sentences as the visible intro that hook the reader. Then expand covering: what makes this attraction special and unique to Dubai, the complete visitor experience from arrival to departure, architectural or design significance, historical context if relevant, atmosphere and ambiance, best times to visit for optimal experience, what makes it worth visiting compared to similar attractions."
+          "content": "Write 350-450 words. Start with 2-3 engaging sentences as the visible intro that hook the reader. Then expand covering: what makes this attraction special and unique to Dubai, the complete visitor experience from arrival to departure, architectural or design significance, historical context if relevant, atmosphere and ambiance, best times to visit for optimal experience, what makes it worth visiting compared to similar attractions."
         },
         "order": 1
       },
@@ -832,9 +834,10 @@ IMPORTANT GUIDELINES:
 const ARTICLE_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized articles for Dubai Travel website.
 
 CONTENT REQUIREMENTS:
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Every piece of content must be accurate, engaging, and valuable for travelers
 - Include natural keyword placement throughout the content
+- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
 
 STEP 1 - SELECT WRITING PERSONALITY (choose the most appropriate for the topic):
 
@@ -1130,10 +1133,11 @@ IMPORTANT GUIDELINES:
 const DINING_SYSTEM_PROMPT = `You are a Dubai culinary content expert creating comprehensive, SEO-optimized restaurant pages for Dubai Travel website.
 
 CONTENT REQUIREMENTS:
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Every piece of content must be accurate, engaging, and valuable for diners
 - Include natural keyword placement throughout the content
 - Write in an appetizing, inviting tone that captures the dining experience
+- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
 
 Your output must be a valid JSON object matching this exact structure:
 
@@ -1165,7 +1169,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "About [Restaurant Name]",
-          "content": "Write 250-350 words. Start with 2-3 engaging sentences as the visible intro capturing the restaurant's essence. Then expand covering: what makes this restaurant unique in Dubai's competitive dining scene, the culinary philosophy and chef's background, signature flavors and cooking techniques, the complete dining experience from arrival to dessert, interior design and ambiance, views if applicable, who this restaurant is ideal for."
+          "content": "Write 350-450 words. Start with 2-3 engaging sentences as the visible intro capturing the restaurant's essence. Then expand covering: what makes this restaurant unique in Dubai's competitive dining scene, the culinary philosophy and chef's background, signature flavors and cooking techniques, the complete dining experience from arrival to dessert, interior design and ambiance, views if applicable, who this restaurant is ideal for."
         },
         "order": 1
       },
@@ -1348,10 +1352,11 @@ Generate unique IDs for each block. Make content appetizing, accurate for Dubai 
 const DISTRICT_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized neighborhood/district guide pages for Dubai Travel website.
 
 CONTENT REQUIREMENTS:
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Every piece of content must be accurate, engaging, and valuable for visitors
 - Include natural keyword placement throughout the content
 - Write in an explorative, informative tone that encourages discovery
+- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
 
 Your output must be a valid JSON object matching this exact structure:
 
@@ -1383,7 +1388,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "About [District Name]",
-          "content": "Write 250-350 words. Start with 2-3 engaging sentences capturing the district's essence. Then expand covering: what makes this area unique, its history and development, the atmosphere and vibe, who the area attracts, what it's known for, best times to visit, how it fits into Dubai's landscape."
+          "content": "Write 350-450 words. Start with 2-3 engaging sentences capturing the district's essence. Then expand covering: what makes this area unique, its history and development, the atmosphere and vibe, who the area attracts, what it's known for, best times to visit, how it fits into Dubai's landscape."
         },
         "order": 1
       },
@@ -1565,10 +1570,11 @@ Generate unique IDs for each block. Make content explorative, accurate for Dubai
 const TRANSPORT_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized transportation guide pages for Dubai Travel website.
 
 CONTENT REQUIREMENTS:
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Every piece of content must be accurate, practical, and valuable for travelers
 - Include natural keyword placement throughout the content
 - Write in a helpful, practical tone that makes navigation easy
+- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
 
 Your output must be a valid JSON object matching this exact structure:
 
@@ -1600,7 +1606,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "About Dubai [Transport Type]",
-          "content": "Write 250-350 words. Start with 2-3 engaging sentences introducing this transport option. Then expand covering: what this transport is and how it works, the network coverage and key routes, why it's useful for tourists, comparison to other transport options, history and modern features, accessibility information."
+          "content": "Write 350-450 words. Start with 2-3 engaging sentences introducing this transport option. Then expand covering: what this transport is and how it works, the network coverage and key routes, why it's useful for tourists, comparison to other transport options, history and modern features, accessibility information."
         },
         "order": 1
       },
@@ -1764,10 +1770,11 @@ Generate unique IDs for each block. Make content practical, accurate for Dubai t
 const EVENT_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized event pages for Dubai Travel website.
 
 CONTENT REQUIREMENTS:
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Every piece of content must be accurate, engaging, and valuable for attendees
 - Include natural keyword placement throughout the content
 - Write in an exciting, informative tone that builds anticipation
+- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
 
 Your output must be a valid JSON object matching this exact structure:
 
@@ -1799,7 +1806,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "About [Event Name]",
-          "content": "Write 250-350 words. Start with 2-3 engaging sentences capturing the event's excitement. Then expand covering: what the event is and its significance, history and past highlights, what attendees can expect, lineup or program highlights, why Dubai is the perfect venue, who should attend."
+          "content": "Write 350-450 words. Start with 2-3 engaging sentences capturing the event's excitement. Then expand covering: what the event is and its significance, history and past highlights, what attendees can expect, lineup or program highlights, why Dubai is the perfect venue, who should attend."
         },
         "order": 1
       },
@@ -1984,10 +1991,11 @@ Generate unique IDs for each block. Make content exciting, accurate for Dubai ev
 const ITINERARY_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized itinerary pages for Dubai Travel website.
 
 CONTENT REQUIREMENTS:
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Every piece of content must be accurate, practical, and valuable for trip planning
 - Include natural keyword placement throughout the content
 - Write in an inspiring, helpful tone that makes planning easy
+- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
 
 Your output must be a valid JSON object matching this exact structure:
 
@@ -2019,7 +2027,7 @@ OUTPUT STRUCTURE:
         "type": "text",
         "data": {
           "heading": "Your [Duration] Dubai Trip Overview",
-          "content": "Write 250-350 words. Start with 2-3 engaging sentences setting up the trip. Then expand covering: what this itinerary covers, who it's perfect for, the overall experience, highlights you'll encounter, practical considerations, why this duration works."
+          "content": "Write 350-450 words. Start with 2-3 engaging sentences setting up the trip. Then expand covering: what this itinerary covers, who it's perfect for, the overall experience, highlights you'll encounter, practical considerations, why this duration works."
         },
         "order": 1
       },
@@ -2236,18 +2244,31 @@ export async function generateHotelContent(hotelName: string): Promise<Generated
         { 
           role: "user", 
           content: `Generate complete content for a Dubai hotel called "${hotelName}". 
-          
-Make it realistic and comprehensive. Generate all sections including:
-- Full SEO metadata
-- Overview text block (200+ words)
-- 6 highlights with descriptions
+
+Make it realistic and comprehensive. This is CRITICAL - you MUST generate ALL of the following blocks in the content.blocks array:
+
+MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array):
+1. hero block - with title, subtitle, overlayText
+2. text block - "About [Hotel Name]" overview (350-450 words minimum)
+3. highlights block - with 6 detailed highlight items (50-80 words each description)
+4. text block - "Rooms & Suites" (200-250 words)
+5. text block - "Dining Experience" (200-250 words)
+6. text block - "Wellness & Recreation" (150-200 words)
+7. text block - "Location & Surroundings" (150-200 words)
+8. tips block - with 7 specific, actionable traveler tips (this is REQUIRED, do NOT skip)
+9. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
+10. cta block - with booking call to action
+
+ALSO REQUIRED in hotel object:
+- 6 highlights with 50-80 word descriptions each
 - 3-4 room types with features and pricing
 - 12 essential info items
-- 2+ dining options
-- 5-7 traveler tips
-- 6+ FAQ items
-- Nearby attractions
+- 4+ dining options
+- 7 traveler tips
+- 8 FAQ items with detailed 100-200 word answers
+- 4 nearby attractions
 
+DO NOT SKIP any blocks. Every block type listed above MUST appear in your output.
 Output valid JSON only, no markdown code blocks.`
         }
       ],
@@ -2289,27 +2310,34 @@ export async function generateAttractionContent(attractionName: string): Promise
           content: `Generate comprehensive content for a Dubai attraction called "${attractionName}".
 
 REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Write engaging, SEO-optimized content that helps tourists plan their visit
 - All information must be accurate and realistic for Dubai
 
-Generate ALL sections including:
-- Hero block with title and subtitle
-- About text block (250-350 words) - detailed introduction
-- Complete Experience text block (200-300 words) - visitor journey
+MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
+1. hero block - with title, subtitle, overlayText
+2. text block - "About [Attraction Name]" (350-450 words minimum, detailed introduction)
+3. highlights block - with 6 items, each with 50-80 word descriptions (REQUIRED)
+4. text block - "The Complete Experience" (250-350 words, visitor journey)
+5. text block - "Planning Your Visit" (200-250 words, practical info)
+6. text block - "Nearby Attractions" (150-200 words)
+7. tips block - with 7 detailed, actionable visitor tips (this is REQUIRED, do NOT skip)
+8. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
+9. cta block - with booking call to action
+
+ALSO REQUIRED in attraction object:
 - 6 highlights with 50-80 word descriptions each
-- Planning Your Visit text block (150-200 words)
-- 7 detailed, actionable visitor tips
-- Nearby Attractions text block (100-150 words)
-- 8 FAQ items with 100-200 word answers EACH (this is critical!)
 - 4 ticket options with descriptions and pricing
 - 12 essential info items
 - 8 quick info bar items
+- 7 visitor tips
+- 8 FAQ items with detailed 100-200 word answers
+- 4 nearby attractions
 - 5 image descriptions with SEO alt text and captions
 - Comprehensive TouristAttraction JSON-LD schema with geo coordinates
-- 4 nearby attractions
 - Trust signals and related keywords
 
+DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
 Output valid JSON only, no markdown code blocks.`
         }
       ],
@@ -2359,25 +2387,33 @@ export async function generateArticleContent(
 ${categoryInstruction}
 
 REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Choose the most appropriate writing personality (A-E) for this topic
 - Choose the most appropriate article structure (1-6) for this topic
 - Write engaging, SEO-optimized content valuable for Dubai travelers
 
-Generate ALL sections including:
-- Hero block with compelling title, subtitle, and overlay text
-- Introduction text block (200-250 words) - engaging hook
-- 3 main content sections (200-300 words each) following your chosen structure
-- Highlights block with 6 key takeaways
-- Practical Information text block (150-200 words)
-- 7 detailed, actionable expert tips
-- 8 FAQ items with 100-200 word answers EACH (this is critical!)
-- CTA block with relevant call to action
+MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
+1. hero block - with compelling title, subtitle, overlayText
+2. text block - "Introduction" (250-350 words, engaging hook)
+3. text block - Main content section 1 (300-400 words)
+4. text block - Main content section 2 (300-400 words)
+5. text block - Main content section 3 (250-350 words)
+6. highlights block - with 6 key takeaways (REQUIRED)
+7. text block - "Practical Information" (200-250 words)
+8. tips block - with 7 detailed, actionable expert tips (this is REQUIRED, do NOT skip)
+9. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
+10. cta block - with relevant call to action
+
+ALSO REQUIRED in article object:
+- 5 quick facts
+- 7 pro tips
+- Relevant warnings
+- 8 FAQ items with detailed 100-200 word answers
+- 4 related topics for internal linking
 - 4 image descriptions with SEO alt text and captions
 - Comprehensive Article JSON-LD schema
-- 5 quick facts, 7 pro tips, relevant warnings
-- 4 related topics for internal linking
 
+DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
 Output valid JSON only, no markdown code blocks.`
         }
       ],
@@ -2420,27 +2456,34 @@ export async function generateDiningContent(
           content: `Generate comprehensive content for this Dubai restaurant: "${restaurantName}"
 
 REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Create engaging, appetizing content that helps diners make informed choices
 - Include realistic pricing in AED
 - Research and include accurate cuisine details
 
-Generate ALL sections including:
-- Hero block with compelling title, subtitle, and overlay text
+MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
+1. hero block - with compelling title, subtitle, overlayText
+2. text block - "About [Restaurant Name]" overview (350-400 words, atmosphere, concept, chef)
+3. highlights block - with 6 signature dishes/experiences (REQUIRED)
+4. text block - "The Menu" (250-300 words, signature dishes, pricing categories)
+5. text block - "Ambiance & Decor" (200-250 words)
+6. text block - "The Dining Experience" (250-300 words)
+7. tips block - with 7 detailed, practical dining tips (this is REQUIRED, do NOT skip)
+8. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
+9. cta block - for reservations
+
+ALSO REQUIRED in dining object:
 - Quick info with cuisine type, price range, location, dress code, reservations
-- Overview text block (250-300 words) - atmosphere, concept, chef background
-- Signature dishes block with 6-8 must-try items and descriptions
-- Menu highlights with pricing categories
-- Ambiance & Decor text block (150-200 words)
-- Dining experience text block (200-250 words)
-- 7 detailed, practical dining tips
-- 8 FAQ items with 100-200 word answers EACH (this is critical!)
-- CTA block for reservations
+- 6-8 menu highlights with pricing
+- 5 quick facts
+- 7 insider tips
+- Dietary accommodations info
+- 8 FAQ items with detailed 100-200 word answers
+- 4 similar restaurant recommendations
 - 4-5 image descriptions with SEO alt text and captions
 - Comprehensive Restaurant JSON-LD schema
-- 5 quick facts, 7 insider tips, dietary accommodations
-- 4 similar restaurant recommendations
 
+DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
 Output valid JSON only, no markdown code blocks.`
         }
       ],
@@ -2483,28 +2526,35 @@ export async function generateDistrictContent(
           content: `Generate comprehensive content for this Dubai district/area: "${districtName}"
 
 REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Create an immersive neighborhood guide for travelers
 - Include practical navigation and local insights
 - Cover all aspects: attractions, dining, shopping, culture
 
-Generate ALL sections including:
-- Hero block with compelling title, subtitle, and overlay text
+MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
+1. hero block - with compelling title, subtitle, overlayText
+2. text block - "About [District Name]" overview (350-400 words, history, character, vibe)
+3. highlights block - with 6-8 key attractions/experiences (REQUIRED)
+4. text block - "Dining & Nightlife" (250-300 words)
+5. text block - "Shopping & Markets" (200-250 words)
+6. text block - "Local Culture & Hidden Gems" (200-250 words)
+7. text block - "Getting Around" (150-200 words)
+8. tips block - with 7 detailed neighborhood exploration tips (this is REQUIRED, do NOT skip)
+9. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
+10. cta block - for tours/experiences
+
+ALSO REQUIRED in district object:
 - Quick info with location, best time to visit, getting there, character
-- Overview text block (250-300 words) - history, character, vibe
-- Key Attractions block with 6-8 must-see spots
-- Dining & Nightlife text block (200-250 words)
-- Shopping & Markets text block (150-200 words)
-- Local Culture & Hidden Gems text block (150-200 words)
-- Getting Around text block (100-150 words)
-- 7 detailed neighborhood exploration tips
-- 8 FAQ items with 100-200 word answers EACH (this is critical!)
-- CTA block for tours/experiences
+- 6-8 must-see spots
+- 5 quick facts
+- 7 local secrets
+- Safety notes
+- 8 FAQ items with detailed 100-200 word answers
+- 4 nearby district recommendations
 - 4-5 image descriptions with SEO alt text and captions
 - Comprehensive TouristDestination JSON-LD schema
-- 5 quick facts, 7 local secrets, safety notes
-- 4 nearby district recommendations
 
+DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
 Output valid JSON only, no markdown code blocks.`
         }
       ],
@@ -2547,28 +2597,34 @@ export async function generateTransportContent(
           content: `Generate comprehensive content for this Dubai transportation option: "${transportType}"
 
 REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Provide accurate, practical transportation guidance
 - Include current pricing in AED where applicable
 - Focus on helping tourists navigate confidently
 
-Generate ALL sections including:
-- Hero block with compelling title, subtitle, and overlay text
+MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
+1. hero block - with compelling title, subtitle, overlayText
+2. text block - "About [Transport Type]" overview (350-400 words, what it is, how it works)
+3. highlights block - with 6 key benefits/features (REQUIRED)
+4. text block - "How to Use" (250-300 words, step-by-step guide)
+5. text block - "Routes & Coverage" (200-250 words)
+6. text block - "Pricing & Tickets" (200-250 words, specific costs in AED)
+7. text block - "Accessibility" (150-200 words)
+8. tips block - with 7 detailed transport tips for tourists (this is REQUIRED, do NOT skip)
+9. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
+10. cta block - for apps/booking
+
+ALSO REQUIRED in transport object:
 - Quick info with cost, availability, payment methods, best for
-- Overview text block (250-300 words) - what it is, how it works
-- How to Use text block (200-250 words) - step-by-step guide
-- Routes & Coverage text block (150-200 words)
-- Pricing & Tickets text block (150-200 words) with specific costs
-- Pros & Cons comparison block
-- Accessibility text block (100-150 words)
-- 7 detailed transport tips for tourists
-- 8 FAQ items with 100-200 word answers EACH (this is critical!)
-- CTA block for apps/booking
+- Pros & Cons list
+- 5 quick facts
+- Common mistakes to avoid
+- 8 FAQ items with detailed 100-200 word answers
+- 4 alternative transport recommendations
 - 3-4 image descriptions with SEO alt text and captions
 - Comprehensive HowTo JSON-LD schema
-- 5 quick facts, common mistakes to avoid
-- 4 alternative transport recommendations
 
+DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
 Output valid JSON only, no markdown code blocks.`
         }
       ],
@@ -2611,28 +2667,35 @@ export async function generateEventContent(
           content: `Generate comprehensive content for this Dubai event/festival: "${eventName}"
 
 REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Create exciting, informative event coverage
 - Include practical attendance information
 - Help readers plan their visit effectively
 
-Generate ALL sections including:
-- Hero block with compelling title, subtitle, and overlay text
+MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
+1. hero block - with compelling title, subtitle, overlayText
+2. text block - "About [Event Name]" overview (350-400 words, what it is, significance)
+3. highlights block - with 6 key experiences/attractions (REQUIRED)
+4. text block - "What to Expect" (250-300 words, activities, highlights)
+5. text block - "Schedule & Programming" (200-250 words)
+6. text block - "Tickets & Entry" (200-250 words, pricing tiers)
+7. text block - "Getting There & Amenities" (200-250 words)
+8. tips block - with 7 detailed event attendance tips (this is REQUIRED, do NOT skip)
+9. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
+10. cta block - for tickets/registration
+
+ALSO REQUIRED in event object:
 - Quick info with dates, venue, ticket prices, duration
-- Overview text block (250-300 words) - what the event is, significance
-- What to Expect text block (200-250 words) - activities, highlights
-- Schedule & Programming block with key times/dates
-- Tickets & Entry text block (150-200 words) with pricing tiers
-- Getting There text block (100-150 words)
-- Food & Amenities text block (100-150 words)
-- 7 detailed event attendance tips
-- 8 FAQ items with 100-200 word answers EACH (this is critical!)
-- CTA block for tickets/registration
+- Schedule with key times/dates
+- 5 quick facts
+- What to bring list
+- Prohibited items list
+- 8 FAQ items with detailed 100-200 word answers
+- 4 similar event recommendations
 - 4-5 image descriptions with SEO alt text and captions
 - Comprehensive Event JSON-LD schema
-- 5 quick facts, what to bring, prohibited items
-- 4 similar event recommendations
 
+DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
 Output valid JSON only, no markdown code blocks.`
         }
       ],
@@ -2682,28 +2745,36 @@ export async function generateItineraryContent(
 ${tripTypeInstruction}
 
 REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1200-2000 words across all text blocks
+- Total word count: 1500-2500 words across all text blocks
 - Create a realistic, well-paced travel plan
 - Include specific timing and logistics
 - Balance popular attractions with local experiences
 
-Generate ALL sections including:
-- Hero block with compelling title, subtitle, and overlay text
+MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
+1. hero block - with compelling title, subtitle, overlayText
+2. text block - "Trip Overview" (300-350 words, trip highlights, philosophy)
+3. highlights block - with 6 key trip highlights/experiences (REQUIRED)
+4. text block - "Day-by-Day Guide" (400-500 words, detailed morning/afternoon/evening activities)
+5. text block - "Budget Breakdown" (200-250 words, estimated costs)
+6. text block - "What to Pack" (200-250 words, essentials)
+7. text block - "Booking Timeline" (150-200 words, what to book in advance)
+8. tips block - with 7 detailed itinerary execution tips (this is REQUIRED, do NOT skip)
+9. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
+10. cta block - for tour booking
+
+ALSO REQUIRED in itinerary object:
 - Quick info with duration, budget range, best for, pace
-- Overview text block (200-250 words) - trip highlights, philosophy
-- Day-by-Day Schedule with detailed morning/afternoon/evening activities
-- Each day should include: activities, timing, costs, transport, meal suggestions
-- Budget Breakdown text block (150-200 words) with estimated costs
-- Packing Essentials block
-- Booking Timeline text block (100-150 words) - what to book in advance
-- 7 detailed itinerary execution tips
-- 8 FAQ items with 100-200 word answers EACH (this is critical!)
-- CTA block for tour booking
+- Day-by-Day Schedule with activities, timing, costs, transport, meal suggestions
+- Packing essentials list
+- 5 quick facts
+- Customization options
+- Alternative activities
+- 8 FAQ items with detailed 100-200 word answers
+- 4 related itinerary recommendations
 - 4-5 image descriptions with SEO alt text and captions
 - Comprehensive TravelPlan JSON-LD schema (use ItemList for days)
-- 5 quick facts, customization options, alternative activities
-- 4 related itinerary recommendations
 
+DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
 Output valid JSON only, no markdown code blocks.`
         }
       ],
