@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "wouter";
+import { Link, useRoute } from "wouter";
 import { 
   ArrowLeft, Star, MapPin, Clock, Phone, Globe, 
   Utensils, ChevronDown, Check, Calendar, CreditCard,
@@ -112,8 +112,8 @@ function EssentialInfoCard({ info }: { info: EssentialInfoItem }) {
 }
 
 export default function PublicDiningDetail() {
-  const params = useParams();
-  const slug = params.slug;
+  const [, params] = useRoute("/dining/:slug");
+  const slug = params?.slug;
   
   const { data: content, isLoading } = useQuery<ContentWithRelations>({
     queryKey: [`/api/contents/slug/${slug}`],
