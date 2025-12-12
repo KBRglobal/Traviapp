@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Mountain, MapPin, ArrowLeft, Search, Clock, Menu, X } from "lucide-react";
+import { Mountain, MapPin, ArrowLeft, Search, Clock, Star } from "lucide-react";
 import type { ContentWithRelations } from "@shared/schema";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PublicNav } from "@/components/public-nav";
 import { Logo } from "@/components/logo";
 import { useState } from "react";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
@@ -133,7 +133,6 @@ function PlaceholderAttractionCard({ index }: { index: number }) {
 
 export default function PublicAttractions() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   useDocumentMeta({
     title: "Dubai Attractions & Things to Do | Travi - Dubai Travel Guide",
@@ -161,41 +160,7 @@ export default function PublicAttractions() {
         Skip to main content
       </a>
       
-      <header>
-        <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b" aria-label="Main navigation" data-testid="nav-header">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between gap-4 h-16">
-              <Logo variant="primary" height={28} />
-              <div className="hidden md:flex items-center gap-8">
-                <Link href="/hotels" className="text-foreground/80 hover:text-primary font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-2 py-1">Hotels</Link>
-                <Link href="/attractions" className="text-primary font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-2 py-1">Attractions</Link>
-                <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-2 py-1">Articles</Link>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-                aria-expanded={mobileMenuOpen}
-                aria-controls="mobile-menu"
-                data-testid="button-mobile-menu"
-              >
-                {mobileMenuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
-              </Button>
-            </div>
-            {mobileMenuOpen && (
-              <div id="mobile-menu" className="md:hidden py-4 border-t">
-                <nav className="flex flex-col gap-2" aria-label="Mobile navigation">
-                  <Link href="/hotels" className="text-foreground/80 hover:text-primary font-medium py-2 focus:outline-none focus:ring-2 focus:ring-primary rounded-md px-2">Hotels</Link>
-                  <Link href="/attractions" className="text-primary font-medium py-2 focus:outline-none focus:ring-2 focus:ring-primary rounded-md px-2">Attractions</Link>
-                  <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium py-2 focus:outline-none focus:ring-2 focus:ring-primary rounded-md px-2">Articles</Link>
-                </nav>
-              </div>
-            )}
-          </div>
-        </nav>
-      </header>
+      <PublicNav />
 
       <main id="main-content">
         <section className="bg-gradient-to-br from-[#4c2889] via-[#6443F4] to-[#8b5cf6] py-16 relative overflow-hidden" aria-labelledby="attractions-heading">

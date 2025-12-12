@@ -1,4 +1,4 @@
-import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Sparkles, Menu, MapPin, Star, Clock, ChevronRight, X, Bed, FileText, User, TrendingUp, Ticket, Eye, Calendar, ArrowRight, Flame } from "lucide-react";
+import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Sparkles, MapPin, Star, Clock, ChevronRight, Bed, FileText, User, TrendingUp, Ticket, Eye, Calendar, ArrowRight, Flame } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -6,7 +6,7 @@ import type { Content, ContentWithRelations } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Logo } from "@/components/logo";
+import { PublicNav } from "@/components/public-nav";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 
 interface HomepagePromotion {
@@ -427,7 +427,6 @@ function HotAttractionCard({ content, index }: { content: Content; index: number
 }
 
 export default function PublicHome() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [, setLocation] = useLocation();
 
@@ -518,47 +517,7 @@ export default function PublicHome() {
       </a>
 
       {/* Navigation */}
-      <header>
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b" data-testid="nav-header" aria-label="Main navigation">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <Logo variant="primary" height={28} />
-
-              {/* Desktop nav */}
-              <div className="hidden md:flex items-center gap-8" role="navigation" aria-label="Primary">
-                <Link href="/hotels" className="text-foreground/80 hover:text-primary font-medium transition-colors" data-testid="link-hotels">Hotels</Link>
-                <Link href="/attractions" className="text-foreground/80 hover:text-primary font-medium transition-colors" data-testid="link-attractions">Attractions</Link>
-                <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors" data-testid="link-articles">Articles</Link>
-              </div>
-
-              <button 
-                className="md:hidden p-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                data-testid="button-mobile-menu"
-                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-                aria-expanded={mobileMenuOpen}
-                aria-controls="mobile-menu"
-              >
-                {mobileMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile menu */}
-          {mobileMenuOpen && (
-            <nav id="mobile-menu" className="md:hidden border-t bg-background p-4" aria-label="Mobile navigation">
-              <div className="flex flex-col gap-2">
-                <Link href="/hotels" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-hotels-mobile" onClick={() => setMobileMenuOpen(false)}>Hotels</Link>
-                <Link href="/attractions" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-attractions-mobile" onClick={() => setMobileMenuOpen(false)}>Attractions</Link>
-                <Link href="/dining" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-dining-mobile" onClick={() => setMobileMenuOpen(false)}>Dining</Link>
-                <Link href="/districts" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-districts-mobile" onClick={() => setMobileMenuOpen(false)}>Districts</Link>
-                <Link href="/transport" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-transport-mobile" onClick={() => setMobileMenuOpen(false)}>Transport</Link>
-                <Link href="/articles" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-articles-mobile" onClick={() => setMobileMenuOpen(false)}>Articles</Link>
-              </div>
-            </nav>
-          )}
-        </nav>
-      </header>
+      <PublicNav variant="transparent" />
 
       <main id="main-content">
         {/* Hero Section - Using brand purple gradient */}
