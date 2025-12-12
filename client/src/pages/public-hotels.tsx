@@ -39,7 +39,7 @@ function HotelCard({ content, index }: { content: Content; index: number }) {
               Dubai, UAE
             </span>
           </div>
-          <h3 className="font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
+          <h3 className="font-heading font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
             {content.title}
           </h3>
           <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
@@ -47,7 +47,7 @@ function HotelCard({ content, index }: { content: Content; index: number }) {
           </p>
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Starting from</span>
-            <span className="font-bold text-[#6443f4]">View Details</span>
+            <span className="font-bold text-primary">View Details</span>
           </div>
         </div>
       </Card>
@@ -107,7 +107,7 @@ function PlaceholderHotelCard({ index }: { index: number }) {
             Dubai, UAE
           </span>
         </div>
-        <h3 className="font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
+        <h3 className="font-heading font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
           {data.title}
         </h3>
         <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
@@ -115,7 +115,7 @@ function PlaceholderHotelCard({ index }: { index: number }) {
         </p>
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Starting from</span>
-          <span className="font-bold text-[#6443f4]">View Details</span>
+          <span className="font-bold text-primary">View Details</span>
         </div>
       </div>
     </Card>
@@ -136,15 +136,14 @@ export default function PublicHotels() {
 
   return (
     <div className="bg-background min-h-screen">
-      {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b" data-testid="nav-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Logo variant="primary" height={28} />
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/hotels" className="text-[#6443f4] font-medium">Hotels</Link>
-              <Link href="/attractions" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Attractions</Link>
-              <Link href="/articles" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Articles</Link>
+              <Link href="/hotels" className="text-primary font-medium">Hotels</Link>
+              <Link href="/attractions" className="text-foreground/80 hover:text-primary font-medium transition-colors">Attractions</Link>
+              <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">Articles</Link>
             </div>
             <Link href="/admin">
               <Button variant="outline" size="sm">Admin</Button>
@@ -153,8 +152,7 @@ export default function PublicHotels() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-[#6443f4] via-[#7c5cf7] to-[#9b7bfa] py-16">
+      <section className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -165,12 +163,11 @@ export default function PublicHotels() {
               <Building2 className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-white">Hotels in Dubai</h1>
+              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white">Hotels in Dubai</h1>
               <p className="text-white/80">Find your perfect stay in the city of dreams</p>
             </div>
           </div>
           
-          {/* Search */}
           <div className="mt-8 max-w-xl">
             <div className="bg-white rounded-xl p-2 flex items-center gap-2">
               <Search className="w-5 h-5 text-muted-foreground ml-3" />
@@ -187,7 +184,6 @@ export default function PublicHotels() {
         </div>
       </section>
 
-      {/* Content */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
@@ -214,7 +210,6 @@ export default function PublicHotels() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="py-8 border-t mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">

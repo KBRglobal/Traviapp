@@ -77,15 +77,15 @@ export default function PublicContentDetail() {
             <div className="flex items-center justify-between h-16">
               <Logo variant="primary" height={28} />
               <div className="hidden md:flex items-center gap-8">
-                <Link href="/hotels" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Hotels</Link>
-                <Link href="/attractions" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Attractions</Link>
-                <Link href="/articles" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Articles</Link>
+                <Link href="/hotels" className="text-foreground/80 hover:text-primary font-medium transition-colors">Hotels</Link>
+                <Link href="/attractions" className="text-foreground/80 hover:text-primary font-medium transition-colors">Attractions</Link>
+                <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">Articles</Link>
               </div>
             </div>
           </div>
         </nav>
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Content Not Found</h1>
+          <h1 className="font-heading text-2xl font-bold text-foreground mb-4">Content Not Found</h1>
           <p className="text-muted-foreground mb-8">The content you're looking for doesn't exist or has been removed.</p>
           <Link href="/">
             <Button>Back to Home</Button>
@@ -97,18 +97,17 @@ export default function PublicContentDetail() {
 
   return (
     <div className="bg-background min-h-screen">
-      {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Logo variant="primary" height={28} />
             <div className="hidden md:flex items-center gap-6">
-              <Link href="/hotels" className={`font-medium transition-colors ${contentType === 'hotel' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Hotels</Link>
-              <Link href="/attractions" className={`font-medium transition-colors ${contentType === 'attraction' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Attractions</Link>
-              <Link href="/dining" className={`font-medium transition-colors ${contentType === 'dining' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Dining</Link>
-              <Link href="/districts" className={`font-medium transition-colors ${contentType === 'district' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Districts</Link>
-              <Link href="/transport" className={`font-medium transition-colors ${contentType === 'transport' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Transport</Link>
-              <Link href="/articles" className={`font-medium transition-colors ${contentType === 'article' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Articles</Link>
+              <Link href="/hotels" className={`font-medium transition-colors ${contentType === 'hotel' ? 'text-primary' : 'text-foreground/80 hover:text-primary'}`}>Hotels</Link>
+              <Link href="/attractions" className={`font-medium transition-colors ${contentType === 'attraction' ? 'text-primary' : 'text-foreground/80 hover:text-primary'}`}>Attractions</Link>
+              <Link href="/dining" className={`font-medium transition-colors ${contentType === 'dining' ? 'text-primary' : 'text-foreground/80 hover:text-primary'}`}>Dining</Link>
+              <Link href="/districts" className={`font-medium transition-colors ${contentType === 'district' ? 'text-primary' : 'text-foreground/80 hover:text-primary'}`}>Districts</Link>
+              <Link href="/transport" className={`font-medium transition-colors ${contentType === 'transport' ? 'text-primary' : 'text-foreground/80 hover:text-primary'}`}>Transport</Link>
+              <Link href="/articles" className={`font-medium transition-colors ${contentType === 'article' ? 'text-primary' : 'text-foreground/80 hover:text-primary'}`}>Articles</Link>
             </div>
             <Link href="/admin">
               <Button variant="outline" size="sm">Admin</Button>
@@ -117,14 +116,12 @@ export default function PublicContentDetail() {
         </div>
       </nav>
 
-      {/* Content */}
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link href={backLink} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Back to {getTypeLabel(contentType)}
         </Link>
 
-        {/* Hero Image */}
         <div className="aspect-[2/1] rounded-2xl overflow-hidden mb-8">
           <img 
             src={imageUrl} 
@@ -133,9 +130,8 @@ export default function PublicContentDetail() {
           />
         </div>
 
-        {/* Meta */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
-          <span className="px-3 py-1 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium capitalize text-sm">
+          <span className="px-3 py-1 bg-primary/10 text-primary rounded-full font-medium capitalize text-sm">
             {content.type}
           </span>
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -154,19 +150,16 @@ export default function PublicContentDetail() {
           )}
         </div>
 
-        {/* Title */}
-        <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
+        <h1 className="font-heading text-3xl sm:text-4xl font-bold text-foreground mb-4">
           {content.title}
         </h1>
 
-        {/* Description */}
         <p className="text-lg text-muted-foreground mb-8">
           {content.metaDescription || "Discover this amazing destination in Dubai."}
         </p>
 
-        {/* Actions */}
         <div className="flex flex-wrap items-center gap-3 mb-12">
-          <Button className="bg-[#6443f4] hover:bg-[#5235d4]">
+          <Button className="bg-primary hover:bg-primary/90">
             Book Now
           </Button>
           <Button variant="outline" size="icon">
@@ -177,17 +170,16 @@ export default function PublicContentDetail() {
           </Button>
         </div>
 
-        {/* Content Blocks */}
         <div className="prose prose-lg max-w-none">
           <Card className="p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4">About</h2>
+            <h2 className="font-heading text-xl font-semibold mb-4">About</h2>
             <p className="text-muted-foreground">
               {content.metaDescription || "Experience the best of Dubai with this amazing destination. Perfect for travelers seeking unforgettable moments in the city of dreams."}
             </p>
           </Card>
 
           <Card className="p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4">Highlights</h2>
+            <h2 className="font-heading text-xl font-semibold mb-4">Highlights</h2>
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-start gap-2">
                 <Star className="w-5 h-5 text-[#fdcd0a] shrink-0 mt-0.5" />
@@ -205,16 +197,15 @@ export default function PublicContentDetail() {
           </Card>
 
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Location</h2>
+            <h2 className="font-heading text-xl font-semibold mb-4">Location</h2>
             <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="w-5 h-5 text-[#6443f4]" />
+              <MapPin className="w-5 h-5 text-primary" />
               <span>Dubai, United Arab Emirates</span>
             </div>
           </Card>
         </div>
       </article>
 
-      {/* Footer */}
       <footer className="py-8 border-t mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">

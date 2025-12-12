@@ -186,7 +186,7 @@ export default function ContentList({ type }: ContentListProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{config.title}</h1>
+          <h1 className="font-heading text-2xl font-semibold">{config.title}</h1>
           <p className="text-muted-foreground">
             Manage your {config.title.toLowerCase()} pages ({config.wordTarget})
           </p>

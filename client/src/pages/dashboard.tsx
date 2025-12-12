@@ -37,7 +37,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <h1 className="font-heading text-2xl font-semibold">Dashboard</h1>
           <p className="text-muted-foreground">
             Welcome to Travi CMS - Dubai Travel Content Management
           </p>

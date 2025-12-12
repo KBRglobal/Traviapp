@@ -197,7 +197,7 @@ export default function PublicHome() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-24 pb-16 sm:pt-32 sm:pb-24 bg-gradient-to-br from-[#6443f4] via-[#7c5cf7] to-[#9b7bfa] relative overflow-hidden" data-testid="section-hero">
+      <section className="pt-24 pb-16 sm:pt-32 sm:pb-24 bg-gradient-to-br from-primary via-primary/80 to-primary/60 relative overflow-hidden" data-testid="section-hero">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iNCIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
@@ -207,7 +207,7 @@ export default function PublicHome() {
               <span className="text-white/90 text-sm font-medium">Your Dubai Travel Companion</span>
             </div>
             
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+            <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
               Discover the Magic of
               <span className="block text-[#fdcd0a]">Dubai</span>
             </h1>
@@ -265,11 +265,11 @@ export default function PublicHome() {
                 <Link
                   key={index}
                   href={category.href}
-                  className="flex flex-col items-center p-4 sm:p-6 rounded-2xl bg-card border hover:border-[#6443f4] hover:shadow-lg transition-all cursor-pointer group"
+                  className="flex flex-col items-center p-4 sm:p-6 rounded-2xl bg-card border hover:border-primary hover:shadow-lg transition-all cursor-pointer group"
                   data-testid={`card-category-${index}`}
                 >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-[#f0edfe] flex items-center justify-center mb-3 group-hover:bg-[#6443f4] transition-colors">
-                    <IconComponent className="w-6 h-6 sm:w-7 sm:h-7 text-[#6443f4] group-hover:text-white transition-colors" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary transition-colors">
+                    <IconComponent className="w-6 h-6 sm:w-7 sm:h-7 text-primary group-hover:text-white transition-colors" />
                   </div>
                   <span className="font-medium text-foreground text-sm sm:text-base">{category.title}</span>
                   <span className="text-xs text-muted-foreground">{category.count}</span>
@@ -285,13 +285,13 @@ export default function PublicHome() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-4 mb-8">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+              <h2 className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-2">
                 Popular Destinations
               </h2>
               <p className="text-muted-foreground">Discover the best Dubai has to offer</p>
             </div>
             <Link href="/attractions">
-              <Button variant="ghost" className="text-[#6443f4] hover:text-[#5235d4] hidden sm:flex">
+              <Button variant="ghost" className="text-primary hidden sm:flex">
                 View All <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
@@ -317,7 +317,7 @@ export default function PublicHome() {
 
           <div className="mt-8 text-center sm:hidden">
             <Link href="/attractions">
-              <Button variant="outline" className="text-[#6443f4] border-[#6443f4]">
+              <Button variant="outline" className="text-primary border-primary">
                 View All Destinations
               </Button>
             </Link>
@@ -329,7 +329,7 @@ export default function PublicHome() {
       <section className="py-12 sm:py-16 bg-background" data-testid="section-features">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-4">
               Why Choose Travi?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -339,30 +339,30 @@ export default function PublicHome() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <Card className="p-6 text-center border-0 shadow-md">
-              <div className="w-14 h-14 rounded-2xl bg-[#f0edfe] flex items-center justify-center mx-auto mb-4">
-                <MapPin className="w-7 h-7 text-[#6443f4]" />
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <MapPin className="w-7 h-7 text-primary" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Curated Experiences</h3>
+              <h3 className="font-heading font-semibold text-lg mb-2">Curated Experiences</h3>
               <p className="text-muted-foreground text-sm">
                 Hand-picked destinations and hidden gems verified by local experts
               </p>
             </Card>
 
             <Card className="p-6 text-center border-0 shadow-md">
-              <div className="w-14 h-14 rounded-2xl bg-[#fff5ea] flex items-center justify-center mx-auto mb-4">
-                <Star className="w-7 h-7 text-[#f8a900]" />
+              <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-4">
+                <Star className="w-7 h-7 text-amber-500" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Trusted Reviews</h3>
+              <h3 className="font-heading font-semibold text-lg mb-2">Trusted Reviews</h3>
               <p className="text-muted-foreground text-sm">
                 Authentic ratings and reviews from real travelers worldwide
               </p>
             </Card>
 
             <Card className="p-6 text-center border-0 shadow-md">
-              <div className="w-14 h-14 rounded-2xl bg-[#e6f9ff] flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-7 h-7 text-[#0ea5e9]" />
+              <div className="w-14 h-14 rounded-2xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-7 h-7 text-sky-500" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Real-Time Updates</h3>
+              <h3 className="font-heading font-semibold text-lg mb-2">Real-Time Updates</h3>
               <p className="text-muted-foreground text-sm">
                 Latest information on events, offers, and travel advisories
               </p>
@@ -372,9 +372,9 @@ export default function PublicHome() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 sm:py-20 bg-gradient-to-r from-[#6443f4] to-[#9b7bfa]" data-testid="section-cta">
+      <section className="py-16 sm:py-20 bg-gradient-to-r from-primary to-primary/70" data-testid="section-cta">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl sm:text-4xl font-bold text-white mb-4">
+          <h2 className="font-heading text-2xl sm:text-4xl font-bold text-white mb-4">
             Ready to Explore Dubai?
           </h2>
           <p className="text-white/80 mb-8 max-w-xl mx-auto">

@@ -29,7 +29,7 @@ function ArticleCard({ content, index }: { content: Content; index: number }) {
         </div>
         <div className="p-5 flex-1">
           <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-            <span className="px-2 py-1 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium">
+            <span className="px-2 py-1 bg-primary/10 text-primary rounded-full font-medium">
               Travel Guide
             </span>
             <span className="flex items-center gap-1">
@@ -37,14 +37,14 @@ function ArticleCard({ content, index }: { content: Content; index: number }) {
               Dec 2024
             </span>
           </div>
-          <h3 className="font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
+          <h3 className="font-heading font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
             {content.title}
           </h3>
           <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
             {content.metaDescription || "Discover the best tips and guides for exploring Dubai."}
           </p>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-[#6443f4] flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
               <User className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="text-sm text-muted-foreground">Travi Team</span>
@@ -97,7 +97,7 @@ function PlaceholderArticleCard({ index }: { index: number }) {
       </div>
       <div className="p-5 flex-1">
         <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-          <span className="px-2 py-1 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium">
+          <span className="px-2 py-1 bg-primary/10 text-primary rounded-full font-medium">
             Travel Guide
           </span>
           <span className="flex items-center gap-1">
@@ -105,14 +105,14 @@ function PlaceholderArticleCard({ index }: { index: number }) {
             Dec 2024
           </span>
         </div>
-        <h3 className="font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
+        <h3 className="font-heading font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
           {data.title}
         </h3>
         <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
           {data.desc}
         </p>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-[#6443f4] flex items-center justify-center">
+          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
             <User className="w-3.5 h-3.5 text-white" />
           </div>
           <span className="text-sm text-muted-foreground">Travi Team</span>
@@ -136,15 +136,14 @@ export default function PublicArticles() {
 
   return (
     <div className="bg-background min-h-screen">
-      {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b" data-testid="nav-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Logo variant="primary" height={28} />
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/hotels" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Hotels</Link>
-              <Link href="/attractions" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Attractions</Link>
-              <Link href="/articles" className="text-[#6443f4] font-medium">Articles</Link>
+              <Link href="/hotels" className="text-foreground/80 hover:text-primary font-medium transition-colors">Hotels</Link>
+              <Link href="/attractions" className="text-foreground/80 hover:text-primary font-medium transition-colors">Attractions</Link>
+              <Link href="/articles" className="text-primary font-medium">Articles</Link>
             </div>
             <Link href="/admin">
               <Button variant="outline" size="sm">Admin</Button>
@@ -153,8 +152,7 @@ export default function PublicArticles() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-[#6443f4] via-[#7c5cf7] to-[#9b7bfa] py-16">
+      <section className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -165,12 +163,11 @@ export default function PublicArticles() {
               <BookOpen className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-white">Travel Articles</h1>
+              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white">Travel Articles</h1>
               <p className="text-white/80">Tips, guides, and inspiration for your Dubai trip</p>
             </div>
           </div>
           
-          {/* Search */}
           <div className="mt-8 max-w-xl">
             <div className="bg-white rounded-xl p-2 flex items-center gap-2">
               <Search className="w-5 h-5 text-muted-foreground ml-3" />
@@ -187,7 +184,6 @@ export default function PublicArticles() {
         </div>
       </section>
 
-      {/* Content */}
       <section className="py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
@@ -214,7 +210,6 @@ export default function PublicArticles() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="py-8 border-t mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
