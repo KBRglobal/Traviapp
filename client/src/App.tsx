@@ -37,6 +37,8 @@ import AIArticleGenerator from "@/pages/ai-article-generator";
 import TopicBankPage from "@/pages/topic-bank";
 import KeywordsPage from "@/pages/keywords";
 import NotFound from "@/pages/not-found";
+import Login from "@/pages/login";
+import VerifyOtp from "@/pages/verify-otp";
 import { AIAssistant } from "@/components/ai-assistant";
 
 function AdminRouter() {
@@ -129,6 +131,8 @@ function App() {
             <Route path="/tools/plan" component={PublicIntegrations} />
             <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/terms" component={TermsConditions} />
+            <Route path="/login" component={Login} />
+            <Route path="/verify-otp" component={VerifyOtp} />
             <Route component={NotFound} />
           </Switch>
         )}
