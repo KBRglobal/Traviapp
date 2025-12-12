@@ -40,7 +40,22 @@ function hasPermission(role: UserRole, permission: PermissionKey): boolean {
 
 function requirePermission(permission: PermissionKey) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const userRole = (req.headers["x-user-role"] as UserRole) || "viewer";
+    // Check for authenticated session first, then header, then default to viewer
+    let userRole: UserRole = "viewer";
+    
+    // Check session for authenticated user role
+    if ((req as any).session?.userRole) {
+      userRole = (req as any).session.userRole as UserRole;
+    } 
+    // Check header (for testing/API access)
+    else if (req.headers["x-user-role"]) {
+      userRole = req.headers["x-user-role"] as UserRole;
+    }
+    // For CMS admin interface requests (same-origin), allow editor access
+    else if (req.headers.referer && req.headers.referer.includes('/admin')) {
+      userRole = "editor";
+    }
+    
     if (!hasPermission(userRole, permission)) {
       return res.status(403).json({ 
         error: "Permission denied", 
