@@ -7,15 +7,15 @@ import { Logo } from "@/components/logo";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const currencies = [
-  { code: "AED", name: "UAE Dirham", symbol: "د.إ", flag: "🇦🇪" },
-  { code: "USD", name: "US Dollar", symbol: "$", flag: "🇺🇸" },
-  { code: "EUR", name: "Euro", symbol: "€", flag: "🇪🇺" },
-  { code: "GBP", name: "British Pound", symbol: "£", flag: "🇬🇧" },
-  { code: "ILS", name: "Israeli Shekel", symbol: "₪", flag: "🇮🇱" },
-  { code: "SAR", name: "Saudi Riyal", symbol: "﷼", flag: "🇸🇦" },
-  { code: "INR", name: "Indian Rupee", symbol: "₹", flag: "🇮🇳" },
-  { code: "CNY", name: "Chinese Yuan", symbol: "¥", flag: "🇨🇳" },
-  { code: "RUB", name: "Russian Ruble", symbol: "₽", flag: "🇷🇺" },
+  { code: "AED", name: "UAE Dirham", symbol: "د.إ" },
+  { code: "USD", name: "US Dollar", symbol: "$" },
+  { code: "EUR", name: "Euro", symbol: "€" },
+  { code: "GBP", name: "British Pound", symbol: "£" },
+  { code: "ILS", name: "Israeli Shekel", symbol: "₪" },
+  { code: "SAR", name: "Saudi Riyal", symbol: "﷼" },
+  { code: "INR", name: "Indian Rupee", symbol: "₹" },
+  { code: "CNY", name: "Chinese Yuan", symbol: "¥" },
+  { code: "RUB", name: "Russian Ruble", symbol: "₽" },
 ];
 
 const exchangeRates: Record<string, number> = {
@@ -258,10 +258,12 @@ export default function PublicCurrency() {
                     data-testid={`rate-${currency.code}`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{currency.flag}</span>
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                        {currency.code}
+                      </div>
                       <div>
                         <p className="font-medium">{currency.name}</p>
-                        <p className="text-sm text-muted-foreground">{currency.code}</p>
+                        <p className="text-sm text-muted-foreground">{currency.symbol}</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -282,7 +284,37 @@ export default function PublicCurrency() {
         </div>
       </section>
 
-      <footer className="py-8 border-t mt-auto">
+      <section className="py-12 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Card className="p-8 bg-gradient-to-r from-teal-500 to-cyan-500 border-0 text-white">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div>
+                <h3 className="font-heading text-2xl font-bold mb-2">Plan Your Dubai Trip</h3>
+                <p className="text-white/90">Calculate costs, find events, and book your travel</p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/tools/budget">
+                  <Button className="bg-white text-teal-600 hover:bg-white/90" data-testid="link-budget">
+                    Budget Calculator
+                  </Button>
+                </Link>
+                <Link href="/tools/events">
+                  <Button variant="outline" className="border-white/50 text-white hover:bg-white/10" data-testid="link-events">
+                    Events Calendar
+                  </Button>
+                </Link>
+                <Link href="/tools/plan">
+                  <Button variant="outline" className="border-white/50 text-white hover:bg-white/10" data-testid="link-plan">
+                    Travel Planning
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      <footer className="py-8 border-t">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <Logo variant="primary" height={28} />

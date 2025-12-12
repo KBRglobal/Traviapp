@@ -28,14 +28,14 @@ const transportOptions = [
 ];
 
 const activities = [
-  { id: "burj", name: "Burj Khalifa At The Top", price: 180, icon: "🏙️" },
-  { id: "safari", name: "Desert Safari", price: 80, icon: "🐫" },
-  { id: "aquarium", name: "Dubai Aquarium", price: 60, icon: "🐠" },
-  { id: "dhow", name: "Dhow Cruise Dinner", price: 90, icon: "⛵" },
-  { id: "museum", name: "Museum of the Future", price: 150, icon: "🔮" },
-  { id: "palm", name: "Palm Jumeirah Tour", price: 100, icon: "🌴" },
-  { id: "gold", name: "Gold Souk Tour", price: 0, icon: "✨" },
-  { id: "miracle", name: "Miracle Garden", price: 55, icon: "🌸" },
+  { id: "burj", name: "Burj Khalifa At The Top", price: 180 },
+  { id: "safari", name: "Desert Safari", price: 80 },
+  { id: "aquarium", name: "Dubai Aquarium", price: 60 },
+  { id: "dhow", name: "Dhow Cruise Dinner", price: 90 },
+  { id: "museum", name: "Museum of the Future", price: 150 },
+  { id: "palm", name: "Palm Jumeirah Tour", price: 100 },
+  { id: "gold", name: "Gold Souk Tour", price: 0 },
+  { id: "miracle", name: "Miracle Garden", price: 55 },
 ];
 
 const currencies: Record<string, { symbol: string; rate: number }> = {
@@ -285,7 +285,7 @@ export default function PublicBudget() {
                       data-testid={`option-activity-${activity.id}`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{activity.icon}</span>
+                        <Ticket className="w-5 h-5 text-primary flex-shrink-0" />
                         <div className="flex-1">
                           <span className="font-medium block">{activity.name}</span>
                           <span className="text-sm text-primary font-semibold">
@@ -359,12 +359,24 @@ export default function PublicBudget() {
                   </div>
                 </div>
 
-                <Link href="/tools/currency">
-                  <Button className="w-full mt-6 bg-white text-[#7c3aed] hover:bg-white/90">
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Currency Converter
-                  </Button>
-                </Link>
+                <div className="flex flex-col gap-2 mt-6">
+                  <Link href="/tools/currency">
+                    <Button className="w-full bg-white text-[#7c3aed] hover:bg-white/90" data-testid="link-currency">
+                      <DollarSign className="w-4 h-4 mr-2" />
+                      Currency Converter
+                    </Button>
+                  </Link>
+                  <Link href="/tools/events">
+                    <Button variant="outline" className="w-full border-white/50 text-white hover:bg-white/10" data-testid="link-events">
+                      Events Calendar
+                    </Button>
+                  </Link>
+                  <Link href="/tools/plan">
+                    <Button variant="outline" className="w-full border-white/50 text-white hover:bg-white/10" data-testid="link-plan">
+                      Travel Planning
+                    </Button>
+                  </Link>
+                </div>
               </Card>
 
               <Card className="mt-4 p-4 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">

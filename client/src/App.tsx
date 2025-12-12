@@ -17,6 +17,8 @@ import PublicSearch from "@/pages/public-search";
 import PublicContentDetail from "@/pages/public-content-detail";
 import PublicCurrency from "@/pages/public-currency";
 import PublicBudget from "@/pages/public-budget";
+import PublicEvents from "@/pages/public-events";
+import PublicIntegrations from "@/pages/public-integrations";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsConditions from "@/pages/terms-conditions";
 import Dashboard from "@/pages/dashboard";
@@ -115,6 +117,8 @@ function App() {
             <Route path="/search" component={PublicSearch} />
             <Route path="/tools/currency" component={PublicCurrency} />
             <Route path="/tools/budget" component={PublicBudget} />
+            <Route path="/tools/events" component={PublicEvents} />
+            <Route path="/tools/plan" component={PublicIntegrations} />
             <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/terms" component={TermsConditions} />
             <Route component={NotFound} />
