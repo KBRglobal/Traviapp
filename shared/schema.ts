@@ -5,7 +5,7 @@ import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 // Enums
-export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport", "event"]);
+export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport", "event", "itinerary"]);
 export const contentStatusEnum = pgEnum("content_status", ["draft", "in_review", "approved", "scheduled", "published"]);
 export const articleCategoryEnum = pgEnum("article_category", ["attractions", "hotels", "food", "transport", "events", "tips", "news", "shopping"]);
 export const userRoleEnum = pgEnum("user_role", ["admin", "editor", "viewer"]);
@@ -210,6 +210,22 @@ export const events = pgTable("events", {
   faq: jsonb("faq").$type<FaqItem[]>().default([]),
 });
 
+// Itineraries/Packages specific data
+export const itineraries = pgTable("itineraries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  duration: text("duration"),
+  totalPrice: text("total_price"),
+  difficultyLevel: text("difficulty_level"),
+  targetAudience: jsonb("target_audience").$type<string[]>().default([]),
+  highlights: jsonb("highlights").$type<string[]>().default([]),
+  includedItems: jsonb("included_items").$type<string[]>().default([]),
+  excludedItems: jsonb("excluded_items").$type<string[]>().default([]),
+  dayPlan: jsonb("day_plan").$type<ItineraryDay[]>().default([]),
+  primaryCta: text("primary_cta"),
+  faq: jsonb("faq").$type<FaqItem[]>().default([]),
+});
+
 // RSS Feeds table
 export const rssFeeds = pgTable("rss_feeds", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -365,6 +381,10 @@ export const contentsRelations = relations(contents, ({ one, many }) => ({
     fields: [contents.id],
     references: [events.contentId],
   }),
+  itinerary: one(itineraries, {
+    fields: [contents.id],
+    references: [itineraries.contentId],
+  }),
   affiliateLinks: many(affiliateLinks),
   sourceInternalLinks: many(internalLinks, { relationName: "sourceLinks" }),
   targetInternalLinks: many(internalLinks, { relationName: "targetLinks" }),
@@ -479,6 +499,13 @@ export interface FareInfoItem {
   description?: string;
 }
 
+export interface ItineraryDay {
+  day: number;
+  title: string;
+  description: string;
+  activities: { time: string; activity: string; location?: string }[];
+}
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -516,6 +543,10 @@ export const insertTransportSchema = createInsertSchema(transports).omit({
 });
 
 export const insertEventSchema = createInsertSchema(events).omit({
+  id: true,
+});
+
+export const insertItinerarySchema = createInsertSchema(itineraries).omit({
   id: true,
 });
 
@@ -573,6 +604,8 @@ export type InsertTransport = z.infer<typeof insertTransportSchema>;
 export type Transport = typeof transports.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Event = typeof events.$inferSelect;
+export type InsertItinerary = z.infer<typeof insertItinerarySchema>;
+export type Itinerary = typeof itineraries.$inferSelect;
 export type InsertRssFeed = z.infer<typeof insertRssFeedSchema>;
 export type RssFeed = typeof rssFeeds.$inferSelect;
 export type InsertAffiliateLink = z.infer<typeof insertAffiliateLinkSchema>;
@@ -633,6 +666,7 @@ export type ContentWithRelations = Content & {
   district?: District;
   transport?: Transport;
   event?: Event;
+  itinerary?: Itinerary;
   affiliateLinks?: AffiliateLink[];
   translations?: Translation[];
 };

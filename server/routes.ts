@@ -10,6 +10,7 @@ import {
   insertHotelSchema,
   insertArticleSchema,
   insertEventSchema,
+  insertItinerarySchema,
   insertRssFeedSchema,
   insertAffiliateLinkSchema,
   insertMediaFileSchema,
@@ -179,6 +180,9 @@ export async function registerRoutes(
         await storage.createArticle({ ...req.body.article, contentId: content.id });
       } else if (parsed.type === "event" && req.body.event) {
         await storage.createEvent({ ...req.body.event, contentId: content.id });
+      } else if (parsed.type === "itinerary" && req.body.itinerary) {
+        const itineraryData = insertItinerarySchema.omit({ contentId: true }).parse(req.body.itinerary);
+        await storage.createItinerary({ ...itineraryData, contentId: content.id });
       } else {
         if (parsed.type === "attraction") {
           await storage.createAttraction({ contentId: content.id });
@@ -188,6 +192,8 @@ export async function registerRoutes(
           await storage.createArticle({ contentId: content.id });
         } else if (parsed.type === "event") {
           await storage.createEvent({ contentId: content.id });
+        } else if (parsed.type === "itinerary") {
+          await storage.createItinerary({ contentId: content.id });
         }
       }
 
@@ -221,7 +227,7 @@ export async function registerRoutes(
         changeNote: req.body.changeNote || null,
       });
 
-      const { attraction, hotel, article, event, changedBy, changeNote, ...contentData } = req.body;
+      const { attraction, hotel, article, event, itinerary, changedBy, changeNote, ...contentData } = req.body;
       
       const updatedContent = await storage.updateContent(req.params.id, contentData);
 
@@ -233,6 +239,8 @@ export async function registerRoutes(
         await storage.updateArticle(req.params.id, article);
       } else if (existingContent.type === "event" && req.body.event) {
         await storage.updateEvent(req.params.id, req.body.event);
+      } else if (existingContent.type === "itinerary" && itinerary) {
+        await storage.updateItinerary(req.params.id, itinerary);
       }
 
       const fullContent = await storage.getContent(req.params.id);

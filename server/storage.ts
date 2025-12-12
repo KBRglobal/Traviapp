@@ -7,6 +7,7 @@ import {
   hotels,
   articles,
   events,
+  itineraries,
   rssFeeds,
   affiliateLinks,
   mediaFiles,
@@ -28,6 +29,8 @@ import {
   type InsertArticle,
   type Event,
   type InsertEvent,
+  type Itinerary,
+  type InsertItinerary,
   type RssFeed,
   type InsertRssFeed,
   type AffiliateLink,
@@ -76,6 +79,10 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(contentId: string, event: Partial<InsertEvent>): Promise<Event | undefined>;
 
+  getItinerary(contentId: string): Promise<Itinerary | undefined>;
+  createItinerary(itinerary: InsertItinerary): Promise<Itinerary>;
+  updateItinerary(contentId: string, itinerary: Partial<InsertItinerary>): Promise<Itinerary | undefined>;
+
   getRssFeeds(): Promise<RssFeed[]>;
   getRssFeed(id: string): Promise<RssFeed | undefined>;
   createRssFeed(feed: InsertRssFeed): Promise<RssFeed>;
@@ -107,6 +114,7 @@ export interface IStorage {
     hotels: number;
     articles: number;
     events: number;
+    itineraries: number;
   }>;
 
   getTopicBankItems(filters?: { category?: string; isActive?: boolean }): Promise<TopicBank[]>;
@@ -198,6 +206,9 @@ export class DatabaseStorage implements IStorage {
     } else if (content.type === "event") {
       const [event] = await db.select().from(events).where(eq(events.contentId, id));
       result.event = event;
+    } else if (content.type === "itinerary") {
+      const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, id));
+      result.itinerary = itinerary;
     }
 
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, id));
@@ -299,6 +310,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(events.contentId, contentId))
       .returning();
     return event;
+  }
+
+  async getItinerary(contentId: string): Promise<Itinerary | undefined> {
+    const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, contentId));
+    return itinerary;
+  }
+
+  async createItinerary(insertItinerary: InsertItinerary): Promise<Itinerary> {
+    const [itinerary] = await db.insert(itineraries).values(insertItinerary).returning();
+    return itinerary;
+  }
+
+  async updateItinerary(contentId: string, updateData: Partial<InsertItinerary>): Promise<Itinerary | undefined> {
+    const [itinerary] = await db
+      .update(itineraries)
+      .set(updateData)
+      .where(eq(itineraries.contentId, contentId))
+      .returning();
+    return itinerary;
   }
 
   async getRssFeeds(): Promise<RssFeed[]> {
@@ -425,6 +455,7 @@ export class DatabaseStorage implements IStorage {
       hotels: allContent.filter(c => c.type === "hotel").length,
       articles: allContent.filter(c => c.type === "article").length,
       events: allContent.filter(c => c.type === "event").length,
+      itineraries: allContent.filter(c => c.type === "itinerary").length,
     };
   }
 
