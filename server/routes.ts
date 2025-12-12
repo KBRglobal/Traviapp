@@ -950,7 +950,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/rss-feeds", requireAuth, async (req, res) => {
+  app.post("/api/rss-feeds", requirePermission("canCreate"), async (req, res) => {
     try {
       const parsed = insertRssFeedSchema.parse(req.body);
       const feed = await storage.createRssFeed(parsed);
@@ -964,7 +964,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/rss-feeds/:id", requireAuth, async (req, res) => {
+  app.patch("/api/rss-feeds/:id", requirePermission("canEdit"), async (req, res) => {
     try {
       const feed = await storage.updateRssFeed(req.params.id, req.body);
       if (!feed) {
@@ -977,7 +977,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/rss-feeds/:id", requireAuth, async (req, res) => {
+  app.delete("/api/rss-feeds/:id", requirePermission("canDelete"), async (req, res) => {
     try {
       await storage.deleteRssFeed(req.params.id);
       res.status(204).send();
@@ -987,7 +987,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/rss-feeds/:id/fetch", requireAuth, async (req, res) => {
+  app.post("/api/rss-feeds/:id/fetch", requirePermission("canCreate"), async (req, res) => {
     try {
       const feed = await storage.getRssFeed(req.params.id);
       if (!feed) {
@@ -1032,7 +1032,7 @@ export async function registerRoutes(
     return `fp_${Math.abs(hash).toString(36)}`;
   }
 
-  app.post("/api/rss-feeds/:id/import", requireAuth, async (req, res) => {
+  app.post("/api/rss-feeds/:id/import", requirePermission("canCreate"), async (req, res) => {
     try {
       const feed = await storage.getRssFeed(req.params.id);
       if (!feed) {
@@ -1169,7 +1169,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/affiliate-links", requireAuth, async (req, res) => {
+  app.post("/api/affiliate-links", requirePermission("canAccessAffiliates"), async (req, res) => {
     try {
       const parsed = insertAffiliateLinkSchema.parse(req.body);
       const link = await storage.createAffiliateLink(parsed);
@@ -1183,7 +1183,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/affiliate-links/:id", requireAuth, async (req, res) => {
+  app.patch("/api/affiliate-links/:id", requirePermission("canAccessAffiliates"), async (req, res) => {
     try {
       const link = await storage.updateAffiliateLink(req.params.id, req.body);
       if (!link) {
@@ -1196,7 +1196,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/affiliate-links/:id", requireAuth, async (req, res) => {
+  app.delete("/api/affiliate-links/:id", requirePermission("canAccessAffiliates"), async (req, res) => {
     try {
       await storage.deleteAffiliateLink(req.params.id);
       res.status(204).send();
@@ -1229,7 +1229,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/media/upload", requireAuth, upload.single("file"), async (req, res) => {
+  app.post("/api/media/upload", requirePermission("canAccessMediaLibrary"), upload.single("file"), async (req, res) => {
     let localPath: string | null = null;
     let objectPath: string | null = null;
     
@@ -1278,7 +1278,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/media/:id", requireAuth, async (req, res) => {
+  app.patch("/api/media/:id", requirePermission("canAccessMediaLibrary"), async (req, res) => {
     try {
       const file = await storage.updateMediaFile(req.params.id, req.body);
       if (!file) {
@@ -1291,7 +1291,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/media/:id", requireAuth, async (req, res) => {
+  app.delete("/api/media/:id", requirePermission("canAccessMediaLibrary"), async (req, res) => {
     try {
       const file = await storage.getMediaFile(req.params.id);
       if (file) {
@@ -1332,7 +1332,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/internal-links", requireAuth, async (req, res) => {
+  app.post("/api/internal-links", requirePermission("canEdit"), async (req, res) => {
     try {
       const link = await storage.createInternalLink(req.body);
       res.status(201).json(link);
@@ -1342,7 +1342,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/internal-links/:id", requireAuth, async (req, res) => {
+  app.delete("/api/internal-links/:id", requirePermission("canEdit"), async (req, res) => {
     try {
       await storage.deleteInternalLink(req.params.id);
       res.status(204).send();
@@ -1352,7 +1352,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ai/generate", requireAuth, async (req, res) => {
+  app.post("/api/ai/generate", requirePermission("canCreate"), async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1416,7 +1416,7 @@ Format the response as JSON with the following structure:
     }
   });
 
-  app.post("/api/ai/suggest-internal-links", requireAuth, async (req, res) => {
+  app.post("/api/ai/suggest-internal-links", requirePermission("canCreate"), async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1458,7 +1458,7 @@ Format the response as JSON with the following structure:
   });
 
   // Comprehensive AI Article Generator - Full Spec Implementation
-  app.post("/api/ai/generate-article", requireAuth, async (req, res) => {
+  app.post("/api/ai/generate-article", requirePermission("canCreate"), async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1606,7 +1606,7 @@ Return valid JSON only.`;
     }
   });
 
-  app.post("/api/ai/generate-seo-schema", requireAuth, async (req, res) => {
+  app.post("/api/ai/generate-seo-schema", requirePermission("canCreate"), async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1849,7 +1849,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     }
   });
 
-  app.post("/api/ai/block-action", requireAuth, async (req, res) => {
+  app.post("/api/ai/block-action", requirePermission("canCreate"), async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1914,7 +1914,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
   });
 
   // AI Assistant Chat
-  app.post("/api/ai/assistant", requireAuth, async (req, res) => {
+  app.post("/api/ai/assistant", requirePermission("canCreate"), async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1985,7 +1985,7 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     }
   });
 
-  app.post("/api/topic-bank", requireAuth, async (req, res) => {
+  app.post("/api/topic-bank", requirePermission("canCreate"), async (req, res) => {
     try {
       const parsed = insertTopicBankSchema.parse(req.body);
       const item = await storage.createTopicBankItem(parsed);
@@ -1999,7 +1999,7 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     }
   });
 
-  app.patch("/api/topic-bank/:id", requireAuth, async (req, res) => {
+  app.patch("/api/topic-bank/:id", requirePermission("canEdit"), async (req, res) => {
     try {
       const item = await storage.updateTopicBankItem(req.params.id, req.body);
       if (!item) {
@@ -2012,7 +2012,7 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     }
   });
 
-  app.delete("/api/topic-bank/:id", requireAuth, async (req, res) => {
+  app.delete("/api/topic-bank/:id", requirePermission("canDelete"), async (req, res) => {
     try {
       await storage.deleteTopicBankItem(req.params.id);
       res.status(204).send();
@@ -2022,7 +2022,7 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     }
   });
 
-  app.post("/api/topic-bank/:id/use", requireAuth, async (req, res) => {
+  app.post("/api/topic-bank/:id/use", requirePermission("canCreate"), async (req, res) => {
     try {
       const item = await storage.incrementTopicUsage(req.params.id);
       if (!item) {
@@ -2036,7 +2036,7 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
   });
 
   // Auto-generate article from Topic Bank item
-  app.post("/api/topic-bank/:id/generate", requireAuth, async (req, res) => {
+  app.post("/api/topic-bank/:id/generate", requirePermission("canCreate"), async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -2237,7 +2237,7 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
   });
 
   // Batch auto-generate from priority topics (for when RSS lacks content)
-  app.post("/api/topic-bank/auto-generate", requireAuth, async (req, res) => {
+  app.post("/api/topic-bank/auto-generate", requirePermission("canCreate"), async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -2391,7 +2391,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/keywords", requireAuth, async (req, res) => {
+  app.post("/api/keywords", requirePermission("canCreate"), async (req, res) => {
     try {
       const parsed = insertKeywordRepositorySchema.parse(req.body);
       const item = await storage.createKeyword(parsed);
@@ -2405,7 +2405,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.patch("/api/keywords/:id", requireAuth, async (req, res) => {
+  app.patch("/api/keywords/:id", requirePermission("canEdit"), async (req, res) => {
     try {
       const item = await storage.updateKeyword(req.params.id, req.body);
       if (!item) {
@@ -2418,7 +2418,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.delete("/api/keywords/:id", requireAuth, async (req, res) => {
+  app.delete("/api/keywords/:id", requirePermission("canDelete"), async (req, res) => {
     try {
       await storage.deleteKeyword(req.params.id);
       res.status(204).send();
@@ -2428,7 +2428,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/keywords/:id/use", requireAuth, async (req, res) => {
+  app.post("/api/keywords/:id/use", requirePermission("canCreate"), async (req, res) => {
     try {
       const item = await storage.incrementKeywordUsage(req.params.id);
       if (!item) {

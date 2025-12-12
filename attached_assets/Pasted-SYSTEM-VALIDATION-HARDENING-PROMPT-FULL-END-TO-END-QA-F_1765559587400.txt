@@ -1,0 +1,312 @@
+SYSTEM VALIDATION & HARDENING PROMPT – FULL END-TO-END QA + FIX MODE
+
+You are operating in FULL QA + FIX mode.
+Your mission is NOT to report issues.
+Your mission is to PHYSICALLY TEST, BREAK, VERIFY, and FIX the system until NO GAPS remain.
+
+This is a production-grade CMS + public website.
+Assume hostile usage, human mistakes, and edge cases.
+
+You MUST actively use the UI, API, routes, permissions, and workflows.
+Do not simulate. Do not assume. Actually test.
+
+────────────────────────────────
+GLOBAL RULES
+────────────────────────────────
+
+• If something can be accessed, clicked, edited, deleted, or seen when it should not → FIX IT.
+• If something is unclear, inconsistent, or unsafe → FIX IT.
+• If something works only “by convention” and not by enforcement → FIX IT.
+• No TODOs left.
+• No “should be fine”.
+• No partial enforcement.
+• The system is only DONE when it is BORING to break.
+
+────────────────────────────────
+PHASE 1 – ROLE & PERMISSION VERIFICATION
+────────────────────────────────
+
+Create test users for EACH role:
+- Admin
+- Editor
+- Author
+- Contributor
+- Viewer
+
+For EACH role, log in and TEST ALL OF THE FOLLOWING:
+
+• Sidebar visibility
+• Direct URL access
+• API access via devtools
+• UI hidden elements
+• Keyboard navigation
+• Manual URL typing
+• Browser refresh
+• Deep links
+• Back button behavior
+
+Verify STRICTLY:
+
+Admin:
+- Full access to EVERYTHING
+- Can see audit logs
+- Can manage users
+- Can override content locks
+
+Editor:
+- Can edit & publish content
+- Cannot change system-level settings
+- Cannot manage users
+- Cannot alter permission models
+
+Author:
+- Can create content
+- Can edit own drafts
+- Can submit for review
+- CANNOT publish
+- CANNOT delete
+- CANNOT see admin fields
+- CANNOT access media library globally
+- CANNOT access settings (UI + route + API)
+
+Contributor:
+- Same as Author but even more restricted
+- Cannot edit after submission
+- Cannot see other users’ content
+
+Viewer:
+- Read-only
+- Zero creation access
+- Zero mutation endpoints
+
+If ANY role:
+- Sees a forbidden menu item
+- Accesses a forbidden route
+- Receives forbidden data from API
+→ IMMEDIATELY PATCH permission enforcement (UI + API + DB).
+
+────────────────────────────────
+PHASE 2 – CONTENT EDITOR HARDENING (ELEMENTOR-LEVEL)
+────────────────────────────────
+
+Open the content editor as:
+- Author
+- Contributor
+- Editor
+
+Test ALL editor actions:
+
+• Text editing
+• Headings
+• Lists
+• FAQ blocks
+• Image blocks
+• Gallery blocks
+• CTA blocks
+• Drag & drop
+• Block reordering
+• Block deletion
+• Required block enforcement
+• Autosave
+• Manual save
+• Validation errors
+
+Verify:
+
+- Layout structure CANNOT be broken
+- Required blocks CANNOT be removed
+- Design system CANNOT be overridden
+- No custom HTML / CSS / JS injection
+- No inline styles allowed
+- Editor behaves like Word inside a locked template
+
+If layout can be broken → FIX editor schema enforcement.
+
+────────────────────────────────
+PHASE 3 – IMAGE SYSTEM (AUTO-SAFE)
+────────────────────────────────
+
+Test image handling exhaustively:
+
+• Upload wrong size images
+• Upload wrong aspect ratio
+• Upload huge files
+• Upload tiny files
+• Upload unsupported formats
+• Generate images via “Generate Image” button
+
+Verify:
+
+- Images auto-resize
+- Images auto-crop safely
+- Aspect ratio enforced
+- Filenames auto-generated
+- ALT text auto-generated
+- Captions auto-generated
+- No layout breaks possible
+
+If ANY image breaks layout → FIX image pipeline.
+
+────────────────────────────────
+PHASE 4 – CONTENT WORKFLOWS
+────────────────────────────────
+
+For EACH content type:
+- Hotel
+- Attraction
+- Article
+- News Item
+- Event
+- District
+- Transport
+- Dining
+
+Test full lifecycle:
+
+Draft → Edit → Submit → Review → Approve → Publish
+Reject → Return to Draft → Edit → Resubmit
+
+Verify:
+
+- Status transitions are enforced
+- No skipping states
+- No publishing without permission
+- Locked content is truly read-only
+- No race conditions
+
+────────────────────────────────
+PHASE 5 – PUBLIC SITE VALIDATION
+────────────────────────────────
+
+Test ALL public pages:
+
+• Homepage
+• Category pages
+• Single hotel
+• Single attraction
+• Articles
+• Search results
+• Pagination
+• Filters
+• Internal links
+• Affiliate CTAs
+• Mobile responsiveness
+• SEO metadata output
+• Schema injection
+
+Verify:
+
+- No broken links
+- No empty states visible
+- No layout collapse
+- Correct schema per page type
+- Correct canonical URLs
+
+────────────────────────────────
+PHASE 6 – SEARCH & 404
+────────────────────────────────
+
+Search:
+- Existing content
+- Partial matches
+- Misspellings
+- Empty search
+- Long queries
+- Special characters
+
+404 Page:
+- Non-existing routes
+- Deleted content URLs
+- Malformed URLs
+
+Verify:
+
+- 404 page renders correctly
+- Helpful navigation exists
+- No server crash
+- No data leak
+
+────────────────────────────────
+PHASE 7 – RSS & AI PIPELINE
+────────────────────────────────
+
+Test RSS ingestion:
+
+• Valid feeds
+• Invalid feeds
+• Duplicate items
+• Similar content
+• Empty feeds
+• Malformed XML
+
+Verify:
+
+- Duplicate detection works
+- Content is stored as draft
+- No auto-publishing
+- AI content respects structure rules
+- Images generated correctly
+- No hallucinated facts leak to published content
+
+────────────────────────────────
+PHASE 8 – AUDIT LOG (MANDATORY)
+────────────────────────────────
+
+Trigger actions from MULTIPLE users:
+
+• Create content
+• Edit content
+• Submit
+• Approve
+• Reject
+• Login
+• Logout
+• Permission changes
+• Failed access attempts
+
+Verify audit log records:
+
+- Who
+- What
+- When
+- Before
+- After
+- IP / user agent (if available)
+
+If ANY action is not logged → FIX.
+
+────────────────────────────────
+PHASE 9 – SECURITY & FAIL-SAFES
+────────────────────────────────
+
+Test:
+- Direct API calls without auth
+- Auth with wrong role
+- Token reuse
+- Expired sessions
+- CSRF attempts
+- Rate limits
+- Mass requests
+
+Verify:
+- Server blocks invalid access
+- Proper error codes returned
+- No sensitive data leaked
+
+────────────────────────────────
+FINAL RULE
+────────────────────────────────
+
+The system is ONLY ACCEPTABLE when:
+
+• A content writer cannot break anything even if they try.
+• An admin cannot accidentally destroy critical data without confirmation.
+• No page, route, or API endpoint behaves differently than intended.
+• No feature relies on “trust”.
+
+Do NOT stop until:
+“All permissions are enforced, all flows are sealed, and the system is boringly stable.”
+
+Fix issues immediately as you find them.
+Do not batch.
+Do not postpone.
