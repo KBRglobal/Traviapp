@@ -1759,82 +1759,13 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
   console.log("Scheduled publishing automation started (runs every minute)");
 
   // =====================
-  // Authentication Routes
-  // =====================
-
-  // Request OTP code
-  app.post("/api/auth/request-otp", async (req, res) => {
-    try {
-      const { email } = req.body;
-      if (!email || typeof email !== "string") {
-        return res.status(400).json({ success: false, message: "Email is required" });
-      }
-      const result = await requestOtp(email.toLowerCase().trim());
-      res.json(result);
-    } catch (error) {
-      console.error("Error requesting OTP:", error);
-      res.status(500).json({ success: false, message: "Failed to send verification code" });
-    }
-  });
-
-  // Verify OTP and create session
-  app.post("/api/auth/verify-otp", async (req, res) => {
-    try {
-      const { email, code } = req.body;
-      if (!email || !code) {
-        return res.status(400).json({ success: false, message: "Email and code are required" });
-      }
-      const result = await verifyOtp(email.toLowerCase().trim(), code);
-      if (result.success && result.user) {
-        (req as any).session.userId = result.user.id;
-        (req as any).session.userRole = result.user.role;
-        res.json({ success: true, message: result.message, user: { id: result.user.id, name: result.user.name, email: result.user.email, role: result.user.role } });
-      } else {
-        res.json(result);
-      }
-    } catch (error) {
-      console.error("Error verifying OTP:", error);
-      res.status(500).json({ success: false, message: "Failed to verify code" });
-    }
-  });
-
-  // Get current user
-  app.get("/api/auth/me", async (req, res) => {
-    try {
-      const userId = (req as any).session?.userId;
-      if (!userId) {
-        return res.json({ authenticated: false });
-      }
-      const user = await storage.getUser(userId);
-      if (!user || !user.isActive) {
-        (req as any).session.destroy(() => {});
-        return res.json({ authenticated: false });
-      }
-      res.json({ authenticated: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
-    } catch (error) {
-      console.error("Error getting current user:", error);
-      res.status(500).json({ authenticated: false });
-    }
-  });
-
-  // Logout
-  app.post("/api/auth/logout", (req, res) => {
-    (req as any).session.destroy((err: any) => {
-      if (err) {
-        return res.status(500).json({ success: false, message: "Failed to logout" });
-      }
-      res.json({ success: true, message: "Logged out successfully" });
-    });
-  });
-
-  // =====================
   // User Management Routes (Admin only)
   // =====================
 
   app.get("/api/users", requirePermission("canManageUsers"), async (req, res) => {
     try {
       const users = await storage.getUsers();
-      res.json(users.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.isActive, createdAt: u.createdAt })));
+      res.json(users.map(u => ({ id: u.id, firstName: u.firstName, lastName: u.lastName, email: u.email, role: u.role, isActive: u.isActive, createdAt: u.createdAt, profileImageUrl: u.profileImageUrl })));
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ error: "Failed to fetch users" });
@@ -1844,12 +1775,15 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
   app.post("/api/users", requirePermission("canManageUsers"), async (req, res) => {
     try {
       const parsed = insertUserSchema.parse(req.body);
+      if (!parsed.email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
       const existingUser = await storage.getUserByEmail(parsed.email.toLowerCase());
       if (existingUser) {
         return res.status(400).json({ error: "A user with this email already exists" });
       }
       const user = await storage.createUser({ ...parsed, email: parsed.email.toLowerCase() });
-      res.status(201).json({ id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive, createdAt: user.createdAt });
+      res.status(201).json({ id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, isActive: user.isActive, createdAt: user.createdAt });
     } catch (error) {
       console.error("Error creating user:", error);
       if (error instanceof z.ZodError) {
@@ -1865,7 +1799,7 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      res.json({ id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive, createdAt: user.createdAt });
+      res.json({ id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, isActive: user.isActive, createdAt: user.createdAt });
     } catch (error) {
       console.error("Error updating user:", error);
       res.status(500).json({ error: "Failed to update user" });

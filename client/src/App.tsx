@@ -41,7 +41,6 @@ import KeywordsPage from "@/pages/keywords";
 import UsersPage from "@/pages/users";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
-import VerifyOtp from "@/pages/verify-otp";
 import { AIAssistant } from "@/components/ai-assistant";
 
 function AdminRouter() {
@@ -149,7 +148,6 @@ function App() {
             <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/terms" component={TermsConditions} />
             <Route path="/login" component={Login} />
-            <Route path="/verify-otp" component={VerifyOtp} />
             <Route component={NotFound} />
           </Switch>
         )}
