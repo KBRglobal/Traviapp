@@ -1,0 +1,208 @@
+Product Requirements Document (PRD)
+
+Travi CMS – מערכת ניהול תוכן חכמה
+
+יזם / בעל מוצר: KBR
+
+⸻
+
+1. מטרת המוצר
+
+פיתוח מערכת CMS ייעודית וחכמה לניהול, יצירה והפצה של תוכן תיירותי בקנה מידה רחב.
+
+המערכת תאפשר:
+	•	ניהול תוכן מורכב ורב־סוגים
+	•	יצירת תוכן בסיוע AI
+	•	אתר ציבורי SEO-Ready
+	•	שליטה מלאה בהרשאות
+	•	תשתית יציבה לצמיחה עתידית
+
+⸻
+
+2. קהל יעד
+	•	צוותי תוכן
+	•	עורכים ומנהלי מערכת
+	•	משתמשי Viewer לקריאה בלבד
+	•	מבקרי האתר הציבורי
+
+⸻
+
+3. Scope כללי
+
+המערכת תכלול:
+	•	CMS Admin
+	•	Editor מבוסס Blocks
+	•	Backend API
+	•	Database
+	•	Public Website
+	•	AI Integration
+	•	DevOps & Deployment
+
+⸻
+
+4. דרישות פונקציונליות
+
+4.1 CMS Admin
+	•	Login / Logout
+‎	•	ניהול משתמשים
+‎	•	ניהול תפקידים:
+	•	Admin
+	•	Editor
+	•	Viewer
+	•	Middleware הרשאות לכל פעולה
+	•	Dashboard עם:
+	•	סטטיסטיקות בסיסיות
+	•	רשימות תוכן
+	•	סינון, חיפוש ופאג’ינציה
+
+⸻
+
+4.2 Content Types
+
+המערכת תתמוך לפחות בסוגי התוכן הבאים:
+	•	Hotels
+	•	Attractions
+	•	Articles
+	•	Dining
+	•	Districts
+	•	Transport
+	•	Events
+	•	Itineraries
+
+לכל סוג תוכן:
+	•	Title
+	•	Slug
+	•	SEO metadata
+	•	Content blocks
+	•	Status (Draft / Published)
+	•	Version history
+
+⸻
+
+4.3 Content Editor
+	•	Editor מבוסס Blocks
+‎	•	בלוקים נדרשים:
+	•	Hero
+	•	Text
+	•	Gallery
+	•	FAQ
+	•	CTA
+	•	Drag & Drop
+	•	Preview בזמן אמת
+‎	•	שמירת גרסאות
+
+⸻
+
+4.4 AI Content Generation
+	•	אינטגרציה למנוע AI (כגון OpenAI)
+	•	יצירת תוכן טקסטואלי לפי Prompt
+	•	אפשרות עריכה לפני פרסום
+	•	שמירה כטיוטה / פרסום
+
+⸻
+
+4.5 Media Library
+	•	העלאת קבצים (Images)
+	•	אחסון ב־Object Storage
+‏	•	Gallery לשימוש חוזר
+	•	חיבור למדיה מתוך ה־Editor
+
+⸻
+
+4.6 RSS Integration
+	•	הוספת מקורות RSS
+	•	פרסור וייבוא תוכן
+	•	מנגנון Deduplication
+	•	אפשרות עריכה לפני פרסום
+
+⸻
+
+4.7 Affiliate Links
+	•	ניהול קישורים
+	•	שיוך לתוכן
+	•	אפשרות להחלפה גלובלית
+
+⸻
+
+4.8 Public Website
+	•	אתר ציבורי רספונסיבי
+	•	עמודי תוכן לכל סוג תוכן
+‏	•	SEO מלא:
+	•	Meta tags
+	•	Open Graph
+	•	JSON-LD
+	•	ביצועים טובים (Core Web Vitals)
+‏	•	Dark / Light Mode
+
+⸻
+
+5. דרישות טכניות
+
+5.1 Backend
+	•	REST API
+	•	Authentication & Authorization
+	•	PostgreSQL
+	•	ORM
+	•	Versioning
+	•	Object Storage
+	•	Logging בסיסי
+
+⸻
+
+5.2 Frontend
+	•	Framework מודרני (React / Next.js / דומה)
+	•	Design system בסיסי
+‎	•	תמיכה מלאה במובייל
+
+⸻
+
+5.3 DevOps
+	•	סביבת Production
+‏	•	CI/CD
+‏	•	Deployment
+	•	ניטור בסיסי
+
+⸻
+
+6. דרישות לא פונקציונליות
+	•	קוד קריא ומתועד
+	•	יכולת הרחבה עתידית
+	•	אבטחה בסיסית
+	•	זמן תגובה סביר
+	•	מוכנות ל־SEO
+
+⸻
+
+7. מה לא נכלל בשלב זה
+	•	Mobile App
+	•	Multi-language
+	•	Multi-currency
+‎	•	מערכת תשלומים
+‎	•	אנליטיקות מתקדמות
+
+⸻
+
+8. Deliverables
+	•	קוד מלא
+	•	מערכת עובדת ב־Production
+	•	תיעוד התקנה בסיסי
+	•	העברת ידע
+
+⸻
+
+9. בקשה מהספק (RFP)
+
+הספק מתבקש לספק:
+	1.	הערכת זמן פיתוח
+	2.	הצעת מחיר
+	3.	חלוקת שלבים
+	4.	טכנולוגיות מוצעות
+	5.	הנחות ומגבלות
+
+⸻
+
+10. הערות
+	•	הפרויקט נועד להיות מוצרי ולא חד־פעמי
+	•	תינתן עדיפות לפתרונות יציבים וניתנים להרחבה
+	•	איכות קוד חשובה יותר ממהירות בלבד
+
