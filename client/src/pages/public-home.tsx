@@ -76,53 +76,6 @@ function ContentCard({ content, index }: { content: Content; index: number }) {
   );
 }
 
-function PlaceholderCard({ index }: { index: number }) {
-  const placeholderData = [
-    { title: "Burj Khalifa Experience", type: "attraction", desc: "Visit the world's tallest building and enjoy breathtaking views of Dubai" },
-    { title: "Desert Safari Adventure", type: "attraction", desc: "Experience dune bashing, camel rides, and traditional Bedouin hospitality" },
-    { title: "Dubai Marina Walk", type: "attraction", desc: "Stroll along the stunning waterfront promenade with dining and shopping" },
-    { title: "Palm Jumeirah", type: "hotel", desc: "Discover luxury resorts and pristine beaches on Dubai's iconic island" },
-  ];
-  const data = placeholderData[index];
-  const imageUrl = defaultPlaceholderImages[index];
-  
-  return (
-    <Link href={`/${data.type}s`}>
-      <article>
-        <Card className="group overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300 cursor-pointer">
-          <div className="aspect-[4/3] overflow-hidden">
-            <img 
-              src={imageUrl} 
-              alt={data.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-              width={600}
-              height={400}
-            />
-          </div>
-          <div className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium capitalize">
-                {data.type}
-              </span>
-              <span className="flex items-center gap-1">
-                <Star className="w-3 h-3 fill-amber-400 text-amber-400" aria-hidden="true" />
-                <span className="sr-only">Rating:</span> 4.8
-              </span>
-            </div>
-            <h3 className="font-heading font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-              {data.title}
-            </h3>
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {data.desc}
-            </p>
-          </div>
-        </Card>
-      </article>
-    </Link>
-  );
-}
-
 function ContentCardSkeleton() {
   return (
     <Card className="overflow-hidden border-0 shadow-md animate-pulse" aria-hidden="true">
@@ -382,9 +335,9 @@ export default function PublicHome() {
                   <ContentCard key={content.id} content={content} index={index} />
                 ))
               ) : (
-                [0, 1, 2, 3].map((index) => (
-                  <PlaceholderCard key={index} index={index} />
-                ))
+                <div className="col-span-full text-center py-12" data-testid="text-featured-empty">
+                  <p className="text-muted-foreground">Content coming soon. Check back for exciting destinations!</p>
+                </div>
               )}
             </div>
 

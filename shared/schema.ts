@@ -87,6 +87,7 @@ export const contents = pgTable("contents", {
   heroImageAlt: text("hero_image_alt"),
   blocks: jsonb("blocks").$type<ContentBlock[]>().default([]),
   seoSchema: jsonb("seo_schema").$type<Record<string, unknown>>(),
+  seoScore: integer("seo_score"),
   wordCount: integer("word_count").default(0),
   scheduledAt: timestamp("scheduled_at"),
   publishedAt: timestamp("published_at"),
