@@ -18,8 +18,15 @@ type AuthState = {
   isAuthenticated: boolean;
 };
 
-export function isUnauthorizedError(error: Error): boolean {
-  return error.message === "401" || error.message.toLowerCase().includes("unauthorized");
+export function isUnauthorizedError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.message === "401" || error.message.toLowerCase().includes("unauthorized");
+  }
+  if (typeof error === "object" && error !== null) {
+    const e = error as { status?: number; message?: string };
+    return e.status === 401 || e.message?.toLowerCase().includes("unauthorized") || false;
+  }
+  return false;
 }
 
 export function useAuth(): AuthState {
@@ -29,7 +36,8 @@ export function useAuth(): AuthState {
     staleTime: 1000 * 60 * 5,
   });
 
-  if (error && isUnauthorizedError(error)) {
+  // Handle unauthorized errors - user is not logged in
+  if (error) {
     return {
       user: null,
       isLoading: false,

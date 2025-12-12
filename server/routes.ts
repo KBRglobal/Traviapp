@@ -143,6 +143,9 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -151,10 +154,17 @@ export async function registerRoutes(
   });
   
   // Get current user role and permissions
-  app.get("/api/user/permissions", (req, res) => {
-    const userRole = (req.headers["x-user-role"] as UserRole) || "viewer";
-    const permissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS.viewer;
-    res.json({ role: userRole, permissions });
+  app.get("/api/user/permissions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const userRole: UserRole = user?.role || "viewer";
+      const permissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS.viewer;
+      res.json({ role: userRole, permissions });
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ error: "Failed to fetch permissions" });
+    }
   });
 
   // Get all available roles (admin only)
