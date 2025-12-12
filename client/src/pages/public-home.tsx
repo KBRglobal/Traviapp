@@ -37,7 +37,7 @@ function ContentCard({ content, index }: { content: Content; index: number }) {
   
   return (
     <Link href={contentPath}>
-      <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer">
+      <Card className="group overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300 cursor-pointer">
         <div className="aspect-[4/3] overflow-hidden">
           <img 
             src={imageUrl} 
@@ -47,15 +47,15 @@ function ContentCard({ content, index }: { content: Content; index: number }) {
         </div>
         <div className="p-4">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <span className="px-2 py-0.5 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium capitalize">
+            <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium capitalize">
               {content.type}
             </span>
             <span className="flex items-center gap-1">
-              <Star className="w-3 h-3 fill-[#fdcd0a] text-[#fdcd0a]" />
+              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
               4.8
             </span>
           </div>
-          <h3 className="font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
+          <h3 className="font-heading font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
             {content.title}
           </h3>
           <p className="text-sm text-muted-foreground line-clamp-2">
@@ -79,7 +79,7 @@ function PlaceholderCard({ index }: { index: number }) {
   
   return (
     <Link href={`/${data.type}s`}>
-      <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer">
+      <Card className="group overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300 cursor-pointer">
         <div className="aspect-[4/3] overflow-hidden">
           <img 
             src={imageUrl} 
@@ -89,15 +89,15 @@ function PlaceholderCard({ index }: { index: number }) {
         </div>
         <div className="p-4">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <span className="px-2 py-0.5 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium capitalize">
+            <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium capitalize">
               {data.type}
             </span>
             <span className="flex items-center gap-1">
-              <Star className="w-3 h-3 fill-[#fdcd0a] text-[#fdcd0a]" />
+              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
               4.8
             </span>
           </div>
-          <h3 className="font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
+          <h3 className="font-heading font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
             {data.title}
           </h3>
           <p className="text-sm text-muted-foreground line-clamp-2">
@@ -160,9 +160,9 @@ export default function PublicHome() {
 
             {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/hotels" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-hotels">Hotels</Link>
-              <Link href="/attractions" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-attractions">Attractions</Link>
-              <Link href="/articles" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-articles">Articles</Link>
+              <Link href="/hotels" className="text-foreground/80 hover:text-primary font-medium transition-colors" data-testid="link-hotels">Hotels</Link>
+              <Link href="/attractions" className="text-foreground/80 hover:text-primary font-medium transition-colors" data-testid="link-attractions">Attractions</Link>
+              <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors" data-testid="link-articles">Articles</Link>
             </div>
 
             {/* CTA */}

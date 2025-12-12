@@ -20,11 +20,11 @@ import {
   Link2,
   Image,
   Settings,
-  Plane,
   UtensilsCrossed,
   Map,
   Train,
 } from "lucide-react";
+import { Mascot } from "@/components/logo";
 
 const contentItems = [
   {
@@ -101,12 +101,10 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <Link href="/admin" className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary text-primary-foreground">
-            <Plane className="h-4 w-4" />
-          </div>
+        <Link href="/admin" className="flex items-center gap-3">
+          <Mascot variant="light-bg" size={36} />
           <div className="flex flex-col">
-            <span className="font-semibold text-sm">Travi CMS</span>
+            <span className="font-heading font-semibold text-sm">Travi CMS</span>
             <span className="text-xs text-muted-foreground">Dubai Travel</span>
           </div>
         </Link>
