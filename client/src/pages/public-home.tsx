@@ -258,7 +258,7 @@ export default function PublicHome() {
                     <EditorialCard
                       key={content.id}
                       title={content.title}
-                      excerpt={content.metaDescription}
+                      excerpt={content.metaDescription || undefined}
                       image={content.heroImage || defaultPlaceholderImages[index + 1]}
                       href={getContentPath(content)}
                       category={content.type}
