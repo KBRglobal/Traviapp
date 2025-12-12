@@ -5,7 +5,7 @@ import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 // Enums
-export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport"]);
+export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport", "event"]);
 export const contentStatusEnum = pgEnum("content_status", ["draft", "in_review", "approved", "scheduled", "published"]);
 export const articleCategoryEnum = pgEnum("article_category", ["attractions", "hotels", "food", "transport", "events", "tips", "news", "shopping"]);
 export const userRoleEnum = pgEnum("user_role", ["admin", "editor", "viewer"]);
@@ -191,6 +191,25 @@ export const transports = pgTable("transports", {
   trustSignals: jsonb("trust_signals").$type<string[]>().default([]),
 });
 
+// Events specific data
+export const events = pgTable("events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  eventDate: timestamp("event_date"),
+  endDate: timestamp("end_date"),
+  venue: text("venue"),
+  venueAddress: text("venue_address"),
+  ticketUrl: text("ticket_url"),
+  ticketPrice: text("ticket_price"),
+  isFeatured: boolean("is_featured").default(false),
+  isRecurring: boolean("is_recurring").default(false),
+  recurrencePattern: text("recurrence_pattern"),
+  targetAudience: jsonb("target_audience").$type<string[]>().default([]),
+  organizer: text("organizer"),
+  contactEmail: text("contact_email"),
+  faq: jsonb("faq").$type<FaqItem[]>().default([]),
+});
+
 // RSS Feeds table
 export const rssFeeds = pgTable("rss_feeds", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -342,6 +361,10 @@ export const contentsRelations = relations(contents, ({ one, many }) => ({
     fields: [contents.id],
     references: [transports.contentId],
   }),
+  event: one(events, {
+    fields: [contents.id],
+    references: [events.contentId],
+  }),
   affiliateLinks: many(affiliateLinks),
   sourceInternalLinks: many(internalLinks, { relationName: "sourceLinks" }),
   targetInternalLinks: many(internalLinks, { relationName: "targetLinks" }),
@@ -492,6 +515,10 @@ export const insertTransportSchema = createInsertSchema(transports).omit({
   id: true,
 });
 
+export const insertEventSchema = createInsertSchema(events).omit({
+  id: true,
+});
+
 export const insertRssFeedSchema = createInsertSchema(rssFeeds).omit({
   id: true,
   createdAt: true,
@@ -544,6 +571,8 @@ export type InsertDistrict = z.infer<typeof insertDistrictSchema>;
 export type District = typeof districts.$inferSelect;
 export type InsertTransport = z.infer<typeof insertTransportSchema>;
 export type Transport = typeof transports.$inferSelect;
+export type InsertEvent = z.infer<typeof insertEventSchema>;
+export type Event = typeof events.$inferSelect;
 export type InsertRssFeed = z.infer<typeof insertRssFeedSchema>;
 export type RssFeed = typeof rssFeeds.$inferSelect;
 export type InsertAffiliateLink = z.infer<typeof insertAffiliateLinkSchema>;
@@ -603,6 +632,7 @@ export type ContentWithRelations = Content & {
   diningData?: Dining;
   district?: District;
   transport?: Transport;
+  event?: Event;
   affiliateLinks?: AffiliateLink[];
   translations?: Translation[];
 };

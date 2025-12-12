@@ -9,6 +9,7 @@ import {
   insertAttractionSchema,
   insertHotelSchema,
   insertArticleSchema,
+  insertEventSchema,
   insertRssFeedSchema,
   insertAffiliateLinkSchema,
   insertMediaFileSchema,
@@ -176,6 +177,8 @@ export async function registerRoutes(
         await storage.createHotel({ ...req.body.hotel, contentId: content.id });
       } else if (parsed.type === "article" && req.body.article) {
         await storage.createArticle({ ...req.body.article, contentId: content.id });
+      } else if (parsed.type === "event" && req.body.event) {
+        await storage.createEvent({ ...req.body.event, contentId: content.id });
       } else {
         if (parsed.type === "attraction") {
           await storage.createAttraction({ contentId: content.id });
@@ -183,6 +186,8 @@ export async function registerRoutes(
           await storage.createHotel({ contentId: content.id });
         } else if (parsed.type === "article") {
           await storage.createArticle({ contentId: content.id });
+        } else if (parsed.type === "event") {
+          await storage.createEvent({ contentId: content.id });
         }
       }
 
@@ -216,7 +221,7 @@ export async function registerRoutes(
         changeNote: req.body.changeNote || null,
       });
 
-      const { attraction, hotel, article, changedBy, changeNote, ...contentData } = req.body;
+      const { attraction, hotel, article, event, changedBy, changeNote, ...contentData } = req.body;
       
       const updatedContent = await storage.updateContent(req.params.id, contentData);
 
@@ -226,6 +231,8 @@ export async function registerRoutes(
         await storage.updateHotel(req.params.id, hotel);
       } else if (existingContent.type === "article" && article) {
         await storage.updateArticle(req.params.id, article);
+      } else if (existingContent.type === "event" && req.body.event) {
+        await storage.updateEvent(req.params.id, req.body.event);
       }
 
       const fullContent = await storage.getContent(req.params.id);

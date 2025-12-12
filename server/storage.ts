@@ -6,6 +6,7 @@ import {
   attractions,
   hotels,
   articles,
+  events,
   rssFeeds,
   affiliateLinks,
   mediaFiles,
@@ -25,6 +26,8 @@ import {
   type InsertHotel,
   type Article,
   type InsertArticle,
+  type Event,
+  type InsertEvent,
   type RssFeed,
   type InsertRssFeed,
   type AffiliateLink,
@@ -69,6 +72,10 @@ export interface IStorage {
   createArticle(article: InsertArticle): Promise<Article>;
   updateArticle(contentId: string, article: Partial<InsertArticle>): Promise<Article | undefined>;
 
+  getEvent(contentId: string): Promise<Event | undefined>;
+  createEvent(event: InsertEvent): Promise<Event>;
+  updateEvent(contentId: string, event: Partial<InsertEvent>): Promise<Event | undefined>;
+
   getRssFeeds(): Promise<RssFeed[]>;
   getRssFeed(id: string): Promise<RssFeed | undefined>;
   createRssFeed(feed: InsertRssFeed): Promise<RssFeed>;
@@ -99,6 +106,7 @@ export interface IStorage {
     attractions: number;
     hotels: number;
     articles: number;
+    events: number;
   }>;
 
   getTopicBankItems(filters?: { category?: string; isActive?: boolean }): Promise<TopicBank[]>;
@@ -187,6 +195,9 @@ export class DatabaseStorage implements IStorage {
     } else if (content.type === "article") {
       const [article] = await db.select().from(articles).where(eq(articles.contentId, id));
       result.article = article;
+    } else if (content.type === "event") {
+      const [event] = await db.select().from(events).where(eq(events.contentId, id));
+      result.event = event;
     }
 
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, id));
@@ -269,6 +280,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(articles.contentId, contentId))
       .returning();
     return article;
+  }
+
+  async getEvent(contentId: string): Promise<Event | undefined> {
+    const [event] = await db.select().from(events).where(eq(events.contentId, contentId));
+    return event;
+  }
+
+  async createEvent(insertEvent: InsertEvent): Promise<Event> {
+    const [event] = await db.insert(events).values(insertEvent).returning();
+    return event;
+  }
+
+  async updateEvent(contentId: string, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
+    const [event] = await db
+      .update(events)
+      .set(updateData)
+      .where(eq(events.contentId, contentId))
+      .returning();
+    return event;
   }
 
   async getRssFeeds(): Promise<RssFeed[]> {
@@ -394,6 +424,7 @@ export class DatabaseStorage implements IStorage {
       attractions: allContent.filter(c => c.type === "attraction").length,
       hotels: allContent.filter(c => c.type === "hotel").length,
       articles: allContent.filter(c => c.type === "article").length,
+      events: allContent.filter(c => c.type === "event").length,
     };
   }
 
