@@ -349,9 +349,9 @@ export async function registerRoutes(
   // Setup Replit Auth
   await setupAuth(app);
   
-  // Hardcoded admin credentials
-  const ADMIN_USERNAME = "admin";
-  const ADMIN_PASSWORD = "tRa\\/!m0z!nev0";
+  // Admin credentials from environment variables (hashed password stored in env)
+  const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
+  const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
   
   // Username/password login endpoint
   app.post('/api/auth/login', async (req: Request, res: Response) => {
@@ -362,36 +362,38 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Username and password are required" });
       }
       
-      // Check for hardcoded admin first
-      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        // Find or create admin user
-        let adminUser = await storage.getUserByUsername(username);
-        if (!adminUser) {
-          const hashedPassword = await bcrypt.hash(password, 10);
-          adminUser = await storage.createUserWithPassword({
-            username: ADMIN_USERNAME,
-            passwordHash: hashedPassword,
-            firstName: "Admin",
-            lastName: "User",
-            role: "admin",
-            isActive: true,
-          });
-        }
-        
-        // Set up session
-        const sessionUser = {
-          claims: { sub: adminUser.id },
-          id: adminUser.id,
-        };
-        
-        req.login(sessionUser, (err: any) => {
-          if (err) {
-            console.error("Login session error:", err);
-            return res.status(500).json({ error: "Failed to create session" });
+      // Check for admin from environment first
+      if (ADMIN_PASSWORD_HASH && username === ADMIN_USERNAME) {
+        const isAdminPassword = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
+        if (isAdminPassword) {
+          // Find or create admin user
+          let adminUser = await storage.getUserByUsername(username);
+          if (!adminUser) {
+            adminUser = await storage.createUserWithPassword({
+              username: ADMIN_USERNAME,
+              passwordHash: ADMIN_PASSWORD_HASH,
+              firstName: "Admin",
+              lastName: "User",
+              role: "admin",
+              isActive: true,
+            });
           }
-          res.json({ success: true, user: adminUser });
-        });
-        return;
+          
+          // Set up session
+          const sessionUser = {
+            claims: { sub: adminUser.id },
+            id: adminUser.id,
+          };
+          
+          req.login(sessionUser, (err: any) => {
+            if (err) {
+              console.error("Login session error:", err);
+              return res.status(500).json({ error: "Failed to create session" });
+            }
+            res.json({ success: true, user: adminUser });
+          });
+          return;
+        }
       }
       
       // Check database for user

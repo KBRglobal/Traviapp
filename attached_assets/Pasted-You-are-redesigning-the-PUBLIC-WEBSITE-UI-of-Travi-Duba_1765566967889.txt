@@ -1,0 +1,133 @@
+You are redesigning the PUBLIC WEBSITE UI of Travi (Dubai travel platform).
+
+⚠️ STRICT SCOPE
+	•	DO NOT touch the CMS / admin system – it is final and out of scope.
+	•	DO NOT change APIs, data models, or logic.
+	•	This task is UI/UX redesign in code only (React + Tailwind).
+	•	No Figma. No new features. No backend changes.
+
+⸻
+
+🎯 GOAL
+
+Transform the public website from a generic template-style site into a premium editorial travel brand.
+
+Target feeling:
+
+Editorial · Premium · Confident · Curated
+Similar to: Lonely Planet (editorial), Airbnb (visual rhythm), Apple (hierarchy)
+
+⸻
+
+🔍 CURRENT STATE (ASSUME THIS)
+	•	Homepage and all listing pages (Hotels / Attractions / Articles) look almost identical.
+	•	Each page starts with a flat colored hero strip + title.
+	•	Content is shown as uniform cards in grids.
+	•	There is no editorial hierarchy, no rhythm, no featured moments.
+	•	Pages differ mostly by color, not structure or storytelling.
+
+⸻
+
+🧭 REDESIGN PRINCIPLES (NON-NEGOTIABLE)
+
+1. Hero Sections
+	•	Replace flat color heroes with image-based heroes.
+	•	Use:
+	•	Large background image
+	•	Gradient overlays
+	•	Clear editorial headline + short subheading
+	•	Hero should feel like “entering a story”, not a category label.
+
+⸻
+
+2. Editorial Hierarchy
+
+Introduce visual hierarchy on all pages:
+	•	Featured content (larger, dominant)
+	•	Secondary content (grid)
+	•	Supporting content (text-led or compact cards)
+
+Not everything should look equal.
+
+⸻
+
+3. Listing Pages (Hotels / Attractions / Articles)
+
+Redesign listing pages so they are not just grids:
+
+Required structure:
+	•	Featured item at top (large card or split layout)
+	•	Then a curated grid
+	•	Optional editorial section (short text + CTA)
+
+Each content type should feel different:
+	•	Hotels → luxury / premium tone
+	•	Attractions → experiential / visual
+	•	Articles → editorial / text-forward
+
+⸻
+
+4. Homepage Rhythm
+
+Homepage must have clear section differentiation:
+	•	Mix of:
+	•	Large visual sections
+	•	Calm whitespace sections
+	•	Editorial text-led blocks
+	•	Avoid repeating the same card layout section after section.
+
+⸻
+
+5. Cards & Components
+
+Improve cards:
+	•	Strong image ratios
+	•	Better typography hierarchy
+	•	Clear CTAs
+	•	Subtle hover states
+	•	Less “UI kit”, more “magazine”
+
+⸻
+
+6. Typography & Spacing
+	•	Increase vertical spacing between sections.
+	•	Use typography to lead the eye:
+	•	Big headlines
+	•	Calm body text
+	•	Clear section intros
+	•	Reduce visual noise.
+
+⸻
+
+🛠️ IMPLEMENTATION CONSTRAINTS
+	•	Use existing React components and Tailwind.
+	•	You may:
+	•	Refactor layouts
+	•	Add new presentational components
+	•	Change spacing, typography, structure
+	•	You may NOT:
+	•	Change data shape
+	•	Add new backend endpoints
+	•	Modify CMS behavior
+
+⸻
+
+✅ SUCCESS CRITERIA
+
+After redesign:
+	•	Homepage feels editorial and premium.
+	•	Listing pages do NOT all look the same.
+	•	User feels content is curated, not dumped.
+	•	The site feels like a brand, not a template.
+
+⸻
+
+🚫 DO NOT DO
+	•	Do not redesign the CMS.
+	•	Do not add features.
+	•	Do not introduce arbitrary animations.
+	•	Do not over-design.
+
+⸻
+
+Deliver clean, readable, production-ready React + Tailwind code that upgrades the visual and editorial quality of the public site only.
