@@ -31,7 +31,12 @@ import * as path from "path";
 import { 
   generateHotelContent, 
   generateAttractionContent, 
-  generateArticleContent 
+  generateArticleContent,
+  generateContentImages,
+  generateImagePrompt,
+  generateImage,
+  type GeneratedImage,
+  type ImageGenerationOptions
 } from "./ai-generator";
 
 // Permission checking utilities
@@ -1222,6 +1227,146 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     } catch (error) {
       console.error("Error generating article content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate article content";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // AI Image Generation endpoint
+  app.post("/api/ai/generate-images", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const { contentType, title, description, location, generateHero, generateContentImages: genContentImages, contentImageCount } = req.body;
+
+      if (!contentType || !title) {
+        return res.status(400).json({ error: "Content type and title are required" });
+      }
+
+      const validContentTypes = ['hotel', 'attraction', 'article', 'dining', 'district', 'transport', 'event', 'itinerary'];
+      if (!validContentTypes.includes(contentType)) {
+        return res.status(400).json({ error: "Invalid content type" });
+      }
+
+      const options: ImageGenerationOptions = {
+        contentType,
+        title: title.trim(),
+        description: description?.trim(),
+        location: location?.trim(),
+        generateHero: generateHero !== false,
+        generateContentImages: genContentImages === true,
+        contentImageCount: Math.min(contentImageCount || 0, 5), // Limit to 5 content images
+      };
+
+      console.log(`Starting image generation for ${contentType}: ${title}`);
+      const images = await generateContentImages(options);
+
+      if (images.length === 0) {
+        return res.status(500).json({ error: "Failed to generate images" });
+      }
+
+      // Store images in object storage if available
+      const storageClient = getObjectStorageClient();
+      const storedImages: GeneratedImage[] = [];
+
+      for (const image of images) {
+        try {
+          // Download image from URL
+          const imageResponse = await fetch(image.url);
+          if (!imageResponse.ok) {
+            console.error(`Failed to fetch image: ${image.url}`);
+            continue;
+          }
+
+          const imageBuffer = await imageResponse.arrayBuffer();
+          const buffer = Buffer.from(imageBuffer);
+
+          if (storageClient) {
+            // Store in object storage
+            const objectPath = `public/ai-generated/${image.filename}`;
+            await storageClient.uploadFromBytes(objectPath, buffer);
+            storedImages.push({
+              ...image,
+              url: `/api/media/${image.filename}`, // Use proxy URL
+            });
+          } else {
+            // Store locally
+            const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
+            if (!fs.existsSync(uploadsDir)) {
+              fs.mkdirSync(uploadsDir, { recursive: true });
+            }
+            const localPath = path.join(uploadsDir, image.filename);
+            fs.writeFileSync(localPath, buffer);
+            storedImages.push({
+              ...image,
+              url: `/uploads/ai-generated/${image.filename}`,
+            });
+          }
+        } catch (imgError) {
+          console.error(`Error storing image ${image.filename}:`, imgError);
+        }
+      }
+
+      console.log(`Generated and stored ${storedImages.length} images for ${title}`);
+      res.json({ images: storedImages, count: storedImages.length });
+    } catch (error) {
+      console.error("Error generating images:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate images";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Generate single image with custom prompt
+  app.post("/api/ai/generate-single-image", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const { prompt, size, quality, style, filename } = req.body;
+
+      if (!prompt) {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+
+      const validSizes = ['1024x1024', '1792x1024', '1024x1792'];
+      const imageSize = validSizes.includes(size) ? size : '1792x1024';
+
+      console.log(`Generating single image with custom prompt`);
+      const imageUrl = await generateImage(prompt, {
+        size: imageSize as '1024x1024' | '1792x1024' | '1024x1792',
+        quality: quality === 'standard' ? 'standard' : 'hd',
+        style: style === 'vivid' ? 'vivid' : 'natural',
+      });
+
+      if (!imageUrl) {
+        return res.status(500).json({ error: "Failed to generate image" });
+      }
+
+      // Download and store image
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        return res.status(500).json({ error: "Failed to download generated image" });
+      }
+
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const buffer = Buffer.from(imageBuffer);
+      const finalFilename = filename || `ai-image-${Date.now()}.jpg`;
+
+      const storageClient = getObjectStorageClient();
+      let storedUrl: string;
+
+      if (storageClient) {
+        const objectPath = `public/ai-generated/${finalFilename}`;
+        await storageClient.uploadFromBytes(objectPath, buffer);
+        storedUrl = `/api/media/${finalFilename}`;
+      } else {
+        const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        const localPath = path.join(uploadsDir, finalFilename);
+        fs.writeFileSync(localPath, buffer);
+        storedUrl = `/uploads/ai-generated/${finalFilename}`;
+      }
+
+      res.json({ url: storedUrl, filename: finalFilename });
+    } catch (error) {
+      console.error("Error generating single image:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate image";
       res.status(500).json({ error: message });
     }
   });

@@ -35,6 +35,194 @@ function generateSlug(title: string): string {
     .trim();
 }
 
+// Image generation types
+export interface GeneratedImage {
+  url: string;
+  filename: string;
+  alt: string;
+  caption: string;
+  type: 'hero' | 'content' | 'gallery';
+}
+
+export interface ImageGenerationOptions {
+  contentType: 'hotel' | 'attraction' | 'article' | 'dining' | 'district' | 'transport' | 'event' | 'itinerary';
+  title: string;
+  description?: string;
+  location?: string;
+  style?: 'photorealistic' | 'artistic' | 'editorial';
+  generateHero?: boolean;
+  generateContentImages?: boolean;
+  contentImageCount?: number;
+}
+
+// Master prompt for Dubai travel image generation
+const IMAGE_MASTER_PROMPT = `You are an expert at creating prompts for DALL-E image generation for Dubai travel content.
+
+STYLE GUIDELINES:
+- Create photorealistic, high-quality travel photography style images
+- Use warm, golden hour lighting when appropriate
+- Capture the luxury and modern architecture of Dubai
+- Include authentic cultural elements where relevant
+- Images should be visually stunning and suitable for professional travel websites
+- Avoid text, watermarks, or logos in images
+- Use 16:9 landscape orientation for hero images
+- Focus on creating aspirational, inviting scenes
+
+DUBAI-SPECIFIC ELEMENTS TO INCORPORATE:
+- Iconic skyline and modern architecture (Burj Khalifa, Dubai Frame, etc.)
+- Luxury hotels and resorts
+- Desert landscapes and dunes
+- Crystal-clear waters and beaches
+- Traditional souks and cultural heritage
+- Culinary experiences
+- Vibrant nightlife and city scenes`;
+
+// Generate image prompt based on content
+export async function generateImagePrompt(
+  options: ImageGenerationOptions
+): Promise<string | null> {
+  const openai = getOpenAIClient();
+  if (!openai) return null;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: IMAGE_MASTER_PROMPT
+        },
+        {
+          role: "user",
+          content: `Create a detailed DALL-E prompt for a ${options.generateHero ? 'hero banner' : 'content'} image for this Dubai travel content:
+
+CONTENT TYPE: ${options.contentType}
+TITLE: ${options.title}
+${options.description ? `DESCRIPTION: ${options.description}` : ''}
+${options.location ? `LOCATION: ${options.location}` : ''}
+STYLE: ${options.style || 'photorealistic'}
+
+Generate a single, detailed prompt (150-200 words) that will create a stunning, professional travel image. The prompt should:
+1. Describe the specific scene, composition, and main subject
+2. Include lighting, atmosphere, and mood details
+3. Specify camera angle and perspective
+4. Mention colors and textures
+5. Be specific to Dubai and the content type
+
+Return ONLY the prompt text, no additional explanation.`
+        }
+      ],
+      temperature: 0.7,
+    });
+
+    return response.choices[0].message.content?.trim() || null;
+  } catch (error) {
+    console.error("Error generating image prompt:", error);
+    return null;
+  }
+}
+
+// Generate image using DALL-E
+export async function generateImage(
+  prompt: string,
+  options: {
+    size?: '1024x1024' | '1792x1024' | '1024x1792';
+    quality?: 'standard' | 'hd';
+    style?: 'vivid' | 'natural';
+  } = {}
+): Promise<string | null> {
+  const openai = getOpenAIClient();
+  if (!openai) return null;
+
+  try {
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: prompt,
+      n: 1,
+      size: options.size || '1792x1024', // Wide for hero images
+      quality: options.quality || 'hd',
+      style: options.style || 'natural',
+    });
+
+    return response.data[0]?.url || null;
+  } catch (error) {
+    console.error("Error generating image with DALL-E:", error);
+    return null;
+  }
+}
+
+// Generate all images for content
+export async function generateContentImages(
+  options: ImageGenerationOptions
+): Promise<GeneratedImage[]> {
+  const images: GeneratedImage[] = [];
+  const slug = generateSlug(options.title);
+  const timestamp = Date.now();
+
+  // Generate hero image
+  if (options.generateHero !== false) {
+    console.log(`Generating hero image for: ${options.title}`);
+    const heroPrompt = await generateImagePrompt({
+      ...options,
+      generateHero: true,
+    });
+
+    if (heroPrompt) {
+      const heroUrl = await generateImage(heroPrompt, {
+        size: '1792x1024',
+        quality: 'hd',
+        style: 'natural',
+      });
+
+      if (heroUrl) {
+        images.push({
+          url: heroUrl,
+          filename: `${slug}-hero-${timestamp}.jpg`,
+          alt: `${options.title} - Dubai Travel`,
+          caption: `Explore ${options.title} in Dubai`,
+          type: 'hero',
+        });
+      }
+    }
+  }
+
+  // Generate additional content images
+  if (options.generateContentImages && options.contentImageCount && options.contentImageCount > 0) {
+    const contentPromises = Array.from({ length: options.contentImageCount }, async (_, index) => {
+      console.log(`Generating content image ${index + 1} for: ${options.title}`);
+      const contentPrompt = await generateImagePrompt({
+        ...options,
+        generateHero: false,
+        description: `${options.description || options.title} - angle ${index + 1}`,
+      });
+
+      if (contentPrompt) {
+        const contentUrl = await generateImage(contentPrompt, {
+          size: '1024x1024',
+          quality: 'standard',
+          style: 'natural',
+        });
+
+        if (contentUrl) {
+          return {
+            url: contentUrl,
+            filename: `${slug}-content-${index + 1}-${timestamp}.jpg`,
+            alt: `${options.title} - View ${index + 1}`,
+            caption: `Discover more about ${options.title}`,
+            type: 'content' as const,
+          };
+        }
+      }
+      return null;
+    });
+
+    const contentResults = await Promise.all(contentPromises);
+    images.push(...contentResults.filter((img): img is GeneratedImage => img !== null));
+  }
+
+  return images;
+}
+
 export interface GeneratedHotelContent {
   content: {
     title: string;
