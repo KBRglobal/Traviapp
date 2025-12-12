@@ -196,20 +196,22 @@ export default function PublicHome() {
         )}
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-24 pb-16 sm:pt-32 sm:pb-24 bg-gradient-to-br from-primary via-primary/80 to-primary/60 relative overflow-hidden" data-testid="section-hero">
+      {/* Hero Section - Using brand purple gradient */}
+      <section className="pt-24 pb-16 sm:pt-32 sm:pb-24 bg-gradient-to-br from-[#6443F4] via-[#7c5cf7] to-[#F94498] relative overflow-hidden" data-testid="section-hero">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iNCIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
+        <div className="absolute top-20 left-10 w-32 h-32 bg-[#FF9327] rounded-full blur-3xl opacity-20" />
+        <div className="absolute bottom-20 right-10 w-40 h-40 bg-[#FFD112] rounded-full blur-3xl opacity-20" />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-6">
-              <Sparkles className="w-4 h-4 text-[#fdcd0a]" />
-              <span className="text-white/90 text-sm font-medium">Your Dubai Travel Companion</span>
+            <div className="inline-flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-5 py-2.5 mb-6 backdrop-blur-sm">
+              <Sparkles className="w-4 h-4 text-[#FFD112]" />
+              <span className="text-white text-sm font-semibold tracking-wide">Your Dubai Travel Companion</span>
             </div>
             
-            <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+            <h1 className="font-heading text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight drop-shadow-lg">
               Discover the Magic of
-              <span className="block text-[#fdcd0a]">Dubai</span>
+              <span className="block bg-gradient-to-r from-[#FFD112] via-[#FF9327] to-[#FFD112] bg-clip-text text-transparent">Dubai</span>
             </h1>
             
             <p className="text-lg sm:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
@@ -233,7 +235,7 @@ export default function PublicHome() {
                 </div>
                 <Button 
                   onClick={handleSearch}
-                  className="bg-[#fdcd0a] hover:bg-[#e5b800] text-[#6443f4] font-semibold rounded-xl px-4 sm:px-6 py-6 shrink-0" 
+                  className="bg-[#F94498] hover:bg-[#e03587] text-white font-semibold rounded-xl px-4 sm:px-8 py-6 shrink-0 shadow-lg" 
                   data-testid="button-search"
                 >
                   <Search className="w-5 h-5 sm:hidden" />

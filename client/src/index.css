@@ -51,9 +51,17 @@
   --popover-foreground: 269 61% 15%;
   --popover-border: 272 11% 85%;
   
-  /* Primary - TRAVI Purple */
-  --primary: 256 83% 61%;
+  /* Primary - TRAVI Pink (Main CTA color per brand book) */
+  --primary: 330 95% 61%;
   --primary-foreground: 0 0% 100%;
+  
+  /* Brand Purple - for links and secondary elements */
+  --brand-purple: 256 83% 61%;
+  --brand-purple-foreground: 0 0% 100%;
+  
+  /* Brand Orange - for warm accents */
+  --brand-orange: 30 100% 58%;
+  --brand-orange-foreground: 269 61% 15%;
   
   /* Secondary - Light gray */
   --secondary: 270 10% 94%;
@@ -149,8 +157,14 @@
   --popover-foreground: 0 0% 98%;
   --popover-border: 269 30% 16%;
   
-  --primary: 256 83% 65%;
+  --primary: 330 95% 65%;
   --primary-foreground: 0 0% 100%;
+  
+  --brand-purple: 256 83% 70%;
+  --brand-purple-foreground: 0 0% 100%;
+  
+  --brand-orange: 30 100% 65%;
+  --brand-orange-foreground: 0 0% 100%;
   
   --secondary: 269 30% 18%;
   --secondary-foreground: 0 0% 98%;
