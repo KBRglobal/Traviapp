@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -7,6 +8,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
+import { useAnalytics } from "@/hooks/use-analytics";
+import { initGA } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
 import PublicHome from "@/pages/public-home";
 import PublicHotels from "@/pages/public-hotels";
@@ -119,6 +122,14 @@ function AdminLayout() {
 function App() {
   const [location] = useLocation();
   const isAdminRoute = location.startsWith("/admin");
+
+  // Initialize Google Analytics on app load
+  useEffect(() => {
+    initGA();
+  }, []);
+
+  // Track page views on route changes
+  useAnalytics();
 
   return (
     <QueryClientProvider client={queryClient}>
