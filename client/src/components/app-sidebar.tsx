@@ -28,6 +28,7 @@ import {
   Search,
   Users,
   LogOut,
+  Home,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -75,6 +76,11 @@ const contentItems = [
 ];
 
 const managementItems = [
+  {
+    title: "Homepage",
+    url: "/admin/homepage-promotions",
+    icon: Home,
+  },
   {
     title: "AI Generator",
     url: "/admin/ai-generator",

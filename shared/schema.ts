@@ -371,6 +371,20 @@ export const translations = pgTable("translations", {
   uniqueContentLocale: sql`UNIQUE (${table.contentId}, ${table.locale})`,
 }));
 
+// Homepage Promotions table - for curating homepage sections
+export const homepageSectionEnum = pgEnum("homepage_section", ["featured", "attractions", "hotels", "articles", "trending"]);
+
+export const homepagePromotions = pgTable("homepage_promotions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  section: homepageSectionEnum("section").notNull(),
+  contentId: varchar("content_id").references(() => contents.id, { onDelete: "cascade" }),
+  position: integer("position").default(0),
+  isActive: boolean("is_active").default(true),
+  customTitle: text("custom_title"),
+  customImage: text("custom_image"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({
   attraction: one(attractions, {
@@ -661,6 +675,14 @@ export const insertTranslationSchema = createInsertSchema(translations).omit({
 });
 export type InsertTranslation = z.infer<typeof insertTranslationSchema>;
 export type Translation = typeof translations.$inferSelect;
+
+export const insertHomepagePromotionSchema = createInsertSchema(homepagePromotions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertHomepagePromotion = z.infer<typeof insertHomepagePromotionSchema>;
+export type HomepagePromotion = typeof homepagePromotions.$inferSelect;
+export type HomepageSection = "featured" | "attractions" | "hotels" | "articles" | "trending";
 
 export type Locale = "en" | "ar" | "zh" | "ru" | "de" | "fr" | "es" | "hi" | "ja" | "ko";
 export type TranslationStatus = "pending" | "in_progress" | "completed" | "needs_review";

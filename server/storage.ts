@@ -51,6 +51,10 @@ import {
   type InsertTranslation,
   type ContentFingerprint,
   type InsertContentFingerprint,
+  type HomepagePromotion,
+  type InsertHomepagePromotion,
+  type HomepageSection,
+  homepagePromotions,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -156,6 +160,13 @@ export interface IStorage {
 
   getScheduledContentToPublish(): Promise<Content[]>;
   publishScheduledContent(id: string): Promise<Content | undefined>;
+
+  getHomepagePromotionsBySection(section: HomepageSection): Promise<HomepagePromotion[]>;
+  getHomepagePromotion(id: string): Promise<HomepagePromotion | undefined>;
+  createHomepagePromotion(promotion: InsertHomepagePromotion): Promise<HomepagePromotion>;
+  updateHomepagePromotion(id: string, data: Partial<InsertHomepagePromotion>): Promise<HomepagePromotion | undefined>;
+  deleteHomepagePromotion(id: string): Promise<boolean>;
+  reorderHomepagePromotions(section: HomepageSection, orderedIds: string[]): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -762,6 +773,48 @@ export class DatabaseStorage implements IStorage {
       .where(eq(contents.id, id))
       .returning();
     return content;
+  }
+
+  async getHomepagePromotionsBySection(section: HomepageSection): Promise<HomepagePromotion[]> {
+    return await db
+      .select()
+      .from(homepagePromotions)
+      .where(eq(homepagePromotions.section, section))
+      .orderBy(homepagePromotions.position);
+  }
+
+  async getHomepagePromotion(id: string): Promise<HomepagePromotion | undefined> {
+    const [promotion] = await db.select().from(homepagePromotions).where(eq(homepagePromotions.id, id));
+    return promotion;
+  }
+
+  async createHomepagePromotion(insertPromotion: InsertHomepagePromotion): Promise<HomepagePromotion> {
+    const [promotion] = await db.insert(homepagePromotions).values(insertPromotion).returning();
+    return promotion;
+  }
+
+  async updateHomepagePromotion(id: string, updateData: Partial<InsertHomepagePromotion>): Promise<HomepagePromotion | undefined> {
+    const [promotion] = await db
+      .update(homepagePromotions)
+      .set(updateData)
+      .where(eq(homepagePromotions.id, id))
+      .returning();
+    return promotion;
+  }
+
+  async deleteHomepagePromotion(id: string): Promise<boolean> {
+    await db.delete(homepagePromotions).where(eq(homepagePromotions.id, id));
+    return true;
+  }
+
+  async reorderHomepagePromotions(section: HomepageSection, orderedIds: string[]): Promise<boolean> {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db
+        .update(homepagePromotions)
+        .set({ position: i })
+        .where(and(eq(homepagePromotions.id, orderedIds[i]), eq(homepagePromotions.section, section)));
+    }
+    return true;
   }
 }
 

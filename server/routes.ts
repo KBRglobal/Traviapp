@@ -18,9 +18,11 @@ import {
   insertKeywordRepositorySchema,
   insertTranslationSchema,
   insertUserSchema,
+  insertHomepagePromotionSchema,
   ROLE_PERMISSIONS,
   SUPPORTED_LOCALES,
   type UserRole,
+  type HomepageSection,
 } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
@@ -1869,6 +1871,102 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  // Homepage Promotions Routes
+  app.get("/api/homepage-promotions/:section", async (req, res) => {
+    try {
+      const section = req.params.section as HomepageSection;
+      const validSections = ["featured", "attractions", "hotels", "articles", "trending"];
+      if (!validSections.includes(section)) {
+        return res.status(400).json({ error: "Invalid section" });
+      }
+      const promotions = await storage.getHomepagePromotionsBySection(section);
+      
+      // Fetch content details for each promotion
+      const promotionsWithContent = await Promise.all(
+        promotions.map(async (promo) => {
+          if (promo.contentId) {
+            const content = await storage.getContent(promo.contentId);
+            return { ...promo, content };
+          }
+          return promo;
+        })
+      );
+      
+      res.json(promotionsWithContent);
+    } catch (error) {
+      console.error("Error fetching homepage promotions:", error);
+      res.status(500).json({ error: "Failed to fetch homepage promotions" });
+    }
+  });
+
+  app.post("/api/homepage-promotions", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const parsed = insertHomepagePromotionSchema.parse(req.body);
+      const promotion = await storage.createHomepagePromotion(parsed);
+      res.status(201).json(promotion);
+    } catch (error) {
+      console.error("Error creating homepage promotion:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation error", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create homepage promotion" });
+    }
+  });
+
+  app.patch("/api/homepage-promotions/:id", requirePermission("canEdit"), async (req, res) => {
+    try {
+      // Validate update payload - only allow specific fields
+      const updateSchema = z.object({
+        isActive: z.boolean().optional(),
+        position: z.number().int().min(0).optional(),
+        customTitle: z.string().nullable().optional(),
+        customImage: z.string().nullable().optional(),
+      });
+      const parsed = updateSchema.parse(req.body);
+      
+      const promotion = await storage.updateHomepagePromotion(req.params.id, parsed);
+      if (!promotion) {
+        return res.status(404).json({ error: "Homepage promotion not found" });
+      }
+      res.json(promotion);
+    } catch (error) {
+      console.error("Error updating homepage promotion:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation error", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update homepage promotion" });
+    }
+  });
+
+  app.delete("/api/homepage-promotions/:id", requirePermission("canEdit"), async (req, res) => {
+    try {
+      await storage.deleteHomepagePromotion(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting homepage promotion:", error);
+      res.status(500).json({ error: "Failed to delete homepage promotion" });
+    }
+  });
+
+  app.post("/api/homepage-promotions/reorder", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const reorderSchema = z.object({
+        section: z.enum(["featured", "attractions", "hotels", "articles", "trending"]),
+        orderedIds: z.array(z.string().uuid()),
+      });
+      const { section, orderedIds } = reorderSchema.parse(req.body);
+      
+      await storage.reorderHomepagePromotions(section, orderedIds);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reordering homepage promotions:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation error", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to reorder homepage promotions" });
     }
   });
 
