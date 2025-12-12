@@ -66,8 +66,10 @@ import {
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
   getUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
+  createUserWithPassword(userData: { username: string; passwordHash: string; firstName?: string; lastName?: string; email?: string; role?: "admin" | "editor" | "author" | "contributor" | "viewer"; isActive?: boolean }): Promise<User>;
   updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
   upsertUser(user: UpsertUser): Promise<User>;
@@ -212,6 +214,24 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(sql`LOWER(${users.email}) = LOWER(${email})`);
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(sql`LOWER(${users.username}) = LOWER(${username})`);
+    return user;
+  }
+
+  async createUserWithPassword(userData: { username: string; passwordHash: string; firstName?: string; lastName?: string; email?: string; role?: "admin" | "editor" | "author" | "contributor" | "viewer"; isActive?: boolean }): Promise<User> {
+    const [user] = await db.insert(users).values({
+      username: userData.username,
+      passwordHash: userData.passwordHash,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      email: userData.email,
+      role: userData.role || "editor",
+      isActive: userData.isActive !== false,
+    }).returning();
     return user;
   }
 

@@ -6,6 +6,7 @@ import { Client } from "@replit/object-storage";
 import OpenAI from "openai";
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
+import bcrypt from "bcrypt";
 import {
   insertContentSchema,
   insertAttractionSchema,
@@ -347,6 +348,85 @@ export async function registerRoutes(
   
   // Setup Replit Auth
   await setupAuth(app);
+  
+  // Hardcoded admin credentials
+  const ADMIN_USERNAME = "admin";
+  const ADMIN_PASSWORD = "tRa\\/!m0z!nev0";
+  
+  // Username/password login endpoint
+  app.post('/api/auth/login', async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+      
+      // Check for hardcoded admin first
+      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+        // Find or create admin user
+        let adminUser = await storage.getUserByUsername(username);
+        if (!adminUser) {
+          const hashedPassword = await bcrypt.hash(password, 10);
+          adminUser = await storage.createUserWithPassword({
+            username: ADMIN_USERNAME,
+            passwordHash: hashedPassword,
+            firstName: "Admin",
+            lastName: "User",
+            role: "admin",
+            isActive: true,
+          });
+        }
+        
+        // Set up session
+        const sessionUser = {
+          claims: { sub: adminUser.id },
+          id: adminUser.id,
+        };
+        
+        req.login(sessionUser, (err: any) => {
+          if (err) {
+            console.error("Login session error:", err);
+            return res.status(500).json({ error: "Failed to create session" });
+          }
+          res.json({ success: true, user: adminUser });
+        });
+        return;
+      }
+      
+      // Check database for user
+      const user = await storage.getUserByUsername(username);
+      if (!user || !user.passwordHash) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+      
+      if (!user.isActive) {
+        return res.status(401).json({ error: "Account is deactivated" });
+      }
+      
+      const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+      
+      // Set up session
+      const sessionUser = {
+        claims: { sub: user.id },
+        id: user.id,
+      };
+      
+      req.login(sessionUser, (err: any) => {
+        if (err) {
+          console.error("Login session error:", err);
+          return res.status(500).json({ error: "Failed to create session" });
+        }
+        res.json({ success: true, user });
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
   
   // Get current authenticated user
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
