@@ -21,6 +21,7 @@ import PublicTransport from "@/pages/public-transport";
 import PublicSearch from "@/pages/public-search";
 import PublicContentDetail from "@/pages/public-content-detail";
 import PublicArticle from "@/pages/public-article";
+import PublicAttraction from "@/pages/public-attraction";
 import PublicCurrency from "@/pages/public-currency";
 import PublicBudget from "@/pages/public-budget";
 import PublicEvents from "@/pages/public-events";
@@ -150,7 +151,7 @@ function App() {
             <Route path="/hotels" component={PublicHotels} />
             <Route path="/hotels/:slug" component={PublicContentDetail} />
             <Route path="/attractions" component={PublicAttractions} />
-            <Route path="/attractions/:slug" component={PublicContentDetail} />
+            <Route path="/attractions/:slug" component={PublicAttraction} />
             <Route path="/articles" component={PublicArticles} />
             <Route path="/articles/:slug" component={PublicArticle} />
             <Route path="/dining" component={PublicDining} />

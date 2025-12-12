@@ -157,11 +157,16 @@ export const attractions = pgTable("attractions", {
   duration: text("duration"),
   targetAudience: jsonb("target_audience").$type<string[]>().default([]),
   primaryCta: text("primary_cta"),
+  introText: text("intro_text"),
+  expandedIntroText: text("expanded_intro_text"),
   quickInfoBar: jsonb("quick_info_bar").$type<QuickInfoItem[]>().default([]),
   highlights: jsonb("highlights").$type<HighlightItem[]>().default([]),
   ticketInfo: jsonb("ticket_info").$type<TicketInfoItem[]>().default([]),
   essentialInfo: jsonb("essential_info").$type<EssentialInfoItem[]>().default([]),
   visitorTips: jsonb("visitor_tips").$type<string[]>().default([]),
+  gallery: jsonb("gallery").$type<GalleryImage[]>().default([]),
+  experienceSteps: jsonb("experience_steps").$type<ExperienceItem[]>().default([]),
+  insiderTips: jsonb("insider_tips").$type<string[]>().default([]),
   faq: jsonb("faq").$type<FaqItem[]>().default([]),
   relatedAttractions: jsonb("related_attractions").$type<RelatedItem[]>().default([]),
   trustSignals: jsonb("trust_signals").$type<string[]>().default([]),
@@ -660,6 +665,12 @@ export interface ItineraryDay {
   title: string;
   description: string;
   activities: { time: string; activity: string; location?: string }[];
+}
+
+export interface ExperienceItem {
+  icon: string;
+  title: string;
+  description: string;
 }
 
 // Insert schemas
