@@ -2700,7 +2700,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   app.get("/api/users", requirePermission("canManageUsers"), async (req, res) => {
     try {
       const users = await storage.getUsers();
-      res.json(users.map(u => ({ id: u.id, firstName: u.firstName, lastName: u.lastName, email: u.email, role: u.role, isActive: u.isActive, createdAt: u.createdAt, profileImageUrl: u.profileImageUrl })));
+      res.json(users.map(u => ({ id: u.id, username: u.username, firstName: u.firstName, lastName: u.lastName, email: u.email, role: u.role, isActive: u.isActive, createdAt: u.createdAt, profileImageUrl: u.profileImageUrl })));
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ error: "Failed to fetch users" });
@@ -2709,16 +2709,49 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
 
   app.post("/api/users", requirePermission("canManageUsers"), async (req, res) => {
     try {
-      const parsed = insertUserSchema.parse(req.body);
-      if (!parsed.email) {
-        return res.status(400).json({ error: "Email is required" });
+      const { username, password, firstName, lastName, email, role } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
       }
-      const existingUser = await storage.getUserByEmail(parsed.email.toLowerCase());
+      
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+      
+      const existingUser = await storage.getUserByUsername(username.toLowerCase());
       if (existingUser) {
-        return res.status(400).json({ error: "A user with this email already exists" });
+        return res.status(400).json({ error: "A user with this username already exists" });
       }
-      const user = await storage.createUser({ ...parsed, email: parsed.email.toLowerCase() });
-      res.status(201).json({ id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, isActive: user.isActive, createdAt: user.createdAt });
+      
+      if (email) {
+        const existingEmail = await storage.getUserByEmail(email.toLowerCase());
+        if (existingEmail) {
+          return res.status(400).json({ error: "A user with this email already exists" });
+        }
+      }
+      
+      const passwordHash = await bcrypt.hash(password, 10);
+      const user = await storage.createUserWithPassword({
+        username: username.toLowerCase(),
+        passwordHash,
+        firstName,
+        lastName,
+        email: email?.toLowerCase(),
+        role: role || "editor",
+        isActive: true,
+      });
+      
+      res.status(201).json({ 
+        id: user.id, 
+        username: user.username,
+        firstName: user.firstName, 
+        lastName: user.lastName, 
+        email: user.email, 
+        role: user.role, 
+        isActive: user.isActive, 
+        createdAt: user.createdAt 
+      });
     } catch (error) {
       console.error("Error creating user:", error);
       if (error instanceof z.ZodError) {
@@ -2731,7 +2764,17 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   app.patch("/api/users/:id", requirePermission("canManageUsers"), async (req, res) => {
     try {
       const existingUser = await storage.getUser(req.params.id);
-      const user = await storage.updateUser(req.params.id, req.body);
+      
+      // Handle password change separately
+      const { password, ...updateData } = req.body;
+      if (password) {
+        if (password.length < 8) {
+          return res.status(400).json({ error: "Password must be at least 8 characters" });
+        }
+        updateData.passwordHash = await bcrypt.hash(password, 10);
+      }
+      
+      const user = await storage.updateUser(req.params.id, updateData);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -2740,13 +2783,13 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const actionType = existingUser?.role !== user.role ? "role_change" : "user_update";
       await logAuditEvent(req, actionType, "user", req.params.id,
         actionType === "role_change" 
-          ? `Role changed for ${user.email}: ${existingUser?.role} -> ${user.role}`
-          : `Updated user: ${user.email}`,
-        { email: existingUser?.email, role: existingUser?.role, isActive: existingUser?.isActive },
-        { email: user.email, role: user.role, isActive: user.isActive }
+          ? `Role changed for ${user.username || user.email}: ${existingUser?.role} -> ${user.role}`
+          : `Updated user: ${user.username || user.email}`,
+        { username: existingUser?.username, email: existingUser?.email, role: existingUser?.role, isActive: existingUser?.isActive },
+        { username: user.username, email: user.email, role: user.role, isActive: user.isActive }
       );
       
-      res.json({ id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, isActive: user.isActive, createdAt: user.createdAt });
+      res.json({ id: user.id, username: user.username, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, isActive: user.isActive, createdAt: user.createdAt });
     } catch (error) {
       console.error("Error updating user:", error);
       res.status(500).json({ error: "Failed to update user" });
