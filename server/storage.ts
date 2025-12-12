@@ -18,6 +18,7 @@ import {
   translations,
   contentFingerprints,
   contentViews,
+  auditLogs,
   type User,
   type InsertUser,
   type UpsertUser,
@@ -57,6 +58,8 @@ import {
   type HomepageSection,
   type ContentView,
   type InsertContentView,
+  type AuditLog,
+  type InsertAuditLog,
   homepagePromotions,
 } from "@shared/schema";
 
@@ -182,6 +185,23 @@ export interface IStorage {
   getTopContent(limit: number): Promise<{ id: string; title: string; type: string; viewCount: number }[]>;
   getViewsByContentType(): Promise<{ type: string; views: number }[]>;
   recordContentView(contentId: string, data?: { userAgent?: string; referrer?: string; sessionId?: string }): Promise<void>;
+
+  // Audit Logs
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(filters?: { 
+    userId?: string; 
+    entityType?: string; 
+    entityId?: string; 
+    actionType?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<AuditLog[]>;
+  getAuditLogCount(filters?: { 
+    userId?: string; 
+    entityType?: string; 
+    entityId?: string; 
+    actionType?: string;
+  }): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -970,6 +990,83 @@ export class DatabaseStorage implements IStorage {
         .set({ viewCount: sql`COALESCE(${contents.viewCount}, 0) + 1` })
         .where(eq(contents.id, contentId));
     });
+  }
+
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [auditLog] = await db.insert(auditLogs).values(log).returning();
+    return auditLog;
+  }
+
+  async getAuditLogs(filters?: { 
+    userId?: string; 
+    entityType?: string; 
+    entityId?: string; 
+    actionType?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<AuditLog[]> {
+    const conditions = [];
+    if (filters?.userId) {
+      conditions.push(eq(auditLogs.userId, filters.userId));
+    }
+    if (filters?.entityType) {
+      conditions.push(eq(auditLogs.entityType, filters.entityType as any));
+    }
+    if (filters?.entityId) {
+      conditions.push(eq(auditLogs.entityId, filters.entityId));
+    }
+    if (filters?.actionType) {
+      conditions.push(eq(auditLogs.actionType, filters.actionType as any));
+    }
+
+    const query = db.select().from(auditLogs);
+    
+    if (conditions.length > 0) {
+      return await query
+        .where(and(...conditions))
+        .orderBy(desc(auditLogs.timestamp))
+        .limit(filters?.limit || 100)
+        .offset(filters?.offset || 0);
+    }
+    
+    return await query
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(filters?.limit || 100)
+      .offset(filters?.offset || 0);
+  }
+
+  async getAuditLogCount(filters?: { 
+    userId?: string; 
+    entityType?: string; 
+    entityId?: string; 
+    actionType?: string;
+  }): Promise<number> {
+    const conditions = [];
+    if (filters?.userId) {
+      conditions.push(eq(auditLogs.userId, filters.userId));
+    }
+    if (filters?.entityType) {
+      conditions.push(eq(auditLogs.entityType, filters.entityType as any));
+    }
+    if (filters?.entityId) {
+      conditions.push(eq(auditLogs.entityId, filters.entityId));
+    }
+    if (filters?.actionType) {
+      conditions.push(eq(auditLogs.actionType, filters.actionType as any));
+    }
+
+    if (conditions.length > 0) {
+      const result = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(auditLogs)
+        .where(and(...conditions));
+      return result[0]?.count || 0;
+    }
+    
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(auditLogs);
+    return result[0]?.count || 0;
   }
 }
 

@@ -8,40 +8,88 @@ import { relations } from "drizzle-orm";
 export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport", "event", "itinerary"]);
 export const contentStatusEnum = pgEnum("content_status", ["draft", "in_review", "approved", "scheduled", "published"]);
 export const articleCategoryEnum = pgEnum("article_category", ["attractions", "hotels", "food", "transport", "events", "tips", "news", "shopping"]);
-export const userRoleEnum = pgEnum("user_role", ["admin", "editor", "viewer"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "editor", "author", "contributor", "viewer"]);
 
 // Role-based permissions
 export const ROLE_PERMISSIONS = {
   admin: {
     canCreate: true,
     canEdit: true,
+    canEditOwn: true,
     canDelete: true,
     canPublish: true,
+    canSubmitForReview: true,
     canManageUsers: true,
     canManageSettings: true,
+    canViewAnalytics: true,
+    canViewAuditLogs: true,
+    canAccessMediaLibrary: true,
+    canAccessAffiliates: true,
     canViewAll: true,
   },
   editor: {
     canCreate: true,
     canEdit: true,
+    canEditOwn: true,
     canDelete: false,
-    canPublish: false,
+    canPublish: true,
+    canSubmitForReview: true,
     canManageUsers: false,
     canManageSettings: false,
+    canViewAnalytics: true,
+    canViewAuditLogs: false,
+    canAccessMediaLibrary: true,
+    canAccessAffiliates: true,
     canViewAll: true,
+  },
+  author: {
+    canCreate: true,
+    canEdit: false,
+    canEditOwn: true,
+    canDelete: false,
+    canPublish: false,
+    canSubmitForReview: true,
+    canManageUsers: false,
+    canManageSettings: false,
+    canViewAnalytics: false,
+    canViewAuditLogs: false,
+    canAccessMediaLibrary: false,
+    canAccessAffiliates: false,
+    canViewAll: false,
+  },
+  contributor: {
+    canCreate: true,
+    canEdit: false,
+    canEditOwn: true,
+    canDelete: false,
+    canPublish: false,
+    canSubmitForReview: true,
+    canManageUsers: false,
+    canManageSettings: false,
+    canViewAnalytics: false,
+    canViewAuditLogs: false,
+    canAccessMediaLibrary: false,
+    canAccessAffiliates: false,
+    canViewAll: false,
   },
   viewer: {
     canCreate: false,
     canEdit: false,
+    canEditOwn: false,
     canDelete: false,
     canPublish: false,
+    canSubmitForReview: false,
     canManageUsers: false,
     canManageSettings: false,
+    canViewAnalytics: false,
+    canViewAuditLogs: false,
+    canAccessMediaLibrary: false,
+    canAccessAffiliates: false,
     canViewAll: true,
   },
 } as const;
 
-export type UserRole = "admin" | "editor" | "viewer";
+export type UserRole = "admin" | "editor" | "author" | "contributor" | "viewer";
 export type RolePermissions = typeof ROLE_PERMISSIONS[UserRole];
 
 // Session storage table for Replit Auth
@@ -400,6 +448,50 @@ export const contentViews = pgTable("content_views", {
   country: varchar("country"),
   city: varchar("city"),
 });
+
+// Audit action type enum
+export const auditActionTypeEnum = pgEnum("audit_action_type", [
+  "create", "update", "delete", "publish", "unpublish", 
+  "submit_for_review", "approve", "reject", "login", "logout",
+  "user_create", "user_update", "user_delete", "role_change",
+  "settings_change", "media_upload", "media_delete"
+]);
+
+// Audit entity type enum
+export const auditEntityTypeEnum = pgEnum("audit_entity_type", [
+  "content", "user", "media", "settings", "rss_feed", 
+  "affiliate_link", "translation", "session"
+]);
+
+// Audit Logs table - immutable append-only logging
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  userName: text("user_name"),
+  userRole: text("user_role"),
+  actionType: auditActionTypeEnum("action_type").notNull(),
+  entityType: auditEntityTypeEnum("entity_type").notNull(),
+  entityId: varchar("entity_id"),
+  description: text("description").notNull(),
+  beforeState: jsonb("before_state").$type<Record<string, unknown>>(),
+  afterState: jsonb("after_state").$type<Record<string, unknown>>(),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+}, (table) => [
+  index("IDX_audit_logs_timestamp").on(table.timestamp),
+  index("IDX_audit_logs_user_id").on(table.userId),
+  index("IDX_audit_logs_entity").on(table.entityType, table.entityId),
+]);
+
+// Audit log insert schema and types
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
 
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({
