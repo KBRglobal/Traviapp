@@ -20,6 +20,9 @@ import TermsConditions from "@/pages/terms-conditions";
 import Dashboard from "@/pages/dashboard";
 import Attractions from "@/pages/attractions";
 import Hotels from "@/pages/hotels";
+import Dining from "@/pages/dining";
+import Districts from "@/pages/districts";
+import Transport from "@/pages/transport";
 import Articles from "@/pages/articles";
 import ContentEditor from "@/pages/content-editor";
 import RssFeeds from "@/pages/rss-feeds";
@@ -38,6 +41,15 @@ function AdminRouter() {
       <Route path="/admin/hotels" component={Hotels} />
       <Route path="/admin/hotels/new" component={ContentEditor} />
       <Route path="/admin/hotels/:id" component={ContentEditor} />
+      <Route path="/admin/dining" component={Dining} />
+      <Route path="/admin/dining/new" component={ContentEditor} />
+      <Route path="/admin/dining/:id" component={ContentEditor} />
+      <Route path="/admin/districts" component={Districts} />
+      <Route path="/admin/districts/new" component={ContentEditor} />
+      <Route path="/admin/districts/:id" component={ContentEditor} />
+      <Route path="/admin/transport" component={Transport} />
+      <Route path="/admin/transport/new" component={ContentEditor} />
+      <Route path="/admin/transport/:id" component={ContentEditor} />
       <Route path="/admin/articles" component={Articles} />
       <Route path="/admin/articles/new" component={ContentEditor} />
       <Route path="/admin/articles/:id" component={ContentEditor} />

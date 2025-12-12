@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Building2, FileText } from "lucide-react";
+import { MapPin, Building2, FileText, UtensilsCrossed, Map, Train } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type ContentType = "attraction" | "hotel" | "article";
+type ContentType = "attraction" | "hotel" | "article" | "dining" | "district" | "transport";
 
 interface ContentTypeBadgeProps {
   type: ContentType;
@@ -24,6 +24,21 @@ const typeConfig: Record<ContentType, { label: string; icon: typeof MapPin; clas
     label: "Article",
     icon: FileText,
     className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  },
+  dining: {
+    label: "Dining",
+    icon: UtensilsCrossed,
+    className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  },
+  district: {
+    label: "District",
+    icon: Map,
+    className: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  },
+  transport: {
+    label: "Transport",
+    icon: Train,
+    className: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
   },
 };
 

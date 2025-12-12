@@ -26,11 +26,14 @@ import {
   FileText,
   Filter,
   X,
+  UtensilsCrossed,
+  Map,
+  Train,
 } from "lucide-react";
 import type { ContentWithRelations } from "@shared/schema";
 
 interface ContentListProps {
-  type: "attraction" | "hotel" | "article";
+  type: "attraction" | "hotel" | "article" | "dining" | "district" | "transport";
 }
 
 const typeConfig = {
@@ -38,22 +41,43 @@ const typeConfig = {
     title: "Attractions",
     singular: "Attraction",
     icon: MapPin,
-    newPath: "/attractions/new",
+    basePath: "/admin/attractions",
     wordTarget: "~1950 words",
   },
   hotel: {
     title: "Hotels",
     singular: "Hotel",
     icon: Building2,
-    newPath: "/hotels/new",
+    basePath: "/admin/hotels",
     wordTarget: "~3000 words",
   },
   article: {
     title: "Articles",
     singular: "Article",
     icon: FileText,
-    newPath: "/articles/new",
+    basePath: "/admin/articles",
     wordTarget: "~1200-2000 words",
+  },
+  dining: {
+    title: "Dining",
+    singular: "Restaurant",
+    icon: UtensilsCrossed,
+    basePath: "/admin/dining",
+    wordTarget: "~1500 words",
+  },
+  district: {
+    title: "Districts",
+    singular: "District",
+    icon: Map,
+    basePath: "/admin/districts",
+    wordTarget: "~2000 words",
+  },
+  transport: {
+    title: "Transport",
+    singular: "Transport",
+    icon: Train,
+    basePath: "/admin/transport",
+    wordTarget: "~1200 words",
   },
 };
 
@@ -75,7 +99,7 @@ export default function ContentList({ type }: ContentListProps) {
       await apiRequest("DELETE", `/api/contents/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${type}`] });
       toast({
         title: "Content deleted",
         description: "The content has been deleted successfully.",
@@ -134,11 +158,11 @@ export default function ContentList({ type }: ContentListProps) {
   const actions: Action<ContentWithRelations>[] = [
     {
       label: "Edit",
-      onClick: (item) => navigate(`/${type}s/${item.id}`),
+      onClick: (item) => navigate(`${config.basePath}/${item.id}`),
     },
     {
       label: "Preview",
-      onClick: (item) => navigate(`/${type}s/${item.id}/preview`),
+      onClick: (item) => window.open(`/${type === "district" ? "districts" : type === "dining" ? "dining" : type === "transport" ? "transport" : type + "s"}/${item.slug}`, "_blank"),
     },
     {
       label: "Delete",
@@ -167,7 +191,7 @@ export default function ContentList({ type }: ContentListProps) {
             Manage your {config.title.toLowerCase()} pages ({config.wordTarget})
           </p>
         </div>
-        <Link href={config.newPath}>
+        <Link href={`${config.basePath}/new`}>
           <Button data-testid={`button-new-${type}`}>
             <Plus className="h-4 w-4 mr-2" />
             New {config.singular}
@@ -236,7 +260,7 @@ export default function ContentList({ type }: ContentListProps) {
                   : `Create your first ${config.singular.toLowerCase()} to get started`
               }
               actionLabel={hasFilters ? "Clear filters" : `Create ${config.singular}`}
-              onAction={hasFilters ? handleClearFilters : () => navigate(config.newPath)}
+              onAction={hasFilters ? handleClearFilters : () => navigate(`${config.basePath}/new`)}
             />
           ) : (
             <DataTable

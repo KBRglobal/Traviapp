@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearch } from "wouter";
-import { Search, ArrowLeft, Star, MapPin, Building2, Mountain, BookOpen } from "lucide-react";
+import { Search, ArrowLeft, Star, MapPin, Building2, Mountain, BookOpen, UtensilsCrossed, Map, Train } from "lucide-react";
 import type { Content } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop",
@@ -19,14 +19,26 @@ function getTypeIcon(type: string) {
     case 'hotel': return Building2;
     case 'attraction': return Mountain;
     case 'article': return BookOpen;
+    case 'dining': return UtensilsCrossed;
+    case 'district': return Map;
+    case 'transport': return Train;
     default: return MapPin;
+  }
+}
+
+function getContentPath(type: string, slug: string) {
+  switch (type) {
+    case 'dining': return `/dining/${slug}`;
+    case 'district': return `/districts/${slug}`;
+    case 'transport': return `/transport/${slug}`;
+    default: return `/${type}s/${slug}`;
   }
 }
 
 function SearchResultCard({ content, index }: { content: Content; index: number }) {
   const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
   const TypeIcon = getTypeIcon(content.type);
-  const contentPath = `/${content.type}s/${content.slug}`;
+  const contentPath = getContentPath(content.type, content.slug);
   
   return (
     <Link href={contentPath}>
@@ -102,9 +114,12 @@ export default function PublicSearch() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Logo variant="primary" height={28} />
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-6">
               <Link href="/hotels" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Hotels</Link>
               <Link href="/attractions" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Attractions</Link>
+              <Link href="/dining" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Dining</Link>
+              <Link href="/districts" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Districts</Link>
+              <Link href="/transport" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Transport</Link>
               <Link href="/articles" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Articles</Link>
             </div>
             <Link href="/admin">
@@ -129,7 +144,7 @@ export default function PublicSearch() {
             <Search className="w-5 h-5 text-muted-foreground ml-3" />
             <input
               type="text"
-              placeholder="Search hotels, attractions, articles..."
+              placeholder="Search hotels, attractions, dining, districts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 bg-transparent outline-none py-2 text-foreground"

@@ -21,7 +21,29 @@ export default function PublicContentDetail() {
 
   const content = allContent?.find(c => c.slug === slug);
   const contentType = content?.type || 'attraction';
-  const backLink = `/${contentType}s`;
+  
+  function getBackLink(type: string) {
+    switch (type) {
+      case 'dining': return '/dining';
+      case 'district': return '/districts';
+      case 'transport': return '/transport';
+      default: return `/${type}s`;
+    }
+  }
+  
+  function getTypeLabel(type: string) {
+    switch (type) {
+      case 'dining': return 'Dining';
+      case 'district': return 'Districts';
+      case 'transport': return 'Transport';
+      case 'hotel': return 'Hotels';
+      case 'attraction': return 'Attractions';
+      case 'article': return 'Articles';
+      default: return type;
+    }
+  }
+  
+  const backLink = getBackLink(contentType);
   const imageUrl = content?.heroImage || defaultPlaceholderImages[0];
 
   if (isLoading) {
@@ -80,9 +102,12 @@ export default function PublicContentDetail() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Logo variant="primary" height={28} />
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-6">
               <Link href="/hotels" className={`font-medium transition-colors ${contentType === 'hotel' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Hotels</Link>
               <Link href="/attractions" className={`font-medium transition-colors ${contentType === 'attraction' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Attractions</Link>
+              <Link href="/dining" className={`font-medium transition-colors ${contentType === 'dining' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Dining</Link>
+              <Link href="/districts" className={`font-medium transition-colors ${contentType === 'district' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Districts</Link>
+              <Link href="/transport" className={`font-medium transition-colors ${contentType === 'transport' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Transport</Link>
               <Link href="/articles" className={`font-medium transition-colors ${contentType === 'article' ? 'text-[#6443f4]' : 'text-foreground/80 hover:text-[#6443f4]'}`}>Articles</Link>
             </div>
             <Link href="/admin">
@@ -96,7 +121,7 @@ export default function PublicContentDetail() {
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link href={backLink} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" />
-          Back to {contentType}s
+          Back to {getTypeLabel(contentType)}
         </Link>
 
         {/* Hero Image */}

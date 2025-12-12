@@ -21,6 +21,9 @@ import {
   Image,
   Settings,
   Plane,
+  UtensilsCrossed,
+  Map,
+  Train,
 } from "lucide-react";
 
 const contentItems = [
@@ -38,6 +41,21 @@ const contentItems = [
     title: "Hotels",
     url: "/admin/hotels",
     icon: Building2,
+  },
+  {
+    title: "Dining",
+    url: "/admin/dining",
+    icon: UtensilsCrossed,
+  },
+  {
+    title: "Districts",
+    url: "/admin/districts",
+    icon: Map,
+  },
+  {
+    title: "Transport",
+    url: "/admin/transport",
+    icon: Train,
   },
   {
     title: "Articles",
