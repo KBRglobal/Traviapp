@@ -12,6 +12,8 @@ import PublicAttractions from "@/pages/public-attractions";
 import PublicArticles from "@/pages/public-articles";
 import PublicSearch from "@/pages/public-search";
 import PublicContentDetail from "@/pages/public-content-detail";
+import PrivacyPolicy from "@/pages/privacy-policy";
+import TermsConditions from "@/pages/terms-conditions";
 import Dashboard from "@/pages/dashboard";
 import Attractions from "@/pages/attractions";
 import Hotels from "@/pages/hotels";
@@ -88,6 +90,8 @@ function App() {
             <Route path="/articles" component={PublicArticles} />
             <Route path="/articles/:slug" component={PublicContentDetail} />
             <Route path="/search" component={PublicSearch} />
+            <Route path="/privacy" component={PrivacyPolicy} />
+            <Route path="/terms" component={TermsConditions} />
             <Route component={NotFound} />
           </Switch>
         )}

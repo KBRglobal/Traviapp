@@ -1,10 +1,11 @@
-import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, ArrowRight, Sparkles, Menu, MapPin, Star, Clock, ChevronRight, X, Plane } from "lucide-react";
+import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, ArrowRight, Sparkles, Menu, MapPin, Star, Clock, ChevronRight, X } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import type { Content } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Logo } from "@/components/logo";
 
 const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop",
@@ -29,16 +30,6 @@ const stats = [
   { value: "4.9", label: "User Rating" },
 ];
 
-function TextLogo({ className = "", inverted = false }: { className?: string; inverted?: boolean }) {
-  return (
-    <Link href="/" className={`flex items-center gap-2 ${className}`}>
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${inverted ? 'bg-white' : 'bg-[#6443f4]'}`}>
-        <Plane className={`w-5 h-5 ${inverted ? 'text-[#6443f4]' : 'text-white'}`} />
-      </div>
-      <span className={`text-xl font-bold ${inverted ? 'text-white' : 'text-[#6443f4]'}`}>TRAVI</span>
-    </Link>
-  );
-}
 
 function ContentCard({ content, index }: { content: Content; index: number }) {
   const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
@@ -165,7 +156,7 @@ export default function PublicHome() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b" data-testid="nav-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <TextLogo />
+            <Logo variant="primary" height={28} />
 
             {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-8">
@@ -408,12 +399,13 @@ export default function PublicHome() {
       <footer className="py-12 bg-[#1a1a2e] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <TextLogo inverted />
-            <div className="flex items-center gap-6 text-white/60 text-sm">
+            <Logo variant="dark-bg" height={28} />
+            <div className="flex flex-wrap items-center justify-center gap-6 text-white/60 text-sm">
               <Link href="/hotels" className="hover:text-white transition-colors">Hotels</Link>
               <Link href="/attractions" className="hover:text-white transition-colors">Attractions</Link>
               <Link href="/articles" className="hover:text-white transition-colors">Articles</Link>
-              <Link href="/admin" className="hover:text-white transition-colors">Admin</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             </div>
             <p className="text-white/40 text-sm">
               2024 Travi. All rights reserved.
