@@ -48,14 +48,14 @@ const categoryLabels: Record<string, string> = {
 };
 
 const categoryColors: Record<string, string> = {
-  attractions: "bg-emerald-600",
-  hotels: "bg-blue-600",
-  food: "bg-orange-600",
-  transport: "bg-purple-600",
-  events: "bg-pink-600",
-  tips: "bg-cyan-600",
-  news: "bg-red-600",
-  shopping: "bg-amber-600",
+  attractions: "bg-[#01BEFF]",
+  hotels: "bg-[#FF9327]",
+  food: "bg-[#F94498]",
+  transport: "bg-[#6443F4]",
+  events: "bg-[#F94498]",
+  tips: "bg-[#02A65C]",
+  news: "bg-[#6443F4]",
+  shopping: "bg-[#FF9327]",
 };
 
 const placeholderArticles = [
@@ -138,13 +138,13 @@ function BreakingNewsTicker() {
   const tickerRef = useRef<HTMLDivElement>(null);
   
   return (
-    <div className="bg-red-600 text-white py-2 overflow-hidden">
+    <div className="bg-[#6443F4] text-white py-2 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 flex items-center gap-4">
         <div className="flex items-center gap-2 shrink-0">
           <span className="animate-pulse">
             <Bell className="w-4 h-4" />
           </span>
-          <Badge className="bg-white text-red-600 border-0 font-bold text-xs">
+          <Badge className="bg-white text-[#6443F4] border-0 font-bold text-xs">
             BREAKING
           </Badge>
         </div>
@@ -196,7 +196,7 @@ function HeroArticle({ article, getDate, getReadTime }: {
         
         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
           <div className="flex items-center gap-3 mb-4">
-            <Badge className={`${categoryColors[category] || 'bg-cyan-600'} text-white border-0`}>
+            <Badge className={`${categoryColors[category] || 'bg-[#01BEFF]'} text-white border-0`}>
               {categoryLabels[category] || 'News'}
             </Badge>
             <span className="text-white/70 text-sm flex items-center gap-1">
@@ -428,7 +428,7 @@ function ArticleGridCard({
         </div>
         <div className="p-4 md:p-5">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <Badge className={`${categoryColors[category] || 'bg-cyan-600'} text-white border-0 text-xs`}>
+            <Badge className={`${categoryColors[category] || 'bg-[#01BEFF]'} text-white border-0 text-xs`}>
               {categoryLabels[category] || 'Travel'}
             </Badge>
             <span className="text-muted-foreground text-xs">{date}</span>
@@ -688,7 +688,7 @@ export default function PublicArticles() {
         {/* Promotional Banner */}
         <section className="py-8" aria-label="Promotion">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 p-8 md:p-12">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#F94498] to-[#6443F4] p-8 md:p-12">
               <div className="absolute inset-0 opacity-10">
                 <div className="absolute inset-0" style={{
                   backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
@@ -706,7 +706,7 @@ export default function PublicArticles() {
                 </div>
                 <Button 
                   size="lg" 
-                  className="bg-white text-orange-600 border-white shrink-0"
+                  className="bg-white text-[#F94498] border-white shrink-0"
                   data-testid="button-promo-dsf"
                 >
                   Learn More <ArrowRight className="w-4 h-4 ml-2" />
