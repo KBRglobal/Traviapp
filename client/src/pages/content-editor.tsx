@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Save,
@@ -99,6 +100,7 @@ export default function ContentEditor() {
   const [, transportNewMatch] = useRoute("/admin/transport/new");
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { canPublish } = usePermissions();
 
   const isNew = !!(attractionNewMatch || hotelNewMatch || articleNewMatch || diningNewMatch || districtNewMatch || transportNewMatch);
   
@@ -503,14 +505,16 @@ export default function ContentEditor() {
             <Save className="h-4 w-4 mr-2" />
             Save Draft
           </Button>
-          <Button variant="outline" onClick={handlePublishNow} disabled={publishMutation.isPending} data-testid="button-publish-now">
-            {publishMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Zap className="h-4 w-4 mr-2" />
-            )}
-            {publishMutation.isPending ? "Publishing..." : "Publish Now"}
-          </Button>
+          {canPublish && (
+            <Button variant="outline" onClick={handlePublishNow} disabled={publishMutation.isPending} data-testid="button-publish-now">
+              {publishMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4 mr-2" />
+              )}
+              {publishMutation.isPending ? "Publishing..." : "Publish Now"}
+            </Button>
+          )}
           <Button onClick={() => { setStatus("in_review"); handleSave(); }} disabled={saveMutation.isPending} data-testid="button-submit-review">
             <Send className="h-4 w-4 mr-2" />
             Submit for Review

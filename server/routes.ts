@@ -696,6 +696,20 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Content not found" });
       }
 
+      // Check canPublish permission if changing status to published
+      if (req.body.status === "published" && existingContent.status !== "published") {
+        const user = req.user as any;
+        const dbUser = await storage.getUser(user?.claims?.sub);
+        const userRole: UserRole = dbUser?.role || "viewer";
+        if (!hasPermission(userRole, "canPublish")) {
+          return res.status(403).json({ 
+            error: "You don't have permission to publish content. Only administrators can publish.",
+            required: "canPublish",
+            currentRole: userRole 
+          });
+        }
+      }
+
       // Auto-create version before update
       const latestVersion = await storage.getLatestVersionNumber(req.params.id);
       await storage.createContentVersion({
