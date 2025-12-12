@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -14,10 +14,34 @@ import {
   insertMediaFileSchema,
   insertTopicBankSchema,
   insertKeywordRepositorySchema,
+  ROLE_PERMISSIONS,
+  type UserRole,
 } from "@shared/schema";
 import { z } from "zod";
 import * as fs from "fs";
 import * as path from "path";
+
+// Permission checking utilities
+type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
+
+function hasPermission(role: UserRole, permission: PermissionKey): boolean {
+  const permissions = ROLE_PERMISSIONS[role];
+  return permissions ? permissions[permission] : false;
+}
+
+function requirePermission(permission: PermissionKey) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const userRole = (req.headers["x-user-role"] as UserRole) || "viewer";
+    if (!hasPermission(userRole, permission)) {
+      return res.status(403).json({ 
+        error: "Permission denied", 
+        required: permission,
+        currentRole: userRole 
+      });
+    }
+    next();
+  };
+}
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -86,6 +110,21 @@ export async function registerRoutes(
   }
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
   
+  // Get current user role and permissions (from header for now, can be extended to session-based)
+  app.get("/api/user/permissions", (req, res) => {
+    const userRole = (req.headers["x-user-role"] as UserRole) || "viewer";
+    const permissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS.viewer;
+    res.json({ role: userRole, permissions });
+  });
+
+  // Get all available roles (admin only)
+  app.get("/api/roles", requirePermission("canManageUsers"), async (req, res) => {
+    res.json({
+      roles: ["admin", "editor", "viewer"],
+      permissions: ROLE_PERMISSIONS,
+    });
+  });
+
   app.get("/api/stats", async (req, res) => {
     try {
       const stats = await storage.getStats();
@@ -124,7 +163,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/contents", async (req, res) => {
+  app.post("/api/contents", requirePermission("canCreate"), async (req, res) => {
     try {
       const parsed = insertContentSchema.parse(req.body);
       const content = await storage.createContent(parsed);
@@ -156,7 +195,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/contents/:id", async (req, res) => {
+  app.patch("/api/contents/:id", requirePermission("canEdit"), async (req, res) => {
     try {
       const existingContent = await storage.getContent(req.params.id);
       if (!existingContent) {
@@ -223,7 +262,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/contents/:id", async (req, res) => {
+  app.delete("/api/contents/:id", requirePermission("canDelete"), async (req, res) => {
     try {
       await storage.deleteContent(req.params.id);
       res.status(204).send();

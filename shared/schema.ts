@@ -8,13 +8,48 @@ import { relations } from "drizzle-orm";
 export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport"]);
 export const contentStatusEnum = pgEnum("content_status", ["draft", "in_review", "approved", "scheduled", "published"]);
 export const articleCategoryEnum = pgEnum("article_category", ["attractions", "hotels", "food", "transport", "events", "tips", "news", "shopping"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "editor", "viewer"]);
+
+// Role-based permissions
+export const ROLE_PERMISSIONS = {
+  admin: {
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+    canPublish: true,
+    canManageUsers: true,
+    canManageSettings: true,
+    canViewAll: true,
+  },
+  editor: {
+    canCreate: true,
+    canEdit: true,
+    canDelete: false,
+    canPublish: false,
+    canManageUsers: false,
+    canManageSettings: false,
+    canViewAll: true,
+  },
+  viewer: {
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+    canPublish: false,
+    canManageUsers: false,
+    canManageSettings: false,
+    canViewAll: true,
+  },
+} as const;
+
+export type UserRole = "admin" | "editor" | "viewer";
+export type RolePermissions = typeof ROLE_PERMISSIONS[UserRole];
 
 // Users table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("editor"),
+  role: userRoleEnum("role").notNull().default("editor"),
 });
 
 // Content table - base table for all content types
