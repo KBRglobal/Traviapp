@@ -582,10 +582,50 @@ export async function registerRoutes(
     }
   });
 
+  // Audit logging helper
+  async function logAuditEvent(
+    req: Request,
+    actionType: "create" | "update" | "delete" | "publish" | "unpublish" | "submit_for_review" | "approve" | "reject" | "login" | "logout" | "user_create" | "user_update" | "user_delete" | "role_change" | "settings_change" | "media_upload" | "media_delete",
+    entityType: "content" | "user" | "media" | "settings" | "rss_feed" | "affiliate_link" | "translation" | "session",
+    entityId: string | null,
+    description: string,
+    beforeState?: Record<string, unknown>,
+    afterState?: Record<string, unknown>
+  ) {
+    try {
+      const user = req.user as any;
+      const userId = user?.claims?.sub;
+      let userName = null;
+      let userRole = null;
+      
+      if (userId) {
+        const dbUser = await storage.getUser(userId);
+        userName = dbUser ? `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim() || dbUser.email : null;
+        userRole = dbUser?.role || null;
+      }
+      
+      await storage.createAuditLog({
+        userId: userId || null,
+        userName,
+        userRole,
+        actionType,
+        entityType,
+        entityId,
+        description,
+        beforeState,
+        afterState,
+        ipAddress: (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || null,
+        userAgent: req.headers['user-agent'] || null,
+      });
+    } catch (error) {
+      console.error("Failed to create audit log:", error);
+    }
+  }
+
   // Get all available roles (admin only)
   app.get("/api/roles", requirePermission("canManageUsers"), async (req, res) => {
     res.json({
-      roles: ["admin", "editor", "viewer"],
+      roles: ["admin", "editor", "author", "contributor", "viewer"],
       permissions: ROLE_PERMISSIONS,
     });
   });
@@ -675,6 +715,10 @@ export async function registerRoutes(
       }
 
       const fullContent = await storage.getContent(content.id);
+      
+      // Audit log content creation
+      await logAuditEvent(req, "create", "content", content.id, `Created ${parsed.type}: ${parsed.title}`, undefined, { title: parsed.title, type: parsed.type, status: parsed.status || "draft" });
+      
       res.status(201).json(fullContent);
     } catch (error) {
       console.error("Error creating content:", error);
@@ -735,6 +779,15 @@ export async function registerRoutes(
       }
 
       const fullContent = await storage.getContent(req.params.id);
+      
+      // Audit log content update
+      const actionType = req.body.status === "published" && existingContent.status !== "published" ? "publish" : "update";
+      await logAuditEvent(req, actionType, "content", req.params.id, 
+        actionType === "publish" ? `Published: ${existingContent.title}` : `Updated: ${existingContent.title}`,
+        { title: existingContent.title, status: existingContent.status },
+        { title: fullContent?.title, status: fullContent?.status }
+      );
+      
       res.json(fullContent);
     } catch (error) {
       console.error("Error updating content:", error);
@@ -859,7 +912,14 @@ export async function registerRoutes(
 
   app.delete("/api/contents/:id", requirePermission("canDelete"), async (req, res) => {
     try {
+      const existingContent = await storage.getContent(req.params.id);
       await storage.deleteContent(req.params.id);
+      
+      // Audit log content deletion
+      if (existingContent) {
+        await logAuditEvent(req, "delete", "content", req.params.id, `Deleted: ${existingContent.title}`, { title: existingContent.title, type: existingContent.type });
+      }
+      
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting content:", error);
@@ -2507,10 +2567,22 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
 
   app.patch("/api/users/:id", requirePermission("canManageUsers"), async (req, res) => {
     try {
+      const existingUser = await storage.getUser(req.params.id);
       const user = await storage.updateUser(req.params.id, req.body);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+      
+      // Audit log user update (check for role change)
+      const actionType = existingUser?.role !== user.role ? "role_change" : "user_update";
+      await logAuditEvent(req, actionType, "user", req.params.id,
+        actionType === "role_change" 
+          ? `Role changed for ${user.email}: ${existingUser?.role} -> ${user.role}`
+          : `Updated user: ${user.email}`,
+        { email: existingUser?.email, role: existingUser?.role, isActive: existingUser?.isActive },
+        { email: user.email, role: user.role, isActive: user.isActive }
+      );
+      
       res.json({ id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, isActive: user.isActive, createdAt: user.createdAt });
     } catch (error) {
       console.error("Error updating user:", error);
@@ -2520,7 +2592,14 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
 
   app.delete("/api/users/:id", requirePermission("canManageUsers"), async (req, res) => {
     try {
+      const existingUser = await storage.getUser(req.params.id);
       await storage.deleteUser(req.params.id);
+      
+      // Audit log user deletion
+      if (existingUser) {
+        await logAuditEvent(req, "user_delete", "user", req.params.id, `Deleted user: ${existingUser.email}`, { email: existingUser.email, role: existingUser.role });
+      }
+      
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting user:", error);
@@ -2624,8 +2703,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  // Analytics Routes
-  app.get("/api/analytics/overview", requireAuth, async (req, res) => {
+  // Analytics Routes (admin/editor only)
+  app.get("/api/analytics/overview", requirePermission("canViewAnalytics"), async (req, res) => {
     try {
       const overview = await storage.getAnalyticsOverview();
       res.json(overview);
@@ -2635,7 +2714,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.get("/api/analytics/views-over-time", requireAuth, async (req, res) => {
+  app.get("/api/analytics/views-over-time", requirePermission("canViewAnalytics"), async (req, res) => {
     try {
       const days = parseInt(req.query.days as string) || 30;
       const views = await storage.getViewsOverTime(Math.min(days, 90));
@@ -2646,7 +2725,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.get("/api/analytics/top-content", requireAuth, async (req, res) => {
+  app.get("/api/analytics/top-content", requirePermission("canViewAnalytics"), async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const topContent = await storage.getTopContent(Math.min(limit, 50));
@@ -2657,7 +2736,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.get("/api/analytics/by-content-type", requireAuth, async (req, res) => {
+  app.get("/api/analytics/by-content-type", requirePermission("canViewAnalytics"), async (req, res) => {
     try {
       const byType = await storage.getViewsByContentType();
       res.json(byType);
@@ -2683,6 +2762,29 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     } catch (error) {
       console.error("Error recording content view:", error);
       res.json({ success: true });
+    }
+  });
+
+  // Audit Logs Routes (admin only)
+  app.get("/api/audit-logs", requirePermission("canViewAuditLogs"), async (req, res) => {
+    try {
+      const { userId, entityType, entityId, actionType, limit, offset } = req.query;
+      const filters = {
+        userId: userId as string | undefined,
+        entityType: entityType as string | undefined,
+        entityId: entityId as string | undefined,
+        actionType: actionType as string | undefined,
+        limit: limit ? parseInt(limit as string) : 50,
+        offset: offset ? parseInt(offset as string) : 0,
+      };
+      const [logs, total] = await Promise.all([
+        storage.getAuditLogs(filters),
+        storage.getAuditLogCount(filters)
+      ]);
+      res.json({ logs, total, limit: filters.limit, offset: filters.offset });
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ error: "Failed to fetch audit logs" });
     }
   });
 

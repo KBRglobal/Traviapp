@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Redirect } from "wouter";
 import {
   Eye,
   TrendingUp,
@@ -86,22 +87,40 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+interface Permissions {
+  canViewAnalytics?: boolean;
+  [key: string]: boolean | undefined;
+}
+
 export default function Analytics() {
+  const { data: permissions, isLoading: permissionsLoading } = useQuery<Permissions>({
+    queryKey: ["/api/user/permissions"],
+  });
+
   const { data: overview, isLoading: overviewLoading } = useQuery<AnalyticsOverview>({
     queryKey: ["/api/analytics/overview"],
+    enabled: permissions?.canViewAnalytics === true,
   });
 
   const { data: viewsOverTime, isLoading: viewsLoading } = useQuery<ViewsOverTime[]>({
     queryKey: ["/api/analytics/views-over-time", { days: 30 }],
+    enabled: permissions?.canViewAnalytics === true,
   });
 
   const { data: topContent, isLoading: topLoading } = useQuery<TopContent[]>({
     queryKey: ["/api/analytics/top-content", { limit: 10 }],
+    enabled: permissions?.canViewAnalytics === true,
   });
 
   const { data: viewsByType, isLoading: typeLoading } = useQuery<ViewsByType[]>({
     queryKey: ["/api/analytics/by-content-type"],
+    enabled: permissions?.canViewAnalytics === true,
   });
+
+  // Redirect if user doesn't have permission
+  if (!permissionsLoading && permissions && !permissions.canViewAnalytics) {
+    return <Redirect to="/access-denied" />;
+  }
 
   const chartData = viewsOverTime?.map((v) => ({
     date: formatDate(v.date),

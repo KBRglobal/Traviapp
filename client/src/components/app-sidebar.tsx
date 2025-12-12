@@ -30,13 +30,24 @@ import {
   LogOut,
   Home,
   BarChart3,
+  ClipboardList,
 } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import type { User } from "@/hooks/use-auth";
 import { Mascot } from "@/components/logo";
+
+type PermissionKey = 
+  | "canCreate" | "canEdit" | "canEditOwn" | "canDelete" | "canPublish" 
+  | "canSubmitForReview" | "canManageUsers" | "canManageSettings" 
+  | "canViewAnalytics" | "canViewAuditLogs" | "canAccessMediaLibrary" 
+  | "canAccessAffiliates" | "canViewAll";
+
+interface Permissions {
+  [key: string]: boolean;
+}
 
 const contentItems = [
   {
@@ -76,54 +87,79 @@ const contentItems = [
   },
 ];
 
-const managementItems = [
+const managementItems: Array<{
+  title: string;
+  url: string;
+  icon: typeof Home;
+  requiredPermission?: PermissionKey;
+}> = [
   {
     title: "Homepage",
     url: "/admin/homepage-promotions",
     icon: Home,
+    requiredPermission: "canPublish",
   },
   {
     title: "Analytics",
     url: "/admin/analytics",
     icon: BarChart3,
+    requiredPermission: "canViewAnalytics",
   },
   {
     title: "AI Generator",
     url: "/admin/ai-generator",
     icon: Sparkles,
+    requiredPermission: "canCreate",
   },
   {
     title: "Topic Bank",
     url: "/admin/topic-bank",
     icon: Lightbulb,
+    requiredPermission: "canCreate",
   },
   {
     title: "Keywords",
     url: "/admin/keywords",
     icon: Search,
+    requiredPermission: "canCreate",
   },
   {
     title: "RSS Feeds",
     url: "/admin/rss-feeds",
     icon: Rss,
+    requiredPermission: "canCreate",
   },
   {
     title: "Affiliate Links",
     url: "/admin/affiliate-links",
     icon: Link2,
+    requiredPermission: "canAccessAffiliates",
   },
   {
     title: "Media Library",
     url: "/admin/media",
     icon: Image,
+    requiredPermission: "canAccessMediaLibrary",
   },
 ];
 
-const systemItems = [
+const systemItems: Array<{
+  title: string;
+  url: string;
+  icon: typeof Settings;
+  requiredPermission?: PermissionKey;
+}> = [
   {
     title: "Settings",
     url: "/admin/settings",
     icon: Settings,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Audit Logs",
+    url: "/admin/audit-logs",
+    icon: ClipboardList,
+    requiredPermission: "canViewAuditLogs",
   },
 ];
 
@@ -133,6 +169,31 @@ interface AppSidebarProps {
 
 export function AppSidebar({ user }: AppSidebarProps) {
   const [location, setLocation] = useLocation();
+
+  // Fetch user permissions
+  const { data: permissions, isLoading: permissionsLoading } = useQuery<Permissions>({
+    queryKey: ["/api/user/permissions"],
+    enabled: !!user,
+  });
+
+  // Filter management items based on permissions (hide restricted items while loading for security)
+  const visibleManagementItems = permissionsLoading 
+    ? managementItems.filter((item) => !item.requiredPermission) // Only show items without permission requirements while loading
+    : managementItems.filter((item) => {
+        if (!item.requiredPermission) return true;
+        return permissions?.[item.requiredPermission] === true;
+      });
+
+  // Filter system items based on permissions (hide restricted items while loading for security)
+  const visibleSystemItems = permissionsLoading
+    ? systemItems.filter((item) => !item.requiredPermission) // Only show items without permission requirements while loading
+    : systemItems.filter((item) => {
+        if (!item.requiredPermission) return true;
+        return permissions?.[item.requiredPermission] === true;
+      });
+
+  // Check if user can manage users (hide while loading for security)
+  const canManageUsers = !permissionsLoading && permissions?.canManageUsers;
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -188,63 +249,67 @@ export function AppSidebar({ user }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {managementItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    data-testid={`nav-${item.title.toLowerCase().replace(" ", "-")}`}
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {visibleManagementItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Management</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleManagementItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      data-testid={`nav-${item.title.toLowerCase().replace(" ", "-")}`}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel>System</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {systemItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    data-testid={`nav-${item.title.toLowerCase()}`}
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {user?.role === "admin" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive("/admin/users")}
-                    data-testid="nav-users"
-                  >
-                    <Link href="/admin/users">
-                      <Users className="h-4 w-4" />
-                      <span>Users</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {(visibleSystemItems.length > 0 || canManageUsers) && (
+          <SidebarGroup>
+            <SidebarGroupLabel>System</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleSystemItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      data-testid={`nav-${item.title.toLowerCase().replace(" ", "-")}`}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+                {canManageUsers && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive("/admin/users")}
+                      data-testid="nav-users"
+                    >
+                      <Link href="/admin/users">
+                        <Users className="h-4 w-4" />
+                        <span>Users</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border space-y-3">

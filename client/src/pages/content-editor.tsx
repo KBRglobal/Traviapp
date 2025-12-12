@@ -130,6 +130,7 @@ export default function ContentEditor() {
   const [aiProcessingBlock, setAiProcessingBlock] = useState<string | null>(null);
   const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
   const [aiGenerateInput, setAiGenerateInput] = useState("");
+  const [imageGeneratingBlock, setImageGeneratingBlock] = useState<string | null>(null);
 
   const { data: content, isLoading } = useQuery<ContentWithRelations>({
     queryKey: [`/api/contents/${contentId}`],
@@ -222,6 +223,65 @@ export default function ContentEditor() {
     }
     setAiProcessingBlock(blockId);
     aiBlockMutation.mutate({ blockId, action, content, targetLanguage });
+  };
+
+  const aiImageMutation = useMutation({
+    mutationFn: async (data: { blockId: string; blockType: "hero" | "image" }) => {
+      const isHero = data.blockType === "hero";
+      const res = await apiRequest("POST", "/api/ai/generate-images", {
+        contentType,
+        title: title || "Dubai Travel",
+        description: primaryKeyword || metaDescription,
+        generateHero: isHero,
+        generateContentImages: !isHero,
+        contentImageCount: isHero ? 0 : 1,
+      });
+      return res.json();
+    },
+    onSuccess: (result, variables) => {
+      const isHero = variables.blockType === "hero";
+      // API returns { images: [...], count } where each image has a type field
+      const images = result.images as Array<{ url: string; alt: string; type: string }> | undefined;
+      const imageData = images?.find(img => isHero ? img.type === "hero" : img.type === "content");
+      if (imageData) {
+        updateBlock(variables.blockId, { 
+          image: imageData.url,
+          alt: imageData.alt || `${title} image`
+        });
+        toast({
+          title: "Image Generated",
+          description: "AI has generated an image for this block.",
+        });
+      } else {
+        toast({
+          title: "No Image Generated",
+          description: "AI could not generate an image. Please try again.",
+          variant: "destructive",
+        });
+      }
+      setImageGeneratingBlock(null);
+    },
+    onError: () => {
+      toast({
+        title: "Image Generation Failed",
+        description: "Failed to generate image. Please try again.",
+        variant: "destructive",
+      });
+      setImageGeneratingBlock(null);
+    },
+  });
+
+  const handleGenerateImage = (blockId: string, blockType: "hero" | "image") => {
+    if (!title.trim()) {
+      toast({
+        title: "Title Required",
+        description: "Please enter a title before generating an image.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setImageGeneratingBlock(blockId);
+    aiImageMutation.mutate({ blockId, blockType });
   };
 
   const aiGenerateMutation = useMutation({
@@ -767,19 +827,35 @@ export default function ContentEditor() {
                           </div>
                         )}
                         {block.type === "hero" && (
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <Input
-                              value={String(block.data?.image || "")}
-                              onChange={(e) => updateBlock(block.id, { image: e.target.value })}
-                              placeholder="Image URL"
-                              data-testid={`input-hero-${block.id}`}
-                            />
-                            <Input
-                              value={String(block.data?.alt || "")}
-                              onChange={(e) => updateBlock(block.id, { alt: e.target.value })}
-                              placeholder="Alt text"
-                              data-testid={`input-alt-${block.id}`}
-                            />
+                          <div className="space-y-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <Input
+                                value={String(block.data?.image || "")}
+                                onChange={(e) => updateBlock(block.id, { image: e.target.value })}
+                                placeholder="Image URL"
+                                data-testid={`input-hero-${block.id}`}
+                              />
+                              <Input
+                                value={String(block.data?.alt || "")}
+                                onChange={(e) => updateBlock(block.id, { alt: e.target.value })}
+                                placeholder="Alt text"
+                                data-testid={`input-alt-${block.id}`}
+                              />
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleGenerateImage(block.id, "hero")}
+                              disabled={imageGeneratingBlock === block.id}
+                              data-testid={`button-generate-image-${block.id}`}
+                            >
+                              {imageGeneratingBlock === block.id ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-4 w-4 mr-2" />
+                              )}
+                              {imageGeneratingBlock === block.id ? "Generating..." : "Generate Image with AI"}
+                            </Button>
                           </div>
                         )}
                         {block.type === "faq" && (
@@ -815,19 +891,35 @@ export default function ContentEditor() {
                           </div>
                         )}
                         {(block.type === "image" || block.type === "gallery") && (
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <Input
-                              value={String(block.data?.image || "")}
-                              onChange={(e) => updateBlock(block.id, { image: e.target.value })}
-                              placeholder="Image URL"
-                              data-testid={`input-image-${block.id}`}
-                            />
-                            <Input
-                              value={String(block.data?.alt || "")}
-                              onChange={(e) => updateBlock(block.id, { alt: e.target.value })}
-                              placeholder="Alt text"
-                              data-testid={`input-image-alt-${block.id}`}
-                            />
+                          <div className="space-y-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <Input
+                                value={String(block.data?.image || "")}
+                                onChange={(e) => updateBlock(block.id, { image: e.target.value })}
+                                placeholder="Image URL"
+                                data-testid={`input-image-${block.id}`}
+                              />
+                              <Input
+                                value={String(block.data?.alt || "")}
+                                onChange={(e) => updateBlock(block.id, { alt: e.target.value })}
+                                placeholder="Alt text"
+                                data-testid={`input-image-alt-${block.id}`}
+                              />
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleGenerateImage(block.id, "image")}
+                              disabled={imageGeneratingBlock === block.id}
+                              data-testid={`button-generate-image-${block.id}`}
+                            >
+                              {imageGeneratingBlock === block.id ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-4 w-4 mr-2" />
+                              )}
+                              {imageGeneratingBlock === block.id ? "Generating..." : "Generate Image with AI"}
+                            </Button>
                           </div>
                         )}
                         {(block.type === "info_grid" || block.type === "highlights" || block.type === "tips") && (
