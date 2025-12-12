@@ -1008,7 +1008,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/rss-feeds", async (req, res) => {
+  app.get("/api/rss-feeds", requireAuth, async (req, res) => {
     try {
       const feeds = await storage.getRssFeeds();
       res.json(feeds);
@@ -1018,7 +1018,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/rss-feeds/:id", async (req, res) => {
+  app.get("/api/rss-feeds/:id", requireAuth, async (req, res) => {
     try {
       const feed = await storage.getRssFeed(req.params.id);
       if (!feed) {
@@ -1226,7 +1226,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/affiliate-links", async (req, res) => {
+  app.get("/api/affiliate-links", requireAuth, async (req, res) => {
     try {
       const { contentId } = req.query;
       const links = await storage.getAffiliateLinks(contentId as string | undefined);
@@ -1237,7 +1237,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/affiliate-links/:id", async (req, res) => {
+  app.get("/api/affiliate-links/:id", requireAuth, async (req, res) => {
     try {
       const link = await storage.getAffiliateLink(req.params.id);
       if (!link) {
