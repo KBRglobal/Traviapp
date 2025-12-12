@@ -2,7 +2,6 @@ import { eq, desc, sql, and, ilike } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
-  otpCodes,
   contents,
   attractions,
   hotels,
@@ -20,8 +19,7 @@ import {
   contentFingerprints,
   type User,
   type InsertUser,
-  type OtpCode,
-  type InsertOtpCode,
+  type UpsertUser,
   type Content,
   type InsertContent,
   type Attraction,
@@ -62,11 +60,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
-
-  createOtpCode(otp: InsertOtpCode): Promise<OtpCode>;
-  getValidOtpCode(email: string, code: string): Promise<OtpCode | undefined>;
-  markOtpAsUsed(id: string): Promise<boolean>;
-  cleanupExpiredOtps(): Promise<number>;
+  upsertUser(user: UpsertUser): Promise<User>;
 
   getContents(filters?: { type?: string; status?: string; search?: string }): Promise<Content[]>;
   getContentsWithRelations(filters?: { type?: string; status?: string; search?: string }): Promise<ContentWithRelations[]>;
@@ -194,35 +188,22 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async createOtpCode(otp: InsertOtpCode): Promise<OtpCode> {
-    const [code] = await db.insert(otpCodes).values(otp).returning();
-    return code;
-  }
-
-  async getValidOtpCode(email: string, code: string): Promise<OtpCode | undefined> {
-    const [otp] = await db.select().from(otpCodes).where(
-      and(
-        eq(otpCodes.email, email),
-        eq(otpCodes.code, code),
-        eq(otpCodes.used, false)
-      )
-    );
-    if (otp && new Date(otp.expiresAt) > new Date()) {
-      return otp;
-    }
-    return undefined;
-  }
-
-  async markOtpAsUsed(id: string): Promise<boolean> {
-    await db.update(otpCodes).set({ used: true }).where(eq(otpCodes.id, id));
-    return true;
-  }
-
-  async cleanupExpiredOtps(): Promise<number> {
-    const result = await db.delete(otpCodes).where(
-      sql`${otpCodes.expiresAt} < NOW() OR ${otpCodes.used} = true`
-    );
-    return 0;
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   async getContents(filters?: { type?: string; status?: string; search?: string }): Promise<Content[]> {

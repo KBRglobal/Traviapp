@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, pgEnum, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -44,25 +44,32 @@ export const ROLE_PERMISSIONS = {
 export type UserRole = "admin" | "editor" | "viewer";
 export type RolePermissions = typeof ROLE_PERMISSIONS[UserRole];
 
-// Users table - email-based authentication with OTP
+// Session storage table for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// Users table - Replit Auth with role-based permissions
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
-  name: text("name"),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
   role: userRoleEnum("role").notNull().default("editor"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// OTP codes table for passwordless authentication
-export const otpCodes = pgTable("otp_codes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull(),
-  code: varchar("code", { length: 6 }).notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  used: boolean("used").notNull().default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+// UpsertUser type for Replit Auth
+export type UpsertUser = typeof users.$inferInsert;
 
 // Content table - base table for all content types
 export const contents = pgTable("contents", {
@@ -522,11 +529,7 @@ export interface ItineraryDay {
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
-});
-
-export const insertOtpCodeSchema = createInsertSchema(otpCodes).omit({
-  id: true,
-  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertContentSchema = createInsertSchema(contents).omit({
@@ -605,8 +608,6 @@ export const insertKeywordRepositorySchema = createInsertSchema(keywordRepositor
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
-export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;
-export type OtpCode = typeof otpCodes.$inferSelect;
 export type InsertContent = z.infer<typeof insertContentSchema>;
 export type Content = typeof contents.$inferSelect;
 export type InsertAttraction = z.infer<typeof insertAttractionSchema>;

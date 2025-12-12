@@ -22,7 +22,7 @@ import {
   SUPPORTED_LOCALES,
   type UserRole,
 } from "@shared/schema";
-import { requestOtp, verifyOtp } from "./auth";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import * as fs from "fs";
 import * as path from "path";
@@ -40,24 +40,23 @@ function hasPermission(role: UserRole, permission: PermissionKey): boolean {
   return permissions ? permissions[permission] : false;
 }
 
-// Authentication middleware - requires valid session
+// Authentication middleware - requires valid Replit Auth session
 function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!(req as any).session?.userId) {
+  const user = req.user as any;
+  if (!req.isAuthenticated() || !user?.claims?.sub) {
     return res.status(401).json({ error: "Not authenticated" });
   }
   next();
 }
 
 function requirePermission(permission: PermissionKey) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    // Must have authenticated session first
-    if (!(req as any).session?.userId) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user as any;
+    if (!req.isAuthenticated() || !user?.claims?.sub) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    
-    // Get role from session (required for permission check)
-    const userRole: UserRole = (req as any).session.userRole || "viewer";
-    
+    const dbUser = await storage.getUser(user.claims.sub);
+    const userRole: UserRole = dbUser?.role || "viewer";
     if (!hasPermission(userRole, permission)) {
       return res.status(403).json({ 
         error: "Permission denied", 
@@ -136,7 +135,22 @@ export async function registerRoutes(
   }
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
   
-  // Get current user role and permissions (from header for now, can be extended to session-based)
+  // Setup Replit Auth
+  await setupAuth(app);
+  
+  // Get current authenticated user
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+  
+  // Get current user role and permissions
   app.get("/api/user/permissions", (req, res) => {
     const userRole = (req.headers["x-user-role"] as UserRole) || "viewer";
     const permissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS.viewer;
