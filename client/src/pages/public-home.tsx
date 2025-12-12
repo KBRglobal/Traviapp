@@ -1,4 +1,4 @@
-import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Sparkles, MapPin, Star, ArrowRight, Flame, Shield, Clock, Award } from "lucide-react";
+import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PublicNav } from "@/components/public-nav";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
+import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
+import logoImg from "@assets/Full_Logo_for_Light_Background_1765570034686.png";
 
 interface HomepagePromotion {
   id: string;
@@ -19,30 +21,61 @@ interface HomepagePromotion {
   content?: ContentWithRelations;
 }
 
-const defaultPlaceholderImages = [
-  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=1200&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=1200&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1546412414-e1885259563a?w=1200&h=800&fit=crop",
+const dubaiImages = [
+  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=800&fit=crop",
+  "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=600&h=800&fit=crop",
+  "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=600&h=800&fit=crop",
+  "https://images.unsplash.com/photo-1546412414-e1885259563a?w=600&h=800&fit=crop",
+  "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=600&h=800&fit=crop",
 ];
 
-const exploreCategories = [
-  { icon: Building2, title: "Hotels", count: "500+ hotels", href: "/hotels", gradient: "from-[#6C5CE7] to-[#A855F7]" },
-  { icon: Mountain, title: "Attractions", count: "200+ places", href: "/attractions", gradient: "from-[#A855F7] to-[#EC4899]" },
-  { icon: Landmark, title: "Districts", count: "25 areas", href: "/districts", gradient: "from-[#EC4899] to-[#F97316]" },
-  { icon: BookOpen, title: "News & Guides", count: "100+ articles", href: "/articles", gradient: "from-[#6C5CE7] to-[#8B5CF6]" },
-  { icon: Utensils, title: "Dining", count: "300+ restaurants", href: "/dining", gradient: "from-[#A855F7] to-[#EC4899]" },
-  { icon: Bus, title: "Transport", count: "50+ options", href: "/transport", gradient: "from-[#8B5CF6] to-[#A855F7]" },
+const activityCategories = [
+  { title: "Desert Safari", image: "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=400&h=300&fit=crop", count: "50+ tours" },
+  { title: "Beach & Water", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop", count: "30+ activities" },
+  { title: "City Tours", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", count: "40+ tours" },
+  { title: "Adventure", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=300&fit=crop", count: "25+ experiences" },
+  { title: "Dining", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop", count: "100+ restaurants" },
+  { title: "Shopping", image: "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=400&h=300&fit=crop", count: "20+ malls" },
 ];
 
-const whyChooseCards = [
-  { icon: Award, title: "Curated Experiences", description: "Handpicked destinations and hidden gems, personally reviewed by travel experts." },
-  { icon: Shield, title: "Trusted Reviews", description: "Authentic ratings from real travelers who've explored Dubai firsthand." },
-  { icon: Clock, title: "Real-Time Updates", description: "Live information on events, deals, and what's happening right now." },
-];
+const CloudSVG = ({ className = "", size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) => {
+  const sizes = { sm: "w-16 h-10", md: "w-24 h-14", lg: "w-32 h-20" };
+  return (
+    <svg className={`${sizes[size]} ${className}`} viewBox="0 0 100 60" fill="white">
+      <ellipse cx="30" cy="40" rx="25" ry="18" />
+      <ellipse cx="55" cy="35" rx="22" ry="16" />
+      <ellipse cx="75" cy="42" rx="20" ry="14" />
+      <ellipse cx="45" cy="28" rx="18" ry="14" />
+    </svg>
+  );
+};
+
+const HotAirBalloonSVG = ({ className = "", color = "#EC4899" }: { className?: string; color?: string }) => (
+  <svg className={`w-16 h-24 balloon-icon ${className}`} viewBox="0 0 60 100" fill="none">
+    <ellipse cx="30" cy="30" rx="25" ry="30" fill={color} />
+    <ellipse cx="30" cy="30" rx="25" ry="30" fill="url(#balloonShine)" />
+    <path d="M15 55 L20 70 L40 70 L45 55" fill="#8B4513" />
+    <rect x="18" y="70" width="24" height="15" rx="2" fill="#D2691E" stroke="#8B4513" strokeWidth="1" />
+    <line x1="20" y1="55" x2="20" y2="70" stroke="#654321" strokeWidth="1" />
+    <line x1="40" y1="55" x2="40" y2="70" stroke="#654321" strokeWidth="1" />
+    <defs>
+      <linearGradient id="balloonShine" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="white" stopOpacity="0.3" />
+        <stop offset="50%" stopColor="white" stopOpacity="0" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+const BirdSVG = ({ className = "" }: { className?: string }) => (
+  <svg className={`w-6 h-4 ${className}`} viewBox="0 0 24 16" fill="#334155">
+    <path d="M0 8 Q6 2 12 8 Q18 2 24 8 Q18 6 12 10 Q6 6 0 8" />
+  </svg>
+);
 
 export default function PublicHome() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [email, setEmail] = useState("");
   const [, setLocation] = useLocation();
 
   useDocumentMeta({
@@ -61,10 +94,6 @@ export default function PublicHome() {
     queryKey: ["/api/homepage-promotions/attractions"],
   });
 
-  const { data: articlesPromotions = [] } = useQuery<HomepagePromotion[]>({
-    queryKey: ["/api/homepage-promotions/articles"],
-  });
-
   const { data: publishedContent } = useQuery<ContentWithRelations[]>({
     queryKey: ["/api/contents?status=published"],
   });
@@ -76,17 +105,13 @@ export default function PublicHome() {
       .slice(0, 6);
   };
 
-  const featuredContent = getActiveContent(featuredPromotions).length > 0 
+  const trendingContent = getActiveContent(featuredPromotions).length > 0 
     ? getActiveContent(featuredPromotions) 
-    : (publishedContent?.slice(0, 6) || []);
+    : (publishedContent?.slice(0, 4) || []);
   
-  const attractionsContent = getActiveContent(attractionsPromotions).length > 0
+  const exploreContent = getActiveContent(attractionsPromotions).length > 0
     ? getActiveContent(attractionsPromotions)
     : (publishedContent?.filter(c => c.type === "attraction").slice(0, 4) || []);
-  
-  const articlesContent = getActiveContent(articlesPromotions).length > 0
-    ? getActiveContent(articlesPromotions)
-    : (publishedContent?.filter(c => c.type === "article").slice(0, 6) || []);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -103,7 +128,7 @@ export default function PublicHome() {
   const getContentPath = (content: Content) => `/${content.type}s/${content.slug}`;
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md">
         Skip to main content
       </a>
@@ -111,360 +136,429 @@ export default function PublicHome() {
       <PublicNav variant="transparent" />
 
       <main id="main-content">
-        {/* SECTION 1 - HERO */}
-        <section className="relative min-h-screen flex items-center justify-center brand-gradient noise-texture overflow-hidden" data-testid="section-hero">
-          <div className="relative z-10 max-w-4xl mx-auto px-6 text-center py-32">
-            <div className="inline-flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-5 py-2.5 mb-8">
-              <Sparkles className="w-4 h-4 text-[#FACC15]" aria-hidden="true" />
-              <span className="text-white text-sm font-medium">Your Dubai Travel Companion</span>
+        {/* HERO SECTION - Sky Theme with Giant TRAVI Letters */}
+        <section className="relative min-h-screen sky-gradient overflow-hidden" data-testid="section-hero">
+          {/* Floating Clouds */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <CloudSVG className="absolute top-20 left-[5%] opacity-90 animate-cloud-drift" size="lg" />
+            <CloudSVG className="absolute top-32 right-[10%] opacity-80 animate-cloud-drift animation-delay-1000" size="md" />
+            <CloudSVG className="absolute top-48 left-[25%] opacity-70 animate-cloud-drift animation-delay-2000" size="sm" />
+            <CloudSVG className="absolute bottom-40 right-[20%] opacity-85 animate-cloud-drift animation-delay-500" size="lg" />
+            <CloudSVG className="absolute bottom-60 left-[15%] opacity-75 animate-cloud-drift animation-delay-3000" size="md" />
+          </div>
+
+          {/* Floating Decorative Elements */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <HotAirBalloonSVG className="absolute top-24 right-[8%] animate-balloon" color="#EC4899" />
+            <HotAirBalloonSVG className="absolute top-40 left-[12%] animate-balloon animation-delay-2000" color="#6C5CE7" />
+            <Plane className="absolute top-16 left-[30%] w-8 h-8 text-white/60 animate-plane plane-icon" />
+            <BirdSVG className="absolute top-28 left-[45%] animate-bird" />
+            <BirdSVG className="absolute top-36 left-[48%] animate-bird animation-delay-500" />
+            <BirdSVG className="absolute top-32 left-[52%] animate-bird animation-delay-300" />
+          </div>
+
+          {/* Main Hero Content */}
+          <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20">
+            {/* Giant TRAVI Letters with Dubai Images */}
+            <div className="text-center mb-8">
+              <h1 className="text-[8rem] sm:text-[12rem] lg:text-[16rem] font-bold leading-none tracking-tight select-none">
+                <span 
+                  className="travi-letter-mask inline-block"
+                  style={{ backgroundImage: `url(${dubaiImages[0]})` }}
+                >T</span>
+                <span 
+                  className="travi-letter-mask inline-block"
+                  style={{ backgroundImage: `url(${dubaiImages[1]})` }}
+                >R</span>
+                <span 
+                  className="travi-letter-mask inline-block"
+                  style={{ backgroundImage: `url(${dubaiImages[2]})` }}
+                >A</span>
+                <span 
+                  className="travi-letter-mask inline-block"
+                  style={{ backgroundImage: `url(${dubaiImages[3]})` }}
+                >V</span>
+                <span 
+                  className="travi-letter-mask inline-block"
+                  style={{ backgroundImage: `url(${dubaiImages[4]})` }}
+                >I</span>
+              </h1>
             </div>
-            
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-tight">
-              Discover the Magic of{" "}
-              <span className="text-[#FACC15]">Dubai</span>
-            </h1>
-            
-            <p className="text-lg sm:text-xl text-white/85 max-w-2xl mx-auto mb-10 leading-relaxed">
-              World-class hotels, iconic attractions, and expert travel guides — curated for you.
-            </p>
-            
+
+            {/* Mascot */}
+            <div className="flex justify-center mb-6">
+              <img 
+                src={mascotImg} 
+                alt="Travi mascot - friendly duck with sunglasses" 
+                className="w-32 h-32 sm:w-40 sm:h-40 animate-float-gentle drop-shadow-lg"
+              />
+            </div>
+
+            {/* Tagline */}
+            <div className="text-center mb-10">
+              <p className="text-2xl sm:text-3xl text-[#1E1B4B] font-medium">
+                Discover Dubai <span className="font-script text-3xl sm:text-4xl text-[#EC4899]">by experience</span>
+              </p>
+            </div>
+
+            {/* Search Bar */}
             <form 
               onSubmit={(e) => { e.preventDefault(); handleSearch(); }} 
               role="search" 
-              className="bg-white rounded-2xl shadow-2xl p-2 flex items-center gap-2 max-w-xl mx-auto"
+              className="max-w-2xl mx-auto"
             >
-              <div className="flex-1 flex items-center gap-3 px-4">
-                <Search className="w-5 h-5 text-[#475569] shrink-0" aria-hidden="true" />
-                <label htmlFor="hero-search" className="sr-only">Search hotels, attractions, or guides</label>
+              <div className="bg-white rounded-full shadow-xl p-2 flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-3 px-5">
+                  <Search className="w-5 h-5 text-[#6C5CE7] shrink-0" aria-hidden="true" />
+                  <label htmlFor="hero-search" className="sr-only">Search Dubai experiences</label>
+                  <input
+                    id="hero-search"
+                    type="search"
+                    placeholder="Where do you want to go?"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    className="flex-1 text-[#1E1B4B] placeholder:text-[#94A3B8] bg-transparent outline-none py-4 text-lg"
+                    data-testid="input-search"
+                  />
+                </div>
+                <Button 
+                  type="submit"
+                  className="btn-gold rounded-full px-8 py-6 text-lg" 
+                  data-testid="button-search"
+                >
+                  Explore
+                </Button>
+              </div>
+            </form>
+
+            {/* Quick Stats */}
+            <div className="flex flex-wrap justify-center gap-8 mt-12">
+              <div className="flex items-center gap-2 text-[#1E1B4B]">
+                <MapPin className="w-5 h-5 text-[#EC4899]" />
+                <span className="font-medium">500+ Places</span>
+              </div>
+              <div className="flex items-center gap-2 text-[#1E1B4B]">
+                <Star className="w-5 h-5 text-[#FACC15] fill-[#FACC15]" />
+                <span className="font-medium">4.9 Rating</span>
+              </div>
+              <div className="flex items-center gap-2 text-[#1E1B4B]">
+                <Users className="w-5 h-5 text-[#6C5CE7]" />
+                <span className="font-medium">50K+ Travelers</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Wavy Divider */}
+          <div className="absolute bottom-0 left-0 right-0">
+            <svg viewBox="0 0 1440 100" fill="none" className="w-full h-16 sm:h-24">
+              <path d="M0,60 C360,100 720,20 1080,60 C1260,80 1380,70 1440,60 L1440,100 L0,100 Z" fill="white" />
+            </svg>
+          </div>
+        </section>
+
+        {/* EXPLORE ACTIVITIES SECTION */}
+        <section className="py-20 bg-white relative overflow-hidden" data-testid="section-activities">
+          {/* Decorative Hot Air Balloons */}
+          <HotAirBalloonSVG className="absolute top-10 right-[5%] animate-float-slow opacity-60" color="#A855F7" />
+          <HotAirBalloonSVG className="absolute bottom-20 left-[3%] animate-float-slow animation-delay-1000 opacity-50" color="#F59E0B" />
+
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4">
+                Explore From Wide Range
+              </h2>
+              <p className="text-xl text-[#64748B]">
+                <span className="font-script text-2xl text-[#EC4899]">of activities</span> in Dubai
+              </p>
+            </div>
+
+            {/* Activity Cards Carousel */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {activityCategories.map((category, index) => (
+                <Link
+                  key={index}
+                  href={`/search?q=${encodeURIComponent(category.title)}`}
+                  className="group relative overflow-hidden rounded-2xl aspect-[3/4] cursor-pointer"
+                  data-testid={`activity-${category.title.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  <img
+                    src={category.image}
+                    alt={category.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h3 className="text-white font-semibold text-lg mb-1">{category.title}</h3>
+                    <span className="text-white/70 text-sm">{category.count}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* READY TO EXPLORE SECTION - Tilted Cards with Clouds */}
+        <section className="py-20 sky-gradient-light relative overflow-hidden" data-testid="section-explore">
+          {/* Background Clouds */}
+          <div className="absolute inset-0 pointer-events-none">
+            <CloudSVG className="absolute top-10 left-[10%] opacity-50" size="lg" />
+            <CloudSVG className="absolute top-40 right-[15%] opacity-40" size="md" />
+            <CloudSVG className="absolute bottom-20 left-[25%] opacity-45" size="sm" />
+          </div>
+
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4">
+                Ready to Explore Dubai?
+              </h2>
+              <p className="text-xl text-[#64748B]">
+                Hand-picked destinations <span className="font-script text-2xl text-[#6C5CE7]">just for you</span>
+              </p>
+            </div>
+
+            {/* Tilted Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {exploreContent.slice(0, 4).map((content, index) => (
+                <Link 
+                  key={content.id} 
+                  href={getContentPath(content)}
+                  data-testid={`explore-card-${content.id}`}
+                >
+                  <article 
+                    className={`tilted-card relative overflow-hidden rounded-2xl shadow-xl cursor-pointer aspect-[3/4] ${
+                      index % 2 === 0 ? 'tilt-left-sm' : 'tilt-right-sm'
+                    }`}
+                  >
+                    <img
+                      src={content.heroImage || dubaiImages[index % dubaiImages.length]}
+                      alt={content.heroImageAlt || content.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                    
+                    <div className="absolute top-4 left-4">
+                      <Badge className="bg-white/90 text-[#6C5CE7] border-0 text-xs font-semibold">
+                        {content.type}
+                      </Badge>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 p-5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Star className="w-4 h-4 fill-[#FACC15] text-[#FACC15]" />
+                        <span className="text-white text-sm font-medium">4.8</span>
+                      </div>
+                      <h3 className="text-white font-bold text-lg line-clamp-2">
+                        {content.title}
+                      </h3>
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
+
+            <div className="text-center mt-10">
+              <Link href="/attractions" data-testid="link-view-all-explore">
+                <Button className="btn-gold rounded-full px-8 py-6 text-lg" data-testid="button-view-all-explore">
+                  View All Attractions
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* TRENDING IN DUBAI SECTION - Watermark Background */}
+        <section className="py-20 bg-white relative overflow-hidden" data-testid="section-trending">
+          {/* Large Watermark Text */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+            <span className="watermark-text">TRENDING</span>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="flex items-end justify-between mb-12">
+              <div>
+                <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-2">
+                  Trending in Dubai
+                </h2>
+                <p className="text-xl text-[#64748B]">What everyone's talking about</p>
+              </div>
+              <Link href="/articles" className="hidden sm:block" data-testid="link-view-all-trending">
+                <Button variant="outline" className="border-[#6C5CE7] text-[#6C5CE7] rounded-full px-6" data-testid="button-view-all-trending">
+                  View All <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Overlapping Cards Row */}
+            <div className="flex flex-wrap justify-center gap-6 lg:gap-0 lg:justify-start">
+              {trendingContent.slice(0, 4).map((content, index) => (
+                <Link 
+                  key={content.id} 
+                  href={getContentPath(content)}
+                  className={`w-full sm:w-72 lg:w-80 ${index > 0 ? 'lg:-ml-8' : ''}`}
+                  style={{ zIndex: 4 - index }}
+                  data-testid={`trending-card-${content.id}`}
+                >
+                  <article 
+                    className={`tilted-card relative overflow-hidden rounded-2xl shadow-2xl cursor-pointer aspect-[4/5] ${
+                      index === 0 ? '' : index === 1 ? 'tilt-right-sm' : index === 2 ? 'tilt-left-sm' : 'tilt-right-sm'
+                    }`}
+                  >
+                    <img
+                      src={content.heroImage || dubaiImages[index % dubaiImages.length]}
+                      alt={content.heroImageAlt || content.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    
+                    <div className="absolute top-4 right-4">
+                      <Badge className="bg-[#EC4899] text-white border-0 text-xs font-semibold">
+                        Hot
+                      </Badge>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 p-5">
+                      <span className="text-[#A855F7] text-sm font-medium uppercase tracking-wide mb-2 block">
+                        {content.type}
+                      </span>
+                      <h3 className="text-white font-bold text-xl line-clamp-2 mb-2">
+                        {content.title}
+                      </h3>
+                      <div className="flex items-center gap-3 text-white/70 text-sm">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          <span>5 min</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 fill-[#FACC15] text-[#FACC15]" />
+                          <span>4.9</span>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* NEWSLETTER SECTION - Dubai Skyline */}
+        <section className="py-20 bg-gradient-to-b from-[#E8F4FD] to-[#87CEEB] relative overflow-hidden" data-testid="section-newsletter">
+          {/* Dubai Skyline Silhouette at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 dubai-skyline opacity-20" />
+          
+          {/* Floating Elements */}
+          <HotAirBalloonSVG className="absolute top-10 left-[8%] animate-float-slow" color="#EC4899" />
+          <CloudSVG className="absolute top-20 right-[10%] opacity-80" size="md" />
+          
+          {/* Mascot */}
+          <img 
+            src={mascotImg} 
+            alt="" 
+            className="absolute bottom-0 right-[10%] w-40 h-40 animate-float-gentle hidden lg:block"
+          />
+
+          <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
+            <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4">
+              Stay in the Loop
+            </h2>
+            <p className="text-xl text-[#475569] mb-8">
+              Get exclusive Dubai travel tips, deals, and inspiration delivered to your inbox
+            </p>
+
+            <form 
+              onSubmit={(e) => { e.preventDefault(); }}
+              className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto"
+            >
+              <div className="flex-1 relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94A3B8]" />
                 <input
-                  id="hero-search"
-                  type="search"
-                  placeholder="Search hotels, attractions, or guides..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                  className="flex-1 text-[#0F172A] placeholder:text-[#475569] bg-transparent outline-none py-3.5 text-base"
-                  data-testid="input-search"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 rounded-full border-0 shadow-lg text-[#1E1B4B] placeholder:text-[#94A3B8] outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+                  data-testid="input-newsletter-email"
                 />
               </div>
               <Button 
                 type="submit"
-                className="bg-[#EC4899] hover:bg-[#DB2777] text-white font-semibold rounded-xl px-6 py-6" 
-                data-testid="button-search"
+                className="btn-gold rounded-full px-8 py-4 text-lg whitespace-nowrap"
+                data-testid="button-newsletter-subscribe"
               >
-                Search
+                Subscribe
               </Button>
             </form>
-          </div>
-        </section>
 
-        {/* SECTION 2 - EXPLORE DUBAI */}
-        <section className="py-16 lg:py-20 bg-white" data-testid="section-explore">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4">Explore Dubai</h2>
-              <p className="text-[#475569] text-lg max-w-2xl mx-auto">Navigate the city through curated categories</p>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-6">
-              {exploreCategories.map((category, index) => {
-                const IconComponent = category.icon;
-                return (
-                  <Link
-                    key={index}
-                    href={category.href}
-                    className="group flex flex-col items-center p-6 rounded-2xl bg-white border border-gray-100 hover:border-[#A855F7]/30 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300"
-                    data-testid={`explore-${category.title.toLowerCase().replace(/\s+/g, '-')}`}
-                  >
-                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${category.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                      <IconComponent className="w-7 h-7 text-white" aria-hidden="true" />
-                    </div>
-                    <h3 className="font-semibold text-[#0F172A] text-center mb-1">{category.title}</h3>
-                    <span className="text-sm text-[#475569]">{category.count}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* SECTION 3 - HOT RIGHT NOW */}
-        {featuredContent.length > 0 && featuredContent[0] && (
-          <section className="py-16 lg:py-20 bg-white" data-testid="section-featured">
-            <div className="max-w-7xl mx-auto px-6 lg:px-8">
-              <div className="mb-10">
-                <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">Hot Right Now</h2>
-                <p className="text-[#475569] text-lg">Trending places everyone's talking about</p>
-              </div>
-              
-              <Link href={getContentPath(featuredContent[0])} data-testid="link-featured-content">
-                <article className="group relative overflow-hidden rounded-3xl cursor-pointer aspect-[21/9]" data-testid="card-featured-content">
-                  <img
-                    src={featuredContent[0].heroImage || defaultPlaceholderImages[0]}
-                    alt={featuredContent[0].heroImageAlt || featuredContent[0].title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                  
-                  <div className="absolute top-6 left-6 flex items-center gap-3">
-                    <Badge className="bg-[#EC4899] text-white border-0 px-4 py-1.5 text-sm font-medium">
-                      <Flame className="w-4 h-4 mr-1.5" />
-                      Trending
-                    </Badge>
-                    <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
-                      <Star className="w-4 h-4 fill-[#FACC15] text-[#FACC15]" />
-                      <span className="text-white text-sm font-medium">4.9</span>
-                    </div>
-                  </div>
-                  
-                  <div className="absolute bottom-0 left-0 right-0 p-8">
-                    <span className="text-[#A855F7] font-medium text-sm uppercase tracking-wide mb-3 block">
-                      {featuredContent[0].type}
-                    </span>
-                    <h3 className="text-white font-bold text-2xl lg:text-4xl mb-3 max-w-2xl">
-                      {featuredContent[0].title}
-                    </h3>
-                    <p className="text-white/80 text-base lg:text-lg max-w-2xl mb-6 line-clamp-2">
-                      {featuredContent[0].metaDescription || "Discover this amazing destination in Dubai"}
-                    </p>
-                    <Button className="bg-white text-[#0F172A] hover:bg-white/90 font-semibold rounded-xl px-6" data-testid="button-explore-featured">
-                      Explore
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                </article>
-              </Link>
-            </div>
-          </section>
-        )}
-
-        {/* SECTION 4 - POPULAR DESTINATIONS */}
-        {attractionsContent.length > 0 && (
-          <section className="py-16 lg:py-20 bg-white" data-testid="section-destinations">
-            <div className="max-w-7xl mx-auto px-6 lg:px-8">
-              <div className="flex items-end justify-between mb-10">
-                <div>
-                  <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">Popular Destinations</h2>
-                  <p className="text-[#475569] text-lg">Explore Dubai's most loved experiences</p>
-                </div>
-                <Link href="/attractions" data-testid="link-view-all-destinations">
-                  <Button variant="outline" className="hidden sm:flex border-[#A855F7] text-[#A855F7] hover:bg-[#A855F7] hover:text-white" data-testid="button-view-all-destinations">
-                    View All <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {attractionsContent.slice(0, 4).map((content, index) => (
-                  <Link key={content.id} href={`/attractions/${content.slug}`} data-testid={`link-destination-${content.id}`}>
-                    <article className="group relative overflow-hidden rounded-2xl cursor-pointer aspect-[3/4]" data-testid={`card-destination-${content.id}`}>
-                      <img
-                        src={content.heroImage || defaultPlaceholderImages[index % 4]}
-                        alt={content.heroImageAlt || content.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                      
-                      <div className="absolute top-4 left-4">
-                        <Badge className="bg-[#6C5CE7] text-white border-0 text-xs font-medium">
-                          {content.type}
-                        </Badge>
-                      </div>
-                      
-                      <div className="absolute bottom-0 left-0 right-0 p-5">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Star className="w-4 h-4 fill-[#FACC15] text-[#FACC15]" />
-                          <span className="text-white/90 text-sm font-medium">4.8</span>
-                        </div>
-                        <h3 className="text-white font-bold text-lg mb-2 line-clamp-2">
-                          {content.title}
-                        </h3>
-                        <p className="text-white/70 text-sm line-clamp-2">
-                          {content.metaDescription || "Discover this amazing place"}
-                        </p>
-                      </div>
-                    </article>
-                  </Link>
-                ))}
-              </div>
-              
-              <div className="mt-8 text-center sm:hidden">
-                <Link href="/attractions" data-testid="link-view-all-destinations-mobile">
-                  <Button className="bg-[#A855F7] hover:bg-[#9333EA] text-white font-semibold" data-testid="button-view-all-destinations-mobile">
-                    View All Destinations
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* SECTION 5 - LATEST NEWS & GUIDES */}
-        {articlesContent.length > 0 && articlesContent[0] && (
-          <section className="py-16 lg:py-20 bg-[#F8FAFC]" data-testid="section-articles">
-            <div className="max-w-7xl mx-auto px-6 lg:px-8">
-              <div className="flex items-end justify-between mb-10">
-                <div>
-                  <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">Latest News & Guides</h2>
-                  <p className="text-[#475569] text-lg">Expert insights for your Dubai journey</p>
-                </div>
-                <Link href="/articles" data-testid="link-view-all-articles">
-                  <Button variant="ghost" className="text-[#A855F7] hover:text-[#9333EA] hover:bg-[#A855F7]/10 font-medium" data-testid="button-view-all-articles">
-                    All Articles <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </div>
-              
-              <Link href={`/articles/${articlesContent[0].slug}`} data-testid="link-featured-article">
-                <article className="group relative overflow-hidden rounded-3xl cursor-pointer aspect-[21/9]" data-testid="card-featured-article">
-                  <img
-                    src={articlesContent[0].heroImage || defaultPlaceholderImages[0]}
-                    alt={articlesContent[0].heroImageAlt || articlesContent[0].title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                  
-                  <div className="absolute top-6 left-6 flex items-center gap-3">
-                    <Badge className="bg-white text-[#0F172A] border-0 px-4 py-1.5 text-sm font-semibold">
-                      Featured
-                    </Badge>
-                    <Badge className="bg-[#6C5CE7] text-white border-0 px-3 py-1.5 text-sm">
-                      Travel Guide
-                    </Badge>
-                  </div>
-                  
-                  <div className="absolute bottom-0 left-0 right-0 p-8">
-                    <h3 className="text-white font-bold text-2xl lg:text-4xl mb-3 max-w-3xl">
-                      {articlesContent[0].title}
-                    </h3>
-                    <div className="flex items-center gap-4 text-white/70 text-sm">
-                      <span>5 min read</span>
-                      <span>2.4k views</span>
-                    </div>
-                  </div>
-                </article>
-              </Link>
-              
-              {articlesContent.length > 1 && (
-                <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  {articlesContent.slice(1, 4).map((content, index) => (
-                    <Link key={content.id} href={`/articles/${content.slug}`} data-testid={`link-article-${content.id}`}>
-                      <article className="group bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300" data-testid={`card-article-${content.id}`}>
-                        <div className="aspect-[16/9] overflow-hidden">
-                          <img
-                            src={content.heroImage || defaultPlaceholderImages[index + 1]}
-                            alt={content.heroImageAlt || content.title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            loading="lazy"
-                          />
-                        </div>
-                        <div className="p-5">
-                          <h3 className="font-semibold text-[#0F172A] line-clamp-2 mb-2 group-hover:text-[#A855F7] transition-colors">
-                            {content.title}
-                          </h3>
-                          <span className="text-sm text-[#475569]">5 min read</span>
-                        </div>
-                      </article>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* SECTION 6 - WHY CHOOSE TRAVI */}
-        <section className="py-16 lg:py-20 bg-white" data-testid="section-why-travi">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-4">Why Choose Travi</h2>
-              <p className="text-[#475569] text-lg max-w-2xl mx-auto">Your trusted partner for exploring Dubai</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {whyChooseCards.map((card, index) => {
-                const IconComponent = card.icon;
-                return (
-                  <div key={index} className="text-center p-8">
-                    <div className="w-16 h-16 rounded-2xl brand-gradient flex items-center justify-center mx-auto mb-6">
-                      <IconComponent className="w-8 h-8 text-white" aria-hidden="true" />
-                    </div>
-                    <h3 className="font-bold text-xl text-[#0F172A] mb-3">{card.title}</h3>
-                    <p className="text-[#475569] leading-relaxed">{card.description}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* SECTION 7 - FINAL CTA */}
-        <section className="py-20 lg:py-28 brand-gradient noise-texture relative overflow-hidden" data-testid="section-cta">
-          <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
-              Ready to Explore Dubai?
-            </h2>
-            <p className="text-lg text-white/85 max-w-xl mx-auto mb-10">
-              Plan your perfect trip with Travi's curated guides and experiences.
+            <p className="text-sm text-[#64748B] mt-4">
+              No spam, unsubscribe anytime
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/hotels" data-testid="link-cta-hotels">
-                <Button className="bg-[#FACC15] hover:bg-[#EAB308] text-[#0F172A] font-bold rounded-xl px-8 py-6 text-lg" data-testid="button-cta-hotels">
-                  Browse Hotels
-                </Button>
-              </Link>
-              <Link href="/attractions" data-testid="link-cta-attractions">
-                <Button variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-[#6C5CE7] font-bold rounded-xl px-8 py-6 text-lg bg-transparent" data-testid="button-cta-attractions">
-                  Explore Attractions
-                </Button>
-              </Link>
-            </div>
           </div>
         </section>
 
-        {/* FOOTER */}
-        <footer className="py-16 bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4C1D95]" data-testid="footer">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        {/* FOOTER - Sky Theme */}
+        <footer className="py-16 bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4C1D95] relative overflow-hidden" data-testid="footer">
+          {/* Stars/sparkles decoration */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-10 left-[20%] w-1 h-1 bg-white rounded-full opacity-60" />
+            <div className="absolute top-20 left-[40%] w-1.5 h-1.5 bg-white rounded-full opacity-40" />
+            <div className="absolute top-8 right-[30%] w-1 h-1 bg-white rounded-full opacity-50" />
+            <div className="absolute top-32 right-[20%] w-1 h-1 bg-white rounded-full opacity-60" />
+          </div>
+
+          <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-              <div>
-                <div className="text-2xl font-bold text-white mb-4">Travi</div>
-                <p className="text-white/70 text-sm leading-relaxed">
-                  Your trusted companion for discovering the best of Dubai. Curated experiences, trusted reviews.
+              {/* Logo & Mascot */}
+              <div className="flex flex-col items-start">
+                <img src={logoImg} alt="Travi" className="h-12 mb-4" />
+                <p className="text-white/70 text-sm leading-relaxed mb-4">
+                  Your trusted companion for discovering the best of Dubai.
                 </p>
+                <img src={mascotImg} alt="" className="w-20 h-20 opacity-80" />
               </div>
+
+              {/* Explore Links */}
               <div>
                 <h4 className="font-semibold text-white mb-4">Explore</h4>
                 <ul className="space-y-3 text-sm text-white/70">
                   <li><Link href="/hotels" className="hover:text-white transition-colors" data-testid="link-footer-hotels">Hotels</Link></li>
                   <li><Link href="/attractions" className="hover:text-white transition-colors" data-testid="link-footer-attractions">Attractions</Link></li>
-                  <li><Link href="/districts" className="hover:text-white transition-colors" data-testid="link-footer-districts">Districts</Link></li>
-                  <li><Link href="/dining" className="hover:text-white transition-colors" data-testid="link-footer-dining">Dining</Link></li>
+                  <li><Link href="/articles" className="hover:text-white transition-colors" data-testid="link-footer-articles">Travel Guides</Link></li>
+                  <li><Link href="/search" className="hover:text-white transition-colors" data-testid="link-footer-search">Search</Link></li>
                 </ul>
               </div>
+
+              {/* Company Links */}
               <div>
-                <h4 className="font-semibold text-white mb-4">Discover</h4>
+                <h4 className="font-semibold text-white mb-4">Company</h4>
                 <ul className="space-y-3 text-sm text-white/70">
-                  <li><Link href="/articles" className="hover:text-white transition-colors" data-testid="link-footer-articles">Travel Guides</Link></li>
-                  <li><Link href="/transport" className="hover:text-white transition-colors" data-testid="link-footer-transport">Transport</Link></li>
                   <li><Link href="/about" className="hover:text-white transition-colors" data-testid="link-footer-about">About Us</Link></li>
                   <li><Link href="/contact" className="hover:text-white transition-colors" data-testid="link-footer-contact">Contact</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-white mb-4">Legal</h4>
-                <ul className="space-y-3 text-sm text-white/70">
                   <li><Link href="/privacy" className="hover:text-white transition-colors" data-testid="link-footer-privacy">Privacy Policy</Link></li>
                   <li><Link href="/terms" className="hover:text-white transition-colors" data-testid="link-footer-terms">Terms of Service</Link></li>
-                  <li><Link href="/cookies" className="hover:text-white transition-colors" data-testid="link-footer-cookies">Cookie Policy</Link></li>
+                </ul>
+              </div>
+
+              {/* Connect */}
+              <div>
+                <h4 className="font-semibold text-white mb-4">Connect</h4>
+                <ul className="space-y-3 text-sm text-white/70">
+                  <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</a></li>
+                  <li><a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter</a></li>
+                  <li><a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Facebook</a></li>
+                  <li><a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">YouTube</a></li>
                 </ul>
               </div>
             </div>
-            
-            <div className="border-t border-white/10 pt-8 text-center">
+
+            {/* Bottom Bar */}
+            <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-white/50 text-sm">
-                © {new Date().getFullYear()} Travi. All rights reserved.
+                2024 Travi. All rights reserved.
+              </p>
+              <p className="text-white/50 text-sm">
+                Made with love in Dubai
               </p>
             </div>
           </div>
