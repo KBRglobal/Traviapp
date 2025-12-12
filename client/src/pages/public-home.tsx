@@ -1,4 +1,4 @@
-import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Sparkles, Menu, MapPin, Star, Clock, ChevronRight, X, Bed, FileText, User } from "lucide-react";
+import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Sparkles, Menu, MapPin, Star, Clock, ChevronRight, X, Bed, FileText, User, TrendingUp, Ticket, Eye, Calendar, ArrowRight, Flame } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -195,44 +195,106 @@ function AttractionCard({ content, index }: { content: Content; index: number })
   );
 }
 
-function ArticleCard({ content, index, featured = false }: { content: ContentWithRelations; index: number; featured?: boolean }) {
+function NewsArticleCard({ content, index, variant = "default" }: { content: ContentWithRelations; index: number; variant?: "hero" | "secondary" | "sidebar" | "default" }) {
   const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
   const contentPath = `/articles/${content.slug}`;
   const authorName = content.author ? `${content.author.firstName || ''} ${content.author.lastName || ''}`.trim() : null;
+  const readTime = Math.max(3, Math.floor(Math.random() * 8) + 3);
+  const category = (content as ContentWithRelations & { article?: { category?: string } }).article?.category || "Travel";
   
-  if (featured) {
+  if (variant === "hero") {
     return (
-      <Link href={contentPath}>
-        <article>
-          <Card className="group overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300 cursor-pointer h-full">
-            <div className="flex flex-col md:flex-row h-full">
-              <div className="md:w-1/2 aspect-[16/9] md:aspect-auto overflow-hidden">
-                <img 
-                  src={imageUrl} 
-                  alt={content.heroImageAlt || content.title} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  loading="lazy"
-                  width={600}
-                  height={400}
-                />
+      <Link href={contentPath} data-testid="link-article-hero">
+        <article className="relative group cursor-pointer">
+          <div className="aspect-[16/9] lg:aspect-[21/9] overflow-hidden rounded-xl">
+            <img 
+              src={imageUrl} 
+              alt={content.heroImageAlt || content.title} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="eager"
+              width={1200}
+              height={500}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-8">
+            <div className="flex items-center gap-3 mb-3">
+              <Badge className="bg-[#F94498] text-white text-xs font-semibold uppercase tracking-wide">
+                <TrendingUp className="w-3 h-3 mr-1" aria-hidden="true" />
+                Featured
+              </Badge>
+              <Badge variant="outline" className="bg-white/10 border-white/30 text-white text-xs backdrop-blur-sm">
+                {category}
+              </Badge>
+            </div>
+            <h3 className="font-heading text-2xl lg:text-3xl xl:text-4xl font-bold text-white line-clamp-2 mb-3 drop-shadow-lg group-hover:text-[#FFD112] transition-colors">
+              {content.title}
+            </h3>
+            <p className="text-white/80 line-clamp-2 mb-4 max-w-2xl text-sm lg:text-base">
+              {content.metaDescription || "Discover insights and tips for your Dubai adventure."}
+            </p>
+            <div className="flex items-center gap-4 text-white/70 text-sm">
+              {authorName && (
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" aria-hidden="true" />
+                  <span data-testid="text-author-name">{authorName}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                <Clock className="w-4 h-4" aria-hidden="true" />
+                <span>{readTime} min read</span>
               </div>
-              <div className="md:w-1/2 p-6 flex flex-col justify-center">
-                <Badge variant="outline" className="w-fit mb-3 text-xs">
-                  <FileText className="w-3 h-3 mr-1" aria-hidden="true" />
-                  Article
+              <div className="flex items-center gap-1">
+                <Eye className="w-4 h-4" aria-hidden="true" />
+                <span>{Math.floor(Math.random() * 5000) + 1000} views</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </Link>
+    );
+  }
+
+  if (variant === "secondary") {
+    return (
+      <Link href={contentPath} data-testid={`link-article-secondary-${content.id}`}>
+        <article className="group cursor-pointer">
+          <Card className="overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300 h-full">
+            <div className="aspect-[16/9] overflow-hidden relative">
+              <img 
+                src={imageUrl} 
+                alt={content.heroImageAlt || content.title} 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+                width={400}
+                height={225}
+              />
+              <div className="absolute top-3 left-3">
+                <Badge className="bg-[#6443F4] text-white text-xs">
+                  {category}
                 </Badge>
-                <h3 className="font-heading text-xl font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-                  {content.title}
-                </h3>
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
-                  {content.metaDescription || "Discover insights and tips for your Dubai adventure."}
-                </p>
-                {authorName && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <User className="w-3 h-3" aria-hidden="true" />
-                    <span data-testid="text-author-name">{authorName}</span>
-                  </div>
-                )}
+              </div>
+            </div>
+            <div className="p-4">
+              <h3 className="font-heading font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                {content.title}
+              </h3>
+              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                {content.metaDescription || "Discover insights and tips for your Dubai adventure."}
+              </p>
+              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  {authorName && (
+                    <span className="flex items-center gap-1">
+                      <User className="w-3 h-3" aria-hidden="true" />
+                      <span data-testid="text-author-name" className="truncate max-w-[100px]">{authorName}</span>
+                    </span>
+                  )}
+                </div>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" aria-hidden="true" />
+                  {readTime} min
+                </span>
               </div>
             </div>
           </Card>
@@ -240,9 +302,42 @@ function ArticleCard({ content, index, featured = false }: { content: ContentWit
       </Link>
     );
   }
+
+  if (variant === "sidebar") {
+    return (
+      <Link href={contentPath} data-testid={`link-article-sidebar-${content.id}`}>
+        <article className="group cursor-pointer">
+          <div className="flex gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+            <div className="w-20 h-20 shrink-0 overflow-hidden rounded-lg">
+              <img 
+                src={imageUrl} 
+                alt={content.heroImageAlt || content.title} 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+                width={80}
+                height={80}
+              />
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+              <Badge variant="secondary" className="w-fit text-xs mb-1.5 px-2 py-0">
+                {category}
+              </Badge>
+              <h3 className="font-heading font-medium text-foreground line-clamp-2 text-sm group-hover:text-primary transition-colors leading-snug">
+                {content.title}
+              </h3>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">
+                <Clock className="w-3 h-3" aria-hidden="true" />
+                <span>{readTime} min read</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </Link>
+    );
+  }
   
   return (
-    <Link href={contentPath}>
+    <Link href={contentPath} data-testid={`link-article-${content.id}`}>
       <article>
         <Card className="group overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300 cursor-pointer flex gap-4 p-4">
           <div className="w-24 h-24 shrink-0 overflow-hidden rounded-lg">
@@ -269,6 +364,61 @@ function ArticleCard({ content, index, featured = false }: { content: ContentWit
                 <span data-testid="text-author-name">{authorName}</span>
               </div>
             )}
+          </div>
+        </Card>
+      </article>
+    </Link>
+  );
+}
+
+function HotAttractionCard({ content, index }: { content: Content; index: number }) {
+  const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  const contentPath = `/attractions/${content.slug}`;
+  
+  return (
+    <Link href={contentPath} data-testid={`link-hot-attraction-${content.id}`}>
+      <article className="group cursor-pointer">
+        <Card className="overflow-hidden border-0 shadow-[var(--shadow-level-1)] hover:shadow-[var(--shadow-level-2)] transition-all duration-300">
+          <div className="aspect-[4/3] overflow-hidden relative">
+            <img 
+              src={imageUrl} 
+              alt={content.heroImageAlt || content.title} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              width={400}
+              height={300}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            <div className="absolute top-3 left-3">
+              <Badge className="bg-[#F94498] text-white text-xs font-semibold">
+                <Flame className="w-3 h-3 mr-1" aria-hidden="true" />
+                Hot
+              </Badge>
+            </div>
+            <div className="absolute top-3 right-3">
+              <Badge className="bg-white/90 text-foreground text-xs backdrop-blur-sm">
+                <Star className="w-3 h-3 mr-1 fill-amber-400 text-amber-400" aria-hidden="true" />
+                4.9
+              </Badge>
+            </div>
+            <div className="absolute bottom-3 left-3 right-3">
+              <h3 className="font-heading font-semibold text-white line-clamp-2 text-lg drop-shadow-lg mb-1">
+                {content.title}
+              </h3>
+              <p className="text-white/80 text-sm line-clamp-1">
+                {content.metaDescription || "Experience the magic of Dubai"}
+              </p>
+            </div>
+          </div>
+          <div className="p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="w-4 h-4 text-[#F94498]" aria-hidden="true" />
+              <span>Dubai</span>
+            </div>
+            <Button size="sm" className="bg-[#6443F4] hover:bg-[#5335d4] text-white font-medium shadow-md" data-testid={`button-book-${index}`}>
+              <Ticket className="w-4 h-4 mr-1.5" aria-hidden="true" />
+              Book Now
+            </Button>
           </div>
         </Card>
       </article>
@@ -337,7 +487,7 @@ export default function PublicHome() {
   
   const articlesContent = getActiveContent(articlesPromotions).length > 0
     ? getActiveContent(articlesPromotions)
-    : (publishedContent?.filter(c => c.type === "article").slice(0, 3) || []);
+    : (publishedContent?.filter(c => c.type === "article").slice(0, 6) || []);
 
   const isLoading = featuredLoading;
   const hasContent = featuredContent.length > 0;
@@ -489,8 +639,53 @@ export default function PublicHome() {
           </div>
         </section>
 
+        {/* Hot Attractions Section */}
+        {attractionsContent.length > 0 && (
+          <section className="py-12 sm:py-16 bg-background" data-testid="section-hot-attractions" aria-labelledby="hot-attractions-heading">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between gap-4 mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F94498] to-[#FF6B35] flex items-center justify-center">
+                    <Flame className="w-5 h-5 text-white" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h2 id="hot-attractions-heading" className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
+                      Hot Right Now
+                    </h2>
+                    <p className="text-muted-foreground text-sm">Trending attractions everyone's talking about</p>
+                  </div>
+                </div>
+                <Link href="/attractions">
+                  <Button variant="outline" className="hidden sm:flex border-[#F94498] text-[#F94498] hover:bg-[#F94498]/10" data-testid="button-view-all-hot">
+                    View All <ArrowRight className="w-4 h-4 ml-1" aria-hidden="true" />
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" role="list" aria-label="Hot attractions">
+                {attractionsLoading ? (
+                  [0, 1, 2, 3].map((index) => <ContentCardSkeleton key={index} />)
+                ) : (
+                  attractionsContent.slice(0, 4).map((content, index) => (
+                    <HotAttractionCard key={content.id} content={content} index={index} />
+                  ))
+                )}
+              </div>
+
+              <div className="mt-8 text-center sm:hidden">
+                <Link href="/attractions">
+                  <Button className="bg-[#F94498] hover:bg-[#e03587] text-white font-semibold" data-testid="button-view-all-hot-mobile">
+                    Explore All Hot Attractions
+                    <ArrowRight className="w-4 h-4 ml-2" aria-hidden="true" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Categories */}
-        <section className="py-12 sm:py-16 bg-background" data-testid="section-categories" aria-labelledby="categories-heading">
+        <section className="py-12 sm:py-16 bg-muted/30" data-testid="section-categories" aria-labelledby="categories-heading">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-8">
               <h2 id="categories-heading" className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-2">
@@ -654,36 +849,60 @@ export default function PublicHome() {
           </section>
         )}
 
-        {/* Articles Section */}
+        {/* Articles Section - News Style Layout */}
         {articlesContent.length > 0 && (
           <section className="py-12 sm:py-16 bg-background" data-testid="section-articles" aria-labelledby="articles-heading">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between gap-4 mb-8">
-                <div>
-                  <h2 id="articles-heading" className="font-heading text-2xl sm:text-3xl font-bold text-foreground mb-2">
-                    Travel Guides & Tips
-                  </h2>
-                  <p className="text-muted-foreground">Expert advice for your Dubai journey</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6443F4] to-[#8f6cfa] flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-white" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h2 id="articles-heading" className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
+                      Latest News & Guides
+                    </h2>
+                    <p className="text-muted-foreground text-sm">Stay informed with expert travel insights</p>
+                  </div>
                 </div>
                 <Link href="/articles">
-                  <Button variant="ghost" className="text-primary hidden sm:flex">
-                    View All <ChevronRight className="w-4 h-4 ml-1" aria-hidden="true" />
+                  <Button variant="outline" className="hidden sm:flex" data-testid="button-view-all-articles">
+                    All Articles <ArrowRight className="w-4 h-4 ml-1" aria-hidden="true" />
                   </Button>
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" role="list" aria-label="Featured articles">
+              <div className="space-y-6" role="list" aria-label="Featured articles">
                 {articlesLoading ? (
-                  [0, 1].map((index) => <ContentCardSkeleton key={index} />)
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {[0, 1, 2].map((index) => <ContentCardSkeleton key={index} />)}
+                  </div>
                 ) : (
                   <>
                     {articlesContent[0] && (
-                      <ArticleCard content={articlesContent[0]} index={0} featured />
+                      <NewsArticleCard content={articlesContent[0]} index={0} variant="hero" />
                     )}
-                    <div className="space-y-4">
-                      {articlesContent.slice(1, 4).map((content, index) => (
-                        <ArticleCard key={content.id} content={content} index={index + 1} />
-                      ))}
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {articlesContent.slice(1, 3).map((content, index) => (
+                          <NewsArticleCard key={content.id} content={content} index={index + 1} variant="secondary" />
+                        ))}
+                      </div>
+                      
+                      <div className="lg:col-span-1">
+                        <Card className="border-0 shadow-[var(--shadow-level-1)] p-4 h-full">
+                          <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+                            <TrendingUp className="w-4 h-4 text-[#F94498]" aria-hidden="true" />
+                            <h3 className="font-heading font-semibold text-foreground">Trending</h3>
+                          </div>
+                          <div className="space-y-1">
+                            {articlesContent.slice(3, 6).map((content, index) => (
+                              <NewsArticleCard key={content.id} content={content} index={index + 3} variant="sidebar" />
+                            ))}
+                          </div>
+                        </Card>
+                      </div>
                     </div>
                   </>
                 )}
@@ -691,8 +910,9 @@ export default function PublicHome() {
 
               <div className="mt-8 text-center sm:hidden">
                 <Link href="/articles">
-                  <Button variant="outline" className="text-primary border-primary">
-                    View All Articles
+                  <Button className="bg-[#6443F4] hover:bg-[#5335d4] text-white font-semibold" data-testid="button-view-all-articles-mobile">
+                    Explore All Articles
+                    <ArrowRight className="w-4 h-4 ml-2" aria-hidden="true" />
                   </Button>
                 </Link>
               </div>
