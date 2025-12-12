@@ -1,0 +1,179 @@
+You are rebuilding the content editor UX to behave like Elementor for writers, not a developer form and not a generic CMS.
+
+Core principle (non-negotiable)
+
+This editor must feel visual, block-first, canvas-based, exactly like Elementor / Webflow editor — not like a settings form with fields.
+
+If something feels like “fill inputs and save”, it is wrong.
+
+⸻
+
+Required UX Model (Elementor-like)
+
+1. Canvas-first editing (critical)
+	•	The center of the screen is a live page canvas, not a form.
+	•	Blocks appear visually stacked, exactly as they will appear on the public page.
+	•	Each block is:
+	•	Clickable
+	•	Editable inline
+	•	Highlighted on hover
+	•	Shows block controls (move / duplicate / delete) on hover
+
+❌ No “Content Blocks” empty box
+❌ No “Add block” dropdown floating alone
+✅ Visual page with sections, even when empty (placeholders)
+
+⸻
+
+2. Left panel = Block library (like Elementor)
+
+Replace the current “Add block” dropdown with:
+	•	A left-side block panel containing:
+	•	Text
+	•	Image
+	•	Gallery
+	•	FAQ
+	•	Highlights
+	•	Tips
+	•	CTA
+	•	Info Grid
+	•	Blocks are added by:
+	•	Click
+	•	Drag & drop into canvas
+
+This panel must feel like Elementor’s widget panel.
+
+⸻
+
+3. Right panel = Block settings (contextual)
+
+The right panel must be context-sensitive:
+	•	When nothing is selected:
+	•	Show Page Settings (status, SEO tab, slug, publish state)
+	•	When a block is selected:
+	•	Replace panel content with Block Settings
+	•	Only settings relevant to that block type
+
+Example:
+	•	Image block → image picker, alt text, caption, alignment
+	•	Text block → typography, spacing, emphasis
+	•	FAQ block → list editor (questions inline, not modal-heavy)
+
+❌ No mixed “Basic Information” form always visible
+❌ No static right panel unrelated to selection
+
+⸻
+
+4. Inline editing (very important)
+	•	Clicking text lets you type directly in the canvas
+	•	No textarea forms for main content
+	•	Headings editable inline
+	•	Lists editable inline
+	•	FAQ questions/answers editable inline
+
+This must feel like writing inside the page, not inside a form.
+
+⸻
+
+5. Hero section must be visual, not fields
+
+The Hero section must NOT be:
+	•	“Hero Image URL”
+	•	“Hero Image Alt Text” inputs
+
+Instead:
+	•	Visual hero block at top
+	•	Click image → choose image / generate image
+	•	Click title → edit title inline
+	•	CTA button editable inline
+
+Think Elementor Hero widget.
+
+⸻
+
+6. Image generation UX (currently broken)
+
+Right now “Generate with AI” is unclear and disconnected.
+
+Fix it like this:
+	•	Image blocks have two buttons:
+	•	“Upload Image”
+	•	“Generate Image with AI”
+	•	Clicking “Generate Image”:
+	•	Opens a modal
+	•	Shows:
+	•	What image will be generated (based on block + page context)
+	•	3–5 image previews returned
+	•	User must explicitly select one
+	•	No auto-insert
+	•	No background magic
+
+The user must always understand:
+
+“I am generating images for THIS block”
+
+⸻
+
+7. Page must never look empty
+
+When creating a new Attraction:
+	•	The canvas should already show:
+	•	Hero placeholder
+	•	Intro text placeholder
+	•	Essential info placeholder
+	•	Tips placeholder
+	•	FAQ placeholder
+
+These are locked required sections (can’t delete), only edit.
+
+Just like Elementor templates.
+
+⸻
+
+8. Writing experience > configuration
+
+Reduce visible fields to the absolute minimum:
+	•	Title
+	•	Slug
+	•	Status
+
+Everything else belongs inside blocks.
+
+If it feels like “admin panel”, it’s wrong.
+If it feels like “website builder”, it’s right.
+
+⸻
+
+9. Visual hierarchy rules
+	•	Clear spacing between blocks
+	•	Subtle borders or background for blocks on hover
+	•	Drag handles visible on hover
+	•	Section labels (“Hero”, “FAQ”, etc.) visible only in editor mode
+
+This is an editor, not a preview-only mode.
+
+⸻
+
+10. Success criteria (how you know you did it right)
+
+If a non-technical editor:
+	•	Never looks at the left menu after choosing “Attractions”
+	•	Writes everything directly on the page
+	•	Understands where images go without reading docs
+
+Then the implementation is correct.
+
+⸻
+
+Explicitly out of scope
+	•	No code editor
+	•	No raw HTML
+	•	No markdown editor
+	•	No “fill this form then see result later”
+
+⸻
+
+Deliverables
+	•	Refactor the editor UI to follow the above UX exactly
+	•	Adjust component structure as needed (canvas, block layer, panels)
+	•	Do not add features — only change how editing feels
