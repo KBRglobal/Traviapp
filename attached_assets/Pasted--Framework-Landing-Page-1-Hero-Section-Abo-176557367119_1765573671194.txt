@@ -1,0 +1,304 @@
+ה־Framework הקבוע (זהה בכל האזורים)
+
+כל עמוד הוא “Landing Page חווייתי” לאזור.
+
+1. Hero Section (Above the Fold)
+	•	תמונת/וידאו Hero גדולה, אימרסיבית
+	•	שם האזור (גדול, בטוח, מותגי)
+	•	שורת Tagline קצרה (אתה תכתוב)
+	•	2–3 Chips קטנים:
+Lifestyle / Business / Culture / Nightlife / Beach / Family (משתנה לפי אזור)
+
+⸻
+
+2. “Why This District”
+
+בלוק של 3–4 כרטיסים:
+	•	למה אנשים בוחרים לגור כאן
+	•	למה מבקרים מגיעים
+	•	מה מייחד את האזור משאר דובאי
+
+ויזואל: אייקונים מינימליים, לא טקסט כבד.
+
+⸻
+
+3. What’s Hot Now
+
+סקשן דינמי:
+	•	מקומות
+	•	טרנדים
+	•	פרויקטים
+	•	חוויות
+
+מבנה:
+	•	1 פריט Featured (גדול)
+	•	3–4 פריטים קטנים (Cards)
+
+⸻
+
+4. The Vibe
+
+סקשן רגשי:
+	•	איך זה מרגיש להיות שם ביום
+	•	איך זה בלילה
+	•	למי זה מתאים / לא מתאים
+
+יכול להיות:
+	•	טקסט קצר
+	•	או Slider “Day → Night”
+
+⸻
+
+5. Live / Visit / Invest (תלוי אזור)
+
+טאב או שלושה כרטיסים:
+	•	Living here
+	•	Visiting
+	•	Business / Investment
+
+לא בכל אזור חייבים שלושתם – אבל המבנה קבוע.
+
+⸻
+
+6. Signature Image / Moment
+
+תמונה אחת איקונית:
+	•	“הרגע של האזור”
+	•	משהו שברגע שאתה רואה – אתה יודע איפה אתה
+
+⸻
+
+7. Bottom CTA
+	•	Explore nearby districts
+	•	Save to wishlist
+	•	Compare districts
+
+⸻
+
+עכשיו – התאמה לכל אזור
+
+⸻
+
+Dubai Marina
+
+סגנון:
+מודרני, אנרגטי, “International Playground”
+
+פלטה:
+כחול עמוק, לבן, נגיעות ניאון
+
+Hero Image:
+קו הרקיע של המרינה בלילה + יאכטות + אורות
+
+What’s Hot Now – דגשים:
+	•	Rooftops
+	•	Yacht life
+	•	New towers / hotels
+	•	Fitness & wellness
+
+The Vibe:
+	•	Day: אקטיבי, ספורט, קפה
+	•	Night: לייב, רועש, גלובלי
+
+Signature Moment:
+מבט מלמעלה על המרינה בלילה בצורת פרסה
+
+⸻
+
+Downtown Dubai
+
+סגנון:
+אייקוני, יוקרתי, “Center of Gravity”
+
+פלטה:
+שחור / זהב / לבן
+
+Hero Image:
+בורג’ ח’ליפה + מזרקות בשקיעה
+
+What’s Hot Now:
+	•	Cultural events
+	•	Fine dining
+	•	New towers / luxury living
+
+The Vibe:
+	•	Day: עסקים, תיירות
+	•	Night: אלגנטי, יקר, רשמי
+
+Signature Moment:
+המזרקות מול הבורג’ בלילה
+
+⸻
+
+Jumeirah
+
+סגנון:
+Beachy luxury, רגוע, Old-money cool
+
+פלטה:
+חול, תכלת, ירוק דקלים
+
+Hero Image:
+חוף פתוח + מסעדת חוף + שמש רכה
+
+What’s Hot Now:
+	•	Beach clubs
+	•	Boutique cafés
+	•	Low-rise luxury
+
+The Vibe:
+	•	Day: רגוע, משפחות, חוף
+	•	Night: סושיאל, אבל לא רועש
+
+Signature Moment:
+הליכה על החוף בשקיעה עם בתי קפה מאחור
+
+⸻
+
+Palm Jumeirah
+
+סגנון:
+Ultra-luxury, Wow-factor, Iconic
+
+פלטה:
+שחור, סגול כהה, זהב
+
+Hero Image:
+מבט אווירי על הפאלם + Atlantis The Royal
+
+What’s Hot Now:
+	•	Celebrity restaurants
+	•	Private beaches
+	•	Branded residences
+
+The Vibe:
+	•	Day: Resort
+	•	Night: Exclusive & flashy
+
+Signature Moment:
+בריכה אינסופית מעל הים
+
+⸻
+
+Business Bay
+
+סגנון:
+Urban, ambitious, “New money”
+
+פלטה:
+אפור, כחול כהה, נגיעות ירוק ניאון
+
+Hero Image:
+תעלת המים עם מגדלים מזווית נמוכה
+
+What’s Hot Now:
+	•	New towers
+	•	Rooftop bars
+	•	Hybrid living/work
+
+The Vibe:
+	•	Day: עבודה, תנועה
+	•	Night: Rooftop, after-work
+
+Signature Moment:
+רוף־טופ עם נוף לדאונטאון
+
+⸻
+
+DIFC
+
+סגנון:
+Sharp, elite, cosmopolitan
+
+פלטה:
+שחור, לבן, כסף
+
+Hero Image:
+Gate DIFC עם אנשים אלגנטיים
+
+What’s Hot Now:
+	•	Fine dining
+	•	Art nights
+	•	Finance & culture mix
+
+The Vibe:
+	•	Day: Power
+	•	Night: Sophisticated
+
+Signature Moment:
+ארוחת ערב אלגנטית בגייט וילג’
+
+⸻
+
+Deira
+
+סגנון:
+Authentic, cultural, heritage
+
+פלטה:
+חום, ירוק, זהב חם
+
+Hero Image:
+סוק, תבלינים, נחל עם אברה
+
+What’s Hot Now:
+	•	Regeneration projects
+	•	Traditional markets
+	•	Cultural tourism
+
+The Vibe:
+	•	Day: Busy, local
+	•	Night: Street life, אוכל
+
+Signature Moment:
+שיט אברה בנחל בשקיעה
+
+⸻
+
+Al Quoz
+
+סגנון:
+Raw, creative, underground
+
+פלטה:
+בטון, שחור, כתמי צבע חזקים
+
+Hero Image:
+מחסן עם גרפיטי / גלריה
+
+What’s Hot Now:
+	•	Art spaces
+	•	Pop-ups
+	•	Creative community
+
+The Vibe:
+	•	Day: Studio / coffee
+	•	Night: Events, culture
+
+Signature Moment:
+אירוע אמנות בתוך מחסן פתוח
+
+⸻
+
+Al Barsha
+
+סגנון:
+Practical, family-friendly, modern suburb
+
+פלטה:
+כחול בהיר, ירוק, לבן
+
+Hero Image:
+פארק שכונתי + skyline ברקע
+
+What’s Hot Now:
+	•	New residential projects
+	•	Affordable luxury
+	•	Community life
+
+The Vibe:
+	•	Day: משפחתי
+	•	Night: שקט, מקומי
+
+Signature Moment:
+משפחה בפארק מול העיר

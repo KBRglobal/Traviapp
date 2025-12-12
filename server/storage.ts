@@ -8,6 +8,7 @@ import {
   articles,
   events,
   itineraries,
+  districts,
   rssFeeds,
   affiliateLinks,
   mediaFiles,
@@ -34,6 +35,7 @@ import {
   type InsertEvent,
   type Itinerary,
   type InsertItinerary,
+  type District,
   type RssFeed,
   type InsertRssFeed,
   type AffiliateLink,
@@ -316,6 +318,9 @@ export class DatabaseStorage implements IStorage {
       } else if (content.type === "itinerary") {
         const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, content.id));
         result.itinerary = itinerary;
+      } else if (content.type === "district") {
+        const [district] = await db.select().from(districts).where(eq(districts.contentId, content.id));
+        result.district = district;
       }
 
       // Fetch author if authorId exists
@@ -351,6 +356,9 @@ export class DatabaseStorage implements IStorage {
     } else if (content.type === "itinerary") {
       const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, id));
       result.itinerary = itinerary;
+    } else if (content.type === "district") {
+      const [district] = await db.select().from(districts).where(eq(districts.contentId, id));
+      result.district = district;
     }
 
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, id));
@@ -386,6 +394,9 @@ export class DatabaseStorage implements IStorage {
     } else if (content.type === "itinerary") {
       const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, content.id));
       result.itinerary = itinerary;
+    } else if (content.type === "district") {
+      const [district] = await db.select().from(districts).where(eq(districts.contentId, content.id));
+      result.district = district;
     }
 
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, content.id));
