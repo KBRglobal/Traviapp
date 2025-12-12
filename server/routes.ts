@@ -640,7 +640,22 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/contents", async (req, res) => {
+  // Helper to strip sensitive fields for public/anonymous access
+  function sanitizeContentForPublic(content: any) {
+    if (!content) return content;
+    const { affiliateLinks, translations, author, ...publicContent } = content;
+    // Only include safe author info
+    if (author) {
+      publicContent.author = { 
+        firstName: author.firstName, 
+        lastName: author.lastName 
+      };
+    }
+    return publicContent;
+  }
+
+  // Admin/CMS content list - requires authentication
+  app.get("/api/contents", requireAuth, async (req, res) => {
     try {
       const { type, status, search } = req.query;
       const filters = {
@@ -658,29 +673,82 @@ export async function registerRoutes(
     }
   });
 
+  // Admin/CMS content by ID - requires authentication for non-published content
   app.get("/api/contents/:id", async (req, res) => {
     try {
       const content = await storage.getContent(req.params.id);
       if (!content) {
         return res.status(404).json({ error: "Content not found" });
       }
-      res.json(content);
+      
+      // Check if user is authenticated
+      const user = req.user as any;
+      const isAuthenticated = req.isAuthenticated() && user?.claims?.sub;
+      
+      // Non-published content requires authentication
+      if (content.status !== "published" && !isAuthenticated) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      
+      // Return full content for authenticated users, sanitized for public
+      if (isAuthenticated) {
+        res.json(content);
+      } else {
+        res.json(sanitizeContentForPublic(content));
+      }
     } catch (error) {
       console.error("Error fetching content:", error);
       res.status(500).json({ error: "Failed to fetch content" });
     }
   });
 
+  // Public content by slug - only returns published content, sanitized
   app.get("/api/contents/slug/:slug", async (req, res) => {
     try {
       const content = await storage.getContentBySlug(req.params.slug);
       if (!content) {
         return res.status(404).json({ error: "Content not found" });
       }
-      res.json(content);
+      
+      // Check if user is authenticated
+      const user = req.user as any;
+      const isAuthenticated = req.isAuthenticated() && user?.claims?.sub;
+      
+      // Non-published content requires authentication
+      if (content.status !== "published" && !isAuthenticated) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      
+      // Return full content for authenticated users, sanitized for public
+      if (isAuthenticated) {
+        res.json(content);
+      } else {
+        res.json(sanitizeContentForPublic(content));
+      }
     } catch (error) {
       console.error("Error fetching content by slug:", error);
       res.status(500).json({ error: "Failed to fetch content" });
+    }
+  });
+
+  // Public API for published content only (for public website)
+  app.get("/api/public/contents", async (req, res) => {
+    try {
+      const { type, search, limit } = req.query;
+      const filters = {
+        type: type as string | undefined,
+        status: "published", // Only published content
+        search: search as string | undefined,
+      };
+      
+      const contents = await storage.getContentsWithRelations(filters);
+      // Limit and sanitize for public consumption
+      const maxLimit = Math.min(parseInt(limit as string) || 50, 100);
+      const sanitizedContents = contents.slice(0, maxLimit).map(sanitizeContentForPublic);
+      res.json(sanitizedContents);
+    } catch (error) {
+      console.error("Error fetching public contents:", error);
+      res.status(500).json({ error: "Failed to fetch contents" });
     }
   });
 
