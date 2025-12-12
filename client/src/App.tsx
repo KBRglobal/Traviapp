@@ -10,6 +10,9 @@ import PublicHome from "@/pages/public-home";
 import PublicHotels from "@/pages/public-hotels";
 import PublicAttractions from "@/pages/public-attractions";
 import PublicArticles from "@/pages/public-articles";
+import PublicDining from "@/pages/public-dining";
+import PublicDistricts from "@/pages/public-districts";
+import PublicTransport from "@/pages/public-transport";
 import PublicSearch from "@/pages/public-search";
 import PublicContentDetail from "@/pages/public-content-detail";
 import PrivacyPolicy from "@/pages/privacy-policy";
@@ -89,6 +92,12 @@ function App() {
             <Route path="/attractions/:slug" component={PublicContentDetail} />
             <Route path="/articles" component={PublicArticles} />
             <Route path="/articles/:slug" component={PublicContentDetail} />
+            <Route path="/dining" component={PublicDining} />
+            <Route path="/dining/:slug" component={PublicContentDetail} />
+            <Route path="/districts" component={PublicDistricts} />
+            <Route path="/districts/:slug" component={PublicContentDetail} />
+            <Route path="/transport" component={PublicTransport} />
+            <Route path="/transport/:slug" component={PublicContentDetail} />
             <Route path="/search" component={PublicSearch} />
             <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/terms" component={TermsConditions} />

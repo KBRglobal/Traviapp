@@ -17,10 +17,10 @@ const defaultPlaceholderImages = [
 const exploreCategories = [
   { icon: Building2, title: "Hotels", count: "500+", href: "/hotels" },
   { icon: Mountain, title: "Attractions", count: "200+", href: "/attractions" },
-  { icon: Landmark, title: "Districts", count: "25", href: "/attractions" },
+  { icon: Landmark, title: "Districts", count: "25", href: "/districts" },
   { icon: BookOpen, title: "Articles", count: "100+", href: "/articles" },
-  { icon: Utensils, title: "Dining", count: "300+", href: "/attractions" },
-  { icon: Bus, title: "Transport", count: "50+", href: "/articles" },
+  { icon: Utensils, title: "Dining", count: "300+", href: "/dining" },
+  { icon: Bus, title: "Transport", count: "50+", href: "/transport" },
 ];
 
 const stats = [
