@@ -24,6 +24,11 @@ import {
 import { z } from "zod";
 import * as fs from "fs";
 import * as path from "path";
+import { 
+  generateHotelContent, 
+  generateAttractionContent, 
+  generateArticleContent 
+} from "./ai-generator";
 
 // Permission checking utilities
 type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
@@ -1114,6 +1119,67 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     } catch (error) {
       console.error("Error generating SEO schema:", error);
       res.status(500).json({ error: "Failed to generate SEO schema" });
+    }
+  });
+
+  // Full content generation endpoints
+  app.post("/api/ai/generate-hotel", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ error: "Hotel name is required" });
+      }
+
+      const result = await generateHotelContent(name.trim());
+      if (!result) {
+        return res.status(500).json({ error: "Failed to generate hotel content" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating hotel content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate hotel content";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  app.post("/api/ai/generate-attraction", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ error: "Attraction name is required" });
+      }
+
+      const result = await generateAttractionContent(name.trim());
+      if (!result) {
+        return res.status(500).json({ error: "Failed to generate attraction content" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating attraction content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate attraction content";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  app.post("/api/ai/generate-article", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const { topic, category } = req.body;
+      if (!topic || typeof topic !== "string" || topic.trim().length === 0) {
+        return res.status(400).json({ error: "Article topic is required" });
+      }
+
+      const result = await generateArticleContent(topic.trim(), category);
+      if (!result) {
+        return res.status(500).json({ error: "Failed to generate article content" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating article content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate article content";
+      res.status(500).json({ error: message });
     }
   });
 

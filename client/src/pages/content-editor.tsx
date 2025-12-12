@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -41,6 +42,7 @@ import {
   CheckCircle,
   BookOpen,
   Loader2,
+  Zap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -82,22 +84,33 @@ function generateId(): string {
 }
 
 export default function ContentEditor() {
-  const [, attractionMatch] = useRoute("/attractions/:id");
-  const [, hotelMatch] = useRoute("/hotels/:id");
-  const [, articleMatch] = useRoute("/articles/:id");
-  const [, attractionNewMatch] = useRoute("/attractions/new");
-  const [, hotelNewMatch] = useRoute("/hotels/new");
-  const [, articleNewMatch] = useRoute("/articles/new");
+  const [, attractionMatch] = useRoute("/admin/attractions/:id");
+  const [, hotelMatch] = useRoute("/admin/hotels/:id");
+  const [, articleMatch] = useRoute("/admin/articles/:id");
+  const [, attractionNewMatch] = useRoute("/admin/attractions/new");
+  const [, hotelNewMatch] = useRoute("/admin/hotels/new");
+  const [, articleNewMatch] = useRoute("/admin/articles/new");
+  // Also check dining, districts, transport
+  const [, diningMatch] = useRoute("/admin/dining/:id");
+  const [, diningNewMatch] = useRoute("/admin/dining/new");
+  const [, districtMatch] = useRoute("/admin/districts/:id");
+  const [, districtNewMatch] = useRoute("/admin/districts/new");
+  const [, transportMatch] = useRoute("/admin/transport/:id");
+  const [, transportNewMatch] = useRoute("/admin/transport/new");
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
-  const contentId = attractionMatch?.id || hotelMatch?.id || articleMatch?.id;
-  const isNew = !!(attractionNewMatch || hotelNewMatch || articleNewMatch);
-  const contentType: ContentType = attractionMatch || attractionNewMatch
-    ? "attraction"
-    : hotelMatch || hotelNewMatch
-    ? "hotel"
-    : "article";
+  const contentId = attractionMatch?.id || hotelMatch?.id || articleMatch?.id || diningMatch?.id || districtMatch?.id || transportMatch?.id;
+  const isNew = !!(attractionNewMatch || hotelNewMatch || articleNewMatch || diningNewMatch || districtNewMatch || transportNewMatch);
+  
+  // Determine content type based on route
+  const getContentType = (): ContentType => {
+    if (attractionMatch || attractionNewMatch) return "attraction";
+    if (hotelMatch || hotelNewMatch) return "hotel";
+    // Dining, districts, transport are treated as articles for now
+    return "article";
+  };
+  const contentType: ContentType = getContentType();
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -111,6 +124,8 @@ export default function ContentEditor() {
   const [activeTab, setActiveTab] = useState("content");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | null>(null);
   const [aiProcessingBlock, setAiProcessingBlock] = useState<string | null>(null);
+  const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
+  const [aiGenerateInput, setAiGenerateInput] = useState("");
 
   const { data: content, isLoading } = useQuery<ContentWithRelations>({
     queryKey: [`/api/contents/${contentId}`],
@@ -149,7 +164,7 @@ export default function ContentEditor() {
         description: "Your content has been saved.",
       });
       if (isNew && result?.id) {
-        navigate(`/${contentType}s/${result.id}`);
+        navigate(`/admin/${contentType}s/${result.id}`);
       }
     },
     onError: () => {
@@ -202,6 +217,113 @@ export default function ContentEditor() {
     }
     setAiProcessingBlock(blockId);
     aiBlockMutation.mutate({ blockId, action, content, targetLanguage });
+  };
+
+  const aiGenerateMutation = useMutation({
+    mutationFn: async (input: string) => {
+      const endpoint = contentType === "hotel" 
+        ? "/api/ai/generate-hotel" 
+        : contentType === "attraction" 
+        ? "/api/ai/generate-attraction" 
+        : "/api/ai/generate-article";
+      const body = contentType === "article" 
+        ? { topic: input } 
+        : { name: input };
+      const res = await apiRequest("POST", endpoint, body);
+      return res.json();
+    },
+    onSuccess: (result) => {
+      if (result.content) {
+        setTitle(result.content.title || "");
+        setSlug(result.content.slug || "");
+        setMetaTitle(result.content.metaTitle || "");
+        setMetaDescription(result.content.metaDescription || "");
+        setPrimaryKeyword(result.content.primaryKeyword || "");
+        if (result.content.heroImage) {
+          setHeroImage(result.content.heroImage);
+        }
+        setHeroImageAlt(result.content.heroImageAlt || "");
+        setBlocks(Array.isArray(result.content.blocks) ? result.content.blocks : []);
+      }
+      setAiGenerateDialogOpen(false);
+      setAiGenerateInput("");
+      toast({
+        title: "Content Generated",
+        description: "AI has generated content for your page. Review and edit as needed.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate content. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAiGenerate = () => {
+    if (!aiGenerateInput.trim()) {
+      toast({
+        title: "Input Required",
+        description: `Please enter a ${contentType === "article" ? "topic" : "name"} to generate content.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    aiGenerateMutation.mutate(aiGenerateInput);
+  };
+
+  const publishMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      if (contentId) {
+        const res = await apiRequest("PATCH", `/api/contents/${contentId}`, data);
+        return res.json();
+      } else {
+        const res = await apiRequest("POST", "/api/contents", { ...data, type: contentType });
+        return res.json();
+      }
+    },
+    onSuccess: (result) => {
+      setStatus("published");
+      queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Published Successfully",
+        description: "Your content is now live.",
+      });
+      if (isNew && result?.id) {
+        navigate(`/admin/${contentType}s/${result.id}`);
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Publish Failed",
+        description: "Failed to publish content. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePublishNow = () => {
+    const wordCount = blocks.reduce((count, block) => {
+      if (block.type === "text" && typeof block.data?.content === "string") {
+        return count + block.data.content.split(/\s+/).filter(Boolean).length;
+      }
+      return count;
+    }, 0);
+    publishMutation.mutate({
+      title,
+      slug: slug || generateSlug(title),
+      metaTitle,
+      metaDescription,
+      primaryKeyword,
+      heroImage,
+      heroImageAlt,
+      blocks,
+      wordCount,
+      status: "published",
+      publishedAt: new Date().toISOString(),
+    });
   };
 
   const handleSave = () => {
@@ -353,7 +475,7 @@ export default function ContentEditor() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/${contentType}s`)} data-testid="button-back">
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/${contentType}s`)} data-testid="button-back">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
@@ -363,8 +485,12 @@ export default function ContentEditor() {
             <p className="text-sm text-muted-foreground">{wordCount} words</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <StatusBadge status={status as "draft" | "in_review" | "approved" | "scheduled" | "published"} />
+          <Button variant="outline" onClick={() => setAiGenerateDialogOpen(true)} data-testid="button-generate-ai">
+            <Sparkles className="h-4 w-4 mr-2" />
+            Generate with AI
+          </Button>
           <Button variant="outline" onClick={() => setPreviewMode("desktop")} data-testid="button-preview">
             <Eye className="h-4 w-4 mr-2" />
             Preview
@@ -372,6 +498,14 @@ export default function ContentEditor() {
           <Button variant="outline" onClick={handleSave} disabled={saveMutation.isPending} data-testid="button-save-draft">
             <Save className="h-4 w-4 mr-2" />
             Save Draft
+          </Button>
+          <Button variant="outline" onClick={handlePublishNow} disabled={publishMutation.isPending} data-testid="button-publish-now">
+            {publishMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4 mr-2" />
+            )}
+            {publishMutation.isPending ? "Publishing..." : "Publish Now"}
           </Button>
           <Button onClick={() => { setStatus("in_review"); handleSave(); }} disabled={saveMutation.isPending} data-testid="button-submit-review">
             <Send className="h-4 w-4 mr-2" />
@@ -740,12 +874,22 @@ export default function ContentEditor() {
                   <Sparkles className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start" disabled data-testid="button-ai-generate">
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Generate Draft
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start" 
+                    onClick={() => setAiGenerateDialogOpen(true)}
+                    disabled={aiGenerateMutation.isPending}
+                    data-testid="button-ai-generate-sidebar"
+                  >
+                    {aiGenerateMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-2" />
+                    )}
+                    {aiGenerateMutation.isPending ? "Generating..." : "Generate with AI"}
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    AI features will be available after backend integration.
+                    Generate complete {contentType} content including SEO metadata and content blocks.
                   </p>
                 </CardContent>
               </Card>
@@ -822,6 +966,71 @@ export default function ContentEditor() {
           </Tabs>
         </div>
       </div>
+
+      <Dialog open={aiGenerateDialogOpen} onOpenChange={setAiGenerateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate {contentType.charAt(0).toUpperCase() + contentType.slice(1)} with AI</DialogTitle>
+            <DialogDescription>
+              {contentType === "article" 
+                ? "Enter a topic and AI will generate a complete article with SEO optimization."
+                : `Enter the ${contentType} name and AI will generate complete content with SEO optimization.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="ai-input">
+                {contentType === "article" ? "Article Topic" : `${contentType.charAt(0).toUpperCase() + contentType.slice(1)} Name`}
+              </Label>
+              <Input
+                id="ai-input"
+                value={aiGenerateInput}
+                onChange={(e) => setAiGenerateInput(e.target.value)}
+                placeholder={contentType === "article" 
+                  ? "e.g., Best Dubai beaches for families" 
+                  : contentType === "hotel"
+                  ? "e.g., Atlantis The Palm"
+                  : "e.g., Burj Khalifa"}
+                disabled={aiGenerateMutation.isPending}
+                data-testid="input-ai-generate"
+              />
+            </div>
+            {aiGenerateMutation.isPending && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating content... This may take 15-30 seconds.
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setAiGenerateDialogOpen(false)}
+              disabled={aiGenerateMutation.isPending}
+              data-testid="button-cancel-ai-generate"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAiGenerate}
+              disabled={aiGenerateMutation.isPending || !aiGenerateInput.trim()}
+              data-testid="button-confirm-ai-generate"
+            >
+              {aiGenerateMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Content
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
