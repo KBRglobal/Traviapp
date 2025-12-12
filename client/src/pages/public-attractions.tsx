@@ -1,119 +1,286 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Clock, MapPin, Search, Ticket } from "lucide-react";
+import { 
+  Search, MapPin, Star, Users, Sparkles, Moon, 
+  Heart, Gem, Compass, Mountain, Building2, Ship,
+  Camera, TreePine, Waves, ChevronRight, ArrowRight,
+  Clock, Sun, Bookmark, Map, Zap
+} from "lucide-react";
 import type { ContentWithRelations } from "@shared/schema";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
-import { CompactHero } from "@/components/image-hero";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-const heroImage = "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=600&fit=crop";
+const EXPERIENCE_TYPES = [
+  { 
+    id: "iconic", 
+    title: "Iconic Dubai", 
+    description: "Must-see landmarks that define the city",
+    icon: Star,
+    gradient: "from-amber-500 to-orange-500",
+    keywords: ["burj", "khalifa", "fountain", "frame", "palm"]
+  },
+  { 
+    id: "family", 
+    title: "Family & Kids", 
+    description: "Fun for the whole family",
+    icon: Users,
+    gradient: "from-green-500 to-emerald-500",
+    keywords: ["kids", "family", "children", "theme park", "aquarium", "zoo"]
+  },
+  { 
+    id: "thrill", 
+    title: "Thrill & Adventure", 
+    description: "Adrenaline-pumping experiences",
+    icon: Zap,
+    gradient: "from-red-500 to-rose-500",
+    keywords: ["adventure", "thrill", "extreme", "desert", "skydive", "safari"]
+  },
+  { 
+    id: "culture", 
+    title: "Culture & History", 
+    description: "Heritage and authentic Emirati experiences",
+    icon: Sparkles,
+    gradient: "from-amber-600 to-yellow-500",
+    keywords: ["museum", "heritage", "history", "culture", "traditional", "souk"]
+  },
+  { 
+    id: "night", 
+    title: "Night & After Dark", 
+    description: "Dubai comes alive at night",
+    icon: Moon,
+    gradient: "from-indigo-600 to-purple-600",
+    keywords: ["night", "evening", "dinner", "cruise", "show", "fountain"]
+  },
+  { 
+    id: "relax", 
+    title: "Relax & Scenic", 
+    description: "Peaceful escapes and stunning views",
+    icon: Waves,
+    gradient: "from-cyan-500 to-blue-500",
+    keywords: ["beach", "spa", "view", "observation", "garden", "park"]
+  },
+  { 
+    id: "budget", 
+    title: "Budget Friendly", 
+    description: "Amazing experiences without breaking the bank",
+    icon: Heart,
+    gradient: "from-teal-500 to-green-500",
+    keywords: ["free", "cheap", "budget", "affordable"]
+  },
+  { 
+    id: "luxury", 
+    title: "Luxury Experiences", 
+    description: "Premium and exclusive adventures",
+    icon: Gem,
+    gradient: "from-purple-600 to-pink-500",
+    keywords: ["luxury", "premium", "vip", "private", "exclusive", "yacht"]
+  },
+];
 
 const CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "museums", label: "Museums" },
-  { id: "theme-parks", label: "Theme Parks" },
-  { id: "zoos", label: "Zoos" },
-  { id: "parks", label: "Parks" },
-  { id: "water-parks", label: "Water Parks" },
-  { id: "landmarks", label: "Landmarks" },
-  { id: "observation-decks", label: "Observation Decks" },
-  { id: "aquariums", label: "Aquariums" },
-  { id: "immersive-experiences", label: "Immersive Experiences" },
-  { id: "cruises", label: "Cruises" },
-  { id: "tours", label: "Tours" },
+  { id: "museums", label: "Museums", icon: Building2 },
+  { id: "theme-parks", label: "Theme Parks", icon: Star },
+  { id: "observation-decks", label: "Observation Decks", icon: Mountain },
+  { id: "cruises", label: "Cruises", icon: Ship },
+  { id: "water-parks", label: "Water Parks", icon: Waves },
+  { id: "tours", label: "Tours", icon: Compass },
+  { id: "immersive-experiences", label: "Immersive", icon: Camera },
+  { id: "parks", label: "Parks & Gardens", icon: TreePine },
 ];
 
-const categoryImages: Record<string, string> = {
-  "museums": "https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=800&h=600&fit=crop",
-  "theme-parks": "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800&h=600&fit=crop",
-  "zoos": "https://images.unsplash.com/photo-1474511320723-9a56873571b7?w=800&h=600&fit=crop",
-  "parks": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800&h=600&fit=crop",
-  "water-parks": "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=800&h=600&fit=crop",
-  "landmarks": "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&h=600&fit=crop",
-  "observation-decks": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
-  "aquariums": "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop",
-  "immersive-experiences": "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=800&h=600&fit=crop",
-  "cruises": "https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?w=800&h=600&fit=crop",
-  "tours": "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=800&h=600&fit=crop",
-};
-
-const defaultPlaceholderImages = [
-  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=800&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1546412414-e1885259563a?w=800&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=800&h=600&fit=crop",
+const CONTEXTUAL_HINTS = [
+  { icon: Star, text: "Best for first-time visitors", filter: "iconic" },
+  { icon: Clock, text: "Can be done in 1-2 hours", filter: null },
+  { icon: Sun, text: "Great in summer (indoor)", filter: null },
+  { icon: Moon, text: "Perfect for evenings", filter: "night" },
 ];
 
-function AttractionCardSkeleton() {
+const FEATURED_EXPERIENCES = [
+  {
+    slug: "burj-khalifa",
+    title: "At the Top, Burj Khalifa",
+    tagline: "Touch the sky at the world's tallest building",
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=1000&fit=crop",
+    tags: ["Iconic", "Must-See"],
+    label: "Editor's Pick"
+  },
+  {
+    slug: "dubai-fountain",
+    title: "Dubai Fountain Show",
+    tagline: "World's largest choreographed fountain",
+    image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&h=600&fit=crop",
+    tags: ["Free", "Night"],
+    label: "Most Loved"
+  },
+  {
+    slug: "desert-safari",
+    title: "Desert Safari Adventure",
+    tagline: "Dune bashing, BBQ & stargazing",
+    image: "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=800&h=600&fit=crop",
+    tags: ["Adventure", "Sunset"],
+    label: "First Time Dubai"
+  },
+  {
+    slug: "dubai-aquarium",
+    title: "Dubai Aquarium & Underwater Zoo",
+    tagline: "Face-to-face with sharks",
+    image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop",
+    tags: ["Family", "Indoor"],
+    label: null
+  },
+];
+
+function ExperienceCard({ 
+  experience, 
+  isActive, 
+  onClick 
+}: { 
+  experience: typeof EXPERIENCE_TYPES[0]; 
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const Icon = experience.icon;
+  
   return (
-    <div aria-hidden="true" className="animate-pulse">
-      <div className="aspect-[4/3] bg-muted rounded-lg mb-4" />
-      <div className="space-y-2">
-        <div className="h-4 w-20 bg-muted rounded" />
-        <div className="h-5 bg-muted rounded w-3/4" />
-        <div className="h-4 bg-muted rounded w-full" />
+    <button
+      onClick={onClick}
+      className={`group relative overflow-hidden rounded-xl p-4 md:p-5 text-left transition-all duration-300 ${
+        isActive 
+          ? 'ring-2 ring-primary shadow-lg scale-105' 
+          : 'hover:shadow-md'
+      }`}
+      data-testid={`button-experience-${experience.id}`}
+    >
+      <div className={`absolute inset-0 bg-gradient-to-br ${experience.gradient} opacity-90`} />
+      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+      
+      <div className="relative z-10">
+        <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-white/20 flex items-center justify-center mb-3">
+          <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+        </div>
+        <h3 className="font-bold text-white text-sm md:text-base mb-1">{experience.title}</h3>
+        <p className="text-white/80 text-xs md:text-sm line-clamp-2">{experience.description}</p>
       </div>
-    </div>
+    </button>
   );
 }
 
-interface AttractionCardProps {
-  rank: number;
-  title: string;
-  description: string;
-  image: string;
-  href: string;
-  category: string;
-  location?: string;
-  priceFrom?: string;
-}
-
-function AttractionCard({ rank, title, description, image, href, category, location, priceFrom }: AttractionCardProps) {
+function FeaturedCard({ 
+  experience, 
+  featured = false 
+}: { 
+  experience: typeof FEATURED_EXPERIENCES[0]; 
+  featured?: boolean;
+}) {
   return (
-    <Link href={href}>
-      <Card className="overflow-hidden hover-elevate cursor-pointer group h-full">
-        <div className="relative aspect-[4/3] overflow-hidden">
+    <Link href={`/attractions/${experience.slug}`}>
+      <Card 
+        className={`group overflow-visible border-0 shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer relative ${
+          featured ? 'col-span-1 md:col-span-2 row-span-2' : ''
+        }`}
+        data-testid={`card-featured-${experience.slug}`}
+      >
+        <div className={`overflow-hidden rounded-lg ${featured ? 'aspect-[4/5]' : 'aspect-[4/3]'}`}>
           <img 
-            src={image} 
-            alt={title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            src={experience.image} 
+            alt={experience.title}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
           />
-          <div className="absolute top-3 left-3 flex items-center gap-2">
-            <Badge variant="secondary" className="font-semibold">
-              #{rank}
-            </Badge>
-            <Badge variant="default">
-              {category}
-            </Badge>
-          </div>
-          {priceFrom && (
-            <div className="absolute bottom-3 right-3">
-              <Badge variant="outline" className="bg-background/90 flex items-center gap-1">
-                <Ticket className="w-3 h-3" />
-                From AED {priceFrom}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-lg" />
+          
+          {experience.label && (
+            <div className="absolute top-4 left-4">
+              <Badge className="bg-primary text-primary-foreground">
+                {experience.label}
               </Badge>
             </div>
           )}
-        </div>
-        <div className="p-4 space-y-2">
-          <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-primary transition-colors" data-testid={`text-attraction-title-${title.toLowerCase().replace(/\s+/g, '-')}`}>
-            {title}
-          </h3>
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {description}
-          </p>
-          {location && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
-              <MapPin className="w-3 h-3" />
-              <span>{location}</span>
+          
+          <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {experience.tags.map((tag) => (
+                <Badge 
+                  key={tag} 
+                  variant="secondary" 
+                  className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs"
+                >
+                  {tag}
+                </Badge>
+              ))}
             </div>
+            
+            <h3 className={`font-bold text-white mb-1 ${featured ? 'text-xl md:text-2xl' : 'text-base md:text-lg'}`}>
+              {experience.title}
+            </h3>
+            
+            <p className="text-white/80 text-xs md:text-sm line-clamp-2 mb-3">
+              {experience.tagline}
+            </p>
+            
+            <div className="flex items-center gap-2 text-white font-medium text-sm group-hover:gap-3 transition-all">
+              <span>Explore</span>
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
+function AttractionCard({ 
+  attraction, 
+  index 
+}: { 
+  attraction: ContentWithRelations; 
+  index: number;
+}) {
+  const image = attraction.heroImage || `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop`;
+  
+  return (
+    <Link href={`/attractions/${attraction.slug}`}>
+      <Card 
+        className="group overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+        data-testid={`card-attraction-${attraction.slug}`}
+      >
+        <div className="relative aspect-[4/3] overflow-hidden">
+          <img 
+            src={image} 
+            alt={attraction.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          
+          <div className="absolute bottom-0 left-0 right-0 p-3">
+            <h3 className="font-semibold text-white text-sm md:text-base line-clamp-1 group-hover:text-white transition-colors">
+              {attraction.title}
+            </h3>
+            {attraction.attraction?.location && (
+              <div className="flex items-center gap-1 text-xs text-white/70 mt-1">
+                <MapPin className="w-3 h-3" />
+                <span className="line-clamp-1">{attraction.attraction.location}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="p-3 flex items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-1">
+            {attraction.attraction?.category && (
+              <Badge variant="outline" className="text-xs">
+                {attraction.attraction.category}
+              </Badge>
+            )}
+          </div>
+          {attraction.attraction?.priceFrom && (
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              From AED {attraction.attraction.priceFrom}
+            </span>
           )}
         </div>
       </Card>
@@ -121,14 +288,29 @@ function AttractionCard({ rank, title, description, image, href, category, locat
   );
 }
 
+function CategoryCard({ category }: { category: typeof CATEGORIES[0] }) {
+  const Icon = category.icon;
+  
+  return (
+    <Link href={`/attractions?category=${category.id}`}>
+      <Card className="group overflow-hidden border hover-elevate cursor-pointer p-4 text-center" data-testid={`card-category-${category.id}`}>
+        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-primary/20 transition-colors">
+          <Icon className="w-6 h-6 text-primary" />
+        </div>
+        <h3 className="font-medium text-sm">{category.label}</h3>
+      </Card>
+    </Link>
+  );
+}
+
 export default function PublicAttractions() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [activeExperience, setActiveExperience] = useState<string | null>(null);
   
   useDocumentMeta({
-    title: "Dubai Attractions & Things to Do | Travi - Dubai Travel Guide",
-    description: "Discover the best attractions and things to do in Dubai. From the iconic Burj Khalifa to desert safaris, find unforgettable experiences in the city of dreams.",
-    ogTitle: "Dubai Attractions & Things to Do | Travi",
+    title: "Dubai Experiences & Attractions | Travi - Dubai Travel Guide",
+    description: "Discover unforgettable experiences in Dubai. From iconic landmarks to hidden adventures, find the perfect way to explore the city of dreams.",
+    ogTitle: "Dubai Experiences & Attractions | Travi",
     ogDescription: "Explore iconic landmarks, thrilling adventures, and unique experiences in Dubai.",
     ogType: "website",
   });
@@ -139,147 +321,302 @@ export default function PublicAttractions() {
 
   const attractions = allContent?.filter(c => c.type === "attraction") || [];
   
-  const filteredAttractions = attractions.filter(a => {
-    const matchesSearch = searchQuery 
-      ? a.title.toLowerCase().includes(searchQuery.toLowerCase())
-      : true;
+  const filteredAttractions = useMemo(() => {
+    let filtered = attractions;
     
-    const attractionCategory = a.attraction?.category || '';
-    const normalizedCategory = attractionCategory.toLowerCase().replace(/\s+/g, '-');
-    const matchesCategory = selectedCategory === "all" || normalizedCategory === selectedCategory;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(a => 
+        a.title.toLowerCase().includes(query) ||
+        a.metaDescription?.toLowerCase().includes(query) ||
+        a.attraction?.category?.toLowerCase().includes(query)
+      );
+    }
     
-    return matchesSearch && matchesCategory;
-  });
+    if (activeExperience) {
+      const experience = EXPERIENCE_TYPES.find(e => e.id === activeExperience);
+      if (experience) {
+        filtered = filtered.filter(a => 
+          experience.keywords.some(keyword => 
+            a.title.toLowerCase().includes(keyword) ||
+            a.metaDescription?.toLowerCase().includes(keyword) ||
+            a.attraction?.category?.toLowerCase().includes(keyword)
+          )
+        );
+      }
+    }
+    
+    return filtered;
+  }, [attractions, searchQuery, activeExperience]);
 
-  const getCategoryLabel = (id: string) => {
-    return CATEGORIES.find(c => c.id === id)?.label || id;
-  };
+  const trendingAttractions = attractions.slice(0, 6);
+  const allAttractions = filteredAttractions;
 
-  const getAttractionImage = (attraction: ContentWithRelations, index: number) => {
-    if (attraction.heroImage) return attraction.heroImage;
-    const category = attraction.attraction?.category?.toLowerCase().replace(/\s+/g, '-') || '';
-    return categoryImages[category] || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  const handleExperienceClick = (experienceId: string) => {
+    setActiveExperience(activeExperience === experienceId ? null : experienceId);
   };
 
   return (
     <div className="bg-background min-h-screen flex flex-col">
-      <a 
-        href="#main-content" 
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-      >
-        Skip to main content
-      </a>
-      
       <PublicNav />
 
-      <main id="main-content" className="flex-1">
-        <CompactHero 
-          backgroundImage={heroImage}
-          title="Explore Dubai Attractions"
-          subtitle="Discover unforgettable experiences and iconic landmarks"
-        />
+      {/* SECTION 1: Hero */}
+      <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0">
+          <img 
+            src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop"
+            alt="Dubai skyline"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
+        </div>
+        
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-16">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
+            Experiences that
+            <span className="block bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+              take your breath away
+            </span>
+          </h1>
+          <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto">
+            From sky-high adventures to ancient souks, discover the moments that make Dubai unforgettable.
+          </p>
+          
+          <div className="max-w-xl mx-auto">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-2 flex items-center gap-2 border border-white/20">
+              <Search className="w-5 h-5 text-white/60 ml-3" />
+              <input
+                type="text"
+                placeholder="Sky views, desert adventure, family fun..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent outline-none py-3 text-white placeholder:text-white/50"
+                data-testid="input-search-attractions"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+          <ChevronRight className="w-6 h-6 text-white/60 rotate-90" />
+        </div>
+      </section>
 
-        <section className="py-8 bg-background" aria-label="Search and filter attractions">
+      <main className="flex-1">
+        {/* SECTION 2: Choose Your Experience */}
+        <section className="py-12 md:py-16 bg-muted/30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <form role="search" onSubmit={(e) => e.preventDefault()} className="max-w-xl mb-6">
-              <label htmlFor="attraction-search" className="sr-only">Search attractions</label>
-              <div className="bg-card border rounded-lg p-2 flex items-center gap-2">
-                <Search className="w-5 h-5 text-muted-foreground ml-3" aria-hidden="true" />
-                <input
-                  id="attraction-search"
-                  type="text"
-                  placeholder="Search attractions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent outline-none py-2 text-foreground"
-                  data-testid="input-search-attractions"
+            <div className="text-center mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold mb-2">Choose Your Experience</h2>
+              <p className="text-muted-foreground">How do you want to feel today?</p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              {EXPERIENCE_TYPES.map((experience) => (
+                <ExperienceCard 
+                  key={experience.id} 
+                  experience={experience} 
+                  isActive={activeExperience === experience.id}
+                  onClick={() => handleExperienceClick(experience.id)}
                 />
-              </div>
-            </form>
-
-            <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter by category">
-              {CATEGORIES.map((category) => (
-                <Button
-                  key={category.id}
-                  variant={selectedCategory === category.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category.id)}
-                  role="tab"
-                  aria-selected={selectedCategory === category.id}
-                  data-testid={`button-category-${category.id}`}
-                >
-                  {category.label}
-                </Button>
               ))}
             </div>
-
-            <p className="mt-4 text-muted-foreground text-sm" aria-live="polite" data-testid="text-attractions-count">
-              {isLoading ? "Loading..." : `${filteredAttractions.length} attractions found`}
-            </p>
+            
+            {activeExperience && (
+              <div className="mt-6 text-center">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setActiveExperience(null)}
+                  data-testid="button-clear-experience-filter"
+                >
+                  Clear filter
+                </Button>
+              </div>
+            )}
           </div>
         </section>
 
-        {isLoading ? (
-          <section className="py-12" aria-label="Loading attractions">
+        {/* SECTION 3: Featured Experiences (Editorial Pick) */}
+        {!activeExperience && !searchQuery && (
+          <section className="py-12 md:py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                  <AttractionCardSkeleton key={i} />
-                ))}
-              </div>
-            </div>
-          </section>
-        ) : filteredAttractions.length > 0 ? (
-          <section className="py-8" aria-labelledby="attractions-heading">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <h2 id="attractions-heading" className="sr-only">
-                {selectedCategory === "all" ? "All Attractions" : getCategoryLabel(selectedCategory)}
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredAttractions.map((attraction, index) => (
-                  <AttractionCard
-                    key={attraction.id}
-                    rank={index + 1}
-                    title={attraction.title}
-                    description={attraction.metaDescription || "Discover this amazing attraction in Dubai."}
-                    image={getAttractionImage(attraction, index)}
-                    href={`/attractions/${attraction.slug}`}
-                    category={attraction.attraction?.category || "Experience"}
-                    location={attraction.attraction?.location || "Dubai, UAE"}
-                    priceFrom={attraction.attraction?.priceFrom}
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
-        ) : (
-          <section className="py-16" aria-label="No attractions found">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-              <div className="max-w-md mx-auto">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-8 h-8 text-muted-foreground" />
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold mb-1">Featured Experiences</h2>
+                  <p className="text-muted-foreground">Hand-picked for first-time visitors</p>
                 </div>
-                <h2 className="text-xl font-semibold mb-2">No attractions found</h2>
-                <p className="text-muted-foreground mb-6">
-                  {searchQuery 
-                    ? `No attractions match "${searchQuery}". Try a different search term.`
-                    : `No attractions in the ${getCategoryLabel(selectedCategory)} category yet.`
-                  }
-                </p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedCategory("all");
-                  }}
-                  data-testid="button-clear-filters"
-                >
-                  Clear Filters
-                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                <FeaturedCard experience={FEATURED_EXPERIENCES[0]} featured />
+                <div className="grid grid-cols-1 gap-4 md:gap-6 md:col-span-1 lg:col-span-2">
+                  {FEATURED_EXPERIENCES.slice(1, 4).map((exp) => (
+                    <FeaturedCard key={exp.slug} experience={exp} />
+                  ))}
+                </div>
               </div>
             </div>
           </section>
         )}
+
+        {/* SECTION 4: Trending & Popular */}
+        {!activeExperience && !searchQuery && trendingAttractions.length > 0 && (
+          <section className="py-12 md:py-16 bg-muted/30">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Zap className="w-5 h-5 text-primary" />
+                    <h2 className="text-2xl md:text-3xl font-bold">Trending Now</h2>
+                  </div>
+                  <p className="text-muted-foreground">What visitors are loving this week</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {trendingAttractions.map((attraction, index) => (
+                  <AttractionCard key={attraction.id} attraction={attraction} index={index} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* SECTION 5: Browse by Category */}
+        {!activeExperience && !searchQuery && (
+          <section className="py-12 md:py-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl md:text-3xl font-bold mb-2">Browse by Category</h2>
+                <p className="text-muted-foreground">Find exactly what you're looking for</p>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                {CATEGORIES.map((category) => (
+                  <CategoryCard key={category.id} category={category} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Filtered Results or All Attractions */}
+        {(activeExperience || searchQuery) && (
+          <section className="py-12 md:py-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold mb-1">
+                    {activeExperience 
+                      ? EXPERIENCE_TYPES.find(e => e.id === activeExperience)?.title 
+                      : "Search Results"}
+                  </h2>
+                  <p className="text-muted-foreground">
+                    {allAttractions.length} experiences found
+                  </p>
+                </div>
+              </div>
+              
+              {isLoading ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="aspect-[4/3] bg-muted rounded-lg mb-2" />
+                      <div className="h-4 bg-muted rounded w-3/4" />
+                    </div>
+                  ))}
+                </div>
+              ) : allAttractions.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                  {allAttractions.map((attraction, index) => (
+                    <AttractionCard key={attraction.id} attraction={attraction} index={index} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">No experiences found</h3>
+                  <p className="text-muted-foreground mb-6">Try a different search or filter</p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setSearchQuery("");
+                      setActiveExperience(null);
+                    }}
+                    data-testid="button-clear-filters"
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* SECTION 7: Contextual Help */}
+        {!activeExperience && !searchQuery && (
+          <section className="py-12 md:py-16 bg-muted/30">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl md:text-3xl font-bold mb-2">Quick Tips</h2>
+                <p className="text-muted-foreground">Not sure what to pick? These might help</p>
+              </div>
+              
+              <div className="flex flex-wrap justify-center gap-3">
+                {CONTEXTUAL_HINTS.map((hint, index) => {
+                  const Icon = hint.icon;
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => hint.filter && handleExperienceClick(hint.filter)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full bg-background border hover:border-primary hover:text-primary transition-colors"
+                      data-testid={`button-hint-${index}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="text-sm">{hint.text}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* SECTION 8: Bottom CTA */}
+        <section className="py-16 md:py-24 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-purple-600/90" />
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-80 h-80 bg-white rounded-full blur-3xl" />
+          </div>
+          
+          <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Not Sure Yet?
+            </h2>
+            <p className="text-lg text-white/80 mb-8 max-w-2xl mx-auto">
+              Save your favorites, explore by district, or let us help you build the perfect Dubai plan.
+            </p>
+            
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90" data-testid="button-save-for-later">
+                <Bookmark className="w-5 h-5 mr-2" />
+                Save for Later
+              </Button>
+              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" data-testid="button-explore-by-district">
+                <Map className="w-5 h-5 mr-2" />
+                Explore by District
+              </Button>
+              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" data-testid="button-build-your-plan">
+                <Compass className="w-5 h-5 mr-2" />
+                Build Your Plan
+              </Button>
+            </div>
+          </div>
+        </section>
       </main>
 
       <PublicFooter />
