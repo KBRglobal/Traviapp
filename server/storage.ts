@@ -542,6 +542,8 @@ export class DatabaseStorage implements IStorage {
     attractions: number;
     hotels: number;
     articles: number;
+    events: number;
+    itineraries: number;
   }> {
     const allContent = await db.select().from(contents);
     
