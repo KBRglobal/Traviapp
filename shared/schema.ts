@@ -154,6 +154,8 @@ export const attractions = pgTable("attractions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
   location: text("location"),
+  category: text("category"),
+  priceFrom: text("price_from"),
   duration: text("duration"),
   targetAudience: jsonb("target_audience").$type<string[]>().default([]),
   primaryCta: text("primary_cta"),

@@ -1,15 +1,46 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Clock, MapPin, Search } from "lucide-react";
+import { Clock, MapPin, Search, Ticket } from "lucide-react";
 import type { ContentWithRelations } from "@shared/schema";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { CompactHero } from "@/components/image-hero";
-import { FeaturedCard, EditorialCard, ContentGrid, SectionHeader } from "@/components/editorial-cards";
 import { useState } from "react";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const heroImage = "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=600&fit=crop";
+
+const CATEGORIES = [
+  { id: "all", label: "All" },
+  { id: "museums", label: "Museums" },
+  { id: "theme-parks", label: "Theme Parks" },
+  { id: "zoos", label: "Zoos" },
+  { id: "parks", label: "Parks" },
+  { id: "water-parks", label: "Water Parks" },
+  { id: "landmarks", label: "Landmarks" },
+  { id: "observation-decks", label: "Observation Decks" },
+  { id: "aquariums", label: "Aquariums" },
+  { id: "immersive-experiences", label: "Immersive Experiences" },
+  { id: "cruises", label: "Cruises" },
+  { id: "tours", label: "Tours" },
+];
+
+const categoryImages: Record<string, string> = {
+  "museums": "https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=800&h=600&fit=crop",
+  "theme-parks": "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800&h=600&fit=crop",
+  "zoos": "https://images.unsplash.com/photo-1474511320723-9a56873571b7?w=800&h=600&fit=crop",
+  "parks": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800&h=600&fit=crop",
+  "water-parks": "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=800&h=600&fit=crop",
+  "landmarks": "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&h=600&fit=crop",
+  "observation-decks": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
+  "aquariums": "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop",
+  "immersive-experiences": "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=800&h=600&fit=crop",
+  "cruises": "https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?w=800&h=600&fit=crop",
+  "tours": "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=800&h=600&fit=crop",
+};
 
 const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
@@ -33,8 +64,66 @@ function AttractionCardSkeleton() {
   );
 }
 
+interface AttractionCardProps {
+  rank: number;
+  title: string;
+  description: string;
+  image: string;
+  href: string;
+  category: string;
+  location?: string;
+  priceFrom?: string;
+}
+
+function AttractionCard({ rank, title, description, image, href, category, location, priceFrom }: AttractionCardProps) {
+  return (
+    <Link href={href}>
+      <Card className="overflow-hidden hover-elevate cursor-pointer group h-full">
+        <div className="relative aspect-[4/3] overflow-hidden">
+          <img 
+            src={image} 
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+          <div className="absolute top-3 left-3 flex items-center gap-2">
+            <Badge className="bg-white/90 text-foreground font-semibold">
+              #{rank}
+            </Badge>
+            <Badge variant="secondary" className="bg-violet-600 text-white">
+              {category}
+            </Badge>
+          </div>
+          {priceFrom && (
+            <div className="absolute bottom-3 right-3">
+              <Badge className="bg-green-600 text-white flex items-center gap-1">
+                <Ticket className="w-3 h-3" />
+                From AED {priceFrom}
+              </Badge>
+            </div>
+          )}
+        </div>
+        <div className="p-4 space-y-2">
+          <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-violet-600 transition-colors" data-testid={`text-attraction-title-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+            {title}
+          </h3>
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {description}
+          </p>
+          {location && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
+              <MapPin className="w-3 h-3" />
+              <span>{location}</span>
+            </div>
+          )}
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
 export default function PublicAttractions() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   
   useDocumentMeta({
     title: "Dubai Attractions & Things to Do | Travi - Dubai Travel Guide",
@@ -49,21 +138,27 @@ export default function PublicAttractions() {
   });
 
   const attractions = allContent?.filter(c => c.type === "attraction") || [];
-  const filteredAttractions = searchQuery 
-    ? attractions.filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    : attractions;
+  
+  const filteredAttractions = attractions.filter(a => {
+    const matchesSearch = searchQuery 
+      ? a.title.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+    
+    const attractionCategory = a.attraction?.category?.toLowerCase().replace(/\s+/g, '-') || '';
+    const matchesCategory = selectedCategory === "all" || attractionCategory === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
 
-  const featuredAttractions = filteredAttractions.slice(0, 2);
-  const remainingAttractions = filteredAttractions.slice(2);
+  const getCategoryLabel = (id: string) => {
+    return CATEGORIES.find(c => c.id === id)?.label || id;
+  };
 
-  const placeholderAttractions = [
-    { title: "Burj Khalifa", desc: "Visit the world's tallest building and enjoy breathtaking panoramic views of Dubai", duration: "2-3 hours", location: "Downtown Dubai" },
-    { title: "Desert Safari", desc: "Experience thrilling dune bashing, camel rides, and authentic Bedouin hospitality", duration: "Half Day", location: "Dubai Desert" },
-    { title: "Dubai Mall", desc: "Explore the world's largest shopping destination with endless entertainment options", duration: "4-6 hours", location: "Downtown Dubai" },
-    { title: "Palm Jumeirah", desc: "Discover the iconic man-made island with luxury resorts, beaches, and fine dining", duration: "Half Day", location: "Palm Jumeirah" },
-    { title: "Dubai Marina", desc: "Walk along the stunning waterfront promenade lined with cafes and yachts", duration: "2-3 hours", location: "Dubai Marina" },
-    { title: "Old Dubai", desc: "Step back in time exploring Al Fahidi, Gold Souk, and traditional markets", duration: "3-4 hours", location: "Deira & Bur Dubai" },
-  ];
+  const getAttractionImage = (attraction: ContentWithRelations, index: number) => {
+    if (attraction.heroImage) return attraction.heroImage;
+    const category = attraction.attraction?.category?.toLowerCase().replace(/\s+/g, '-') || '';
+    return categoryImages[category] || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  };
 
   return (
     <div className="bg-background min-h-screen flex flex-col">
@@ -83,9 +178,9 @@ export default function PublicAttractions() {
           subtitle="Discover unforgettable experiences and iconic landmarks"
         />
 
-        <section className="py-8 bg-background" aria-label="Search attractions">
+        <section className="py-8 bg-background" aria-label="Search and filter attractions">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <form role="search" onSubmit={(e) => e.preventDefault()} className="max-w-xl">
+            <form role="search" onSubmit={(e) => e.preventDefault()} className="max-w-xl mb-6">
               <label htmlFor="attraction-search" className="sr-only">Search attractions</label>
               <div className="bg-card border rounded-lg p-2 flex items-center gap-2">
                 <Search className="w-5 h-5 text-muted-foreground ml-3" aria-hidden="true" />
@@ -100,6 +195,24 @@ export default function PublicAttractions() {
                 />
               </div>
             </form>
+
+            <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter by category">
+              {CATEGORIES.map((category) => (
+                <Button
+                  key={category.id}
+                  variant={selectedCategory === category.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category.id)}
+                  role="tab"
+                  aria-selected={selectedCategory === category.id}
+                  data-testid={`button-category-${category.id}`}
+                  className={selectedCategory === category.id ? "bg-violet-600 hover:bg-violet-700" : ""}
+                >
+                  {category.label}
+                </Button>
+              ))}
+            </div>
+
             <p className="mt-4 text-muted-foreground text-sm" aria-live="polite" data-testid="text-attractions-count">
               {isLoading ? "Loading..." : `${filteredAttractions.length} attractions found`}
             </p>
@@ -109,98 +222,61 @@ export default function PublicAttractions() {
         {isLoading ? (
           <section className="py-12" aria-label="Loading attractions">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
                   <AttractionCardSkeleton key={i} />
                 ))}
               </div>
             </div>
           </section>
         ) : filteredAttractions.length > 0 ? (
-          <>
-            {featuredAttractions.length > 0 && (
-              <section className="py-8" aria-label="Featured attractions">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {featuredAttractions.map((attraction, index) => (
-                      <FeaturedCard
-                        key={attraction.id}
-                        title={attraction.title}
-                        description={attraction.metaDescription || "Discover this amazing attraction in Dubai."}
-                        image={attraction.heroImage || defaultPlaceholderImages[index]}
-                        href={`/attractions/${attraction.slug}`}
-                        category="Must Visit"
-                        categoryColor="bg-violet-600"
-                        location={attraction.attraction?.location || "Dubai, UAE"}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {remainingAttractions.length > 0 && (
-              <section className="py-12" aria-labelledby="all-attractions-heading">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <SectionHeader 
-                    title="More Experiences"
-                    subtitle="From iconic landmarks to hidden gems"
-                  />
-                  <ContentGrid columns={3}>
-                    {remainingAttractions.map((attraction, index) => (
-                      <EditorialCard
-                        key={attraction.id}
-                        title={attraction.title}
-                        excerpt={attraction.metaDescription || "Explore this unique Dubai experience."}
-                        image={attraction.heroImage || defaultPlaceholderImages[(index + 2) % defaultPlaceholderImages.length]}
-                        href={`/attractions/${attraction.slug}`}
-                        category={attraction.attraction?.duration || "Experience"}
-                        categoryColor="text-violet-600"
-                        size="medium"
-                        data-testid={`card-attraction-${attraction.id}`}
-                      />
-                    ))}
-                  </ContentGrid>
-                </div>
-              </section>
-            )}
-          </>
-        ) : (
-          <section className="py-12" aria-label="Sample attractions">
+          <section className="py-8" aria-labelledby="attractions-heading">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-                {placeholderAttractions.slice(0, 2).map((attraction, index) => (
-                  <FeaturedCard
-                    key={index}
+              <h2 id="attractions-heading" className="sr-only">
+                {selectedCategory === "all" ? "All Attractions" : getCategoryLabel(selectedCategory)}
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredAttractions.map((attraction, index) => (
+                  <AttractionCard
+                    key={attraction.id}
+                    rank={index + 1}
                     title={attraction.title}
-                    description={attraction.desc}
-                    image={defaultPlaceholderImages[index]}
-                    href="#"
-                    category="Must Visit"
-                    categoryColor="bg-violet-600"
-                    location={attraction.location}
+                    description={attraction.metaDescription || "Discover this amazing attraction in Dubai."}
+                    image={getAttractionImage(attraction, index)}
+                    href={`/attractions/${attraction.slug}`}
+                    category={attraction.attraction?.category || "Experience"}
+                    location={attraction.attraction?.location || "Dubai, UAE"}
+                    priceFrom={attraction.attraction?.priceFrom}
                   />
                 ))}
               </div>
-              
-              <SectionHeader 
-                title="More to Explore"
-                subtitle="Curated experiences across the city"
-              />
-              <ContentGrid columns={4}>
-                {placeholderAttractions.slice(2).map((attraction, index) => (
-                  <EditorialCard
-                    key={index}
-                    title={attraction.title}
-                    excerpt={attraction.desc}
-                    image={defaultPlaceholderImages[(index + 2) % defaultPlaceholderImages.length]}
-                    href="#"
-                    category={attraction.duration}
-                    categoryColor="text-violet-600"
-                    size="small"
-                  />
-                ))}
-              </ContentGrid>
+            </div>
+          </section>
+        ) : (
+          <section className="py-16" aria-label="No attractions found">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h2 className="text-xl font-semibold mb-2">No attractions found</h2>
+                <p className="text-muted-foreground mb-6">
+                  {searchQuery 
+                    ? `No attractions match "${searchQuery}". Try a different search term.`
+                    : `No attractions in the ${getCategoryLabel(selectedCategory)} category yet.`
+                  }
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategory("all");
+                  }}
+                  data-testid="button-clear-filters"
+                >
+                  Clear Filters
+                </Button>
+              </div>
             </div>
           </section>
         )}
