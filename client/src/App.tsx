@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
 import PublicHome from "@/pages/public-home";
 import PublicHotels from "@/pages/public-hotels";
 import PublicAttractions from "@/pages/public-attractions";
@@ -36,6 +38,7 @@ import Settings from "@/pages/settings";
 import AIArticleGenerator from "@/pages/ai-article-generator";
 import TopicBankPage from "@/pages/topic-bank";
 import KeywordsPage from "@/pages/keywords";
+import UsersPage from "@/pages/users";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import VerifyOtp from "@/pages/verify-otp";
@@ -70,21 +73,35 @@ function AdminRouter() {
       <Route path="/admin/affiliate-links" component={AffiliateLinks} />
       <Route path="/admin/media" component={MediaLibrary} />
       <Route path="/admin/settings" component={Settings} />
+      <Route path="/admin/users" component={UsersPage} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function AdminLayout() {
+  const { user, isLoading, isAuthenticated } = useAuth();
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect to="/login" />;
+  }
+
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
-        <AppSidebar />
+        <AppSidebar user={user} />
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center justify-between gap-4 p-3 border-b sticky top-0 z-50 bg-background">
             <SidebarTrigger data-testid="button-sidebar-toggle" />

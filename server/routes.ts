@@ -40,23 +40,23 @@ function hasPermission(role: UserRole, permission: PermissionKey): boolean {
   return permissions ? permissions[permission] : false;
 }
 
+// Authentication middleware - requires valid session
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!(req as any).session?.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  next();
+}
+
 function requirePermission(permission: PermissionKey) {
   return (req: Request, res: Response, next: NextFunction) => {
-    // Check for authenticated session first, then header, then default to viewer
-    let userRole: UserRole = "viewer";
+    // Must have authenticated session first
+    if (!(req as any).session?.userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
     
-    // Check session for authenticated user role
-    if ((req as any).session?.userRole) {
-      userRole = (req as any).session.userRole as UserRole;
-    } 
-    // Check header (for testing/API access)
-    else if (req.headers["x-user-role"]) {
-      userRole = req.headers["x-user-role"] as UserRole;
-    }
-    // For CMS admin interface requests (same-origin), allow editor access
-    else if (req.headers.referer && req.headers.referer.includes('/admin')) {
-      userRole = "editor";
-    }
+    // Get role from session (required for permission check)
+    const userRole: UserRole = (req as any).session.userRole || "viewer";
     
     if (!hasPermission(userRole, permission)) {
       return res.status(403).json({ 
@@ -441,7 +441,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/rss-feeds", async (req, res) => {
+  app.post("/api/rss-feeds", requireAuth, async (req, res) => {
     try {
       const parsed = insertRssFeedSchema.parse(req.body);
       const feed = await storage.createRssFeed(parsed);
@@ -455,7 +455,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/rss-feeds/:id", async (req, res) => {
+  app.patch("/api/rss-feeds/:id", requireAuth, async (req, res) => {
     try {
       const feed = await storage.updateRssFeed(req.params.id, req.body);
       if (!feed) {
@@ -468,7 +468,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/rss-feeds/:id", async (req, res) => {
+  app.delete("/api/rss-feeds/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteRssFeed(req.params.id);
       res.status(204).send();
@@ -478,7 +478,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/rss-feeds/:id/fetch", async (req, res) => {
+  app.post("/api/rss-feeds/:id/fetch", requireAuth, async (req, res) => {
     try {
       const feed = await storage.getRssFeed(req.params.id);
       if (!feed) {
@@ -523,7 +523,7 @@ export async function registerRoutes(
     return `fp_${Math.abs(hash).toString(36)}`;
   }
 
-  app.post("/api/rss-feeds/:id/import", async (req, res) => {
+  app.post("/api/rss-feeds/:id/import", requireAuth, async (req, res) => {
     try {
       const feed = await storage.getRssFeed(req.params.id);
       if (!feed) {
@@ -660,7 +660,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/affiliate-links", async (req, res) => {
+  app.post("/api/affiliate-links", requireAuth, async (req, res) => {
     try {
       const parsed = insertAffiliateLinkSchema.parse(req.body);
       const link = await storage.createAffiliateLink(parsed);
@@ -674,7 +674,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/affiliate-links/:id", async (req, res) => {
+  app.patch("/api/affiliate-links/:id", requireAuth, async (req, res) => {
     try {
       const link = await storage.updateAffiliateLink(req.params.id, req.body);
       if (!link) {
@@ -687,7 +687,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/affiliate-links/:id", async (req, res) => {
+  app.delete("/api/affiliate-links/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteAffiliateLink(req.params.id);
       res.status(204).send();
@@ -720,7 +720,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/media/upload", upload.single("file"), async (req, res) => {
+  app.post("/api/media/upload", requireAuth, upload.single("file"), async (req, res) => {
     let localPath: string | null = null;
     let objectPath: string | null = null;
     
@@ -769,7 +769,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/media/:id", async (req, res) => {
+  app.patch("/api/media/:id", requireAuth, async (req, res) => {
     try {
       const file = await storage.updateMediaFile(req.params.id, req.body);
       if (!file) {
@@ -782,7 +782,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/media/:id", async (req, res) => {
+  app.delete("/api/media/:id", requireAuth, async (req, res) => {
     try {
       const file = await storage.getMediaFile(req.params.id);
       if (file) {
@@ -823,7 +823,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/internal-links", async (req, res) => {
+  app.post("/api/internal-links", requireAuth, async (req, res) => {
     try {
       const link = await storage.createInternalLink(req.body);
       res.status(201).json(link);
@@ -833,7 +833,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/internal-links/:id", async (req, res) => {
+  app.delete("/api/internal-links/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteInternalLink(req.params.id);
       res.status(204).send();
@@ -843,7 +843,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ai/generate", async (req, res) => {
+  app.post("/api/ai/generate", requireAuth, async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -907,7 +907,7 @@ Format the response as JSON with the following structure:
     }
   });
 
-  app.post("/api/ai/suggest-internal-links", async (req, res) => {
+  app.post("/api/ai/suggest-internal-links", requireAuth, async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -949,7 +949,7 @@ Format the response as JSON with the following structure:
   });
 
   // Comprehensive AI Article Generator - Full Spec Implementation
-  app.post("/api/ai/generate-article", async (req, res) => {
+  app.post("/api/ai/generate-article", requireAuth, async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1097,7 +1097,7 @@ Return valid JSON only.`;
     }
   });
 
-  app.post("/api/ai/generate-seo-schema", async (req, res) => {
+  app.post("/api/ai/generate-seo-schema", requireAuth, async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1200,7 +1200,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     }
   });
 
-  app.post("/api/ai/block-action", async (req, res) => {
+  app.post("/api/ai/block-action", requireAuth, async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1265,7 +1265,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
   });
 
   // AI Assistant Chat
-  app.post("/api/ai/assistant", async (req, res) => {
+  app.post("/api/ai/assistant", requireAuth, async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1336,7 +1336,7 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     }
   });
 
-  app.post("/api/topic-bank", async (req, res) => {
+  app.post("/api/topic-bank", requireAuth, async (req, res) => {
     try {
       const parsed = insertTopicBankSchema.parse(req.body);
       const item = await storage.createTopicBankItem(parsed);
@@ -1350,7 +1350,7 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     }
   });
 
-  app.patch("/api/topic-bank/:id", async (req, res) => {
+  app.patch("/api/topic-bank/:id", requireAuth, async (req, res) => {
     try {
       const item = await storage.updateTopicBankItem(req.params.id, req.body);
       if (!item) {
@@ -1363,7 +1363,7 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     }
   });
 
-  app.delete("/api/topic-bank/:id", async (req, res) => {
+  app.delete("/api/topic-bank/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteTopicBankItem(req.params.id);
       res.status(204).send();
@@ -1373,7 +1373,7 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     }
   });
 
-  app.post("/api/topic-bank/:id/use", async (req, res) => {
+  app.post("/api/topic-bank/:id/use", requireAuth, async (req, res) => {
     try {
       const item = await storage.incrementTopicUsage(req.params.id);
       if (!item) {
@@ -1387,7 +1387,7 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
   });
 
   // Auto-generate article from Topic Bank item
-  app.post("/api/topic-bank/:id/generate", async (req, res) => {
+  app.post("/api/topic-bank/:id/generate", requireAuth, async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1519,7 +1519,7 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
   });
 
   // Batch auto-generate from priority topics (for when RSS lacks content)
-  app.post("/api/topic-bank/auto-generate", async (req, res) => {
+  app.post("/api/topic-bank/auto-generate", requireAuth, async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1651,7 +1651,7 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
     }
   });
 
-  app.post("/api/keywords", async (req, res) => {
+  app.post("/api/keywords", requireAuth, async (req, res) => {
     try {
       const parsed = insertKeywordRepositorySchema.parse(req.body);
       const item = await storage.createKeyword(parsed);
@@ -1665,7 +1665,7 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
     }
   });
 
-  app.patch("/api/keywords/:id", async (req, res) => {
+  app.patch("/api/keywords/:id", requireAuth, async (req, res) => {
     try {
       const item = await storage.updateKeyword(req.params.id, req.body);
       if (!item) {
@@ -1678,7 +1678,7 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
     }
   });
 
-  app.delete("/api/keywords/:id", async (req, res) => {
+  app.delete("/api/keywords/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteKeyword(req.params.id);
       res.status(204).send();
@@ -1688,7 +1688,7 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
     }
   });
 
-  app.post("/api/keywords/:id/use", async (req, res) => {
+  app.post("/api/keywords/:id/use", requireAuth, async (req, res) => {
     try {
       const item = await storage.incrementKeywordUsage(req.params.id);
       if (!item) {

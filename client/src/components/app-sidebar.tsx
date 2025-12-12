@@ -1,4 +1,4 @@
-import { useLocation, Link } from "wouter";
+import { Link } from "wouter";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +26,14 @@ import {
   Sparkles,
   Lightbulb,
   Search,
+  Users,
+  LogOut,
 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import type { User } from "@/hooks/use-auth";
 import { Mascot } from "@/components/logo";
 
 const contentItems = [
@@ -108,12 +115,30 @@ const systemItems = [
   },
 ];
 
-export function AppSidebar() {
-  const [location] = useLocation();
+interface AppSidebarProps {
+  user?: User | null;
+}
+
+export function AppSidebar({ user }: AppSidebarProps) {
+  const [location, setLocation] = useLocation();
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/auth/logout");
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      setLocation("/login");
+    },
+  });
 
   const isActive = (url: string) => {
     if (url === "/admin") return location === "/admin";
     return location.startsWith(url);
+  };
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   return (
@@ -191,15 +216,43 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {user?.role === "admin" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive("/admin/users")}
+                    data-testid="nav-users"
+                  >
+                    <Link href="/admin/users">
+                      <Users className="h-4 w-4" />
+                      <span>Users</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <div className="text-xs text-muted-foreground">
-          Travi CMS v1.0
-        </div>
+      <SidebarFooter className="p-4 border-t border-sidebar-border space-y-3">
+        {user && (
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium truncate">{user.name || user.email}</span>
+            <span className="text-xs text-muted-foreground capitalize">{user.role}</span>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start"
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
+          data-testid="button-logout"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
