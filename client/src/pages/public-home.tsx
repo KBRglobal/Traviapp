@@ -24,12 +24,15 @@ const exploreCategories = [
   { icon: Bus, title: "Transport", count: "50+", href: "/transport" },
 ];
 
-const stats = [
-  { value: "1M+", label: "Happy Travelers" },
-  { value: "500+", label: "Hotels Listed" },
-  { value: "200+", label: "Attractions" },
-  { value: "4.9", label: "User Rating" },
-];
+interface StatsData {
+  totalContent: number;
+  published: number;
+  drafts: number;
+  inReview: number;
+  attractions: number;
+  hotels: number;
+  articles: number;
+}
 
 
 function ContentCard({ content, index }: { content: Content; index: number }) {
@@ -154,8 +157,19 @@ export default function PublicHome() {
     queryKey: ["/api/contents?status=published"],
   });
 
+  const { data: statsData } = useQuery<StatsData>({
+    queryKey: ["/api/stats"],
+  });
+
   const featuredContent = publishedContent?.slice(0, 4) || [];
   const hasContent = featuredContent.length > 0;
+
+  const displayStats = [
+    { value: statsData?.hotels ? `${statsData.hotels}+` : "500+", label: "Hotels Listed" },
+    { value: statsData?.attractions ? `${statsData.attractions}+` : "200+", label: "Attractions" },
+    { value: statsData?.articles ? `${statsData.articles}+` : "100+", label: "Articles" },
+    { value: statsData?.published ? `${statsData.published}` : "1000+", label: "Published Guides" },
+  ];
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -216,7 +230,11 @@ export default function PublicHome() {
               <div className="flex flex-col gap-2">
                 <Link href="/hotels" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-hotels-mobile" onClick={() => setMobileMenuOpen(false)}>Hotels</Link>
                 <Link href="/attractions" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-attractions-mobile" onClick={() => setMobileMenuOpen(false)}>Attractions</Link>
+                <Link href="/dining" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-dining-mobile" onClick={() => setMobileMenuOpen(false)}>Dining</Link>
+                <Link href="/districts" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-districts-mobile" onClick={() => setMobileMenuOpen(false)}>Districts</Link>
+                <Link href="/transport" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-transport-mobile" onClick={() => setMobileMenuOpen(false)}>Transport</Link>
                 <Link href="/articles" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-articles-mobile" onClick={() => setMobileMenuOpen(false)}>Articles</Link>
+                <div className="border-t my-2" />
                 <Link href="/admin" className="py-2 px-4 hover:bg-muted rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary" data-testid="link-admin-mobile" onClick={() => setMobileMenuOpen(false)}>Admin Panel</Link>
               </div>
             </nav>
@@ -283,7 +301,7 @@ export default function PublicHome() {
 
             {/* Stats */}
             <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 max-w-4xl mx-auto" role="list" aria-label="Travi statistics">
-              {stats.map((stat, index) => (
+              {displayStats.map((stat, index) => (
                 <div key={index} className="text-center" role="listitem">
                   <div className="text-3xl sm:text-4xl font-bold text-white mb-1">{stat.value}</div>
                   <div className="text-white/70 text-sm sm:text-base">{stat.label}</div>
@@ -458,17 +476,48 @@ export default function PublicHome() {
       {/* Footer */}
       <footer className="py-12 bg-[#1a1a2e] text-white" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <Logo variant="dark-bg" height={28} />
-            <nav className="flex flex-wrap items-center justify-center gap-6 text-white/60 text-sm" aria-label="Footer navigation">
-              <Link href="/hotels" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[#1a1a2e] rounded">Hotels</Link>
-              <Link href="/attractions" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[#1a1a2e] rounded">Attractions</Link>
-              <Link href="/articles" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[#1a1a2e] rounded">Articles</Link>
-              <Link href="/privacy" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[#1a1a2e] rounded">Privacy</Link>
-              <Link href="/terms" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[#1a1a2e] rounded">Terms</Link>
-            </nav>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div className="md:col-span-1">
+              <Logo variant="dark-bg" height={28} />
+              <p className="text-white/60 text-sm mt-4">
+                Your trusted companion for exploring Dubai's wonders. Curated travel guides, hotels, and attractions.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-white mb-4">Explore</h3>
+              <nav className="flex flex-col gap-2 text-white/60 text-sm" aria-label="Explore links">
+                <Link href="/hotels" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Hotels</Link>
+                <Link href="/attractions" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Attractions</Link>
+                <Link href="/dining" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Dining</Link>
+              </nav>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-white mb-4">Discover</h3>
+              <nav className="flex flex-col gap-2 text-white/60 text-sm" aria-label="Discover links">
+                <Link href="/districts" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Districts</Link>
+                <Link href="/transport" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Transport</Link>
+                <Link href="/articles" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Articles</Link>
+              </nav>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-white mb-4">Legal</h3>
+              <nav className="flex flex-col gap-2 text-white/60 text-sm" aria-label="Legal links">
+                <Link href="/privacy" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Privacy Policy</Link>
+                <Link href="/terms" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Terms of Service</Link>
+                <Link href="/admin" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded w-fit">Admin</Link>
+              </nav>
+            </div>
+          </div>
+          
+          <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-white/40 text-sm">
               2024 Travi. All rights reserved.
+            </p>
+            <p className="text-white/40 text-sm">
+              Made with care for Dubai travelers
             </p>
           </div>
         </div>
