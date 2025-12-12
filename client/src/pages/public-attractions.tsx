@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Mountain, Star, MapPin, ArrowLeft, Plane, Search, Clock } from "lucide-react";
+import { Mountain, Star, MapPin, ArrowLeft, Search, Clock } from "lucide-react";
 import type { Content } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Logo } from "@/components/logo";
 import { useState } from "react";
 
 const defaultPlaceholderImages = [
@@ -12,17 +13,6 @@ const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=600&h=400&fit=crop",
   "https://images.unsplash.com/photo-1546412414-e1885259563a?w=600&h=400&fit=crop",
 ];
-
-function TextLogo({ className = "" }: { className?: string }) {
-  return (
-    <Link href="/" className={`flex items-center gap-2 ${className}`}>
-      <div className="w-9 h-9 rounded-xl bg-[#6443f4] flex items-center justify-center">
-        <Plane className="w-5 h-5 text-white" />
-      </div>
-      <span className="text-xl font-bold text-[#6443f4]">TRAVI</span>
-    </Link>
-  );
-}
 
 function AttractionCard({ content, index }: { content: Content; index: number }) {
   const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
@@ -147,7 +137,7 @@ export default function PublicAttractions() {
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b" data-testid="nav-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <TextLogo />
+            <Logo variant="primary" height={28} />
             <div className="hidden md:flex items-center gap-8">
               <Link href="/hotels" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors">Hotels</Link>
               <Link href="/attractions" className="text-[#6443f4] font-medium">Attractions</Link>
@@ -225,13 +215,17 @@ export default function PublicAttractions() {
       <footer className="py-8 border-t mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <TextLogo />
+            <Logo variant="primary" height={28} />
             <div className="flex items-center gap-6 text-muted-foreground text-sm">
               <Link href="/hotels" className="hover:text-foreground transition-colors">Hotels</Link>
               <Link href="/attractions" className="hover:text-foreground transition-colors">Attractions</Link>
               <Link href="/articles" className="hover:text-foreground transition-colors">Articles</Link>
             </div>
-            <p className="text-muted-foreground text-sm">2024 Travi</p>
+            <div className="flex items-center gap-4 text-muted-foreground text-sm">
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+              <span>2024 Travi</span>
+            </div>
           </div>
         </div>
       </footer>
