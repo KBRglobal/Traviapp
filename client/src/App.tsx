@@ -24,6 +24,7 @@ import PublicArticle from "@/pages/public-article";
 import PublicAttraction from "@/pages/public-attraction";
 import PublicDistrict from "@/pages/public-district";
 import PublicHotelDetail from "@/pages/public-hotel-detail";
+import PublicDiningDetail from "@/pages/public-dining-detail";
 import PublicCurrency from "@/pages/public-currency";
 import PublicBudget from "@/pages/public-budget";
 import PublicEvents from "@/pages/public-events";
@@ -157,7 +158,7 @@ function App() {
             <Route path="/articles" component={PublicArticles} />
             <Route path="/articles/:slug" component={PublicArticle} />
             <Route path="/dining" component={PublicDining} />
-            <Route path="/dining/:slug" component={PublicContentDetail} />
+            <Route path="/dining/:slug" component={PublicDiningDetail} />
             <Route path="/districts" component={PublicDistricts} />
             <Route path="/districts/:slug" component={PublicDistrict} />
             <Route path="/transport" component={PublicTransport} />
