@@ -91,6 +91,8 @@ export const contents = pgTable("contents", {
   seoSchema: jsonb("seo_schema").$type<Record<string, unknown>>(),
   seoScore: integer("seo_score"),
   wordCount: integer("word_count").default(0),
+  viewCount: integer("view_count").default(0),
+  authorId: varchar("author_id").references(() => users.id),
   scheduledAt: timestamp("scheduled_at"),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -387,8 +389,24 @@ export const homepagePromotions = pgTable("homepage_promotions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Content Views table - for analytics tracking
+export const contentViews = pgTable("content_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  viewedAt: timestamp("viewed_at").defaultNow(),
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  sessionId: varchar("session_id"),
+  country: varchar("country"),
+  city: varchar("city"),
+});
+
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({
+  author: one(users, {
+    fields: [contents.authorId],
+    references: [users.id],
+  }),
   attraction: one(attractions, {
     fields: [contents.id],
     references: [attractions.contentId],
@@ -424,6 +442,14 @@ export const contentsRelations = relations(contents, ({ one, many }) => ({
   affiliateLinks: many(affiliateLinks),
   sourceInternalLinks: many(internalLinks, { relationName: "sourceLinks" }),
   targetInternalLinks: many(internalLinks, { relationName: "targetLinks" }),
+  views: many(contentViews),
+}));
+
+export const contentViewsRelations = relations(contentViews, ({ one }) => ({
+  content: one(contents, {
+    fields: [contentViews.contentId],
+    references: [contents.id],
+  }),
 }));
 
 export const affiliateLinksRelations = relations(affiliateLinks, ({ one }) => ({
@@ -686,6 +712,13 @@ export type InsertHomepagePromotion = z.infer<typeof insertHomepagePromotionSche
 export type HomepagePromotion = typeof homepagePromotions.$inferSelect;
 export type HomepageSection = "featured" | "attractions" | "hotels" | "articles" | "trending";
 
+export const insertContentViewSchema = createInsertSchema(contentViews).omit({
+  id: true,
+  viewedAt: true,
+});
+export type InsertContentView = z.infer<typeof insertContentViewSchema>;
+export type ContentView = typeof contentViews.$inferSelect;
+
 export type Locale = "en" | "ar" | "zh" | "ru" | "de" | "fr" | "es" | "hi" | "ja" | "ko";
 export type TranslationStatus = "pending" | "in_progress" | "completed" | "needs_review";
 
@@ -704,6 +737,7 @@ export const SUPPORTED_LOCALES: { code: Locale; name: string; nativeName: string
 
 // Full content types with relations
 export type ContentWithRelations = Content & {
+  author?: User;
   attraction?: Attraction;
   hotel?: Hotel;
   article?: Article;
@@ -714,4 +748,5 @@ export type ContentWithRelations = Content & {
   itinerary?: Itinerary;
   affiliateLinks?: AffiliateLink[];
   translations?: Translation[];
+  views?: ContentView[];
 };
