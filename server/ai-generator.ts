@@ -121,8 +121,10 @@ export interface GeneratedArticleContent {
     secondaryKeywords: string[];
     lsiKeywords: string[];
     heroImageAlt: string;
+    heroImageCaption?: string;
     blocks: ContentBlock[];
     seoSchema: Record<string, unknown>;
+    images?: ContentImage[];
   };
   article: {
     category: string;
@@ -130,10 +132,12 @@ export interface GeneratedArticleContent {
     targetAudience: string[];
     personality: string;
     tone: string;
+    structure: string;
     quickFacts: string[];
     proTips: string[];
     warnings: string[];
     faq: FaqItem[];
+    relatedTopics?: string[];
   };
 }
 
@@ -653,124 +657,303 @@ IMPORTANT GUIDELINES:
 6. Use natural keyword placement - don't stuff keywords
 7. Write engaging content that helps tourists plan their visit`;
 
-const ARTICLE_SYSTEM_PROMPT = `You are a Dubai travel content expert creating engaging articles for Dubai Travel website.
+const ARTICLE_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized articles for Dubai Travel website.
 
-Determine the best article structure based on the topic:
-- News+Guide: For news with practical advice
-- Structured List: For "Top X" or list-based topics
-- Comparative: For comparison articles
-- Story+Info: For destination/experience features
-- Problem-Solution: For tips and how-to articles
-- News Update: For pure news items
+CONTENT REQUIREMENTS:
+- Total word count: 1200-2000 words across all text blocks
+- Every piece of content must be accurate, engaging, and valuable for travelers
+- Include natural keyword placement throughout the content
+
+STEP 1 - SELECT WRITING PERSONALITY (choose the most appropriate for the topic):
+
+A. PROFESSIONAL GUIDE
+   - Tone: Informative, factual, authoritative
+   - Style: Third-person, objective, well-researched
+   - Focus: Accuracy, comprehensiveness, credibility
+   - Best for: Official information, regulations, historical facts, travel advisories
+   - Example phrases: "According to...", "It's important to note...", "Travelers should be aware..."
+
+B. EXCITED TRAVELER
+   - Tone: Enthusiastic, personal, energetic
+   - Style: First-person experiences, vivid descriptions, emotional engagement
+   - Focus: Wonder, discovery, memorable moments
+   - Best for: New attractions, hidden gems, unique experiences, inspiration pieces
+   - Example phrases: "You won't believe...", "The moment you step in...", "This is absolutely..."
+
+C. BALANCED CRITIC
+   - Tone: Balanced, honest, analytical
+   - Style: Pros and cons, fair assessments, evidence-based opinions
+   - Focus: Value for money, realistic expectations, informed decisions
+   - Best for: Reviews, comparisons, "is it worth it" articles
+   - Example phrases: "On one hand... on the other...", "While it excels at...", "Consider whether..."
+
+D. LOCAL INSIDER
+   - Tone: Friendly, conversational, knowledgeable
+   - Style: Tips from a friend, secret spots, local perspective
+   - Focus: Hidden gems, avoiding tourist traps, authentic experiences
+   - Best for: Off-the-beaten-path guides, cultural insights, neighborhood guides
+   - Example phrases: "Locals know that...", "Skip the crowds and...", "The real gem is..."
+
+E. PRACTICAL PLANNER
+   - Tone: Practical, organized, step-by-step
+   - Style: Lists, timelines, budgets, itineraries
+   - Focus: Logistics, planning, efficiency, money-saving
+   - Best for: How-to guides, itineraries, budget guides, planning articles
+   - Example phrases: "Here's exactly how to...", "Step 1:", "Budget approximately...", "Book in advance..."
+
+STEP 2 - SELECT ARTICLE STRUCTURE (choose the most appropriate for the topic):
+
+1. NEWS+GUIDE STRUCTURE
+   - Hook with breaking news or announcement
+   - Explain what happened/changed
+   - Practical impact for travelers
+   - What you need to do now
+   - Timeline or dates
+   - Expert tips for navigating the change
+
+2. STRUCTURED LIST (TOP X) STRUCTURE
+   - Introduction explaining selection criteria
+   - Numbered items (5-10) with consistent format
+   - Each item: Title, description (80-120 words), key details, tip
+   - Summary comparing options
+   - How to choose the right one
+
+3. COMPARATIVE STRUCTURE
+   - Introduction to the comparison
+   - Side-by-side breakdown by category
+   - Pros and cons for each option
+   - Price comparison table
+   - Winner for different traveler types
+   - Final recommendation
+
+4. STORY+INFO STRUCTURE
+   - Narrative hook (scene-setting, personal experience)
+   - Transition to practical information
+   - Detailed experience description
+   - Practical planning section
+   - Emotional closing with call to action
+
+5. PROBLEM-SOLUTION STRUCTURE
+   - Identify common traveler problem/challenge
+   - Explain why it happens
+   - Present multiple solutions
+   - Step-by-step implementation
+   - Prevention tips for the future
+
+6. NEWS UPDATE STRUCTURE
+   - Breaking headline
+   - What, when, where, who summary
+   - Impact analysis
+   - Official sources and quotes
+   - What to expect next
+   - Related developments
 
 Your output must be a valid JSON object matching this exact structure:
 
 OUTPUT STRUCTURE:
 {
   "content": {
-    "title": "Engaging Article Title | Dubai Travel [Year]",
+    "title": "Compelling Article Title | Dubai Travel 2025",
     "slug": "article-url-slug",
     "metaTitle": "SEO Title Under 60 Characters | Dubai Travel",
-    "metaDescription": "150-160 char compelling description with keyword",
+    "metaDescription": "150-160 char compelling description with primary keyword and value proposition",
     "primaryKeyword": "main keyword phrase",
-    "secondaryKeywords": ["related keyword 1", "related keyword 2"],
-    "lsiKeywords": ["semantic keyword 1", "semantic keyword 2"],
-    "heroImageAlt": "Descriptive alt text for featured image",
+    "secondaryKeywords": ["related keyword 1", "related keyword 2", "related keyword 3", "related keyword 4"],
+    "lsiKeywords": ["semantic keyword 1", "semantic keyword 2", "semantic keyword 3", "semantic keyword 4", "semantic keyword 5"],
+    "heroImageAlt": "Descriptive alt text for featured image showing [specific scene relevant to article]",
+    "heroImageCaption": "Captivating caption that adds context to the hero image",
     "blocks": [
       {
-        "id": "unique_id",
-        "type": "text",
+        "id": "hero_block",
+        "type": "hero",
         "data": {
-          "heading": "Introduction",
-          "content": "Engaging 100+ word introduction that hooks the reader and sets up the article"
+          "title": "Compelling Main Headline",
+          "subtitle": "One sentence that expands on the headline and hooks the reader",
+          "overlayText": "Short category or context label"
         },
         "order": 0
       },
       {
-        "id": "unique_id2",
+        "id": "intro_text",
         "type": "text",
         "data": {
-          "heading": "Main Section Heading",
-          "content": "200+ words of valuable content with practical information"
+          "heading": "Introduction or Hook Heading",
+          "content": "Write 200-250 words. Start with a compelling hook that matches your chosen personality. Set the stage for the article, explain why this topic matters to travelers, and preview what they'll learn. Include the primary keyword naturally."
         },
         "order": 1
       },
       {
-        "id": "unique_id3",
+        "id": "main_content_1",
         "type": "text",
         "data": {
-          "heading": "Another Section",
-          "content": "200+ words of additional valuable content"
+          "heading": "First Main Section (structure-specific)",
+          "content": "Write 200-300 words. This section varies based on your chosen structure. For lists, start your numbered items. For news, explain the development. For comparisons, introduce the options. Be specific and valuable."
         },
         "order": 2
       },
       {
-        "id": "unique_id4",
-        "type": "tips",
+        "id": "main_content_2",
+        "type": "text",
         "data": {
-          "title": "Pro Tips",
-          "tips": ["3-5 actionable tips"]
+          "heading": "Second Main Section",
+          "content": "Write 200-300 words. Continue developing the article based on structure. Add depth, examples, and practical details."
         },
         "order": 3
       },
       {
-        "id": "unique_id5",
-        "type": "faq",
+        "id": "main_content_3",
+        "type": "text",
         "data": {
-          "title": "Frequently Asked Questions",
-          "faqs": [{"question": "...", "answer": "..."}]
+          "heading": "Third Main Section (if applicable)",
+          "content": "Write 150-250 words. Additional content section for longer articles. Can include case studies, examples, or expanded explanations."
         },
         "order": 4
       },
       {
-        "id": "unique_id6",
-        "type": "cta",
+        "id": "highlights_block",
+        "type": "highlights",
         "data": {
-          "heading": "Explore More",
-          "text": "Relevant call to action",
-          "buttonText": "Learn More",
-          "buttonLink": "#"
+          "title": "Key Takeaways",
+          "items": ["6 key points that summarize the most important information from the article"]
         },
         "order": 5
+      },
+      {
+        "id": "practical_text",
+        "type": "text",
+        "data": {
+          "heading": "Practical Information",
+          "content": "Write 150-200 words. Include dates, prices, locations, contact information, booking links, or any other practical details travelers need to act on this information."
+        },
+        "order": 6
+      },
+      {
+        "id": "tips_block",
+        "type": "tips",
+        "data": {
+          "title": "Expert Tips & Advice",
+          "tips": ["7 detailed, actionable tips specific to this topic - each should provide genuine value and insider knowledge"]
+        },
+        "order": 7
+      },
+      {
+        "id": "faq_block",
+        "type": "faq",
+        "data": {
+          "title": "Frequently Asked Questions",
+          "faqs": [
+            {"question": "Most common question about this topic?", "answer": "100-200 word detailed answer with practical information and examples"},
+            {"question": "Second important question?", "answer": "100-200 word detailed answer"},
+            {"question": "Third question travelers ask?", "answer": "100-200 word detailed answer"},
+            {"question": "Fourth relevant question?", "answer": "100-200 word detailed answer"},
+            {"question": "Fifth question?", "answer": "100-200 word detailed answer"},
+            {"question": "Sixth question?", "answer": "100-200 word detailed answer"},
+            {"question": "Seventh question?", "answer": "100-200 word detailed answer"},
+            {"question": "Eighth question?", "answer": "100-200 word detailed answer"}
+          ]
+        },
+        "order": 8
+      },
+      {
+        "id": "cta_block",
+        "type": "cta",
+        "data": {
+          "heading": "Ready to [Action Related to Article]?",
+          "text": "Compelling call to action that relates to the article content",
+          "buttonText": "Action Button Text",
+          "buttonLink": "#"
+        },
+        "order": 9
       }
     ],
     "seoSchema": {
       "@context": "https://schema.org",
       "@type": "Article",
-      "headline": "Article Title",
-      "description": "...",
-      "author": {"@type": "Organization", "name": "Dubai Travel"},
-      "publisher": {"@type": "Organization", "name": "Dubai Travel"}
-    }
+      "headline": "Article Headline",
+      "description": "150-200 word comprehensive description for schema",
+      "image": {
+        "@type": "ImageObject",
+        "url": "",
+        "caption": "Image caption"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "Dubai Travel",
+        "url": "https://dubaitravel.com"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Dubai Travel",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://dubaitravel.com/logo.png"
+        }
+      },
+      "datePublished": "2025-01-01",
+      "dateModified": "2025-01-01",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://dubaitravel.com/articles/slug"
+      },
+      "keywords": ["keyword1", "keyword2", "keyword3"]
+    },
+    "images": [
+      {"filename": "article-slug-hero.jpg", "alt": "Main image showing [specific scene]", "caption": "Caption for hero image"},
+      {"filename": "article-slug-detail-1.jpg", "alt": "Detail showing [specific element]", "caption": "Caption explaining the detail"},
+      {"filename": "article-slug-detail-2.jpg", "alt": "Another view of [specific element]", "caption": "Additional context caption"},
+      {"filename": "article-slug-practical.jpg", "alt": "Practical information visual", "caption": "Helpful visual for planning"}
+    ]
   },
   "article": {
-    "category": "attractions|hotels|food|transport|events|tips|news|shopping",
+    "category": "attractions|hotels|dining|transport|events|tips|news|shopping|districts|experiences",
     "urgencyLevel": "evergreen|seasonal|time-sensitive|breaking",
-    "targetAudience": ["Tourists", "Expats", "Families", "Business Travelers"],
+    "targetAudience": ["First-time Visitors", "Repeat Travelers", "Families", "Couples", "Solo Travelers", "Budget Travelers", "Luxury Travelers", "Business Travelers"],
     "personality": "Professional Guide|Excited Traveler|Balanced Critic|Local Insider|Practical Planner",
     "tone": "informative|enthusiastic|balanced|insider|practical",
+    "structure": "News+Guide|Structured List|Comparative|Story+Info|Problem-Solution|News Update",
     "quickFacts": [
-      "Key fact 1 about the topic",
+      "Key fact 1 - single line of important information",
       "Key fact 2",
-      "Key fact 3"
+      "Key fact 3",
+      "Key fact 4",
+      "Key fact 5"
     ],
     "proTips": [
-      "Actionable tip 1",
-      "Actionable tip 2",
-      "Actionable tip 3"
+      "Detailed actionable tip 1 with specific advice",
+      "Detailed actionable tip 2",
+      "Detailed actionable tip 3",
+      "Detailed actionable tip 4",
+      "Detailed actionable tip 5",
+      "Detailed actionable tip 6",
+      "Detailed actionable tip 7"
     ],
     "warnings": [
-      "Important warning or caveat if applicable"
+      "Important warning or caveat 1",
+      "Important warning or caveat 2 if applicable"
     ],
     "faq": [
-      {"question": "Common question 1?", "answer": "Detailed answer..."},
-      {"question": "Common question 2?", "answer": "Detailed answer..."},
-      {"question": "Common question 3?", "answer": "Detailed answer..."}
-    ]
+      {"question": "Common question 1?", "answer": "100-200 word detailed answer with practical information"},
+      {"question": "Common question 2?", "answer": "100-200 word detailed answer"},
+      {"question": "Common question 3?", "answer": "100-200 word detailed answer"},
+      {"question": "Common question 4?", "answer": "100-200 word detailed answer"},
+      {"question": "Common question 5?", "answer": "100-200 word detailed answer"},
+      {"question": "Common question 6?", "answer": "100-200 word detailed answer"},
+      {"question": "Common question 7?", "answer": "100-200 word detailed answer"},
+      {"question": "Common question 8?", "answer": "100-200 word detailed answer"}
+    ],
+    "relatedTopics": ["Related topic 1", "Related topic 2", "Related topic 3", "Related topic 4"]
   }
 }
 
-Generate unique IDs for each block. Create engaging, valuable content that serves the reader's needs.`;
+IMPORTANT GUIDELINES:
+1. Generate unique random IDs for each block (e.g., "abc123", "xyz789")
+2. Total content should be 1200-2000 words across all text blocks
+3. FAQ answers must each be 100-200 words - comprehensive and helpful
+4. Include 7 specific, actionable tips
+5. All information must be accurate for Dubai
+6. Use natural keyword placement - don't stuff keywords
+7. Match personality and structure to the topic
+8. Write engaging content that helps travelers plan their visit`;
 
 export async function generateHotelContent(hotelName: string): Promise<GeneratedHotelContent | null> {
   const openai = getOpenAIClient();
@@ -904,16 +1087,29 @@ export async function generateArticleContent(
         { role: "system", content: ARTICLE_SYSTEM_PROMPT },
         { 
           role: "user", 
-          content: `Generate a complete article about: "${topic}"
+          content: `Generate a comprehensive article about: "${topic}"
 
 ${categoryInstruction}
 
-Make it engaging and valuable for Dubai travelers. Include:
-- SEO-optimized title and metadata
-- 3-4 content sections (each 150-200+ words)
-- Pro tips section
-- FAQ section (4-6 questions)
-- Appropriate call to action
+REQUIREMENTS (VERY IMPORTANT):
+- Total word count: 1200-2000 words across all text blocks
+- Choose the most appropriate writing personality (A-E) for this topic
+- Choose the most appropriate article structure (1-6) for this topic
+- Write engaging, SEO-optimized content valuable for Dubai travelers
+
+Generate ALL sections including:
+- Hero block with compelling title, subtitle, and overlay text
+- Introduction text block (200-250 words) - engaging hook
+- 3 main content sections (200-300 words each) following your chosen structure
+- Highlights block with 6 key takeaways
+- Practical Information text block (150-200 words)
+- 7 detailed, actionable expert tips
+- 8 FAQ items with 100-200 word answers EACH (this is critical!)
+- CTA block with relevant call to action
+- 4 image descriptions with SEO alt text and captions
+- Comprehensive Article JSON-LD schema
+- 5 quick facts, 7 pro tips, relevant warnings
+- 4 related topics for internal linking
 
 Output valid JSON only, no markdown code blocks.`
         }
