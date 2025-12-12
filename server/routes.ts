@@ -687,6 +687,19 @@ export async function registerRoutes(
   app.post("/api/contents", requirePermission("canCreate"), async (req, res) => {
     try {
       const parsed = insertContentSchema.parse(req.body);
+      
+      // Generate fallback slug if empty to prevent unique constraint violation
+      if (!parsed.slug || parsed.slug.trim() === '') {
+        const timestamp = Date.now();
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        parsed.slug = `draft-${parsed.type}-${timestamp}-${randomSuffix}`;
+      }
+      
+      // Generate fallback title if empty
+      if (!parsed.title || parsed.title.trim() === '') {
+        parsed.title = `Untitled ${parsed.type} Draft`;
+      }
+      
       const content = await storage.createContent(parsed);
 
       if (parsed.type === "attraction" && req.body.attraction) {
