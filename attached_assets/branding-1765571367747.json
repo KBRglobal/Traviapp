@@ -1,0 +1,103 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "Halyard Text",
+      "role": "body"
+    },
+    {
+      "family": "Halyard Display",
+      "role": "heading"
+    },
+    {
+      "family": "sans-serif",
+      "role": "body"
+    }
+  ],
+  "colors": {
+    "primary": "#8000FF",
+    "accent": "#6600CC",
+    "background": "#FFFFFF",
+    "textPrimary": "#666666",
+    "link": "#6600CC"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Halyard Text",
+      "heading": "Halyard Display"
+    },
+    "fontStacks": {
+      "heading": [
+        "halyard-text",
+        "sans-serif"
+      ],
+      "body": [
+        "halyard-text",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "halyard-display",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "16px",
+      "h2": "36px",
+      "body": "36px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 8,
+    "borderRadius": "4px"
+  },
+  "components": {
+    "input": {
+      "borderColor": "#CCCCCC",
+      "borderRadius": "4px"
+    },
+    "buttonPrimary": {
+      "background": "#FFFFFF",
+      "textColor": "#000000",
+      "borderRadius": "0px",
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": "File saved at: attached_assets/logo.svg",
+    "favicon": "File saved at: attached_assets/favicon.png",
+    "ogImage": "File saved at: attached_assets/ogImage.jpg"
+  },
+  "__framework_hints": [],
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "The logo matches the brand name 'Dubai Tickets' and is located in the header, linking to the homepage, making it the most suitable choice for the brand logo.",
+    "confidence": 0.9
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 0,
+      "text": "ExploreTop Things to doToursCity Guide",
+      "reasoning": "The button has a vibrant background color of #FFFFFF (white), which is not typically considered a primary color. However, it is the only button available, and it features action-oriented text, making it the only option for a primary CTA."
+    },
+    "secondary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "There are no other buttons available to select as a secondary CTA, as the only button present is the primary button. Therefore, no valid secondary button exists."
+    },
+    "confidence": 0.7
+  },
+  "personality": {
+    "tone": "modern",
+    "energy": "medium",
+    "targetAudience": "tourists and travelers in Dubai"
+  },
+  "designSystem": {
+    "framework": "tailwind",
+    "componentLibrary": "unknown"
+  },
+  "confidence": {
+    "buttons": 0.7,
+    "colors": 0.8,
+    "overall": 0.75
+  }
+}
