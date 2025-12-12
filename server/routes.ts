@@ -1583,5 +1583,38 @@ Article should be 800-1500 words, traveler-focused, no fake data.`,
     }
   });
 
+  // Get scheduled content ready for publishing
+  app.get("/api/scheduled-content", async (req, res) => {
+    try {
+      const scheduledContent = await storage.getScheduledContentToPublish();
+      res.json(scheduledContent);
+    } catch (error) {
+      console.error("Error fetching scheduled content:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled content" });
+    }
+  });
+
+  // Background scheduler for auto-publishing scheduled content
+  // Runs every minute to check for content that should be published
+  const runScheduledPublishing = async () => {
+    try {
+      const contentToPublish = await storage.getScheduledContentToPublish();
+      for (const content of contentToPublish) {
+        await storage.publishScheduledContent(content.id);
+        console.log(`Auto-published scheduled content: ${content.title} (ID: ${content.id})`);
+      }
+      if (contentToPublish.length > 0) {
+        console.log(`Scheduled publishing: Published ${contentToPublish.length} item(s)`);
+      }
+    } catch (error) {
+      console.error("Error in scheduled publishing job:", error);
+    }
+  };
+
+  // Run immediately on startup, then every minute
+  runScheduledPublishing();
+  setInterval(runScheduledPublishing, 60 * 1000);
+  console.log("Scheduled publishing automation started (runs every minute)");
+
   return httpServer;
 }

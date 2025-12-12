@@ -130,6 +130,9 @@ export interface IStorage {
   getContentFingerprintsByFeedId(rssFeedId: string): Promise<ContentFingerprint[]>;
   createContentFingerprint(fingerprint: InsertContentFingerprint): Promise<ContentFingerprint>;
   checkDuplicateFingerprints(fingerprints: string[]): Promise<ContentFingerprint[]>;
+
+  getScheduledContentToPublish(): Promise<Content[]>;
+  publishScheduledContent(id: string): Promise<Content | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -570,6 +573,32 @@ export class DatabaseStorage implements IStorage {
       .from(contentFingerprints)
       .where(sql`${contentFingerprints.fingerprint} = ANY(${fingerprints})`);
     return results;
+  }
+
+  async getScheduledContentToPublish(): Promise<Content[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(contents)
+      .where(
+        and(
+          eq(contents.status, "scheduled"),
+          sql`${contents.scheduledAt} <= ${now}`
+        )
+      );
+  }
+
+  async publishScheduledContent(id: string): Promise<Content | undefined> {
+    const [content] = await db
+      .update(contents)
+      .set({
+        status: "published",
+        publishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(contents.id, id))
+      .returning();
+    return content;
   }
 }
 
