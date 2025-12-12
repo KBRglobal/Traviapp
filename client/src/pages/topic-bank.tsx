@@ -86,6 +86,7 @@ export default function TopicBankPage() {
       setGeneratingTopicId(null);
       queryClient.invalidateQueries({ queryKey: ["/api/topic-bank"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contents?type=article"] });
       toast({ 
         title: "Article Generated", 
         description: `Created draft article: ${data.content?.title}` 

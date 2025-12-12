@@ -160,6 +160,7 @@ export default function ContentEditor() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${contentType}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Saved successfully",
@@ -288,6 +289,7 @@ export default function ContentEditor() {
     onSuccess: (result) => {
       setStatus("published");
       queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${contentType}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Published Successfully",
