@@ -5,7 +5,7 @@ import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 // Enums
-export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article"]);
+export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport"]);
 export const contentStatusEnum = pgEnum("content_status", ["draft", "in_review", "approved", "scheduled", "published"]);
 export const articleCategoryEnum = pgEnum("article_category", ["attractions", "hotels", "food", "transport", "events", "tips", "news", "shopping"]);
 
@@ -97,6 +97,63 @@ export const articles = pgTable("articles", {
   proTips: jsonb("pro_tips").$type<string[]>().default([]),
   warnings: jsonb("warnings").$type<string[]>().default([]),
   faq: jsonb("faq").$type<FaqItem[]>().default([]),
+});
+
+// Dining specific data
+export const dining = pgTable("dining", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  location: text("location"),
+  cuisineType: text("cuisine_type"),
+  priceRange: text("price_range"),
+  targetAudience: jsonb("target_audience").$type<string[]>().default([]),
+  primaryCta: text("primary_cta"),
+  quickInfoBar: jsonb("quick_info_bar").$type<QuickInfoItem[]>().default([]),
+  highlights: jsonb("highlights").$type<HighlightItem[]>().default([]),
+  menuHighlights: jsonb("menu_highlights").$type<MenuHighlightItem[]>().default([]),
+  essentialInfo: jsonb("essential_info").$type<EssentialInfoItem[]>().default([]),
+  diningTips: jsonb("dining_tips").$type<string[]>().default([]),
+  faq: jsonb("faq").$type<FaqItem[]>().default([]),
+  relatedDining: jsonb("related_dining").$type<RelatedItem[]>().default([]),
+  photoGallery: jsonb("photo_gallery").$type<GalleryImage[]>().default([]),
+  trustSignals: jsonb("trust_signals").$type<string[]>().default([]),
+});
+
+// Districts specific data
+export const districts = pgTable("districts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  location: text("location"),
+  neighborhood: text("neighborhood"),
+  targetAudience: jsonb("target_audience").$type<string[]>().default([]),
+  primaryCta: text("primary_cta"),
+  quickInfoBar: jsonb("quick_info_bar").$type<QuickInfoItem[]>().default([]),
+  highlights: jsonb("highlights").$type<HighlightItem[]>().default([]),
+  thingsToDo: jsonb("things_to_do").$type<ThingsToDoItem[]>().default([]),
+  essentialInfo: jsonb("essential_info").$type<EssentialInfoItem[]>().default([]),
+  localTips: jsonb("local_tips").$type<string[]>().default([]),
+  faq: jsonb("faq").$type<FaqItem[]>().default([]),
+  relatedDistricts: jsonb("related_districts").$type<RelatedItem[]>().default([]),
+  photoGallery: jsonb("photo_gallery").$type<GalleryImage[]>().default([]),
+  trustSignals: jsonb("trust_signals").$type<string[]>().default([]),
+});
+
+// Transport specific data
+export const transports = pgTable("transports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  transitMode: text("transit_mode"),
+  routeInfo: text("route_info"),
+  targetAudience: jsonb("target_audience").$type<string[]>().default([]),
+  primaryCta: text("primary_cta"),
+  quickInfoBar: jsonb("quick_info_bar").$type<QuickInfoItem[]>().default([]),
+  highlights: jsonb("highlights").$type<HighlightItem[]>().default([]),
+  fareInfo: jsonb("fare_info").$type<FareInfoItem[]>().default([]),
+  essentialInfo: jsonb("essential_info").$type<EssentialInfoItem[]>().default([]),
+  travelTips: jsonb("travel_tips").$type<string[]>().default([]),
+  faq: jsonb("faq").$type<FaqItem[]>().default([]),
+  relatedTransport: jsonb("related_transport").$type<RelatedItem[]>().default([]),
+  trustSignals: jsonb("trust_signals").$type<string[]>().default([]),
 });
 
 // RSS Feeds table
@@ -255,6 +312,24 @@ export interface NearbyItem {
 export interface GalleryImage {
   image: string;
   alt: string;
+}
+
+export interface MenuHighlightItem {
+  name: string;
+  description: string;
+  price?: string;
+}
+
+export interface ThingsToDoItem {
+  name: string;
+  description: string;
+  type: string;
+}
+
+export interface FareInfoItem {
+  type: string;
+  price: string;
+  description?: string;
 }
 
 // Insert schemas
