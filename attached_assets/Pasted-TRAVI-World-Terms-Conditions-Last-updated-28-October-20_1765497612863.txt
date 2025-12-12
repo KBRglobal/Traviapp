@@ -1,0 +1,136 @@
+TRAVI World — Terms & Conditions
+Last updated: 28 October 2025
+Important: These Terms are a legal agreement between you and the operator of TRAVI World. By accessing or using this Website, you agree to be bound by these Terms. If you do not agree, do not use the Website.
+Operator / Legal Entity. TRAVI World (the “Website”, “we”, “us”, “our”) is operated by [Legal Entity Name], a company incorporated in Gibraltar (company no. [●]) with registered address at [Registered Address]. You may contact us at traviquackson@gmail.com for legal inquiries. Additional contacts appear in Section 13.
+
+1. Purpose & Scope of Use
+TRAVI World is a digital media and editorial platform. We publish travel-related news, destination updates, guides, reviews, and curated outbound links to third-party providers (such as Booking.com, GetYourGuide, Viator, Skyscanner, and others). We do not sell any products or services directly and do not process bookings or payments. All third‑party transactions are governed by the third party’s terms.
+Use of the Website is permitted for personal, non‑commercial purposes only and subject to these Terms, our Privacy Policy, and our Cookie Policy, which are incorporated by reference.
+
+2. Affiliate Disclosure & Third‑Party Transactions
+Some links on the Website are affiliate links. If you click an affiliate link and make a purchase or booking, we may earn a commission at no additional cost to you. We clearly disclose material connections and mark sponsored content, in line with the U.S. FTC Endorsement Guides and the EU Digital Services Act.
+All bookings, purchases, and customer service matters are handled exclusively by the relevant third‑party provider. We are not a travel agent, booking service, payment processor, or travel provider. We do not control third‑party services and are not responsible for their acts, omissions, or policies. Direct any inquiries, complaints, cancellations, or refund requests to the applicable provider.
+
+3. AI‑Generated Content Disclaimer
+We may create, edit, or enhance certain content using artificial intelligence (AI) tools. While we apply editorial review, AI‑assisted content may contain inaccuracies, omissions, or time‑sensitive information. Content is provided for general information only.
+No Professional Advice. AI‑assisted or human‑written content on the Website does not constitute professional, legal, medical, financial, or individualized travel advice and must not be relied upon as a substitute for consultation with qualified professionals or verification with official sources. You are responsible for independently verifying critical details before making decisions.
+
+4. User Conduct & Prohibited Actions
+You agree not to:
+use the Website for unlawful, harmful, defamatory, obscene, or abusive purposes;
+
+
+infringe intellectual property or privacy rights of others;
+
+
+interfere with or disrupt the Website or its infrastructure;
+
+
+upload or transmit malware, spyware, or harmful code;
+
+
+engage in unauthorized scraping, data extraction, or bulk copying;
+
+
+use bots, crawlers, or automated tools (including AI agents) to access or reproduce content without our prior written consent;
+
+
+misrepresent your identity or affiliation; or
+
+
+circumvent access controls, rate limits, or security features.
+
+
+We may suspend or terminate access without notice for violations.
+
+5. Intellectual Property & Limited License
+Unless otherwise credited, all original content on the Website—articles, text, layout, design, trademarks, logos, and compilations—is the intellectual property of TRAVI World or its licensors and is protected by law. Subject to these Terms, we grant you a limited, revocable, non‑exclusive, non‑transferable license to access and use the Website for personal, non‑commercial purposes. Any other use (including reproduction, distribution, public display, or commercial exploitation) requires our prior written consent.
+Some images, media, or data may be sourced via third‑party APIs or licensed databases; in such cases, rights remain with the respective owners and are used under license or applicable exceptions.
+
+6. Notice‑and‑Takedown (DMCA/Similar)
+If you believe that content on the Website infringes your rights, please send a notice to our Designated Agent:
+DMCA/Notice Agent: [Name]
+
+
+Email: dmca@traviworld.com
+
+
+Address: [Postal Address]
+
+
+Your notice should include: (a) identification of the work claimed to be infringed; (b) the specific URL/location of the allegedly infringing material; (c) your contact details; (d) a statement of good‑faith belief; and (e) a statement under penalty of perjury that the information is accurate and that you are authorized to act. We may remove or disable access to the material and, where applicable, notify the user who posted it.
+
+7. Accuracy, Availability & Disclaimers
+Information‑Only; No Warranties. The Website and all content are provided “as is” and “as available”, without warranties of any kind (express or implied), including but not limited to warranties of accuracy, completeness, timeliness, non‑infringement, merchantability, or fitness for a particular purpose. We do not warrant that the Website will be uninterrupted, secure, or error‑free, or that defects will be corrected.
+Third‑Party Content. We do not endorse and are not responsible for third‑party websites, content, products, or services linked from the Website. Accessing third‑party sites is at your own risk.
+
+8. Limitation of Liability & Force Majeure
+To the maximum extent permitted by law, TRAVI World and its affiliates, officers, employees, and partners shall not be liable for any indirect, incidental, special, consequential, punitive, or exemplary damages, or for loss of profits, data, goodwill, or other intangible losses, arising out of or related to your use of (or inability to use) the Website or reliance on its content.
+To the extent any liability is not lawfully excludable, our aggregate liability for all claims relating to the Website shall not exceed USD 50. Some jurisdictions do not allow certain exclusions or limitations; in such cases, the above applies to the fullest extent permitted.
+Force Majeure. We shall not be liable for any delay or failure to perform due to events beyond our reasonable control, including acts of God, outages, cyberattacks, war, terrorism, strikes, labor disputes, governmental action, natural disasters, or failures of networks, utilities, or third‑party services.
+
+9. Indemnification
+You agree to indemnify, defend, and hold harmless TRAVI World and its affiliates, officers, employees, and partners from and against any claims, liabilities, damages, losses, and expenses (including reasonable legal fees) arising out of or related to your breach of these Terms or your misuse of the Website.
+
+10. Privacy, Cookies & Data Protection
+We describe our data practices in our Privacy Policy and Cookie Policy. In summary:
+We collect limited personal data and non‑personal browsing data (e.g., device, region, usage analytics) to operate and improve the Website and to measure affiliate performance.
+
+
+For users in jurisdictions requiring consent (e.g., EU/EEA), non‑essential cookies (analytics/measurement) are not set unless and until you provide prior consent via our consent tool ([Cookie Settings] link available at all times). You can withdraw consent at any time.
+
+
+We process personal data in accordance with applicable laws, including GDPR (EU) and UAE PDPL. Where required (e.g., PDPL Art. 22; GDPR Chapter V), we implement appropriate safeguards for cross‑border transfers, such as adequacy decisions or standard contractual clauses.
+
+
+California residents may have rights under the CCPA/CPRA, including the right to know, delete, and opt‑out of the sale or sharing of personal information (if applicable). See our Privacy Policy for details and mechanisms.
+
+
+By using the Website, you acknowledge our data practices as described and consent to cookies as managed via the consent tool. For full details (including your rights and how to exercise them), please read our Privacy Policy and Cookie Policy.
+
+11. Accessibility Statement (WCAG 2.2)
+We are committed to digital accessibility and aim to conform to WCAG 2.2 Level AA. If you experience difficulty accessing any content, contact accessibility@traviworld.com. We will make reasonable efforts to provide the information in an alternative format and to remediate issues.
+
+12. Governing Law, Arbitration & Jurisdiction
+Governing Law. These Terms are governed by and construed in accordance with the laws of Gibraltar, without regard to conflict‑of‑law rules. Nothing in this clause limits mandatory consumer protections that cannot be waived under the law applicable to you.
+Arbitration (ICC). Any dispute, controversy, or claim arising out of or relating to these Terms or the Website shall be finally settled by arbitration under the Rules of Arbitration of the International Chamber of Commerce (ICC) by one arbitrator appointed in accordance with the ICC Rules. The seat of arbitration shall be London, United Kingdom (or Gibraltar, if agreed by the parties). The language of the arbitration shall be English.
+Injunctive Relief Carve‑Out. Either party may seek interim, injunctive, or equitable relief in any competent court to protect its intellectual property or confidential information, pending constitution of the tribunal or on an urgent basis.
+Class/Collective Action Waiver. To the fullest extent permitted by law, disputes shall be resolved on an individual basis and not as a class, collective, or representative action.
+Courts for Ancillary Matters. For matters not subject to arbitration or for enforcement of arbitral awards, you agree to the exclusive jurisdiction of the courts of Gibraltar.
+
+13. Updates, Suspension & Termination
+We may update these Terms from time to time. Changes take effect upon posting the updated Terms with a revised “Last updated” date. Your continued use of the Website after changes are posted constitutes acceptance of the updated Terms.
+We may suspend or terminate the Website or your access at any time, with or without notice, including for violations of these Terms, legal risk, or maintenance and security reasons. You may stop using the Website at any time.
+
+14. Age Requirement
+This Website is intended for users aged 13 and older. If you are under 13, do not use the Website or provide any personal information. If we learn that we have collected personal data from a child under 13, we will delete it promptly upon notice. Parents/guardians may contact privacy@traviworld.com to request deletion.
+
+15. Language
+These Terms may be provided in Arabic and Hebrew for convenience. In case of any inconsistency or conflict between translations, the English version shall prevail.
+
+16. Miscellaneous
+Entire Agreement. These Terms (together with the Privacy Policy and Cookie Policy) constitute the entire agreement between you and us regarding the Website and supersede prior agreements.
+Severability. If any provision is held invalid or unenforceable, the remaining provisions shall remain in full force and effect.
+No Waiver. Our failure to enforce any right or provision is not a waiver of such right or provision.
+Assignment. You may not assign these Terms without our prior written consent. We may assign or transfer our rights and obligations under these Terms in connection with a merger, acquisition, or sale of assets.
+
+17. Contact & Compliance Addresses
+General/Legal: traviquackson@gmail.com
+
+
+Privacy/Data Requests: privacy@traviworld.com
+
+
+DMCA/Notice Agent: dmca@traviworld.com
+
+
+Accessibility: accessibility@traviworld.com
+
+
+Postal Address: [Registered Address]
+
+
+If you have questions about these Terms, please contact us using the details above.
+
+Acknowledgement. By using the Website, you confirm that you have read, understood, and agree to these Terms & Conditions.
+

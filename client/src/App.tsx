@@ -7,6 +7,11 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import PublicHome from "@/pages/public-home";
+import PublicHotels from "@/pages/public-hotels";
+import PublicAttractions from "@/pages/public-attractions";
+import PublicArticles from "@/pages/public-articles";
+import PublicSearch from "@/pages/public-search";
+import PublicContentDetail from "@/pages/public-content-detail";
 import Dashboard from "@/pages/dashboard";
 import Attractions from "@/pages/attractions";
 import Hotels from "@/pages/hotels";
@@ -76,6 +81,13 @@ function App() {
         ) : (
           <Switch>
             <Route path="/" component={PublicHome} />
+            <Route path="/hotels" component={PublicHotels} />
+            <Route path="/hotels/:slug" component={PublicContentDetail} />
+            <Route path="/attractions" component={PublicAttractions} />
+            <Route path="/attractions/:slug" component={PublicContentDetail} />
+            <Route path="/articles" component={PublicArticles} />
+            <Route path="/articles/:slug" component={PublicContentDetail} />
+            <Route path="/search" component={PublicSearch} />
             <Route component={NotFound} />
           </Switch>
         )}

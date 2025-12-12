@@ -1,12 +1,10 @@
-import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, Lightbulb, Compass, ArrowRight, Sparkles, Menu, MapPin, Star, Clock, ChevronRight } from "lucide-react";
+import { Search, Building2, Mountain, Landmark, BookOpen, Utensils, Bus, ArrowRight, Sparkles, Menu, MapPin, Star, Clock, ChevronRight, X, Plane } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
 import type { Content } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-
-const imgGroup48 = "https://www.figma.com/api/mcp/asset/eb2c53d1-f6df-4038-8e21-ee0637ce9137";
-const imgGroup33 = "https://www.figma.com/api/mcp/asset/9f5220f9-18b3-4413-a5c9-173fed9f42f7";
 
 const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop",
@@ -16,12 +14,12 @@ const defaultPlaceholderImages = [
 ];
 
 const exploreCategories = [
-  { icon: Building2, title: "Hotels", count: "500+" },
-  { icon: Mountain, title: "Attractions", count: "200+" },
-  { icon: Landmark, title: "Districts", count: "25" },
-  { icon: BookOpen, title: "Guides", count: "100+" },
-  { icon: Utensils, title: "Dining", count: "300+" },
-  { icon: Bus, title: "Transport", count: "50+" },
+  { icon: Building2, title: "Hotels", count: "500+", href: "/hotels" },
+  { icon: Mountain, title: "Attractions", count: "200+", href: "/attractions" },
+  { icon: Landmark, title: "Districts", count: "25", href: "/attractions" },
+  { icon: BookOpen, title: "Articles", count: "100+", href: "/articles" },
+  { icon: Utensils, title: "Dining", count: "300+", href: "/attractions" },
+  { icon: Bus, title: "Transport", count: "50+", href: "/articles" },
 ];
 
 const stats = [
@@ -31,36 +29,50 @@ const stats = [
   { value: "4.9", label: "User Rating" },
 ];
 
+function TextLogo({ className = "", inverted = false }: { className?: string; inverted?: boolean }) {
+  return (
+    <Link href="/" className={`flex items-center gap-2 ${className}`}>
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${inverted ? 'bg-white' : 'bg-[#6443f4]'}`}>
+        <Plane className={`w-5 h-5 ${inverted ? 'text-[#6443f4]' : 'text-white'}`} />
+      </div>
+      <span className={`text-xl font-bold ${inverted ? 'text-white' : 'text-[#6443f4]'}`}>TRAVI</span>
+    </Link>
+  );
+}
+
 function ContentCard({ content, index }: { content: Content; index: number }) {
   const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  const contentPath = `/${content.type}s/${content.slug}`;
   
   return (
-    <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer">
-      <div className="aspect-[4/3] overflow-hidden">
-        <img 
-          src={imageUrl} 
-          alt={content.heroImageAlt || content.title} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-        />
-      </div>
-      <div className="p-4">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <span className="px-2 py-0.5 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium capitalize">
-            {content.type}
-          </span>
-          <span className="flex items-center gap-1">
-            <Star className="w-3 h-3 fill-[#fdcd0a] text-[#fdcd0a]" />
-            4.8
-          </span>
+    <Link href={contentPath}>
+      <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer">
+        <div className="aspect-[4/3] overflow-hidden">
+          <img 
+            src={imageUrl} 
+            alt={content.heroImageAlt || content.title} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+          />
         </div>
-        <h3 className="font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
-          {content.title}
-        </h3>
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {content.metaDescription || "Explore this amazing destination in Dubai."}
-        </p>
-      </div>
-    </Card>
+        <div className="p-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <span className="px-2 py-0.5 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium capitalize">
+              {content.type}
+            </span>
+            <span className="flex items-center gap-1">
+              <Star className="w-3 h-3 fill-[#fdcd0a] text-[#fdcd0a]" />
+              4.8
+            </span>
+          </div>
+          <h3 className="font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
+            {content.title}
+          </h3>
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {content.metaDescription || "Explore this amazing destination in Dubai."}
+          </p>
+        </div>
+      </Card>
+    </Link>
   );
 }
 
@@ -75,32 +87,34 @@ function PlaceholderCard({ index }: { index: number }) {
   const imageUrl = defaultPlaceholderImages[index];
   
   return (
-    <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer">
-      <div className="aspect-[4/3] overflow-hidden">
-        <img 
-          src={imageUrl} 
-          alt={data.title} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-        />
-      </div>
-      <div className="p-4">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <span className="px-2 py-0.5 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium capitalize">
-            {data.type}
-          </span>
-          <span className="flex items-center gap-1">
-            <Star className="w-3 h-3 fill-[#fdcd0a] text-[#fdcd0a]" />
-            4.8
-          </span>
+    <Link href={`/${data.type}s`}>
+      <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer">
+        <div className="aspect-[4/3] overflow-hidden">
+          <img 
+            src={imageUrl} 
+            alt={data.title} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+          />
         </div>
-        <h3 className="font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
-          {data.title}
-        </h3>
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {data.desc}
-        </p>
-      </div>
-    </Card>
+        <div className="p-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <span className="px-2 py-0.5 bg-[#f0edfe] text-[#6443f4] rounded-full font-medium capitalize">
+              {data.type}
+            </span>
+            <span className="flex items-center gap-1">
+              <Star className="w-3 h-3 fill-[#fdcd0a] text-[#fdcd0a]" />
+              4.8
+            </span>
+          </div>
+          <h3 className="font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-[#6443f4] transition-colors">
+            {data.title}
+          </h3>
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {data.desc}
+          </p>
+        </div>
+      </Card>
+    </Link>
   );
 }
 
@@ -124,6 +138,7 @@ function ContentCardSkeleton() {
 export default function PublicHome() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [, setLocation] = useLocation();
 
   const { data: publishedContent, isLoading } = useQuery<Content[]>({
     queryKey: ["/api/contents?status=published"],
@@ -132,37 +147,46 @@ export default function PublicHome() {
   const featuredContent = publishedContent?.slice(0, 4) || [];
   const hasContent = featuredContent.length > 0;
 
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      setLocation(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   return (
     <div className="bg-background min-h-screen overflow-x-hidden">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b" data-testid="nav-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-2">
-              <img src={imgGroup48} alt="Travi Logo" className="h-10 w-auto" />
-              <img src={imgGroup33} alt="Travi" className="h-8 w-auto hidden sm:block" />
-            </div>
+            <TextLogo />
 
             {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-8">
-              <a href="#" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-hotels">Hotels</a>
-              <a href="#" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-attractions">Attractions</a>
-              <a href="#" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-guides">Guides</a>
+              <Link href="/hotels" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-hotels">Hotels</Link>
+              <Link href="/attractions" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-attractions">Attractions</Link>
+              <Link href="/articles" className="text-foreground/80 hover:text-[#6443f4] font-medium transition-colors" data-testid="link-articles">Articles</Link>
             </div>
 
             {/* CTA */}
             <div className="flex items-center gap-3">
-              <Button className="bg-[#6443f4] hover:bg-[#5235d4] text-white rounded-full px-6" data-testid="button-get-app">
-                Get App
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              <Link href="/admin">
+                <Button variant="outline" className="hidden sm:flex" data-testid="button-admin">
+                  Admin
+                </Button>
+              </Link>
               <button 
                 className="md:hidden p-2 text-foreground"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 data-testid="button-mobile-menu"
               >
-                <Menu className="w-6 h-6" />
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
             </div>
           </div>
@@ -172,9 +196,10 @@ export default function PublicHome() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t bg-background p-4">
             <div className="flex flex-col gap-2">
-              <a href="#" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" data-testid="link-hotels-mobile">Hotels</a>
-              <a href="#" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" data-testid="link-attractions-mobile">Attractions</a>
-              <a href="#" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" data-testid="link-guides-mobile">Guides</a>
+              <Link href="/hotels" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" data-testid="link-hotels-mobile" onClick={() => setMobileMenuOpen(false)}>Hotels</Link>
+              <Link href="/attractions" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" data-testid="link-attractions-mobile" onClick={() => setMobileMenuOpen(false)}>Attractions</Link>
+              <Link href="/articles" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" data-testid="link-articles-mobile" onClick={() => setMobileMenuOpen(false)}>Articles</Link>
+              <Link href="/admin" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" data-testid="link-admin-mobile" onClick={() => setMobileMenuOpen(false)}>Admin Panel</Link>
             </div>
           </div>
         )}
@@ -207,14 +232,19 @@ export default function PublicHome() {
                   <Search className="w-5 h-5 text-muted-foreground shrink-0" />
                   <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder="Search hotels, attractions, articles..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
                     className="flex-1 text-foreground placeholder:text-muted-foreground bg-transparent outline-none py-3 text-sm sm:text-base min-w-0"
                     data-testid="input-search"
                   />
                 </div>
-                <Button className="bg-[#fdcd0a] hover:bg-[#e5b800] text-[#6443f4] font-semibold rounded-xl px-4 sm:px-6 py-6 shrink-0" data-testid="button-search">
+                <Button 
+                  onClick={handleSearch}
+                  className="bg-[#fdcd0a] hover:bg-[#e5b800] text-[#6443f4] font-semibold rounded-xl px-4 sm:px-6 py-6 shrink-0" 
+                  data-testid="button-search"
+                >
                   <Search className="w-5 h-5 sm:hidden" />
                   <span className="hidden sm:inline">Search</span>
                 </Button>
@@ -241,8 +271,9 @@ export default function PublicHome() {
             {exploreCategories.map((category, index) => {
               const IconComponent = category.icon;
               return (
-                <div
+                <Link
                   key={index}
+                  href={category.href}
                   className="flex flex-col items-center p-4 sm:p-6 rounded-2xl bg-card border hover:border-[#6443f4] hover:shadow-lg transition-all cursor-pointer group"
                   data-testid={`card-category-${index}`}
                 >
@@ -251,7 +282,7 @@ export default function PublicHome() {
                   </div>
                   <span className="font-medium text-foreground text-sm sm:text-base">{category.title}</span>
                   <span className="text-xs text-muted-foreground">{category.count}</span>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -261,16 +292,18 @@ export default function PublicHome() {
       {/* Featured Content */}
       <section className="py-12 sm:py-16 bg-muted/30" data-testid="section-featured">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between gap-4 mb-8">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
                 Popular Destinations
               </h2>
               <p className="text-muted-foreground">Discover the best Dubai has to offer</p>
             </div>
-            <Button variant="ghost" className="text-[#6443f4] hover:text-[#5235d4] hidden sm:flex">
-              View All <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
+            <Link href="/attractions">
+              <Button variant="ghost" className="text-[#6443f4] hover:text-[#5235d4] hidden sm:flex">
+                View All <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -292,9 +325,11 @@ export default function PublicHome() {
           </div>
 
           <div className="mt-8 text-center sm:hidden">
-            <Button variant="outline" className="text-[#6443f4] border-[#6443f4]">
-              View All Destinations
-            </Button>
+            <Link href="/attractions">
+              <Button variant="outline" className="text-[#6443f4] border-[#6443f4]">
+                View All Destinations
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -352,15 +387,19 @@ export default function PublicHome() {
             Ready to Explore Dubai?
           </h2>
           <p className="text-white/80 mb-8 max-w-xl mx-auto">
-            Download the Travi app and start planning your perfect Dubai adventure today.
+            Browse our collection of hotels, attractions, and travel guides to plan your perfect Dubai adventure.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button className="bg-[#fdcd0a] hover:bg-[#e5b800] text-[#6443f4] font-semibold rounded-full px-8 py-6 text-lg">
-              Download App
-            </Button>
-            <Button variant="outline" className="border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg">
-              Learn More
-            </Button>
+            <Link href="/hotels">
+              <Button className="bg-[#fdcd0a] hover:bg-[#e5b800] text-[#6443f4] font-semibold rounded-full px-8 py-6 text-lg">
+                Browse Hotels
+              </Button>
+            </Link>
+            <Link href="/attractions">
+              <Button variant="outline" className="border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg">
+                Explore Attractions
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -369,14 +408,12 @@ export default function PublicHome() {
       <footer className="py-12 bg-[#1a1a2e] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <img src={imgGroup48} alt="Travi Logo" className="h-10 w-auto brightness-0 invert" />
-              <img src={imgGroup33} alt="Travi" className="h-8 w-auto brightness-0 invert" />
-            </div>
+            <TextLogo inverted />
             <div className="flex items-center gap-6 text-white/60 text-sm">
-              <a href="#" className="hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms</a>
-              <a href="#" className="hover:text-white transition-colors">Contact</a>
+              <Link href="/hotels" className="hover:text-white transition-colors">Hotels</Link>
+              <Link href="/attractions" className="hover:text-white transition-colors">Attractions</Link>
+              <Link href="/articles" className="hover:text-white transition-colors">Articles</Link>
+              <Link href="/admin" className="hover:text-white transition-colors">Admin</Link>
             </div>
             <p className="text-white/40 text-sm">
               2024 Travi. All rights reserved.
