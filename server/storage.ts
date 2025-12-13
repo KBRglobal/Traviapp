@@ -260,7 +260,7 @@ export class DatabaseStorage implements IStorage {
       passwordHash: userData.passwordHash,
       firstName: userData.firstName,
       lastName: userData.lastName,
-      email: userData.email,
+      email: userData.email || `${userData.username}@local.admin`,
       role: userData.role || "editor",
       isActive: userData.isActive !== false,
     }).returning();
