@@ -1,76 +1,71 @@
 import TelegramBot from 'node-telegram-bot-api';
+import OpenAI from 'openai';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY
+});
 
 let bot: TelegramBot | null = null;
 
-// Store user language preferences (in production, save to database)
+// Store user language preferences and conversation history
 const userLanguages: Map<number, string> = new Map();
+const userConversations: Map<number, Array<{ role: 'user' | 'assistant'; content: string }>> = new Map();
 
-const messages = {
-  en: {
-    welcome: (name: string) => `Welcome ${name}!\n\nWelcome to *Travi* - Your complete guide to exploring Dubai!\n\nChoose from the menu below:`,
-    hotels: 'Hotels',
-    attractions: 'Attractions',
-    dining: 'Dining',
-    districts: 'Districts',
-    articles: 'Articles',
-    transport: 'Transport',
-    search: 'Search',
-    hotelsDesc: '*Hotels in Dubai*\n\nExplore the best hotels for your stay.',
-    attractionsDesc: '*Attractions in Dubai*\n\nDiscover amazing places to visit.',
-    diningDesc: '*Dining in Dubai*\n\nFind the best restaurants and cafes.',
-    districtsDesc: '*Dubai Districts*\n\nExplore different areas of Dubai.',
-    articlesDesc: '*Travel Articles*\n\nRead helpful tips and guides.',
-    transportDesc: '*Transport*\n\nLearn about getting around Dubai.',
-    searchDesc: '*Search*\n\nFind what you need quickly.',
-    viewAll: 'View All',
-    openInBrowser: 'Open in Browser',
-    languageChanged: 'Language changed to English!',
-    help: '*Available Commands:*\n\n/start - Start the bot and see main menu\n/help - Show this help message\n/language - Change language'
-  },
-  he: {
-    welcome: (name: string) => `שלום ${name}!\n\nברוכים הבאים ל-*Travi* - המדריך המלא שלך לגילוי דובאי!\n\nבחר מהתפריט למטה:`,
-    hotels: 'מלונות',
-    attractions: 'אטרקציות',
-    dining: 'מסעדות',
-    districts: 'אזורים',
-    articles: 'מאמרים',
-    transport: 'תחבורה',
-    search: 'חיפוש',
-    hotelsDesc: '*מלונות בדובאי*\n\nגלה את המלונות הטובים ביותר לשהותך.',
-    attractionsDesc: '*אטרקציות בדובאי*\n\nגלה מקומות מדהימים לביקור.',
-    diningDesc: '*מסעדות בדובאי*\n\nמצא את המסעדות והקפה הטובים ביותר.',
-    districtsDesc: '*אזורים בדובאי*\n\nגלה אזורים שונים בדובאי.',
-    articlesDesc: '*מאמרי טיולים*\n\nקרא טיפים ומדריכים שימושיים.',
-    transportDesc: '*תחבורה*\n\nלמד על התניידות בדובאי.',
-    searchDesc: '*חיפוש*\n\nמצא מה שאתה צריך במהירות.',
-    viewAll: 'צפה בהכל',
-    openInBrowser: 'פתח בדפדפן',
-    languageChanged: 'השפה שונתה לעברית!',
-    help: '*פקודות זמינות:*\n\n/start - הפעל את הבוט וראה תפריט ראשי\n/help - הצג הודעת עזרה זו\n/language - שנה שפה'
-  },
-  ar: {
-    welcome: (name: string) => `مرحباً ${name}!\n\nأهلاً بك في *Travi* - دليلك الشامل لاستكشاف دبي!\n\nاختر من القائمة أدناه:`,
-    hotels: 'فنادق',
-    attractions: 'معالم سياحية',
-    dining: 'مطاعم',
-    districts: 'مناطق',
-    articles: 'مقالات',
-    transport: 'مواصلات',
-    search: 'بحث',
-    hotelsDesc: '*فنادق في دبي*\n\nاستكشف أفضل الفنادق لإقامتك.',
-    attractionsDesc: '*معالم سياحية في دبي*\n\nاكتشف أماكن مذهلة للزيارة.',
-    diningDesc: '*مطاعم في دبي*\n\nابحث عن أفضل المطاعم والمقاهي.',
-    districtsDesc: '*مناطق دبي*\n\nاستكشف مناطق مختلفة في دبي.',
-    articlesDesc: '*مقالات السفر*\n\nاقرأ نصائح وأدلة مفيدة.',
-    transportDesc: '*المواصلات*\n\nتعرف على التنقل في دبي.',
-    searchDesc: '*البحث*\n\nابحث عما تحتاجه بسرعة.',
-    viewAll: 'عرض الكل',
-    openInBrowser: 'فتح في المتصفح',
-    languageChanged: 'تم تغيير اللغة إلى العربية!',
-    help: '*الأوامر المتاحة:*\n\n/start - بدء البوت وعرض القائمة الرئيسية\n/help - عرض رسالة المساعدة هذه\n/language - تغيير اللغة'
-  }
+const systemPrompts = {
+  en: `You are Travi, a friendly and helpful AI travel assistant specializing in Dubai. You help tourists and visitors with:
+- Hotel recommendations and bookings advice
+- Tourist attractions and things to do
+- Restaurant and dining recommendations  
+- Transportation tips (metro, taxi, buses)
+- Local customs and cultural advice
+- Weather and best times to visit
+- Shopping destinations
+- Nightlife and entertainment
+- Day trips and excursions
+- Visa and travel requirements
+
+Be warm, enthusiastic, and knowledgeable. Give concise but helpful answers. Use simple language. If you don't know something specific, suggest they check official sources or ask local tourism offices.`,
+
+  he: `אתה טראבי, עוזר נסיעות AI ידידותי ומועיל המתמחה בדובאי. אתה עוזר לתיירים ומבקרים עם:
+- המלצות על מלונות וייעוץ להזמנות
+- אטרקציות תיירותיות ודברים לעשות
+- המלצות על מסעדות ואוכל
+- טיפים לתחבורה (מטרו, מוניות, אוטובוסים)
+- מנהגים מקומיים וייעוץ תרבותי
+- מזג אוויר וזמנים הטובים ביותר לביקור
+- יעדי קניות
+- חיי לילה ובידור
+- טיולי יום וסיורים
+- דרישות ויזה ונסיעות
+
+היה חם, נלהב ובעל ידע. תן תשובות תמציתיות אך מועילות. השתמש בשפה פשוטה. אם אתה לא יודע משהו ספציפי, הצע לבדוק מקורות רשמיים או לפנות למשרדי תיירות מקומיים.`,
+
+  ar: `أنت ترافي، مساعد سفر ذكي ودود ومفيد متخصص في دبي. أنت تساعد السياح والزوار في:
+- توصيات الفنادق ونصائح الحجز
+- المعالم السياحية والأنشطة
+- توصيات المطاعم والطعام
+- نصائح المواصلات (المترو، التاكسي، الحافلات)
+- العادات المحلية والنصائح الثقافية
+- الطقس وأفضل أوقات الزيارة
+- وجهات التسوق
+- الحياة الليلية والترفيه
+- الرحلات اليومية والجولات
+- متطلبات التأشيرة والسفر
+
+كن دافئاً ومتحمساً وذو معرفة. قدم إجابات موجزة ولكن مفيدة. استخدم لغة بسيطة.`
+};
+
+const welcomeMessages = {
+  en: (name: string) => `Hi ${name}! I'm *Travi*, your AI travel assistant for Dubai.\n\nAsk me anything about:\n- Hotels & accommodations\n- Attractions & things to do\n- Restaurants & dining\n- Transportation\n- Local tips & culture\n\nHow can I help you plan your Dubai adventure?`,
+  he: (name: string) => `היי ${name}! אני *טראבי*, העוזר האישי שלך לטיולים בדובאי.\n\nאפשר לשאול אותי על:\n- מלונות ולינה\n- אטרקציות ודברים לעשות\n- מסעדות ואוכל\n- תחבורה\n- טיפים מקומיים ותרבות\n\nאיך אני יכול לעזור לך לתכנן את ההרפתקה שלך בדובאי?`,
+  ar: (name: string) => `مرحباً ${name}! أنا *ترافي*، مساعدك الذكي للسفر في دبي.\n\nيمكنك أن تسألني عن:\n- الفنادق والإقامة\n- المعالم السياحية والأنشطة\n- المطاعم والطعام\n- المواصلات\n- النصائح المحلية والثقافة\n\nكيف يمكنني مساعدتك في التخطيط لمغامرتك في دبي؟`
+};
+
+const languageChangedMessages = {
+  en: 'Language changed to English! How can I help you?',
+  he: 'השפה שונתה לעברית! איך אני יכול לעזור?',
+  ar: 'تم تغيير اللغة إلى العربية! كيف يمكنني مساعدتك؟'
 };
 
 type LangCode = 'en' | 'he' | 'ar';
@@ -79,35 +74,51 @@ function getUserLang(chatId: number): LangCode {
   return (userLanguages.get(chatId) as LangCode) || 'en';
 }
 
-function getMsg(chatId: number) {
-  return messages[getUserLang(chatId)];
+function getConversation(chatId: number) {
+  if (!userConversations.has(chatId)) {
+    userConversations.set(chatId, []);
+  }
+  return userConversations.get(chatId)!;
 }
 
-function showMainMenu(chatId: number, firstName: string) {
-  const lang = getMsg(chatId);
+async function getAIResponse(chatId: number, userMessage: string): Promise<string> {
+  const lang = getUserLang(chatId);
+  const conversation = getConversation(chatId);
   
-  bot?.sendMessage(chatId, lang.welcome(firstName), {
-    parse_mode: 'Markdown',
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: lang.hotels, callback_data: 'hotels' },
-          { text: lang.attractions, callback_data: 'attractions' }
-        ],
-        [
-          { text: lang.dining, callback_data: 'dining' },
-          { text: lang.districts, callback_data: 'districts' }
-        ],
-        [
-          { text: lang.articles, callback_data: 'articles' },
-          { text: lang.transport, callback_data: 'transport' }
-        ],
-        [
-          { text: lang.search, callback_data: 'search' }
-        ]
-      ]
-    }
-  });
+  // Add user message to history
+  conversation.push({ role: 'user', content: userMessage });
+  
+  // Keep only last 10 messages for context
+  if (conversation.length > 10) {
+    conversation.splice(0, conversation.length - 10);
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompts[lang] },
+        ...conversation
+      ],
+      max_tokens: 500,
+      temperature: 0.7
+    });
+
+    const assistantMessage = response.choices[0]?.message?.content || 'Sorry, I could not process your request.';
+    
+    // Add assistant response to history
+    conversation.push({ role: 'assistant', content: assistantMessage });
+    
+    return assistantMessage;
+  } catch (error) {
+    console.error('[Telegram Bot] OpenAI error:', error);
+    const errorMessages = {
+      en: 'Sorry, I encountered an error. Please try again.',
+      he: 'סליחה, נתקלתי בשגיאה. אנא נסה שוב.',
+      ar: 'عذراً، حدث خطأ. يرجى المحاولة مرة أخرى.'
+    };
+    return errorMessages[lang];
+  }
 }
 
 function showLanguageSelection(chatId: number) {
@@ -130,14 +141,16 @@ export function initTelegramBot() {
 
   try {
     bot = new TelegramBot(token, { polling: true });
-    console.log('[Telegram Bot] Bot started with polling');
+    console.log('[Telegram Bot] AI Assistant Bot started with polling');
 
     // /start command
     bot.onText(/\/start/, (msg) => {
       const chatId = msg.chat.id;
       
       if (userLanguages.has(chatId)) {
-        showMainMenu(chatId, msg.from?.first_name || 'Guest');
+        const lang = getUserLang(chatId);
+        const firstName = msg.from?.first_name || 'Guest';
+        bot?.sendMessage(chatId, welcomeMessages[lang](firstName), { parse_mode: 'Markdown' });
       } else {
         showLanguageSelection(chatId);
       }
@@ -148,84 +161,32 @@ export function initTelegramBot() {
       showLanguageSelection(msg.chat.id);
     });
 
+    // /clear command - clear conversation history
+    bot.onText(/\/clear/, (msg) => {
+      const chatId = msg.chat.id;
+      userConversations.delete(chatId);
+      const lang = getUserLang(chatId);
+      const clearMessages = {
+        en: 'Conversation cleared! Start fresh.',
+        he: 'השיחה נמחקה! מתחילים מחדש.',
+        ar: 'تم مسح المحادثة! ابدأ من جديد.'
+      };
+      bot?.sendMessage(chatId, clearMessages[lang]);
+    });
+
     // /help command
     bot.onText(/\/help/, (msg) => {
       const chatId = msg.chat.id;
-      const lang = getMsg(chatId);
-      bot?.sendMessage(chatId, lang.help, { parse_mode: 'Markdown' });
+      const lang = getUserLang(chatId);
+      const helpMessages = {
+        en: '*Travi - Your Dubai Travel Assistant*\n\nJust type your question and I will help you!\n\n*Commands:*\n/start - Start conversation\n/language - Change language\n/clear - Clear conversation history\n/help - Show this help',
+        he: '*טראבי - העוזר שלך לטיולים בדובאי*\n\nפשוט כתוב את השאלה שלך ואני אעזור לך!\n\n*פקודות:*\n/start - התחל שיחה\n/language - שנה שפה\n/clear - נקה היסטוריית שיחה\n/help - הצג עזרה',
+        ar: '*ترافي - مساعدك للسفر في دبي*\n\nاكتب سؤالك وسأساعدك!\n\n*الأوامر:*\n/start - بدء المحادثة\n/language - تغيير اللغة\n/clear - مسح سجل المحادثة\n/help - عرض المساعدة'
+      };
+      bot?.sendMessage(chatId, helpMessages[lang], { parse_mode: 'Markdown' });
     });
 
-    // /hotels command
-    bot.onText(/\/hotels/, (msg) => {
-      const chatId = msg.chat.id;
-      const lang = getMsg(chatId);
-      bot?.sendMessage(chatId, lang.hotelsDesc, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: lang.viewAll, url: 'https://mzgdubai.replit.app/hotels' }]
-          ]
-        }
-      });
-    });
-
-    // /attractions command
-    bot.onText(/\/attractions/, (msg) => {
-      const chatId = msg.chat.id;
-      const lang = getMsg(chatId);
-      bot?.sendMessage(chatId, lang.attractionsDesc, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: lang.viewAll, url: 'https://mzgdubai.replit.app/attractions' }]
-          ]
-        }
-      });
-    });
-
-    // /dining command
-    bot.onText(/\/dining/, (msg) => {
-      const chatId = msg.chat.id;
-      const lang = getMsg(chatId);
-      bot?.sendMessage(chatId, lang.diningDesc, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: lang.viewAll, url: 'https://mzgdubai.replit.app/dining' }]
-          ]
-        }
-      });
-    });
-
-    // /districts command
-    bot.onText(/\/districts/, (msg) => {
-      const chatId = msg.chat.id;
-      const lang = getMsg(chatId);
-      bot?.sendMessage(chatId, lang.districtsDesc, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: lang.viewAll, url: 'https://mzgdubai.replit.app/districts' }]
-          ]
-        }
-      });
-    });
-
-    // /articles command
-    bot.onText(/\/articles/, (msg) => {
-      const chatId = msg.chat.id;
-      const lang = getMsg(chatId);
-      bot?.sendMessage(chatId, lang.articlesDesc, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: lang.viewAll, url: 'https://mzgdubai.replit.app/articles' }]
-          ]
-        }
-      });
-    });
-
-    // Handle callback queries (button clicks)
+    // Handle callback queries (language selection)
     bot.on('callback_query', async (callbackQuery) => {
       const chatId = callbackQuery.message?.chat.id;
       const data = callbackQuery.data;
@@ -239,35 +200,34 @@ export function initTelegramBot() {
       if (data?.startsWith('lang_')) {
         const langCode = data.replace('lang_', '') as LangCode;
         userLanguages.set(chatId, langCode);
-        const lang = messages[langCode];
-        await bot?.sendMessage(chatId, lang.languageChanged);
-        showMainMenu(chatId, firstName);
+        userConversations.delete(chatId); // Clear history on language change
+        
+        await bot?.sendMessage(chatId, languageChangedMessages[langCode]);
+        await bot?.sendMessage(chatId, welcomeMessages[langCode](firstName), { parse_mode: 'Markdown' });
+      }
+    });
+
+    // Handle all text messages (AI conversation)
+    bot.on('message', async (msg) => {
+      const chatId = msg.chat.id;
+      const text = msg.text;
+
+      // Ignore commands
+      if (!text || text.startsWith('/')) return;
+
+      // Check if user has selected language
+      if (!userLanguages.has(chatId)) {
+        showLanguageSelection(chatId);
         return;
       }
 
-      // Handle menu selections
-      const lang = getMsg(chatId);
-      const responses: Record<string, { text: string; url: string }> = {
-        hotels: { text: lang.hotelsDesc, url: 'https://mzgdubai.replit.app/hotels' },
-        attractions: { text: lang.attractionsDesc, url: 'https://mzgdubai.replit.app/attractions' },
-        dining: { text: lang.diningDesc, url: 'https://mzgdubai.replit.app/dining' },
-        districts: { text: lang.districtsDesc, url: 'https://mzgdubai.replit.app/districts' },
-        articles: { text: lang.articlesDesc, url: 'https://mzgdubai.replit.app/articles' },
-        transport: { text: lang.transportDesc, url: 'https://mzgdubai.replit.app/transport' },
-        search: { text: lang.searchDesc, url: 'https://mzgdubai.replit.app/search' }
-      };
+      // Show typing indicator
+      await bot?.sendChatAction(chatId, 'typing');
 
-      const response = responses[data || ''];
-      if (response) {
-        await bot?.sendMessage(chatId, response.text, {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: lang.openInBrowser, url: response.url }]
-            ]
-          }
-        });
-      }
+      // Get AI response
+      const response = await getAIResponse(chatId, text);
+      
+      await bot?.sendMessage(chatId, response, { parse_mode: 'Markdown' });
     });
 
     bot.on('polling_error', (error) => {
