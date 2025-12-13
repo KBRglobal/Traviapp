@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail } from "lucide-react";
+import { Loader2, Mail, Building2, MapPin, Lightbulb, MessageCircle } from "lucide-react";
+import { SiInstagram, SiTiktok, SiYoutube, SiFacebook } from "react-icons/si";
 import { apiRequest } from "@/lib/queryClient";
 import fullLogo from "@assets/Full_Logo_for_Dark_Background_1765637862936.png";
 import mascot from "@assets/Mascot_for_Dark_Background_1765637862937.png";
@@ -65,46 +66,94 @@ export default function ComingSoon() {
 
   const CountdownBox = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">
-      <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4 md:p-6 min-w-[70px] md:min-w-[100px]">
-        <span className="text-3xl md:text-5xl font-bold text-white">
+      <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 md:p-5 min-w-[60px] md:min-w-[90px]">
+        <span className="text-2xl md:text-4xl font-bold text-white">
           {String(value).padStart(2, "0")}
         </span>
       </div>
-      <span className="text-white/70 text-sm mt-2">{label}</span>
+      <span className="text-white/70 text-xs md:text-sm mt-2">{label}</span>
+    </div>
+  );
+
+  const FeatureCard = ({ icon: Icon, title, description }: { icon: typeof Building2; title: string; description: string }) => (
+    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-5 text-center hover-elevate transition-all duration-300">
+      <div className="w-12 h-12 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center">
+        <Icon className="w-6 h-6 text-white" />
+      </div>
+      <h3 className="text-white font-semibold text-base mb-1">{title}</h3>
+      <p className="text-white/70 text-sm">{description}</p>
     </div>
   );
 
   return (
     <div 
-      className="min-h-screen flex flex-col items-center justify-center p-6"
+      className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 overflow-hidden relative"
       style={{
-        background: "linear-gradient(135deg, #6443F4 0%, #F94498 50%, #FF9327 100%)"
+        background: "linear-gradient(135deg, #6443F4 0%, #F94498 50%, #FF9327 100%)",
+        backgroundSize: "400% 400%",
+        animation: "gradientShift 15s ease infinite"
       }}
     >
-      <div className="max-w-2xl w-full text-center space-y-8">
-        <div className="flex flex-col items-center justify-center mb-4">
+      <style>{`
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(-3deg); }
+          50% { transform: translateY(-15px) rotate(3deg); }
+        }
+      `}</style>
+
+      <div className="max-w-3xl w-full text-center space-y-6">
+        <div className="flex items-center justify-center gap-4 md:gap-6 mb-4">
           <img 
             src={fullLogo} 
             alt="Travi" 
-            className="h-24 md:h-32 w-auto"
+            className="h-20 md:h-28 w-auto"
+          />
+          <img 
+            src={mascot} 
+            alt="Travi Mascot" 
+            className="h-24 md:h-36 w-auto"
+            style={{ animation: "float 4s ease-in-out infinite" }}
           />
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <h2 className="text-2xl md:text-4xl font-bold text-white">
             Coming Soon
           </h2>
-          <p className="text-lg md:text-xl text-white/90 max-w-lg mx-auto">
+          <p className="text-base md:text-xl text-white/90 max-w-lg mx-auto">
             We're about to change the world of tourism forever. 
             Get ready for a revolutionary travel experience.
           </p>
         </div>
 
-        <div className="flex justify-center gap-3 md:gap-6 py-8">
+        <div className="flex justify-center gap-2 md:gap-4 py-4">
           <CountdownBox value={timeLeft.days} label="Days" />
           <CountdownBox value={timeLeft.hours} label="Hours" />
           <CountdownBox value={timeLeft.minutes} label="Minutes" />
           <CountdownBox value={timeLeft.seconds} label="Seconds" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 md:gap-4 max-w-xl mx-auto py-4">
+          <FeatureCard 
+            icon={Building2} 
+            title="Hotels" 
+            description="Best stays in Dubai"
+          />
+          <FeatureCard 
+            icon={MapPin} 
+            title="Attractions" 
+            description="Top places to visit"
+          />
+          <FeatureCard 
+            icon={Lightbulb} 
+            title="Tips" 
+            description="Local insider guides"
+          />
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
@@ -123,7 +172,7 @@ export default function ComingSoon() {
           <Button 
             type="submit" 
             disabled={isSubmitting}
-            className="h-12 px-6 bg-[#24103E] hover:bg-[#24103E]/90 text-white"
+            className="h-12 px-6 bg-[#24103E] text-white border border-[#24103E]"
             data-testid="button-newsletter-subscribe"
           >
             {isSubmitting ? (
@@ -137,6 +186,64 @@ export default function ComingSoon() {
         <p className="text-white/60 text-sm">
           Be the first to know when we launch. No spam, we promise.
         </p>
+
+        <div className="flex items-center justify-center gap-4 pt-4">
+          <a 
+            href="https://instagram.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+            data-testid="link-social-instagram"
+          >
+            <SiInstagram className="w-5 h-5 text-white" />
+          </a>
+          <a 
+            href="https://tiktok.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+            data-testid="link-social-tiktok"
+          >
+            <SiTiktok className="w-5 h-5 text-white" />
+          </a>
+          <a 
+            href="https://youtube.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+            data-testid="link-social-youtube"
+          >
+            <SiYoutube className="w-5 h-5 text-white" />
+          </a>
+          <a 
+            href="https://facebook.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+            data-testid="link-social-facebook"
+          >
+            <SiFacebook className="w-5 h-5 text-white" />
+          </a>
+        </div>
+
+        <a 
+          href="https://wa.me/971000000000" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#22c55e] text-white font-medium px-5 py-3 rounded-full transition-colors mt-2"
+          data-testid="link-whatsapp-contact"
+        >
+          <MessageCircle className="w-5 h-5" />
+          <span>Chat with us on WhatsApp</span>
+        </a>
+
+        <div className="flex items-center justify-center gap-6 pt-4 text-white/50 text-xs">
+          <span>Secure & Private</span>
+          <span>|</span>
+          <span>Made in Dubai</span>
+          <span>|</span>
+          <span>Launching 2025</span>
+        </div>
       </div>
     </div>
   );
