@@ -1,10 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api';
-import OpenAI from 'openai';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY
-});
+const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
 
 let bot: TelegramBot | null = null;
 
@@ -25,7 +22,7 @@ const systemPrompts = {
 - Day trips and excursions
 - Visa and travel requirements
 
-Be warm, enthusiastic, and knowledgeable. Give concise but helpful answers. Use simple language. If you don't know something specific, suggest they check official sources or ask local tourism offices.`,
+Be warm, enthusiastic, and knowledgeable. Give concise but helpful answers. Use simple language.`,
 
   he: `אתה טראבי, עוזר נסיעות AI ידידותי ומועיל המתמחה בדובאי. אתה עוזר לתיירים ומבקרים עם:
 - המלצות על מלונות וייעוץ להזמנות
@@ -39,7 +36,7 @@ Be warm, enthusiastic, and knowledgeable. Give concise but helpful answers. Use 
 - טיולי יום וסיורים
 - דרישות ויזה ונסיעות
 
-היה חם, נלהב ובעל ידע. תן תשובות תמציתיות אך מועילות. השתמש בשפה פשוטה. אם אתה לא יודע משהו ספציפי, הצע לבדוק מקורות רשמיים או לפנות למשרדי תיירות מקומיים.`,
+היה חם, נלהב ובעל ידע. תן תשובות תמציתיות אך מועילות. השתמש בשפה פשוטה.`,
 
   ar: `أنت ترافي، مساعد سفر ذكي ودود ومفيد متخصص في دبي. أنت تساعد السياح والزوار في:
 - توصيات الفنادق ونصائح الحجز
@@ -81,37 +78,73 @@ function getConversation(chatId: number) {
   return userConversations.get(chatId)!;
 }
 
-async function getAIResponse(chatId: number, userMessage: string): Promise<string> {
+async function getPerplexityResponse(chatId: number, userMessage: string): Promise<string> {
   const lang = getUserLang(chatId);
   const conversation = getConversation(chatId);
   
   // Add user message to history
   conversation.push({ role: 'user', content: userMessage });
   
-  // Keep only last 10 messages for context
+  // Keep only last 10 messages for context (must alternate user/assistant)
   if (conversation.length > 10) {
     conversation.splice(0, conversation.length - 10);
   }
 
+  // Ensure proper alternation: user, assistant, user, assistant... ending in user
+  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    { role: 'system', content: systemPrompts[lang] }
+  ];
+  
+  // Build alternating messages
+  for (let i = 0; i < conversation.length; i++) {
+    const msg = conversation[i];
+    // Only add if it maintains proper alternation
+    if (messages.length === 1 && msg.role === 'user') {
+      messages.push(msg);
+    } else if (messages.length > 1) {
+      const lastRole = messages[messages.length - 1].role;
+      if ((lastRole === 'user' && msg.role === 'assistant') || 
+          (lastRole === 'assistant' && msg.role === 'user') ||
+          (lastRole === 'system' && msg.role === 'user')) {
+        messages.push(msg);
+      }
+    }
+  }
+
+  // Ensure we end with a user message
+  if (messages[messages.length - 1].role !== 'user') {
+    messages.push({ role: 'user', content: userMessage });
+  }
+
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompts[lang] },
-        ...conversation
-      ],
-      max_tokens: 500,
-      temperature: 0.7
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${perplexityApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-sonar-small-128k-online',
+        messages: messages,
+        max_tokens: 500,
+        temperature: 0.7,
+        stream: false
+      })
     });
 
-    const assistantMessage = response.choices[0]?.message?.content || 'Sorry, I could not process your request.';
+    if (!response.ok) {
+      throw new Error(`Perplexity API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const assistantMessage = data.choices?.[0]?.message?.content || 'Sorry, I could not process your request.';
     
     // Add assistant response to history
     conversation.push({ role: 'assistant', content: assistantMessage });
     
     return assistantMessage;
   } catch (error) {
-    console.error('[Telegram Bot] OpenAI error:', error);
+    console.error('[Telegram Bot] Perplexity error:', error);
     const errorMessages = {
       en: 'Sorry, I encountered an error. Please try again.',
       he: 'סליחה, נתקלתי בשגיאה. אנא נסה שוב.',
@@ -139,9 +172,13 @@ export function initTelegramBot() {
     return null;
   }
 
+  if (!perplexityApiKey) {
+    console.log('[Telegram Bot] No PERPLEXITY_API_KEY found, AI features disabled');
+  }
+
   try {
     bot = new TelegramBot(token, { polling: true });
-    console.log('[Telegram Bot] AI Assistant Bot started with polling');
+    console.log('[Telegram Bot] AI Assistant Bot started with polling (Perplexity)');
 
     // /start command
     bot.onText(/\/start/, (msg) => {
@@ -221,11 +258,23 @@ export function initTelegramBot() {
         return;
       }
 
+      // Check if Perplexity API is available
+      if (!perplexityApiKey) {
+        const lang = getUserLang(chatId);
+        const errorMessages = {
+          en: 'AI features are currently unavailable. Please try again later.',
+          he: 'תכונות הבינה המלאכותית אינן זמינות כרגע. אנא נסה שוב מאוחר יותר.',
+          ar: 'ميزات الذكاء الاصطناعي غير متوفرة حالياً. يرجى المحاولة لاحقاً.'
+        };
+        await bot?.sendMessage(chatId, errorMessages[lang]);
+        return;
+      }
+
       // Show typing indicator
       await bot?.sendChatAction(chatId, 'typing');
 
-      // Get AI response
-      const response = await getAIResponse(chatId, text);
+      // Get AI response from Perplexity
+      const response = await getPerplexityResponse(chatId, text);
       
       await bot?.sendMessage(chatId, response, { parse_mode: 'Markdown' });
     });
