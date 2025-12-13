@@ -31,6 +31,7 @@ import {
   Home,
   BarChart3,
   ClipboardList,
+  Mail,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -108,6 +109,12 @@ const managementItems: Array<{
     title: "Analytics",
     url: "/admin/analytics",
     icon: BarChart3,
+    requiredPermission: "canViewAnalytics",
+  },
+  {
+    title: "Newsletter",
+    url: "/admin/newsletter",
+    icon: Mail,
     requiredPermission: "canViewAnalytics",
   },
   {
