@@ -11,26 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { initGA } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
-import PublicHome from "@/pages/public-home";
-import PublicHotels from "@/pages/public-hotels";
-import PublicAttractions from "@/pages/public-attractions";
-import PublicArticles from "@/pages/public-articles";
-import PublicDining from "@/pages/public-dining";
-import PublicDistricts from "@/pages/public-districts";
-import PublicTransport from "@/pages/public-transport";
-import PublicSearch from "@/pages/public-search";
-import PublicContentDetail from "@/pages/public-content-detail";
-import PublicArticle from "@/pages/public-article";
-import PublicAttraction from "@/pages/public-attraction";
-import PublicDistrict from "@/pages/public-district";
-import PublicHotelDetail from "@/pages/public-hotel-detail";
-import PublicDiningDetail from "@/pages/public-dining-detail";
-import PublicCurrency from "@/pages/public-currency";
-import PublicBudget from "@/pages/public-budget";
-import PublicEvents from "@/pages/public-events";
-import PublicIntegrations from "@/pages/public-integrations";
-import PrivacyPolicy from "@/pages/privacy-policy";
-import TermsConditions from "@/pages/terms-conditions";
+import ComingSoon from "@/pages/coming-soon";
 import Dashboard from "@/pages/dashboard";
 import Attractions from "@/pages/attractions";
 import Hotels from "@/pages/hotels";
@@ -150,29 +131,9 @@ function App() {
           <AdminLayout />
         ) : (
           <Switch>
-            <Route path="/" component={PublicHome} />
-            <Route path="/hotels" component={PublicHotels} />
-            <Route path="/hotels/:slug" component={PublicHotelDetail} />
-            <Route path="/attractions" component={PublicAttractions} />
-            <Route path="/attractions/:slug" component={PublicAttraction} />
-            <Route path="/articles" component={PublicArticles} />
-            <Route path="/articles/:slug" component={PublicArticle} />
-            <Route path="/dining" component={PublicDining} />
-            <Route path="/dining/:slug" component={PublicDiningDetail} />
-            <Route path="/districts" component={PublicDistricts} />
-            <Route path="/districts/:slug" component={PublicDistrict} />
-            <Route path="/transport" component={PublicTransport} />
-            <Route path="/transport/:slug" component={PublicContentDetail} />
-            <Route path="/search" component={PublicSearch} />
-            <Route path="/tools/currency" component={PublicCurrency} />
-            <Route path="/tools/budget" component={PublicBudget} />
-            <Route path="/tools/events" component={PublicEvents} />
-            <Route path="/tools/plan" component={PublicIntegrations} />
-            <Route path="/privacy" component={PrivacyPolicy} />
-            <Route path="/terms" component={TermsConditions} />
             <Route path="/login" component={Login} />
             <Route path="/access-denied" component={AccessDenied} />
-            <Route component={NotFound} />
+            <Route component={ComingSoon} />
           </Switch>
         )}
         <Toaster />

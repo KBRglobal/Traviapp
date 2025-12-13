@@ -2971,6 +2971,21 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // Newsletter subscription (public)
+  app.post("/api/newsletter/subscribe", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        return res.status(400).json({ error: "Valid email required" });
+      }
+      console.log("[Newsletter] New subscriber:", email);
+      res.json({ success: true, message: "Subscribed successfully" });
+    } catch (error) {
+      console.error("Error subscribing to newsletter:", error);
+      res.status(500).json({ error: "Failed to subscribe" });
+    }
+  });
+
   // Audit Logs Routes (admin only)
   app.get("/api/audit-logs", requirePermission("canViewAuditLogs"), async (req, res) => {
     try {
