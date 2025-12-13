@@ -625,7 +625,13 @@ export async function registerRoutes(
               console.error("Login session error:", err);
               return res.status(500).json({ error: "Failed to create session" });
             }
-            res.json({ success: true, user: adminUser });
+            req.session.save((saveErr: any) => {
+              if (saveErr) {
+                console.error("Session save error:", saveErr);
+                return res.status(500).json({ error: "Failed to save session" });
+              }
+              res.json({ success: true, user: adminUser });
+            });
           });
           return;
         }
@@ -657,7 +663,13 @@ export async function registerRoutes(
           console.error("Login session error:", err);
           return res.status(500).json({ error: "Failed to create session" });
         }
-        res.json({ success: true, user });
+        req.session.save((saveErr: any) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ error: "Failed to save session" });
+          }
+          res.json({ success: true, user });
+        });
       });
     } catch (error) {
       console.error("Login error:", error);
