@@ -65,7 +65,13 @@ import {
   type InsertAuditLog,
   type NewsletterSubscriber,
   type InsertNewsletterSubscriber,
+  type NewsletterCampaign,
+  type InsertCampaign,
+  type CampaignEvent,
+  type InsertCampaignEvent,
   homepagePromotions,
+  newsletterCampaigns,
+  campaignEvents,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -212,12 +218,24 @@ export interface IStorage {
 
   // Newsletter Subscribers
   getNewsletterSubscribers(filters?: { status?: string }): Promise<NewsletterSubscriber[]>;
+  getActiveNewsletterSubscribers(): Promise<NewsletterSubscriber[]>;
   getNewsletterSubscriber(id: string): Promise<NewsletterSubscriber | undefined>;
   getNewsletterSubscriberByEmail(email: string): Promise<NewsletterSubscriber | undefined>;
   getNewsletterSubscriberByToken(token: string): Promise<NewsletterSubscriber | undefined>;
   createNewsletterSubscriber(subscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber>;
   updateNewsletterSubscriber(id: string, data: Partial<InsertNewsletterSubscriber>): Promise<NewsletterSubscriber | undefined>;
   deleteNewsletterSubscriber(id: string): Promise<boolean>;
+
+  // Newsletter Campaigns
+  getCampaigns(): Promise<NewsletterCampaign[]>;
+  getCampaign(id: string): Promise<NewsletterCampaign | undefined>;
+  createCampaign(campaign: InsertCampaign): Promise<NewsletterCampaign>;
+  updateCampaign(id: string, data: Partial<InsertCampaign>): Promise<NewsletterCampaign | undefined>;
+  deleteCampaign(id: string): Promise<boolean>;
+
+  // Campaign Events
+  createCampaignEvent(event: InsertCampaignEvent): Promise<CampaignEvent>;
+  getCampaignEvents(campaignId: string): Promise<CampaignEvent[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1122,6 +1140,15 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.subscribedAt));
   }
 
+  async getActiveNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
+    return await db.select().from(newsletterSubscribers)
+      .where(and(
+        eq(newsletterSubscribers.status, "confirmed"),
+        eq(newsletterSubscribers.isActive, true)
+      ))
+      .orderBy(desc(newsletterSubscribers.subscribedAt));
+  }
+
   async getNewsletterSubscriber(id: string): Promise<NewsletterSubscriber | undefined> {
     const [subscriber] = await db.select().from(newsletterSubscribers).where(eq(newsletterSubscribers.id, id));
     return subscriber;
@@ -1150,6 +1177,46 @@ export class DatabaseStorage implements IStorage {
   async deleteNewsletterSubscriber(id: string): Promise<boolean> {
     await db.delete(newsletterSubscribers).where(eq(newsletterSubscribers.id, id));
     return true;
+  }
+
+  // Newsletter Campaigns
+  async getCampaigns(): Promise<NewsletterCampaign[]> {
+    return await db.select().from(newsletterCampaigns).orderBy(desc(newsletterCampaigns.createdAt));
+  }
+
+  async getCampaign(id: string): Promise<NewsletterCampaign | undefined> {
+    const [campaign] = await db.select().from(newsletterCampaigns).where(eq(newsletterCampaigns.id, id));
+    return campaign;
+  }
+
+  async createCampaign(campaign: InsertCampaign): Promise<NewsletterCampaign> {
+    const [newCampaign] = await db.insert(newsletterCampaigns).values(campaign).returning();
+    return newCampaign;
+  }
+
+  async updateCampaign(id: string, data: Partial<InsertCampaign>): Promise<NewsletterCampaign | undefined> {
+    const [campaign] = await db.update(newsletterCampaigns)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(newsletterCampaigns.id, id))
+      .returning();
+    return campaign;
+  }
+
+  async deleteCampaign(id: string): Promise<boolean> {
+    await db.delete(newsletterCampaigns).where(eq(newsletterCampaigns.id, id));
+    return true;
+  }
+
+  // Campaign Events
+  async createCampaignEvent(event: InsertCampaignEvent): Promise<CampaignEvent> {
+    const [newEvent] = await db.insert(campaignEvents).values(event).returning();
+    return newEvent;
+  }
+
+  async getCampaignEvents(campaignId: string): Promise<CampaignEvent[]> {
+    return await db.select().from(campaignEvents)
+      .where(eq(campaignEvents.campaignId, campaignId))
+      .orderBy(desc(campaignEvents.createdAt));
   }
 }
 

@@ -243,6 +243,78 @@ async function sendConfirmationEmail(email: string, token: string, firstName?: s
   }
 }
 
+async function sendWelcomeEmail(email: string, firstName?: string, unsubscribeToken?: string): Promise<boolean> {
+  const resend = getResendClient();
+  if (!resend) {
+    console.log("[Newsletter] Resend not configured, skipping welcome email for:", email);
+    return false;
+  }
+  
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : 'http://localhost:5000';
+  
+  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+  const unsubscribeUrl = unsubscribeToken 
+    ? `${baseUrl}/api/newsletter/unsubscribe?token=${unsubscribeToken}`
+    : `${baseUrl}/api/newsletter/unsubscribe`;
+  
+  try {
+    await resend.emails.send({
+      from: "Dubai Travel <noreply@dubaitravel.com>",
+      to: email,
+      subject: "Welcome to Dubai Travel Newsletter!",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #0066cc; margin-bottom: 10px;">Dubai Travel</h1>
+          </div>
+          
+          <p style="font-size: 16px;">${greeting}</p>
+          
+          <p style="font-size: 16px;">Welcome to the Dubai Travel newsletter! We're thrilled to have you join our community of travel enthusiasts.</p>
+          
+          <p style="font-size: 16px;">Here's what you can expect from us:</p>
+          
+          <ul style="font-size: 16px; margin: 20px 0; padding-left: 24px;">
+            <li style="margin-bottom: 8px;">Exclusive travel tips and insider guides</li>
+            <li style="margin-bottom: 8px;">Special deals on hotels and attractions</li>
+            <li style="margin-bottom: 8px;">Latest events and happenings in Dubai</li>
+            <li style="margin-bottom: 8px;">Hidden gems and local recommendations</li>
+          </ul>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${baseUrl}" style="background-color: #0066cc; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+              Explore Dubai Travel
+            </a>
+          </div>
+          
+          <p style="font-size: 14px; color: #666;">Stay tuned for our next newsletter packed with amazing Dubai content!</p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <p style="font-size: 12px; color: #999; text-align: center;">
+            Dubai Travel - Your guide to the best of Dubai<br>
+            <a href="${unsubscribeUrl}" style="color: #999;">Unsubscribe</a>
+          </p>
+        </body>
+        </html>
+      `,
+    });
+    console.log("[Newsletter] Welcome email sent to:", email);
+    return true;
+  } catch (error) {
+    console.error("[Newsletter] Failed to send welcome email:", error);
+    return false;
+  }
+}
+
 function renderConfirmationPage(success: boolean, message: string): string {
   return renderNewsletterPage(success, message, success ? "You're All Set!" : "Oops!");
 }
@@ -3264,6 +3336,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         .where(eq(newsletterSubscribers.id, subscriber.id));
       
       console.log("[Newsletter] Subscription confirmed:", subscriber.email);
+      
+      // Send welcome email (fire and forget - don't block response)
+      sendWelcomeEmail(subscriber.email, subscriber.firstName || undefined, subscriber.id)
+        .catch(err => console.error("[Newsletter] Welcome email error:", err));
+      
       res.send(renderConfirmationPage(true, "Thank you! Your subscription has been confirmed."));
     } catch (error) {
       console.error("Error confirming subscription:", error);
@@ -3355,6 +3432,423 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     } catch (error) {
       console.error("Error deleting subscriber:", error);
       res.status(500).json({ error: "Failed to delete subscriber" });
+    }
+  });
+
+  // Resend Webhook for bounce/complaint handling
+  // This endpoint receives events from Resend about email delivery status
+  app.post("/api/webhooks/resend", async (req, res) => {
+    try {
+      const event = req.body;
+      
+      // Resend sends webhook events with these types:
+      // email.sent, email.delivered, email.delivery_delayed, 
+      // email.complained, email.bounced, email.opened, email.clicked
+      const eventType = event.type;
+      const eventData = event.data;
+      
+      if (!eventType || !eventData) {
+        console.log("[Resend Webhook] Invalid event received:", event);
+        return res.status(400).json({ error: "Invalid event format" });
+      }
+      
+      console.log(`[Resend Webhook] Received event: ${eventType}`);
+      
+      // Extract email from event data
+      const recipientEmail = eventData.to?.[0] || eventData.email;
+      
+      if (!recipientEmail) {
+        console.log("[Resend Webhook] No recipient email in event");
+        return res.status(200).json({ received: true });
+      }
+      
+      // Handle bounce events - mark subscriber as bounced
+      if (eventType === "email.bounced") {
+        const subscriber = await storage.getNewsletterSubscriberByEmail(recipientEmail);
+        if (subscriber && subscriber.status !== "bounced") {
+          const consentEntry = {
+            action: "unsubscribe" as const,
+            timestamp: new Date().toISOString(),
+            source: "resend_bounce",
+            ipAddress: "webhook",
+          };
+          const consentLog = [...(subscriber.consentLog || []), consentEntry];
+          
+          await storage.updateNewsletterSubscriber(subscriber.id, {
+            status: "bounced",
+            consentLog,
+            isActive: false,
+          });
+          console.log(`[Resend Webhook] Subscriber marked as bounced: ${recipientEmail}`);
+        }
+      }
+      
+      // Handle complaint events (spam reports) - mark subscriber as complained
+      if (eventType === "email.complained") {
+        const subscriber = await storage.getNewsletterSubscriberByEmail(recipientEmail);
+        if (subscriber && subscriber.status !== "complained") {
+          const consentEntry = {
+            action: "unsubscribe" as const,
+            timestamp: new Date().toISOString(),
+            source: "resend_complaint",
+            ipAddress: "webhook",
+          };
+          const consentLog = [...(subscriber.consentLog || []), consentEntry];
+          
+          await storage.updateNewsletterSubscriber(subscriber.id, {
+            status: "complained",
+            consentLog,
+            isActive: false,
+          });
+          console.log(`[Resend Webhook] Subscriber marked as complained (spam): ${recipientEmail}`);
+        }
+      }
+      
+      // Acknowledge receipt of webhook
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("[Resend Webhook] Error processing webhook:", error);
+      // Return 200 anyway to prevent Resend from retrying
+      res.status(200).json({ received: true, error: "Processing error" });
+    }
+  });
+
+  // Campaign CRUD Routes (admin only)
+  app.get("/api/campaigns", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const campaigns = await storage.getCampaigns();
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Error fetching campaigns:", error);
+      res.status(500).json({ error: "Failed to fetch campaigns" });
+    }
+  });
+
+  app.get("/api/campaigns/:id", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const campaign = await storage.getCampaign(id);
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error) {
+      console.error("Error fetching campaign:", error);
+      res.status(500).json({ error: "Failed to fetch campaign" });
+    }
+  });
+
+  app.post("/api/campaigns", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const user = req.user as any;
+      const campaignData = {
+        ...req.body,
+        createdBy: user?.claims?.sub || null,
+      };
+      const campaign = await storage.createCampaign(campaignData);
+      console.log("[Campaigns] Created campaign:", campaign.name);
+      res.status(201).json(campaign);
+    } catch (error) {
+      console.error("Error creating campaign:", error);
+      res.status(500).json({ error: "Failed to create campaign" });
+    }
+  });
+
+  app.patch("/api/campaigns/:id", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const existing = await storage.getCampaign(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      // Don't allow editing sent campaigns
+      if (existing.status === "sent" || existing.status === "sending") {
+        return res.status(400).json({ error: "Cannot edit a campaign that has been sent or is sending" });
+      }
+      const campaign = await storage.updateCampaign(id, req.body);
+      console.log("[Campaigns] Updated campaign:", campaign?.name);
+      res.json(campaign);
+    } catch (error) {
+      console.error("Error updating campaign:", error);
+      res.status(500).json({ error: "Failed to update campaign" });
+    }
+  });
+
+  app.delete("/api/campaigns/:id", requirePermission("canDelete"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const existing = await storage.getCampaign(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      // Don't allow deleting sent campaigns
+      if (existing.status === "sent" || existing.status === "sending") {
+        return res.status(400).json({ error: "Cannot delete a campaign that has been sent or is sending" });
+      }
+      await storage.deleteCampaign(id);
+      console.log("[Campaigns] Deleted campaign:", existing.name);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting campaign:", error);
+      res.status(500).json({ error: "Failed to delete campaign" });
+    }
+  });
+
+  // Campaign events (for analytics)
+  app.get("/api/campaigns/:id/events", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const events = await storage.getCampaignEvents(id);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching campaign events:", error);
+      res.status(500).json({ error: "Failed to fetch campaign events" });
+    }
+  });
+
+  // Send campaign to all active subscribers
+  app.post("/api/campaigns/:id/send", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      if (campaign.status === "sent" || campaign.status === "sending") {
+        return res.status(400).json({ error: "Campaign has already been sent or is currently sending" });
+      }
+      
+      const resend = getResendClient();
+      if (!resend) {
+        return res.status(500).json({ error: "Email service not configured" });
+      }
+      
+      // Get active subscribers
+      const subscribers = await storage.getActiveNewsletterSubscribers();
+      
+      if (subscribers.length === 0) {
+        return res.status(400).json({ error: "No active subscribers to send to" });
+      }
+      
+      // Update campaign status to sending
+      await storage.updateCampaign(id, {
+        status: "sending",
+        sentAt: new Date(),
+        totalRecipients: subscribers.length,
+      });
+      
+      console.log(`[Campaigns] Starting send for campaign ${campaign.name} to ${subscribers.length} subscribers`);
+      
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : 'http://localhost:5000';
+      
+      let sentCount = 0;
+      let failedCount = 0;
+      
+      // Helper to inject tracking pixel into HTML
+      const injectTrackingPixel = (html: string, campaignId: string, subscriberId: string): string => {
+        const trackingPixel = `<img src="${baseUrl}/api/track/open/${campaignId}/${subscriberId}" width="1" height="1" style="display:none" alt="" />`;
+        // Insert before closing body tag, or append at end
+        if (html.includes('</body>')) {
+          return html.replace('</body>', `${trackingPixel}</body>`);
+        }
+        return html + trackingPixel;
+      };
+      
+      // Helper to wrap links with click tracking
+      const wrapLinksWithTracking = (html: string, campaignId: string, subscriberId: string): string => {
+        // Match href="..." but not tracking URLs or unsubscribe links
+        return html.replace(
+          /href="(https?:\/\/[^"]+)"/gi,
+          (match, url) => {
+            // Don't wrap tracking URLs or unsubscribe links
+            if (url.includes('/api/track/') || url.includes('/api/newsletter/unsubscribe')) {
+              return match;
+            }
+            const trackingUrl = `${baseUrl}/api/track/click/${campaignId}/${subscriberId}?url=${encodeURIComponent(url)}`;
+            return `href="${trackingUrl}"`;
+          }
+        );
+      };
+      
+      // Send to each subscriber
+      for (const subscriber of subscribers) {
+        try {
+          // Personalize content
+          let htmlContent = campaign.htmlContent || '';
+          
+          // Add unsubscribe link if not present
+          const unsubscribeUrl = `${baseUrl}/api/newsletter/unsubscribe?token=${subscriber.id}`;
+          if (!htmlContent.includes('/api/newsletter/unsubscribe')) {
+            htmlContent = htmlContent.replace(
+              '</body>',
+              `<p style="text-align:center;font-size:12px;color:#999;margin-top:30px;"><a href="${unsubscribeUrl}" style="color:#999;">Unsubscribe</a></p></body>`
+            );
+          }
+          
+          // Wrap links with click tracking
+          htmlContent = wrapLinksWithTracking(htmlContent, id, subscriber.id);
+          
+          // Inject tracking pixel
+          htmlContent = injectTrackingPixel(htmlContent, id, subscriber.id);
+          
+          // Replace personalization tokens
+          const firstName = subscriber.firstName || 'there';
+          htmlContent = htmlContent.replace(/\{\{firstName\}\}/g, firstName);
+          htmlContent = htmlContent.replace(/\{\{email\}\}/g, subscriber.email);
+          
+          await resend.emails.send({
+            from: campaign.fromEmail || "Dubai Travel <noreply@dubaitravel.com>",
+            to: subscriber.email,
+            subject: campaign.subject,
+            html: htmlContent,
+          });
+          
+          // Record sent event
+          await storage.createCampaignEvent({
+            campaignId: id,
+            subscriberId: subscriber.id,
+            eventType: "sent",
+            metadata: { email: subscriber.email },
+          });
+          
+          sentCount++;
+        } catch (emailError) {
+          console.error(`[Campaigns] Failed to send to ${subscriber.email}:`, emailError);
+          failedCount++;
+          
+          // Record failed event
+          await storage.createCampaignEvent({
+            campaignId: id,
+            subscriberId: subscriber.id,
+            eventType: "bounced",
+            metadata: { 
+              email: subscriber.email,
+              error: emailError instanceof Error ? emailError.message : "Unknown error" 
+            },
+          });
+        }
+      }
+      
+      // Update campaign with final stats
+      await storage.updateCampaign(id, {
+        status: failedCount === subscribers.length ? "failed" : "sent",
+        totalSent: sentCount,
+      });
+      
+      console.log(`[Campaigns] Campaign ${campaign.name} completed: ${sentCount} sent, ${failedCount} failed`);
+      
+      res.json({
+        success: true,
+        sent: sentCount,
+        failed: failedCount,
+        total: subscribers.length,
+      });
+    } catch (error) {
+      console.error("Error sending campaign:", error);
+      
+      // Try to update status to failed
+      try {
+        await storage.updateCampaign(req.params.id, { status: "failed" });
+      } catch {}
+      
+      res.status(500).json({ error: "Failed to send campaign" });
+    }
+  });
+
+  // Email tracking endpoints (public - called from email clients)
+  // Open tracking pixel - returns a 1x1 transparent GIF
+  app.get("/api/track/open/:campaignId/:subscriberId", async (req, res) => {
+    try {
+      const { campaignId, subscriberId } = req.params;
+      
+      // Record the open event
+      await storage.createCampaignEvent({
+        campaignId,
+        subscriberId,
+        eventType: "opened",
+        metadata: {
+          userAgent: req.headers["user-agent"] || "unknown",
+          ip: req.ip || "unknown",
+        },
+      });
+      
+      // Update campaign stats
+      const campaign = await storage.getCampaign(campaignId);
+      if (campaign) {
+        await storage.updateCampaign(campaignId, {
+          totalOpened: campaign.totalOpened + 1,
+        });
+      }
+      
+      console.log(`[Tracking] Open recorded: campaign=${campaignId}, subscriber=${subscriberId}`);
+      
+      // Return a 1x1 transparent GIF
+      const transparentGif = Buffer.from(
+        "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+        "base64"
+      );
+      res.set("Content-Type", "image/gif");
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+      res.send(transparentGif);
+    } catch (error) {
+      console.error("[Tracking] Error recording open:", error);
+      // Still return the pixel even on error
+      const transparentGif = Buffer.from(
+        "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+        "base64"
+      );
+      res.set("Content-Type", "image/gif");
+      res.send(transparentGif);
+    }
+  });
+
+  // Click tracking - redirects to actual URL after recording click
+  app.get("/api/track/click/:campaignId/:subscriberId", async (req, res) => {
+    try {
+      const { campaignId, subscriberId } = req.params;
+      const { url } = req.query;
+      
+      if (!url || typeof url !== "string") {
+        return res.status(400).send("Missing URL parameter");
+      }
+      
+      // Record the click event
+      await storage.createCampaignEvent({
+        campaignId,
+        subscriberId,
+        eventType: "clicked",
+        metadata: {
+          url,
+          userAgent: req.headers["user-agent"] || "unknown",
+          ip: req.ip || "unknown",
+        },
+      });
+      
+      // Update campaign stats
+      const campaign = await storage.getCampaign(campaignId);
+      if (campaign) {
+        await storage.updateCampaign(campaignId, {
+          totalClicked: campaign.totalClicked + 1,
+        });
+      }
+      
+      console.log(`[Tracking] Click recorded: campaign=${campaignId}, subscriber=${subscriberId}, url=${url}`);
+      
+      // Redirect to the actual URL
+      res.redirect(url);
+    } catch (error) {
+      console.error("[Tracking] Error recording click:", error);
+      // Try to redirect anyway
+      const { url } = req.query;
+      if (url && typeof url === "string") {
+        res.redirect(url);
+      } else {
+        res.status(500).send("Tracking error");
+      }
     }
   });
 

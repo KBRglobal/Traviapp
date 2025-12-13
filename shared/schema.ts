@@ -554,6 +554,85 @@ export type InsertNewsletterSubscriber = z.infer<typeof insertNewsletterSubscrib
 export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
 export type SubscriberStatus = "pending_confirmation" | "subscribed" | "unsubscribed" | "bounced" | "complained";
 
+// Campaign status enum
+export const campaignStatusEnum = pgEnum("campaign_status", [
+  "draft",
+  "scheduled",
+  "sending",
+  "sent",
+  "failed"
+]);
+
+// Email event type enum
+export const emailEventTypeEnum = pgEnum("email_event_type", [
+  "sent",
+  "delivered",
+  "opened",
+  "clicked",
+  "bounced",
+  "complained",
+  "unsubscribed"
+]);
+
+// Newsletter Campaigns table
+export const newsletterCampaigns = pgTable("newsletter_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  subject: varchar("subject").notNull(),
+  previewText: varchar("preview_text"),
+  htmlContent: text("html_content").notNull(),
+  status: campaignStatusEnum("status").notNull().default("draft"),
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
+  totalRecipients: integer("total_recipients").default(0),
+  totalSent: integer("total_sent").default(0),
+  totalOpened: integer("total_opened").default(0),
+  totalClicked: integer("total_clicked").default(0),
+  totalBounced: integer("total_bounced").default(0),
+  totalUnsubscribed: integer("total_unsubscribed").default(0),
+});
+
+export const insertCampaignSchema = createInsertSchema(newsletterCampaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  sentAt: true,
+  totalRecipients: true,
+  totalSent: true,
+  totalOpened: true,
+  totalClicked: true,
+  totalBounced: true,
+  totalUnsubscribed: true,
+});
+
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
+export type NewsletterCampaign = typeof newsletterCampaigns.$inferSelect;
+export type CampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "failed";
+
+// Campaign Events table (for tracking opens, clicks, bounces, etc.)
+export const campaignEvents = pgTable("campaign_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => newsletterCampaigns.id, { onDelete: "cascade" }),
+  subscriberId: varchar("subscriber_id").references(() => newsletterSubscribers.id, { onDelete: "set null" }),
+  eventType: emailEventTypeEnum("event_type").notNull(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  ipAddress: varchar("ip_address"),
+  userAgent: varchar("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCampaignEventSchema = createInsertSchema(campaignEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCampaignEvent = z.infer<typeof insertCampaignEventSchema>;
+export type CampaignEvent = typeof campaignEvents.$inferSelect;
+export type EmailEventType = "sent" | "delivered" | "opened" | "clicked" | "bounced" | "complained" | "unsubscribed";
+
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({
   author: one(users, {

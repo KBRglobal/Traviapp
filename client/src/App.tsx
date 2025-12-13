@@ -32,6 +32,7 @@ import HomepagePromotions from "@/pages/homepage-promotions";
 import Analytics from "@/pages/analytics";
 import AuditLogs from "@/pages/audit-logs";
 import NewsletterSubscribers from "@/pages/newsletter-subscribers";
+import Campaigns from "@/pages/campaigns";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import AccessDenied from "@/pages/access-denied";
@@ -71,6 +72,7 @@ function AdminRouter() {
       <Route path="/admin/analytics" component={Analytics} />
       <Route path="/admin/audit-logs" component={AuditLogs} />
       <Route path="/admin/newsletter" component={NewsletterSubscribers} />
+      <Route path="/admin/campaigns" component={Campaigns} />
       <Route component={NotFound} />
     </Switch>
   );
