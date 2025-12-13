@@ -80,41 +80,12 @@ function getConversation(chatId: number) {
 
 async function getPerplexityResponse(chatId: number, userMessage: string): Promise<string> {
   const lang = getUserLang(chatId);
-  const conversation = getConversation(chatId);
-  
-  // Add user message to history
-  conversation.push({ role: 'user', content: userMessage });
-  
-  // Keep only last 10 messages for context (must alternate user/assistant)
-  if (conversation.length > 10) {
-    conversation.splice(0, conversation.length - 10);
-  }
 
-  // Ensure proper alternation: user, assistant, user, assistant... ending in user
-  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-    { role: 'system', content: systemPrompts[lang] }
+  // Simple messages array - just system + user for reliability
+  const messages = [
+    { role: 'system', content: systemPrompts[lang] },
+    { role: 'user', content: userMessage }
   ];
-  
-  // Build alternating messages
-  for (let i = 0; i < conversation.length; i++) {
-    const msg = conversation[i];
-    // Only add if it maintains proper alternation
-    if (messages.length === 1 && msg.role === 'user') {
-      messages.push(msg);
-    } else if (messages.length > 1) {
-      const lastRole = messages[messages.length - 1].role;
-      if ((lastRole === 'user' && msg.role === 'assistant') || 
-          (lastRole === 'assistant' && msg.role === 'user') ||
-          (lastRole === 'system' && msg.role === 'user')) {
-        messages.push(msg);
-      }
-    }
-  }
-
-  // Ensure we end with a user message
-  if (messages[messages.length - 1].role !== 'user') {
-    messages.push({ role: 'user', content: userMessage });
-  }
 
   try {
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -126,21 +97,19 @@ async function getPerplexityResponse(chatId: number, userMessage: string): Promi
       body: JSON.stringify({
         model: 'llama-3.1-sonar-small-128k-online',
         messages: messages,
-        max_tokens: 500,
         temperature: 0.7,
         stream: false
       })
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Telegram Bot] Perplexity API response:', errorText);
       throw new Error(`Perplexity API error: ${response.status}`);
     }
 
     const data = await response.json();
     const assistantMessage = data.choices?.[0]?.message?.content || 'Sorry, I could not process your request.';
-    
-    // Add assistant response to history
-    conversation.push({ role: 'assistant', content: assistantMessage });
     
     return assistantMessage;
   } catch (error) {
