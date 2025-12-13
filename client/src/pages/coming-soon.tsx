@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Building2, MapPin, Lightbulb, Check, Globe, Shield, Award } from "lucide-react";
+import { Loader2, Mail, Check, Globe } from "lucide-react";
 import { SiInstagram, SiTelegram } from "react-icons/si";
 import { apiRequest } from "@/lib/queryClient";
 import fullLogo from "@assets/Full_Logo_for_Dark_Background_1765637862936.png";
-import mascot from "@assets/Mascot_for_Dark_Background_1765637862937.png";
 
 type Language = "en" | "ar";
 
@@ -18,20 +17,10 @@ const translations = {
     hours: "Hours",
     minutes: "Minutes",
     seconds: "Seconds",
-    hotels: "Hotels",
-    hotelsDesc: "Best stays in Dubai",
-    attractions: "Attractions",
-    attractionsDesc: "Top places to visit",
-    tips: "Tips",
-    tipsDesc: "Local insider guides",
     emailPlaceholder: "Enter your email",
     notifyMe: "Notify Me",
     subscribed: "Subscribed!",
     noSpam: "Be the first to know when we launch. No spam, we promise.",
-    secure: "Secure & Private",
-    madein: "Made in Dubai",
-    launching: "Launching 2025",
-    bestPrices: "Best Prices",
     invalidEmail: "Please enter a valid email address",
   },
   ar: {
@@ -41,20 +30,10 @@ const translations = {
     hours: "ساعات",
     minutes: "دقائق",
     seconds: "ثواني",
-    hotels: "فنادق",
-    hotelsDesc: "أفضل الإقامات في دبي",
-    attractions: "معالم سياحية",
-    attractionsDesc: "أفضل الأماكن للزيارة",
-    tips: "نصائح",
-    tipsDesc: "أدلة محلية من الداخل",
     emailPlaceholder: "أدخل بريدك الإلكتروني",
     notifyMe: "أبلغني",
     subscribed: "تم الاشتراك!",
     noSpam: "كن أول من يعلم عند إطلاقنا. لا رسائل مزعجة، نعدك.",
-    secure: "آمن وخاص",
-    madein: "صنع في دبي",
-    launching: "إطلاق 2025",
-    bestPrices: "أفضل الأسعار",
     invalidEmail: "يرجى إدخال بريد إلكتروني صحيح",
   }
 };
@@ -156,23 +135,6 @@ export default function ComingSoon() {
     </div>
   );
 
-  const FeatureCard = ({ icon: Icon, title, description }: { icon: typeof Building2; title: string; description: string }) => (
-    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-5 text-center hover-elevate transition-all duration-300">
-      <div className="w-12 h-12 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center">
-        <Icon className="w-6 h-6 text-white" />
-      </div>
-      <h3 className="text-white font-semibold text-base mb-1">{title}</h3>
-      <p className="text-white/70 text-sm">{description}</p>
-    </div>
-  );
-
-  const TrustBadge = ({ icon: Icon, text }: { icon: typeof Shield; text: string }) => (
-    <div className="flex items-center gap-2 bg-white/5 backdrop-blur-sm rounded-full px-4 py-2">
-      <Icon className="w-4 h-4 text-white/80" />
-      <span className="text-white/80 text-xs">{text}</span>
-    </div>
-  );
-
   return (
     <div 
       className={`min-h-screen flex flex-col p-4 md:p-6 overflow-hidden relative ${isRTL ? "rtl" : "ltr"}`}
@@ -193,26 +155,14 @@ export default function ComingSoon() {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.05); }
         }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(-3deg); }
-          50% { transform: translateY(-15px) rotate(3deg); }
-        }
       `}</style>
 
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <img 
-            src={fullLogo} 
-            alt="Travi" 
-            className="h-12 md:h-16 w-auto"
-          />
-          <img 
-            src={mascot} 
-            alt="Travi Mascot" 
-            className="h-16 md:h-24 w-auto"
-            style={{ animation: "float 4s ease-in-out infinite" }}
-          />
-        </div>
+        <img 
+          src={fullLogo} 
+          alt="Travi" 
+          className="h-12 md:h-16 w-auto"
+        />
         <button
           onClick={() => setLanguage(language === "en" ? "ar" : "en")}
           className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full px-4 py-2 text-white text-sm transition-colors"
@@ -234,34 +184,11 @@ export default function ComingSoon() {
             </p>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-2 md:gap-3">
-            <TrustBadge icon={Shield} text={t.secure} />
-            <TrustBadge icon={Award} text={t.bestPrices} />
-          </div>
-
           <div className="flex justify-center gap-2 md:gap-4 py-4">
             <CountdownBox value={timeLeft.days} label={t.days} />
             <CountdownBox value={timeLeft.hours} label={t.hours} />
             <CountdownBox value={timeLeft.minutes} label={t.minutes} />
             <CountdownBox value={timeLeft.seconds} label={t.seconds} />
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 md:gap-4 max-w-xl mx-auto py-4">
-            <FeatureCard 
-              icon={Building2} 
-              title={t.hotels} 
-              description={t.hotelsDesc}
-            />
-            <FeatureCard 
-              icon={MapPin} 
-              title={t.attractions} 
-              description={t.attractionsDesc}
-            />
-            <FeatureCard 
-              icon={Lightbulb} 
-              title={t.tips} 
-              description={t.tipsDesc}
-            />
           </div>
 
           <form id="newsletter-form" onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
@@ -329,14 +256,6 @@ export default function ComingSoon() {
             >
               <SiTelegram className="w-5 h-5 text-white" />
             </a>
-          </div>
-
-          <div className="flex items-center justify-center gap-6 pt-4 text-white/50 text-xs">
-            <span>{t.secure}</span>
-            <span>|</span>
-            <span>{t.madein}</span>
-            <span>|</span>
-            <span>{t.launching}</span>
           </div>
         </div>
       </div>
