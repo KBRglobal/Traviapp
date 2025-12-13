@@ -46,7 +46,7 @@ import {
 } from "lucide-react";
 import type { ContentWithRelations, ContentBlock } from "@shared/schema";
 
-type ContentType = "attraction" | "hotel" | "article";
+type ContentType = "attraction" | "hotel" | "article" | "event" | "itinerary";
 
 interface BlockTypeConfig {
   type: ContentBlock["type"];
@@ -101,16 +101,22 @@ export default function ContentEditor() {
   const [, districtNewMatch] = useRoute("/admin/districts/new");
   const [, transportMatch] = useRoute("/admin/transport/:id");
   const [, transportNewMatch] = useRoute("/admin/transport/new");
+  const [, eventMatch] = useRoute("/admin/events/:id");
+  const [, eventNewMatch] = useRoute("/admin/events/new");
+  const [, itineraryMatch] = useRoute("/admin/itineraries/:id");
+  const [, itineraryNewMatch] = useRoute("/admin/itineraries/new");
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { canPublish } = usePermissions();
 
-  const isNew = !!(attractionNewMatch || hotelNewMatch || articleNewMatch || diningNewMatch || districtNewMatch || transportNewMatch);
-  const contentId = isNew ? undefined : (attractionMatch?.id || hotelMatch?.id || articleMatch?.id || diningMatch?.id || districtMatch?.id || transportMatch?.id);
+  const isNew = !!(attractionNewMatch || hotelNewMatch || articleNewMatch || diningNewMatch || districtNewMatch || transportNewMatch || eventNewMatch || itineraryNewMatch);
+  const contentId = isNew ? undefined : (attractionMatch?.id || hotelMatch?.id || articleMatch?.id || diningMatch?.id || districtMatch?.id || transportMatch?.id || eventMatch?.id || itineraryMatch?.id);
 
   const getContentType = (): ContentType => {
     if (attractionMatch || attractionNewMatch) return "attraction";
     if (hotelMatch || hotelNewMatch) return "hotel";
+    if (eventMatch || eventNewMatch) return "event";
+    if (itineraryMatch || itineraryNewMatch) return "itinerary";
     return "article";
   };
   const contentType: ContentType = getContentType();
