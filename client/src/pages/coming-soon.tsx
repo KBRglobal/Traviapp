@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Building2, MapPin, Lightbulb, MessageCircle, Check, Globe, Shield, Award, Clock } from "lucide-react";
-import { SiInstagram, SiTiktok, SiYoutube, SiFacebook, SiWhatsapp } from "react-icons/si";
+import { Loader2, Mail, Building2, MapPin, Lightbulb, MessageCircle, Check, Globe, Shield, Award } from "lucide-react";
+import { SiInstagram, SiTelegram, SiWhatsapp } from "react-icons/si";
 import { apiRequest } from "@/lib/queryClient";
 import fullLogo from "@assets/Full_Logo_for_Dark_Background_1765637862936.png";
+import mascot from "@assets/Mascot_for_Dark_Background_1765637862937.png";
 
 type Language = "en" | "ar";
 
@@ -32,10 +33,9 @@ const translations = {
     secure: "Secure & Private",
     madein: "Made in Dubai",
     launching: "Launching 2025",
-    trustedBy: "Trusted by travelers worldwide",
-    support247: "24/7 Support",
     bestPrices: "Best Prices",
     invalidEmail: "Please enter a valid email address",
+    telegram: "AI Assistant",
   },
   ar: {
     comingSoon: "قريباً",
@@ -59,10 +59,9 @@ const translations = {
     secure: "آمن وخاص",
     madein: "صنع في دبي",
     launching: "إطلاق 2025",
-    trustedBy: "موثوق من المسافرين حول العالم",
-    support247: "دعم 24/7",
     bestPrices: "أفضل الأسعار",
     invalidEmail: "يرجى إدخال بريد إلكتروني صحيح",
+    telegram: "مساعد ذكي",
   }
 };
 
@@ -189,7 +188,7 @@ export default function ComingSoon() {
 
   return (
     <div 
-      className={`min-h-screen flex flex-col items-center justify-center p-4 md:p-6 pb-24 md:pb-6 overflow-hidden relative ${isRTL ? "rtl" : "ltr"}`}
+      className={`min-h-screen flex flex-col p-4 md:p-6 pb-24 md:pb-6 overflow-hidden relative ${isRTL ? "rtl" : "ltr"}`}
       dir={isRTL ? "rtl" : "ltr"}
       style={{
         background: "linear-gradient(135deg, #6443F4 0%, #F94498 50%, #FF9327 100%)",
@@ -207,168 +206,162 @@ export default function ComingSoon() {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.05); }
         }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(-3deg); }
+          50% { transform: translateY(-15px) rotate(3deg); }
+        }
       `}</style>
 
-      <button
-        onClick={() => setLanguage(language === "en" ? "ar" : "en")}
-        className="absolute top-4 right-4 flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 text-white text-sm transition-colors"
-        data-testid="button-language-toggle"
-      >
-        <Globe className="w-4 h-4" />
-        <span>{language === "en" ? "العربية" : "English"}</span>
-      </button>
-
-      <div className="max-w-3xl w-full text-center space-y-6">
-        <div className="flex items-center justify-center mb-4">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
           <img 
             src={fullLogo} 
             alt="Travi" 
-            className="h-20 md:h-28 w-auto"
+            className="h-12 md:h-16 w-auto"
+          />
+          <img 
+            src={mascot} 
+            alt="Travi Mascot" 
+            className="h-16 md:h-24 w-auto"
+            style={{ animation: "float 4s ease-in-out infinite" }}
           />
         </div>
-
-        <div className="space-y-3">
-          <h2 className="text-2xl md:text-4xl font-bold text-white">
-            {t.comingSoon}
-          </h2>
-          <p className="text-base md:text-xl text-white/90 max-w-lg mx-auto">
-            {t.tagline}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap justify-center gap-2 md:gap-3">
-          <TrustBadge icon={Shield} text={t.secure} />
-          <TrustBadge icon={Clock} text={t.support247} />
-          <TrustBadge icon={Award} text={t.bestPrices} />
-        </div>
-
-        <div className="flex justify-center gap-2 md:gap-4 py-4">
-          <CountdownBox value={timeLeft.days} label={t.days} />
-          <CountdownBox value={timeLeft.hours} label={t.hours} />
-          <CountdownBox value={timeLeft.minutes} label={t.minutes} />
-          <CountdownBox value={timeLeft.seconds} label={t.seconds} />
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 md:gap-4 max-w-xl mx-auto py-4">
-          <FeatureCard 
-            icon={Building2} 
-            title={t.hotels} 
-            description={t.hotelsDesc}
-          />
-          <FeatureCard 
-            icon={MapPin} 
-            title={t.attractions} 
-            description={t.attractionsDesc}
-          />
-          <FeatureCard 
-            icon={Lightbulb} 
-            title={t.tips} 
-            description={t.tipsDesc}
-          />
-        </div>
-
-        <form id="newsletter-form" onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-          <div className="relative flex-1">
-            <Mail className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
-            <Input
-              type="email"
-              placeholder={t.emailPlaceholder}
-              value={email}
-              onChange={handleEmailChange}
-              className={`${isRTL ? "pr-10" : "pl-10"} h-12 bg-white border-0 ${emailError ? "ring-2 ring-red-500" : ""}`}
-              data-testid="input-newsletter-email"
-              required
-            />
-            {emailError && (
-              <p className={`absolute ${isRTL ? "right-0" : "left-0"} -bottom-5 text-xs text-red-200`}>
-                {emailError}
-              </p>
-            )}
-          </div>
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || isSubscribed}
-            className={`h-12 px-6 text-white border transition-all duration-300 ${
-              isSubscribed 
-                ? "bg-green-500 border-green-500" 
-                : "bg-[#24103E] border-[#24103E]"
-            }`}
-            style={isSubscribed ? { animation: "successPulse 0.5s ease-in-out" } : undefined}
-            data-testid="button-newsletter-subscribe"
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : isSubscribed ? (
-              <span className="flex items-center gap-2">
-                <Check className="w-4 h-4" />
-                {t.subscribed}
-              </span>
-            ) : (
-              t.notifyMe
-            )}
-          </Button>
-        </form>
-
-        <p className="text-white/60 text-sm mt-8">
-          {t.noSpam}
-        </p>
-
-        <div className="flex items-center justify-center gap-4 pt-4">
-          <a 
-            href="https://instagram.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-            data-testid="link-social-instagram"
-          >
-            <SiInstagram className="w-5 h-5 text-white" />
-          </a>
-          <a 
-            href="https://tiktok.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-            data-testid="link-social-tiktok"
-          >
-            <SiTiktok className="w-5 h-5 text-white" />
-          </a>
-          <a 
-            href="https://youtube.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-            data-testid="link-social-youtube"
-          >
-            <SiYoutube className="w-5 h-5 text-white" />
-          </a>
-          <a 
-            href="https://facebook.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-            data-testid="link-social-facebook"
-          >
-            <SiFacebook className="w-5 h-5 text-white" />
-          </a>
-        </div>
-
-        <a 
-          href="https://wa.me/971559627997" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="hidden md:inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#22c55e] text-white font-medium px-5 py-3 rounded-full transition-colors mt-2"
-          data-testid="link-whatsapp-contact"
+        <button
+          onClick={() => setLanguage(language === "en" ? "ar" : "en")}
+          className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full px-4 py-2 text-white text-sm transition-colors"
+          data-testid="button-language-toggle"
         >
-          <MessageCircle className="w-5 h-5" />
-          <span>{t.whatsapp}</span>
-        </a>
+          <Globe className="w-4 h-4" />
+          <span>{language === "en" ? "العربية" : "English"}</span>
+        </button>
+      </div>
 
-        <div className="flex items-center justify-center gap-6 pt-4 text-white/50 text-xs">
-          <span>{t.secure}</span>
-          <span>|</span>
-          <span>{t.madein}</span>
-          <span>|</span>
-          <span>{t.launching}</span>
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="max-w-3xl w-full text-center space-y-6">
+          <div className="space-y-3">
+            <h2 className="text-2xl md:text-4xl font-bold text-white">
+              {t.comingSoon}
+            </h2>
+            <p className="text-base md:text-xl text-white/90 max-w-lg mx-auto">
+              {t.tagline}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-2 md:gap-3">
+            <TrustBadge icon={Shield} text={t.secure} />
+            <TrustBadge icon={Award} text={t.bestPrices} />
+          </div>
+
+          <div className="flex justify-center gap-2 md:gap-4 py-4">
+            <CountdownBox value={timeLeft.days} label={t.days} />
+            <CountdownBox value={timeLeft.hours} label={t.hours} />
+            <CountdownBox value={timeLeft.minutes} label={t.minutes} />
+            <CountdownBox value={timeLeft.seconds} label={t.seconds} />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 md:gap-4 max-w-xl mx-auto py-4">
+            <FeatureCard 
+              icon={Building2} 
+              title={t.hotels} 
+              description={t.hotelsDesc}
+            />
+            <FeatureCard 
+              icon={MapPin} 
+              title={t.attractions} 
+              description={t.attractionsDesc}
+            />
+            <FeatureCard 
+              icon={Lightbulb} 
+              title={t.tips} 
+              description={t.tipsDesc}
+            />
+          </div>
+
+          <form id="newsletter-form" onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <div className="relative flex-1">
+              <Mail className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
+              <Input
+                type="email"
+                placeholder={t.emailPlaceholder}
+                value={email}
+                onChange={handleEmailChange}
+                className={`${isRTL ? "pr-10" : "pl-10"} h-12 bg-white border-0 ${emailError ? "ring-2 ring-red-500" : ""}`}
+                data-testid="input-newsletter-email"
+                required
+              />
+              {emailError && (
+                <p className={`absolute ${isRTL ? "right-0" : "left-0"} -bottom-5 text-xs text-red-200`}>
+                  {emailError}
+                </p>
+              )}
+            </div>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || isSubscribed}
+              className={`h-12 px-6 text-white border transition-all duration-300 ${
+                isSubscribed 
+                  ? "bg-green-500 border-green-500" 
+                  : "bg-[#24103E] border-[#24103E]"
+              }`}
+              style={isSubscribed ? { animation: "successPulse 0.5s ease-in-out" } : undefined}
+              data-testid="button-newsletter-subscribe"
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isSubscribed ? (
+                <span className="flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  {t.subscribed}
+                </span>
+              ) : (
+                t.notifyMe
+              )}
+            </Button>
+          </form>
+
+          <p className="text-white/60 text-sm mt-8">
+            {t.noSpam}
+          </p>
+
+          <div className="flex items-center justify-center gap-4 pt-4">
+            <a 
+              href="https://instagram.com/travi_world" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+              data-testid="link-social-instagram"
+            >
+              <SiInstagram className="w-5 h-5 text-white" />
+            </a>
+            <a 
+              href="https://t.me/TraviAi_bot" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+              data-testid="link-social-telegram"
+            >
+              <SiTelegram className="w-5 h-5 text-white" />
+            </a>
+          </div>
+
+          <a 
+            href="https://wa.me/971559627997" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hidden md:inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#22c55e] text-white font-medium px-5 py-3 rounded-full transition-colors mt-2"
+            data-testid="link-whatsapp-contact"
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span>{t.whatsapp}</span>
+          </a>
+
+          <div className="flex items-center justify-center gap-6 pt-4 text-white/50 text-xs">
+            <span>{t.secure}</span>
+            <span>|</span>
+            <span>{t.madein}</span>
+            <span>|</span>
+            <span>{t.launching}</span>
+          </div>
         </div>
       </div>
 
