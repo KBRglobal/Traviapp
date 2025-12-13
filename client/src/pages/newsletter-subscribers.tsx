@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,52 +12,115 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Mail, Users, Download, Search, Filter } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Mail, Users, Download, Search, Trash2, CheckCircle, Clock, XCircle, AlertTriangle } from "lucide-react";
 import { Redirect } from "wouter";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+type SubscriberStatus = "pending_confirmation" | "subscribed" | "unsubscribed" | "bounced" | "complained";
 
 type NewsletterSubscriber = {
   id: string;
   email: string;
+  firstName: string | null;
+  lastName: string | null;
   source: string | null;
+  status: SubscriberStatus;
   subscribedAt: string;
+  confirmedAt: string | null;
+  unsubscribedAt: string | null;
   isActive: boolean;
+};
+
+const statusConfig: Record<SubscriberStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; icon: typeof CheckCircle }> = {
+  pending_confirmation: { label: "Pending", variant: "secondary", icon: Clock },
+  subscribed: { label: "Subscribed", variant: "default", icon: CheckCircle },
+  unsubscribed: { label: "Unsubscribed", variant: "outline", icon: XCircle },
+  bounced: { label: "Bounced", variant: "destructive", icon: AlertTriangle },
+  complained: { label: "Complained", variant: "destructive", icon: AlertTriangle },
 };
 
 export default function NewsletterSubscribersPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const { data: subscribers = [], isLoading } = useQuery<NewsletterSubscriber[]>({
     queryKey: ["/api/newsletter/subscribers"],
     enabled: isAuthenticated,
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/newsletter/subscribers/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/newsletter/subscribers"] });
+      toast({
+        title: "Subscriber deleted",
+        description: "The subscriber has been permanently removed.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete subscriber. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredSubscribers = useMemo(() => {
     return subscribers.filter((subscriber) => {
-      const matchesSearch = subscriber.email.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = 
-        filterStatus === "all" ? true :
-        filterStatus === "active" ? subscriber.isActive :
-        !subscriber.isActive;
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = 
+        subscriber.email.toLowerCase().includes(searchLower) ||
+        (subscriber.firstName?.toLowerCase().includes(searchLower)) ||
+        (subscriber.lastName?.toLowerCase().includes(searchLower));
+      const matchesStatus = filterStatus === "all" || subscriber.status === filterStatus;
       return matchesSearch && matchesStatus;
     });
   }, [subscribers, searchQuery, filterStatus]);
 
-  const activeCount = subscribers.filter(s => s.isActive).length;
-  const inactiveCount = subscribers.filter(s => !s.isActive).length;
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: subscribers.length };
+    for (const s of subscribers) {
+      counts[s.status] = (counts[s.status] || 0) + 1;
+    }
+    return counts;
+  }, [subscribers]);
 
   const exportToCSV = () => {
-    const headers = ["Email", "Source", "Subscribed At", "Status"];
+    const headers = ["Email", "First Name", "Last Name", "Status", "Source", "Subscribed At", "Confirmed At"];
     const rows = filteredSubscribers.map((subscriber) => [
       subscriber.email,
+      subscriber.firstName || "",
+      subscriber.lastName || "",
+      subscriber.status,
       subscriber.source || "coming_soon",
-      subscriber.subscribedAt 
-        ? format(new Date(subscriber.subscribedAt), "yyyy-MM-dd HH:mm:ss")
-        : "N/A",
-      subscriber.isActive ? "Active" : "Inactive"
+      subscriber.subscribedAt ? format(new Date(subscriber.subscribedAt), "yyyy-MM-dd HH:mm:ss") : "",
+      subscriber.confirmedAt ? format(new Date(subscriber.confirmedAt), "yyyy-MM-dd HH:mm:ss") : "",
     ]);
 
     const csvContent = [
@@ -94,7 +157,7 @@ export default function NewsletterSubscribersPage() {
         <div>
           <h1 className="text-2xl font-semibold" data-testid="text-page-title">Newsletter Subscribers</h1>
           <p className="text-muted-foreground">
-            People who signed up to be notified when the site launches
+            Manage newsletter subscriptions with double opt-in verification
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -103,10 +166,10 @@ export default function NewsletterSubscribersPage() {
             {subscribers.length} total
           </Badge>
           <Badge variant="default" className="px-3 py-1.5">
-            {activeCount} active
+            {statusCounts.subscribed || 0} confirmed
           </Badge>
           <Badge variant="outline" className="px-3 py-1.5">
-            {inactiveCount} inactive
+            {statusCounts.pending_confirmation || 0} pending
           </Badge>
         </div>
       </div>
@@ -120,7 +183,7 @@ export default function NewsletterSubscribersPage() {
                 Subscriber List
               </CardTitle>
               <CardDescription>
-                All email addresses collected from the coming soon page
+                All newsletter subscribers with consent tracking
               </CardDescription>
             </div>
             <Button
@@ -139,51 +202,26 @@ export default function NewsletterSubscribersPage() {
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search by email..."
+                placeholder="Search by email or name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
                 data-testid="input-search-subscribers"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-              <div className="flex rounded-md overflow-hidden border">
-                <button
-                  onClick={() => setFilterStatus("all")}
-                  className={`px-3 py-1.5 text-sm transition-colors ${
-                    filterStatus === "all" 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-background hover:bg-muted"
-                  }`}
-                  data-testid="button-filter-all"
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setFilterStatus("active")}
-                  className={`px-3 py-1.5 text-sm transition-colors border-l ${
-                    filterStatus === "active" 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-background hover:bg-muted"
-                  }`}
-                  data-testid="button-filter-active"
-                >
-                  Active
-                </button>
-                <button
-                  onClick={() => setFilterStatus("inactive")}
-                  className={`px-3 py-1.5 text-sm transition-colors border-l ${
-                    filterStatus === "inactive" 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-background hover:bg-muted"
-                  }`}
-                  data-testid="button-filter-inactive"
-                >
-                  Inactive
-                </button>
-              </div>
-            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[180px]" data-testid="select-filter-status">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status ({statusCounts.all})</SelectItem>
+                <SelectItem value="subscribed">Subscribed ({statusCounts.subscribed || 0})</SelectItem>
+                <SelectItem value="pending_confirmation">Pending ({statusCounts.pending_confirmation || 0})</SelectItem>
+                <SelectItem value="unsubscribed">Unsubscribed ({statusCounts.unsubscribed || 0})</SelectItem>
+                <SelectItem value="bounced">Bounced ({statusCounts.bounced || 0})</SelectItem>
+                <SelectItem value="complained">Complained ({statusCounts.complained || 0})</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {isLoading ? (
@@ -210,35 +248,90 @@ export default function NewsletterSubscribersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Subscribed At</TableHead>
+                    <TableHead>Subscriber</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Signed Up</TableHead>
+                    <TableHead>Confirmed</TableHead>
+                    <TableHead className="w-[50px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSubscribers.map((subscriber) => (
-                    <TableRow key={subscriber.id} data-testid={`row-subscriber-${subscriber.id}`}>
-                      <TableCell className="font-medium" data-testid={`text-email-${subscriber.id}`}>
-                        {subscriber.email}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {subscriber.source || "coming_soon"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {subscriber.subscribedAt 
-                          ? format(new Date(subscriber.subscribedAt), "MMM d, yyyy 'at' h:mm a")
-                          : "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={subscriber.isActive ? "default" : "secondary"}>
-                          {subscriber.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredSubscribers.map((subscriber) => {
+                    const config = statusConfig[subscriber.status];
+                    const StatusIcon = config.icon;
+                    const displayName = [subscriber.firstName, subscriber.lastName].filter(Boolean).join(" ");
+                    
+                    return (
+                      <TableRow key={subscriber.id} data-testid={`row-subscriber-${subscriber.id}`}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium" data-testid={`text-email-${subscriber.id}`}>
+                              {subscriber.email}
+                            </div>
+                            {displayName && (
+                              <div className="text-sm text-muted-foreground">
+                                {displayName}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={config.variant} className="gap-1">
+                            <StatusIcon className="w-3 h-3" />
+                            {config.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" size="sm">
+                            {subscriber.source || "coming_soon"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {subscriber.subscribedAt 
+                            ? format(new Date(subscriber.subscribedAt), "MMM d, yyyy")
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {subscriber.confirmedAt 
+                            ? format(new Date(subscriber.confirmedAt), "MMM d, yyyy")
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                data-testid={`button-delete-${subscriber.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-muted-foreground" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Subscriber</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete {subscriber.email} and all associated data. 
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMutation.mutate(subscriber.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  data-testid={`button-confirm-delete-${subscriber.id}`}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
