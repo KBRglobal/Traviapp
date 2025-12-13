@@ -80,12 +80,37 @@ function getConversation(chatId: number) {
 
 async function getPerplexityResponse(chatId: number, userMessage: string): Promise<string> {
   const lang = getUserLang(chatId);
+  const conversation = getConversation(chatId);
+  
+  // Add user message to history
+  conversation.push({ role: 'user', content: userMessage });
+  
+  // Keep only last 8 messages for context
+  while (conversation.length > 8) {
+    conversation.shift();
+  }
 
-  // Simple messages array - just system + user for reliability
-  const messages = [
-    { role: 'system', content: systemPrompts[lang] },
-    { role: 'user', content: userMessage }
+  // Build messages array with proper alternation
+  const messages: Array<{ role: string; content: string }> = [
+    { role: 'system', content: systemPrompts[lang] }
   ];
+  
+  // Add conversation history ensuring proper alternation
+  let lastRole = 'system';
+  for (const msg of conversation) {
+    if ((lastRole === 'system' || lastRole === 'assistant') && msg.role === 'user') {
+      messages.push({ role: 'user', content: msg.content });
+      lastRole = 'user';
+    } else if (lastRole === 'user' && msg.role === 'assistant') {
+      messages.push({ role: 'assistant', content: msg.content });
+      lastRole = 'assistant';
+    }
+  }
+  
+  // Ensure ending with user message
+  if (lastRole !== 'user') {
+    messages.push({ role: 'user', content: userMessage });
+  }
 
   try {
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -110,6 +135,9 @@ async function getPerplexityResponse(chatId: number, userMessage: string): Promi
 
     const data = await response.json();
     const assistantMessage = data.choices?.[0]?.message?.content || 'Sorry, I could not process your request.';
+    
+    // Save assistant response to conversation history
+    conversation.push({ role: 'assistant', content: assistantMessage });
     
     return assistantMessage;
   } catch (error) {
