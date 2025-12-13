@@ -2978,11 +2978,31 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       if (!email || typeof email !== "string" || !email.includes("@")) {
         return res.status(400).json({ error: "Valid email required" });
       }
-      console.log("[Newsletter] New subscriber:", email);
+      
+      // Check if already subscribed
+      const existing = await storage.getNewsletterSubscriberByEmail(email);
+      if (existing) {
+        return res.json({ success: true, message: "Already subscribed" });
+      }
+      
+      // Save to database
+      await storage.createNewsletterSubscriber({ email, source: "coming_soon" });
+      console.log("[Newsletter] New subscriber saved:", email);
       res.json({ success: true, message: "Subscribed successfully" });
     } catch (error) {
       console.error("Error subscribing to newsletter:", error);
       res.status(500).json({ error: "Failed to subscribe" });
+    }
+  });
+
+  // Newsletter subscribers list (admin only)
+  app.get("/api/newsletter/subscribers", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const subscribers = await storage.getNewsletterSubscribers();
+      res.json(subscribers);
+    } catch (error) {
+      console.error("Error fetching newsletter subscribers:", error);
+      res.status(500).json({ error: "Failed to fetch subscribers" });
     }
   });
 

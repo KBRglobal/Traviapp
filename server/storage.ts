@@ -20,6 +20,7 @@ import {
   contentFingerprints,
   contentViews,
   auditLogs,
+  newsletterSubscribers,
   type User,
   type InsertUser,
   type UpsertUser,
@@ -62,6 +63,8 @@ import {
   type InsertContentView,
   type AuditLog,
   type InsertAuditLog,
+  type NewsletterSubscriber,
+  type InsertNewsletterSubscriber,
   homepagePromotions,
 } from "@shared/schema";
 
@@ -206,6 +209,11 @@ export interface IStorage {
     entityId?: string; 
     actionType?: string;
   }): Promise<number>;
+
+  // Newsletter Subscribers
+  getNewsletterSubscribers(): Promise<NewsletterSubscriber[]>;
+  createNewsletterSubscriber(subscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber>;
+  getNewsletterSubscriberByEmail(email: string): Promise<NewsletterSubscriber | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1098,6 +1106,21 @@ export class DatabaseStorage implements IStorage {
       .select({ count: sql<number>`count(*)::int` })
       .from(auditLogs);
     return result[0]?.count || 0;
+  }
+
+  // Newsletter Subscribers
+  async getNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
+    return await db.select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.subscribedAt));
+  }
+
+  async createNewsletterSubscriber(subscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber> {
+    const [newSubscriber] = await db.insert(newsletterSubscribers).values(subscriber).returning();
+    return newSubscriber;
+  }
+
+  async getNewsletterSubscriberByEmail(email: string): Promise<NewsletterSubscriber | undefined> {
+    const [subscriber] = await db.select().from(newsletterSubscribers).where(sql`LOWER(${newsletterSubscribers.email}) = LOWER(${email})`);
+    return subscriber;
   }
 }
 
