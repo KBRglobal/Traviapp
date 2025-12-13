@@ -1,25 +1,14 @@
 import { Link } from "wouter";
-import { ArrowLeft, Calendar, MapPin, Clock, Filter, Search } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Clock, Filter, Search, Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface DubaiEvent {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  endDate?: string;
-  time: string;
-  location: string;
-  category: string;
-  image: string;
-  featured?: boolean;
-}
+import type { ContentWithRelations } from "@shared/schema";
 
 const categories = [
   { id: "all", name: "All Events" },
@@ -29,121 +18,6 @@ const categories = [
   { id: "exhibitions", name: "Exhibitions" },
   { id: "food", name: "Food & Dining" },
   { id: "cultural", name: "Cultural" },
-];
-
-const dubaiEvents: DubaiEvent[] = [
-  {
-    id: "1",
-    title: "Dubai Shopping Festival 2025",
-    description: "The world's longest-running shopping festival featuring incredible deals, entertainment, and fireworks.",
-    date: "2025-01-01",
-    endDate: "2025-02-02",
-    time: "All Day",
-    location: "Citywide",
-    category: "festivals",
-    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600",
-    featured: true,
-  },
-  {
-    id: "2",
-    title: "Dubai Tennis Championships",
-    description: "World-class tennis tournament featuring top ATP players competing for the title.",
-    date: "2025-02-24",
-    endDate: "2025-03-01",
-    time: "12:00 PM - 10:00 PM",
-    location: "Dubai Duty Free Tennis Stadium",
-    category: "sports",
-    image: "https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=600",
-  },
-  {
-    id: "3",
-    title: "Global Village Season 29",
-    description: "Multicultural family destination with pavilions from 90+ countries, entertainment, and cuisine.",
-    date: "2024-10-16",
-    endDate: "2025-05-04",
-    time: "4:00 PM - 12:00 AM",
-    location: "Global Village, Sheikh Mohammed Bin Zayed Road",
-    category: "cultural",
-    image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=600",
-    featured: true,
-  },
-  {
-    id: "4",
-    title: "Dubai Food Festival",
-    description: "Celebrating Dubai's diverse culinary scene with special menus, food trucks, and chef experiences.",
-    date: "2025-04-18",
-    endDate: "2025-05-04",
-    time: "Various",
-    location: "Multiple Venues",
-    category: "food",
-    image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600",
-  },
-  {
-    id: "5",
-    title: "Art Dubai 2025",
-    description: "The leading international art fair in the Middle East, featuring contemporary and modern art.",
-    date: "2025-03-07",
-    endDate: "2025-03-09",
-    time: "11:00 AM - 8:00 PM",
-    location: "Madinat Jumeirah",
-    category: "exhibitions",
-    image: "https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=600",
-  },
-  {
-    id: "6",
-    title: "Dubai World Cup",
-    description: "The world's richest horse race with thrilling races, fashion, and entertainment.",
-    date: "2025-03-29",
-    time: "2:00 PM - 8:00 PM",
-    location: "Meydan Racecourse",
-    category: "sports",
-    image: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=600",
-    featured: true,
-  },
-  {
-    id: "7",
-    title: "Dubai Opera: Swan Lake",
-    description: "The iconic ballet performed by the Russian State Ballet at Dubai Opera.",
-    date: "2025-02-14",
-    endDate: "2025-02-16",
-    time: "8:00 PM",
-    location: "Dubai Opera",
-    category: "concerts",
-    image: "https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=600",
-  },
-  {
-    id: "8",
-    title: "Dubai Design Week",
-    description: "The region's largest creative festival celebrating design, architecture, and innovation.",
-    date: "2025-11-08",
-    endDate: "2025-11-13",
-    time: "10:00 AM - 10:00 PM",
-    location: "Dubai Design District (d3)",
-    category: "exhibitions",
-    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600",
-  },
-  {
-    id: "9",
-    title: "Dubai Comedy Festival",
-    description: "International comedians performing stand-up shows across multiple venues.",
-    date: "2025-05-08",
-    endDate: "2025-05-18",
-    time: "Various",
-    location: "Multiple Venues",
-    category: "concerts",
-    image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=600",
-  },
-  {
-    id: "10",
-    title: "Ramadan Night Market",
-    description: "Special evening market during Ramadan with traditional foods, crafts, and entertainment.",
-    date: "2025-03-01",
-    endDate: "2025-03-30",
-    time: "7:00 PM - 2:00 AM",
-    location: "Dubai World Trade Centre",
-    category: "cultural",
-    image: "https://images.unsplash.com/photo-1564769625905-50e93615e769?w=600",
-  },
 ];
 
 const months = [
@@ -194,20 +68,45 @@ export default function PublicEvents() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState("all");
 
+  const { data: eventsData, isLoading } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/contents?type=event&status=published"],
+  });
+
+  const events = useMemo(() => {
+    if (!eventsData) return [];
+    return eventsData.map((content) => {
+      const eventData = content.event;
+      return {
+        id: content.id,
+        title: content.title,
+        slug: content.slug,
+        description: content.metaDescription || "",
+        date: eventData?.startDate || new Date().toISOString(),
+        endDate: eventData?.endDate || undefined,
+        time: eventData?.startTime || "All Day",
+        location: eventData?.location || "Dubai",
+        category: eventData?.category || "cultural",
+        image: content.featuredImage || "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=600",
+        featured: eventData?.featured || false,
+      };
+    });
+  }, [eventsData]);
+
   const filteredEvents = useMemo(() => {
-    return dubaiEvents.filter((event) => {
+    return events.filter((event) => {
       const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.location.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesCategory = selectedCategory === "all" || event.category === selectedCategory;
       
-      const eventMonth = event.date.split("-")[1];
+      const eventDate = new Date(event.date);
+      const eventMonth = String(eventDate.getMonth() + 1).padStart(2, "0");
       const matchesMonth = selectedMonth === "all" || eventMonth === selectedMonth;
       
       return matchesSearch && matchesCategory && matchesMonth;
     });
-  }, [searchQuery, selectedCategory, selectedMonth]);
+  }, [events, searchQuery, selectedCategory, selectedMonth]);
 
   const featuredEvents = filteredEvents.filter(e => e.featured);
   const regularEvents = filteredEvents.filter(e => !e.featured);
@@ -294,11 +193,18 @@ export default function PublicEvents() {
 
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {filteredEvents.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredEvents.length === 0 ? (
             <div className="text-center py-16">
               <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-heading text-xl font-semibold mb-2">No events found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters or search query</p>
+              <h3 className="font-heading text-xl font-semibold mb-2">No events available</h3>
+              <p className="text-muted-foreground mb-6">Check back soon for upcoming events in Dubai</p>
+              <Link href="/">
+                <Button data-testid="button-back-home">Back to Home</Button>
+              </Link>
             </div>
           ) : (
             <>
@@ -322,7 +228,7 @@ export default function PublicEvents() {
                           <div className="flex-1 p-5">
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <Badge className={`${getCategoryColor(event.category)} no-default-hover-elevate no-default-active-elevate`}>
-                                {categories.find(c => c.id === event.category)?.name}
+                                {categories.find(c => c.id === event.category)?.name || event.category}
                               </Badge>
                               <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 no-default-hover-elevate no-default-active-elevate">
                                 Featured
@@ -368,7 +274,7 @@ export default function PublicEvents() {
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                         <Badge className={`absolute top-3 left-3 ${getCategoryColor(event.category)} no-default-hover-elevate no-default-active-elevate`}>
-                          {categories.find(c => c.id === event.category)?.name}
+                          {categories.find(c => c.id === event.category)?.name || event.category}
                         </Badge>
                       </div>
                       <div className="p-4">
