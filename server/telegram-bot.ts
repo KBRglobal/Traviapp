@@ -653,6 +653,303 @@ function showLanguageSelection(chatId: number) {
   });
 }
 
+// Profile message templates
+const profileLabels = {
+  en: {
+    title: 'Your Profile',
+    name: 'Name',
+    language: 'Language',
+    points: 'Points',
+    badges: 'Badges',
+    interests: 'Interests',
+    style: 'Travel Style',
+    budget: 'Budget',
+    notifications: 'Notifications',
+    notSet: 'Not set',
+    on: 'On',
+    off: 'Off',
+    editLanguage: 'Change Language',
+    editInterests: 'Set Interests',
+    editStyle: 'Travel Style',
+    editBudget: 'Set Budget',
+    editNotifications: 'Toggle Notifications',
+    back: 'Back to Profile',
+    selectInterests: 'Select your interests (tap to toggle):',
+    selectStyle: 'Select your travel style:',
+    selectBudget: 'Select your budget range:',
+    interestUpdated: 'Interest updated!',
+    styleUpdated: 'Travel style updated!',
+    budgetUpdated: 'Budget updated!',
+    notificationsUpdated: 'Notifications updated!'
+  },
+  he: {
+    title: 'הפרופיל שלך',
+    name: 'שם',
+    language: 'שפה',
+    points: 'נקודות',
+    badges: 'תגים',
+    interests: 'תחומי עניין',
+    style: 'סגנון נסיעה',
+    budget: 'תקציב',
+    notifications: 'התראות',
+    notSet: 'לא הוגדר',
+    on: 'פעיל',
+    off: 'כבוי',
+    editLanguage: 'שנה שפה',
+    editInterests: 'הגדר תחומי עניין',
+    editStyle: 'סגנון נסיעה',
+    editBudget: 'הגדר תקציב',
+    editNotifications: 'הפעל/כבה התראות',
+    back: 'חזרה לפרופיל',
+    selectInterests: 'בחר את תחומי העניין שלך (לחץ להחלפה):',
+    selectStyle: 'בחר את סגנון הנסיעה שלך:',
+    selectBudget: 'בחר את טווח התקציב שלך:',
+    interestUpdated: 'תחום העניין עודכן!',
+    styleUpdated: 'סגנון הנסיעה עודכן!',
+    budgetUpdated: 'התקציב עודכן!',
+    notificationsUpdated: 'ההתראות עודכנו!'
+  },
+  ar: {
+    title: 'ملفك الشخصي',
+    name: 'الاسم',
+    language: 'اللغة',
+    points: 'النقاط',
+    badges: 'الشارات',
+    interests: 'الاهتمامات',
+    style: 'أسلوب السفر',
+    budget: 'الميزانية',
+    notifications: 'الإشعارات',
+    notSet: 'غير محدد',
+    on: 'مفعّل',
+    off: 'معطّل',
+    editLanguage: 'تغيير اللغة',
+    editInterests: 'تحديد الاهتمامات',
+    editStyle: 'أسلوب السفر',
+    editBudget: 'تحديد الميزانية',
+    editNotifications: 'تفعيل/تعطيل الإشعارات',
+    back: 'العودة للملف الشخصي',
+    selectInterests: 'اختر اهتماماتك (انقر للتبديل):',
+    selectStyle: 'اختر أسلوب سفرك:',
+    selectBudget: 'اختر نطاق ميزانيتك:',
+    interestUpdated: 'تم تحديث الاهتمام!',
+    styleUpdated: 'تم تحديث أسلوب السفر!',
+    budgetUpdated: 'تم تحديث الميزانية!',
+    notificationsUpdated: 'تم تحديث الإشعارات!'
+  }
+};
+
+const interestOptions = [
+  { id: 'attractions', en: 'Attractions', he: 'אטרקציות', ar: 'المعالم السياحية' },
+  { id: 'hotels', en: 'Hotels', he: 'מלונות', ar: 'الفنادق' },
+  { id: 'restaurants', en: 'Restaurants', he: 'מסעדות', ar: 'المطاعم' },
+  { id: 'nightlife', en: 'Nightlife', he: 'חיי לילה', ar: 'الحياة الليلية' },
+  { id: 'shopping', en: 'Shopping', he: 'קניות', ar: 'التسوق' },
+  { id: 'culture', en: 'Culture', he: 'תרבות', ar: 'الثقافة' }
+];
+
+const styleOptions = [
+  { id: 'budget', en: 'Budget', he: 'חסכוני', ar: 'اقتصادي' },
+  { id: 'mid-range', en: 'Mid-range', he: 'בינוני', ar: 'متوسط' },
+  { id: 'luxury', en: 'Luxury', he: 'יוקרתי', ar: 'فاخر' }
+];
+
+const budgetOptions = [
+  { id: 'low', en: 'Up to $100/day', he: 'עד 100$/יום', ar: 'حتى 100$/يوم' },
+  { id: 'medium', en: '$100-300/day', he: '100-300$/יום', ar: '100-300$/يوم' },
+  { id: 'high', en: '$300+/day', he: '300$+/יום', ar: '300$+/يوم' }
+];
+
+const badgeNames: Record<string, { en: string; he: string; ar: string }> = {
+  first_timer: { en: 'First Timer', he: 'מבקר ראשון', ar: 'زائر جديد' },
+  explorer: { en: 'Explorer', he: 'חוקר', ar: 'مستكشف' },
+  foodie: { en: 'Foodie', he: 'גורמה', ar: 'عاشق الطعام' },
+  culture_buff: { en: 'Culture Buff', he: 'חובב תרבות', ar: 'محب الثقافة' },
+  night_owl: { en: 'Night Owl', he: 'ינשוף לילה', ar: 'بومة الليل' },
+  shopaholic: { en: 'Shopaholic', he: 'שופהוליק', ar: 'مدمن التسوق' },
+  frequent_visitor: { en: 'Frequent Visitor', he: 'מבקר קבוע', ar: 'زائر متكرر' },
+  premium_member: { en: 'Premium', he: 'פרימיום', ar: 'مميز' }
+};
+
+const languageNames: Record<string, string> = {
+  en: 'English',
+  he: 'עברית',
+  ar: 'العربية'
+};
+
+// Format profile message
+function formatProfileMessage(profile: TelegramUserProfile, lang: LangCode): string {
+  const labels = profileLabels[lang];
+  const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || profile.telegramUsername || 'Traveler';
+  
+  // Format interests
+  const interestsDisplay = profile.interests && profile.interests.length > 0
+    ? profile.interests.map(i => {
+        const opt = interestOptions.find(o => o.id === i);
+        return opt ? opt[lang] : i;
+      }).join(', ')
+    : labels.notSet;
+  
+  // Format travel style
+  const styleDisplay = profile.travelStyle
+    ? (styleOptions.find(s => s.id === profile.travelStyle)?.[lang] || profile.travelStyle)
+    : labels.notSet;
+  
+  // Format budget
+  const budgetDisplay = profile.budget
+    ? (budgetOptions.find(b => b.id === profile.budget)?.[lang] || profile.budget)
+    : labels.notSet;
+  
+  // Format badges
+  const badgesDisplay = profile.badges && profile.badges.length > 0
+    ? profile.badges.map(b => badgeNames[b]?.[lang] || b).join(', ')
+    : '-';
+  
+  // Format notifications
+  const notifDisplay = profile.notificationsEnabled ? labels.on : labels.off;
+
+  return `*${labels.title}*\n\n` +
+    `*${labels.name}:* ${displayName}\n` +
+    `*${labels.language}:* ${languageNames[profile.language] || profile.language}\n` +
+    `*${labels.points}:* ${profile.points || 0}\n` +
+    `*${labels.badges}:* ${badgesDisplay}\n\n` +
+    `*${labels.interests}:* ${interestsDisplay}\n` +
+    `*${labels.style}:* ${styleDisplay}\n` +
+    `*${labels.budget}:* ${budgetDisplay}\n` +
+    `*${labels.notifications}:* ${notifDisplay}`;
+}
+
+// Get profile inline keyboard
+function getProfileKeyboard(lang: LangCode): TelegramBot.InlineKeyboardMarkup {
+  const labels = profileLabels[lang];
+  return {
+    inline_keyboard: [
+      [{ text: labels.editLanguage, callback_data: 'profile_language' }],
+      [{ text: labels.editInterests, callback_data: 'profile_interests' }],
+      [{ text: labels.editStyle, callback_data: 'profile_style' }],
+      [{ text: labels.editBudget, callback_data: 'profile_budget' }],
+      [{ text: labels.editNotifications, callback_data: 'profile_notifications' }]
+    ]
+  };
+}
+
+// Get interests selection keyboard
+function getInterestsKeyboard(currentInterests: string[], lang: LangCode): TelegramBot.InlineKeyboardMarkup {
+  const labels = profileLabels[lang];
+  const buttons = interestOptions.map(opt => {
+    const isSelected = currentInterests.includes(opt.id);
+    const checkmark = isSelected ? ' [x]' : '';
+    return [{ text: `${opt[lang]}${checkmark}`, callback_data: `interest_${opt.id}` }];
+  });
+  buttons.push([{ text: labels.back, callback_data: 'profile_back' }]);
+  return { inline_keyboard: buttons };
+}
+
+// Get style selection keyboard
+function getStyleKeyboard(currentStyle: string | null, lang: LangCode): TelegramBot.InlineKeyboardMarkup {
+  const labels = profileLabels[lang];
+  const buttons = styleOptions.map(opt => {
+    const isSelected = currentStyle === opt.id;
+    const checkmark = isSelected ? ' [x]' : '';
+    return [{ text: `${opt[lang]}${checkmark}`, callback_data: `style_${opt.id}` }];
+  });
+  buttons.push([{ text: labels.back, callback_data: 'profile_back' }]);
+  return { inline_keyboard: buttons };
+}
+
+// Get budget selection keyboard
+function getBudgetKeyboard(currentBudget: string | null, lang: LangCode): TelegramBot.InlineKeyboardMarkup {
+  const labels = profileLabels[lang];
+  const buttons = budgetOptions.map(opt => {
+    const isSelected = currentBudget === opt.id;
+    const checkmark = isSelected ? ' [x]' : '';
+    return [{ text: `${opt[lang]}${checkmark}`, callback_data: `budget_${opt.id}` }];
+  });
+  buttons.push([{ text: labels.back, callback_data: 'profile_back' }]);
+  return { inline_keyboard: buttons };
+}
+
+// Send profile message with inline keyboard
+async function sendProfileMessage(chatId: number, profile: TelegramUserProfile) {
+  const lang = profile.language as LangCode;
+  const text = formatProfileMessage(profile, lang);
+  await bot?.sendMessage(chatId, text, {
+    parse_mode: 'Markdown',
+    reply_markup: getProfileKeyboard(lang)
+  });
+}
+
+// Update user interests in database
+async function updateUserInterests(chatId: number, interests: string[]) {
+  const telegramId = chatId.toString();
+  try {
+    await db.update(telegramUserProfiles)
+      .set({ interests })
+      .where(eq(telegramUserProfiles.telegramId, telegramId));
+    
+    const cached = userProfileCache.get(chatId);
+    if (cached) {
+      cached.interests = interests;
+      userProfileCache.set(chatId, cached);
+    }
+  } catch (error) {
+    console.error('[Telegram Bot] Error updating interests:', error);
+  }
+}
+
+// Update user travel style in database
+async function updateUserTravelStyle(chatId: number, travelStyle: string) {
+  const telegramId = chatId.toString();
+  try {
+    await db.update(telegramUserProfiles)
+      .set({ travelStyle })
+      .where(eq(telegramUserProfiles.telegramId, telegramId));
+    
+    const cached = userProfileCache.get(chatId);
+    if (cached) {
+      cached.travelStyle = travelStyle;
+      userProfileCache.set(chatId, cached);
+    }
+  } catch (error) {
+    console.error('[Telegram Bot] Error updating travel style:', error);
+  }
+}
+
+// Update user budget in database
+async function updateUserBudget(chatId: number, budget: string) {
+  const telegramId = chatId.toString();
+  try {
+    await db.update(telegramUserProfiles)
+      .set({ budget })
+      .where(eq(telegramUserProfiles.telegramId, telegramId));
+    
+    const cached = userProfileCache.get(chatId);
+    if (cached) {
+      cached.budget = budget;
+      userProfileCache.set(chatId, cached);
+    }
+  } catch (error) {
+    console.error('[Telegram Bot] Error updating budget:', error);
+  }
+}
+
+// Update user notifications preference in database
+async function updateUserNotifications(chatId: number, enabled: boolean) {
+  const telegramId = chatId.toString();
+  try {
+    await db.update(telegramUserProfiles)
+      .set({ notificationsEnabled: enabled })
+      .where(eq(telegramUserProfiles.telegramId, telegramId));
+    
+    const cached = userProfileCache.get(chatId);
+    if (cached) {
+      cached.notificationsEnabled = enabled;
+      userProfileCache.set(chatId, cached);
+    }
+  } catch (error) {
+    console.error('[Telegram Bot] Error updating notifications:', error);
+  }
+}
+
 // Check if message is a menu button press
 function isMenuButton(text: string, lang: LangCode): string | null {
   const labels = menuLabels[lang];
@@ -760,9 +1057,9 @@ export function initTelegramBot() {
       const chatId = msg.chat.id;
       const lang = await getUserLang(chatId);
       const helpMessages = {
-        en: '*Travi - Your Dubai Travel Assistant*\n\nUse the menu buttons below or type your question!\n\n*Commands:*\n/start - Start conversation\n/language - Change language\n/weather - Dubai weather\n/currency - Currency converter\n/clear - Clear history\n/help - Show this help\n\nYou can also share your location for nearby recommendations!',
-        he: '*טראבי - העוזר שלך לטיולים בדובאי*\n\nהשתמש בכפתורי התפריט למטה או כתוב את השאלה שלך!\n\n*פקודות:*\n/start - התחל שיחה\n/language - שנה שפה\n/weather - מזג אוויר\n/currency - המרת מטבע\n/clear - נקה היסטוריה\n/help - הצג עזרה\n\nאתה יכול גם לשתף את המיקום שלך להמלצות בסביבה!',
-        ar: '*ترافي - مساعدك للسفر في دبي*\n\nاستخدم أزرار القائمة أدناه أو اكتب سؤالك!\n\n*الأوامر:*\n/start - بدء المحادثة\n/language - تغيير اللغة\n/weather - الطقس\n/currency - تحويل العملات\n/clear - مسح السجل\n/help - عرض المساعدة\n\nيمكنك أيضاً مشاركة موقعك للحصول على توصيات قريبة!'
+        en: '*Travi - Your Dubai Travel Assistant*\n\nUse the menu buttons below or type your question!\n\n*Commands:*\n/start - Start conversation\n/language - Change language\n/profile - Your profile & preferences\n/weather - Dubai weather\n/currency - Currency converter\n/clear - Clear history\n/help - Show this help\n\nYou can also share your location for nearby recommendations!',
+        he: '*טראבי - העוזר שלך לטיולים בדובאי*\n\nהשתמש בכפתורי התפריט למטה או כתוב את השאלה שלך!\n\n*פקודות:*\n/start - התחל שיחה\n/language - שנה שפה\n/profile - הפרופיל וההעדפות שלך\n/weather - מזג אוויר\n/currency - המרת מטבע\n/clear - נקה היסטוריה\n/help - הצג עזרה\n\nאתה יכול גם לשתף את המיקום שלך להמלצות בסביבה!',
+        ar: '*ترافي - مساعدك للسفر في دبي*\n\nاستخدم أزرار القائمة أدناه أو اكتب سؤالك!\n\n*الأوامر:*\n/start - بدء المحادثة\n/language - تغيير اللغة\n/profile - ملفك الشخصي والتفضيلات\n/weather - الطقس\n/currency - تحويل العملات\n/clear - مسح السجل\n/help - عرض المساعدة\n\nيمكنك أيضاً مشاركة موقعك للحصول على توصيات قريبة!'
       };
       await bot?.sendMessage(chatId, helpMessages[lang], { 
         parse_mode: 'Markdown',
@@ -770,9 +1067,17 @@ export function initTelegramBot() {
       });
     });
 
-    // Handle callback queries (language selection)
+    // /profile command - Show user profile and preferences
+    bot.onText(/\/profile/, async (msg) => {
+      const chatId = msg.chat.id;
+      const profile = await getOrCreateUserProfile(chatId, msg.from);
+      await sendProfileMessage(chatId, profile);
+    });
+
+    // Handle callback queries (language selection + profile preferences)
     bot.on('callback_query', async (callbackQuery) => {
       const chatId = callbackQuery.message?.chat.id;
+      const messageId = callbackQuery.message?.message_id;
       const data = callbackQuery.data;
       const firstName = callbackQuery.from?.first_name || 'Guest';
 
@@ -799,6 +1104,123 @@ export function initTelegramBot() {
           parse_mode: 'Markdown',
           reply_markup: getReplyKeyboard(langCode)
         });
+        return;
+      }
+
+      // Profile-related callbacks
+      const profile = await getOrCreateUserProfile(chatId, callbackQuery.from);
+      const lang = profile.language as LangCode;
+      const labels = profileLabels[lang];
+
+      // Show language selection from profile
+      if (data === 'profile_language') {
+        showLanguageSelection(chatId);
+        return;
+      }
+
+      // Show interests selection
+      if (data === 'profile_interests') {
+        await bot?.editMessageText(labels.selectInterests, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getInterestsKeyboard(profile.interests || [], lang)
+        });
+        return;
+      }
+
+      // Show style selection
+      if (data === 'profile_style') {
+        await bot?.editMessageText(labels.selectStyle, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getStyleKeyboard(profile.travelStyle, lang)
+        });
+        return;
+      }
+
+      // Show budget selection
+      if (data === 'profile_budget') {
+        await bot?.editMessageText(labels.selectBudget, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getBudgetKeyboard(profile.budget, lang)
+        });
+        return;
+      }
+
+      // Toggle notifications
+      if (data === 'profile_notifications') {
+        const newValue = !profile.notificationsEnabled;
+        await updateUserNotifications(chatId, newValue);
+        profile.notificationsEnabled = newValue;
+        
+        await bot?.editMessageText(formatProfileMessage(profile, lang), {
+          chat_id: chatId,
+          message_id: messageId,
+          parse_mode: 'Markdown',
+          reply_markup: getProfileKeyboard(lang)
+        });
+        return;
+      }
+
+      // Back to profile
+      if (data === 'profile_back') {
+        const updatedProfile = await getOrCreateUserProfile(chatId, callbackQuery.from);
+        await bot?.editMessageText(formatProfileMessage(updatedProfile, lang), {
+          chat_id: chatId,
+          message_id: messageId,
+          parse_mode: 'Markdown',
+          reply_markup: getProfileKeyboard(lang)
+        });
+        return;
+      }
+
+      // Handle interest toggle
+      if (data?.startsWith('interest_')) {
+        const interestId = data.replace('interest_', '');
+        const currentInterests = profile.interests || [];
+        let newInterests: string[];
+        
+        if (currentInterests.includes(interestId)) {
+          newInterests = currentInterests.filter(i => i !== interestId);
+        } else {
+          newInterests = [...currentInterests, interestId];
+        }
+        
+        await updateUserInterests(chatId, newInterests);
+        
+        await bot?.editMessageReplyMarkup({
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getInterestsKeyboard(newInterests, lang)
+        } as any);
+        return;
+      }
+
+      // Handle style selection
+      if (data?.startsWith('style_')) {
+        const styleId = data.replace('style_', '');
+        await updateUserTravelStyle(chatId, styleId);
+        
+        await bot?.editMessageReplyMarkup({
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getStyleKeyboard(styleId, lang)
+        } as any);
+        return;
+      }
+
+      // Handle budget selection
+      if (data?.startsWith('budget_')) {
+        const budgetId = data.replace('budget_', '');
+        await updateUserBudget(chatId, budgetId);
+        
+        await bot?.editMessageReplyMarkup({
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getBudgetKeyboard(budgetId, lang)
+        } as any);
+        return;
       }
     });
 
