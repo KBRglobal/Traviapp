@@ -1,4 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api';
+import { db } from './db';
+import { contents, attractions, hotels, dining, affiliateLinks } from '@shared/schema';
+import { eq, and, ilike, sql } from 'drizzle-orm';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
@@ -54,15 +57,43 @@ Be warm, enthusiastic, and knowledgeable. Give concise but helpful answers. Use 
 };
 
 const welcomeMessages = {
-  en: (name: string) => `Hi ${name}! I'm *Travi*, your AI travel assistant for Dubai.\n\nAsk me anything about:\n- Hotels & accommodations\n- Attractions & things to do\n- Restaurants & dining\n- Transportation\n- Local tips & culture\n\nHow can I help you plan your Dubai adventure?`,
-  he: (name: string) => `היי ${name}! אני *טראבי*, העוזר האישי שלך לטיולים בדובאי.\n\nאפשר לשאול אותי על:\n- מלונות ולינה\n- אטרקציות ודברים לעשות\n- מסעדות ואוכל\n- תחבורה\n- טיפים מקומיים ותרבות\n\nאיך אני יכול לעזור לך לתכנן את ההרפתקה שלך בדובאי?`,
-  ar: (name: string) => `مرحباً ${name}! أنا *ترافي*، مساعدك الذكي للسفر في دبي.\n\nيمكنك أن تسألني عن:\n- الفنادق والإقامة\n- المعالم السياحية والأنشطة\n- المطاعم والطعام\n- المواصلات\n- النصائح المحلية والثقافة\n\nكيف يمكنني مساعدتك في التخطيط لمغامرتك في دبي؟`
+  en: (name: string) => `Hi ${name}! I'm *Travi*, your AI travel assistant for Dubai.\n\nUse the menu below or just type your question!\n\nHow can I help you plan your Dubai adventure?`,
+  he: (name: string) => `היי ${name}! אני *טראבי*, העוזר האישי שלך לטיולים בדובאי.\n\nהשתמש בתפריט למטה או פשוט כתוב את השאלה שלך!\n\nאיך אני יכול לעזור לך לתכנן את ההרפתקה שלך בדובאי?`,
+  ar: (name: string) => `مرحباً ${name}! أنا *ترافي*، مساعدك الذكي للسفر في دبي.\n\nاستخدم القائمة أدناه أو اكتب سؤالك!\n\nكيف يمكنني مساعدتك في التخطيط لمغامرتك في دبي؟`
 };
 
 const languageChangedMessages = {
   en: 'Language changed to English! How can I help you?',
   he: 'השפה שונתה לעברית! איך אני יכול לעזור?',
   ar: 'تم تغيير اللغة إلى العربية! كيف يمكنني مساعدتك؟'
+};
+
+// Quick reply keyboard labels per language
+const menuLabels = {
+  en: {
+    attractions: 'Attractions',
+    hotels: 'Hotels',
+    restaurants: 'Restaurants',
+    weather: 'Weather',
+    currency: 'Currency',
+    help: 'Help'
+  },
+  he: {
+    attractions: 'אטרקציות',
+    hotels: 'מלונות',
+    restaurants: 'מסעדות',
+    weather: 'מזג אוויר',
+    currency: 'המרת מטבע',
+    help: 'עזרה'
+  },
+  ar: {
+    attractions: 'المعالم السياحية',
+    hotels: 'الفنادق',
+    restaurants: 'المطاعم',
+    weather: 'الطقس',
+    currency: 'تحويل العملات',
+    help: 'مساعدة'
+  }
 };
 
 type LangCode = 'en' | 'he' | 'ar';
@@ -78,15 +109,321 @@ function getConversation(chatId: number) {
   return userConversations.get(chatId)!;
 }
 
-// Remove Perplexity citation numbers from response (e.g., "text.12" -> "text.")
+// Remove Perplexity citation numbers from response
 function cleanCitations(text: string): string {
-  // Remove citation numbers like [1], [2], etc.
   let cleaned = text.replace(/\[\d+\]/g, '');
-  // Remove citation numbers without brackets that appear after punctuation or at word boundaries
   cleaned = cleaned.replace(/([.!?،,:])\s*\d{1,2}(?=\s|$|\n)/g, '$1');
-  // Remove standalone citation numbers at end of lines
   cleaned = cleaned.replace(/\s+\d{1,2}(?=\s*$|\s*\n)/gm, '');
   return cleaned;
+}
+
+// Get reply keyboard with menu buttons
+function getReplyKeyboard(lang: LangCode): TelegramBot.ReplyKeyboardMarkup {
+  const labels = menuLabels[lang];
+  return {
+    keyboard: [
+      [{ text: labels.attractions }, { text: labels.hotels }, { text: labels.restaurants }],
+      [{ text: labels.weather }, { text: labels.currency }, { text: labels.help }]
+    ],
+    resize_keyboard: true,
+    one_time_keyboard: false
+  };
+}
+
+// Fetch attractions from CMS
+async function getAttractionsFromCMS(limit: number = 5) {
+  try {
+    const results = await db.select({
+      id: contents.id,
+      title: contents.title,
+      slug: contents.slug,
+      heroImage: contents.heroImage,
+      metaDescription: contents.metaDescription,
+      location: attractions.location,
+      priceFrom: attractions.priceFrom,
+      duration: attractions.duration,
+      primaryCta: attractions.primaryCta
+    })
+    .from(contents)
+    .innerJoin(attractions, eq(contents.id, attractions.contentId))
+    .where(eq(contents.status, 'published'))
+    .limit(limit);
+    
+    return results;
+  } catch (error) {
+    console.error('[Telegram Bot] Error fetching attractions:', error);
+    return [];
+  }
+}
+
+// Fetch hotels from CMS
+async function getHotelsFromCMS(limit: number = 5) {
+  try {
+    const results = await db.select({
+      id: contents.id,
+      title: contents.title,
+      slug: contents.slug,
+      heroImage: contents.heroImage,
+      metaDescription: contents.metaDescription,
+      location: hotels.location,
+      starRating: hotels.starRating,
+      primaryCta: hotels.primaryCta
+    })
+    .from(contents)
+    .innerJoin(hotels, eq(contents.id, hotels.contentId))
+    .where(eq(contents.status, 'published'))
+    .limit(limit);
+    
+    return results;
+  } catch (error) {
+    console.error('[Telegram Bot] Error fetching hotels:', error);
+    return [];
+  }
+}
+
+// Fetch restaurants from CMS
+async function getDiningFromCMS(limit: number = 5) {
+  try {
+    const results = await db.select({
+      id: contents.id,
+      title: contents.title,
+      slug: contents.slug,
+      heroImage: contents.heroImage,
+      metaDescription: contents.metaDescription,
+      location: dining.location,
+      cuisineType: dining.cuisineType,
+      priceRange: dining.priceRange,
+      primaryCta: dining.primaryCta
+    })
+    .from(contents)
+    .innerJoin(dining, eq(contents.id, dining.contentId))
+    .where(eq(contents.status, 'published'))
+    .limit(limit);
+    
+    return results;
+  } catch (error) {
+    console.error('[Telegram Bot] Error fetching dining:', error);
+    return [];
+  }
+}
+
+// Get affiliate links for content
+async function getAffiliateLinksForContent(contentId: string) {
+  try {
+    const links = await db.select()
+      .from(affiliateLinks)
+      .where(eq(affiliateLinks.contentId, contentId));
+    return links;
+  } catch (error) {
+    console.error('[Telegram Bot] Error fetching affiliate links:', error);
+    return [];
+  }
+}
+
+// Format attractions message
+async function formatAttractionsMessage(lang: LangCode): Promise<{ text: string; items: any[] }> {
+  const items = await getAttractionsFromCMS(5);
+  
+  if (items.length === 0) {
+    const noDataMessages = {
+      en: 'No attractions available at the moment. Ask me anything about Dubai attractions!',
+      he: 'אין אטרקציות זמינות כרגע. שאל אותי כל שאלה על אטרקציות בדובאי!',
+      ar: 'لا توجد معالم سياحية متاحة حالياً. اسألني أي سؤال عن معالم دبي!'
+    };
+    return { text: noDataMessages[lang], items: [] };
+  }
+
+  const headers = {
+    en: '*Top Dubai Attractions:*\n\n',
+    he: '*אטרקציות מובילות בדובאי:*\n\n',
+    ar: '*أفضل معالم دبي السياحية:*\n\n'
+  };
+
+  let message = headers[lang];
+  
+  for (const item of items) {
+    message += `*${item.title}*\n`;
+    if (item.location) message += `${item.location}\n`;
+    if (item.priceFrom) message += `${lang === 'he' ? 'מחיר: ' : lang === 'ar' ? 'السعر: ' : 'Price: '}${item.priceFrom}\n`;
+    if (item.duration) message += `${lang === 'he' ? 'משך: ' : lang === 'ar' ? 'المدة: ' : 'Duration: '}${item.duration}\n`;
+    message += `\n`;
+  }
+
+  const footers = {
+    en: '_Ask me for more details about any attraction!_',
+    he: '_שאל אותי לפרטים נוספים על כל אטרקציה!_',
+    ar: '_اسألني للمزيد من التفاصيل عن أي معلم!_'
+  };
+  message += footers[lang];
+
+  return { text: message, items };
+}
+
+// Format hotels message
+async function formatHotelsMessage(lang: LangCode): Promise<{ text: string; items: any[] }> {
+  const items = await getHotelsFromCMS(5);
+  
+  if (items.length === 0) {
+    const noDataMessages = {
+      en: 'No hotels available at the moment. Ask me anything about Dubai hotels!',
+      he: 'אין מלונות זמינים כרגע. שאל אותי כל שאלה על מלונות בדובאי!',
+      ar: 'لا توجد فنادق متاحة حالياً. اسألني أي سؤال عن فنادق دبي!'
+    };
+    return { text: noDataMessages[lang], items: [] };
+  }
+
+  const headers = {
+    en: '*Top Dubai Hotels:*\n\n',
+    he: '*מלונות מובילים בדובאי:*\n\n',
+    ar: '*أفضل فنادق دبي:*\n\n'
+  };
+
+  let message = headers[lang];
+  
+  for (const item of items) {
+    const stars = item.starRating ? '⭐'.repeat(item.starRating) : '';
+    message += `*${item.title}* ${stars}\n`;
+    if (item.location) message += `${item.location}\n`;
+    message += `\n`;
+  }
+
+  const footers = {
+    en: '_Ask me for more details about any hotel!_',
+    he: '_שאל אותי לפרטים נוספים על כל מלון!_',
+    ar: '_اسألني للمزيد من التفاصيل عن أي فندق!_'
+  };
+  message += footers[lang];
+
+  return { text: message, items };
+}
+
+// Format restaurants message
+async function formatDiningMessage(lang: LangCode): Promise<{ text: string; items: any[] }> {
+  const items = await getDiningFromCMS(5);
+  
+  if (items.length === 0) {
+    const noDataMessages = {
+      en: 'No restaurants available at the moment. Ask me anything about Dubai dining!',
+      he: 'אין מסעדות זמינות כרגע. שאל אותי כל שאלה על אוכל בדובאי!',
+      ar: 'لا توجد مطاعم متاحة حالياً. اسألني أي سؤال عن المطاعم في دبي!'
+    };
+    return { text: noDataMessages[lang], items: [] };
+  }
+
+  const headers = {
+    en: '*Top Dubai Restaurants:*\n\n',
+    he: '*מסעדות מובילות בדובאי:*\n\n',
+    ar: '*أفضل مطاعم دبي:*\n\n'
+  };
+
+  let message = headers[lang];
+  
+  for (const item of items) {
+    message += `*${item.title}*\n`;
+    if (item.cuisineType) message += `${lang === 'he' ? 'סוג מטבח: ' : lang === 'ar' ? 'نوع المطبخ: ' : 'Cuisine: '}${item.cuisineType}\n`;
+    if (item.location) message += `${item.location}\n`;
+    if (item.priceRange) message += `${lang === 'he' ? 'טווח מחירים: ' : lang === 'ar' ? 'نطاق السعر: ' : 'Price range: '}${item.priceRange}\n`;
+    message += `\n`;
+  }
+
+  const footers = {
+    en: '_Ask me for more details about any restaurant!_',
+    he: '_שאל אותי לפרטים נוספים על כל מסעדה!_',
+    ar: '_اسألني للمزيد من التفاصيل عن أي مطعم!_'
+  };
+  message += footers[lang];
+
+  return { text: message, items };
+}
+
+// Get Dubai weather (using wttr.in free API)
+async function getDubaiWeather(): Promise<{ temp: string; condition: string; humidity: string; wind: string }> {
+  try {
+    const response = await fetch('https://wttr.in/Dubai?format=j1');
+    if (!response.ok) throw new Error('Weather API error');
+    
+    const data = await response.json();
+    const current = data.current_condition[0];
+    
+    return {
+      temp: current.temp_C,
+      condition: current.weatherDesc[0].value,
+      humidity: current.humidity,
+      wind: current.windspeedKmph
+    };
+  } catch (error) {
+    console.error('[Telegram Bot] Weather error:', error);
+    return { temp: '30', condition: 'Sunny', humidity: '50', wind: '15' };
+  }
+}
+
+// Format weather message
+async function formatWeatherMessage(lang: LangCode): Promise<string> {
+  const weather = await getDubaiWeather();
+  
+  const messages = {
+    en: `*Dubai Weather Now:*\n\nTemperature: ${weather.temp}°C\nCondition: ${weather.condition}\nHumidity: ${weather.humidity}%\nWind: ${weather.wind} km/h\n\n_Best time to visit Dubai is November to March when temperatures are pleasant!_`,
+    he: `*מזג האוויר בדובאי עכשיו:*\n\nטמפרטורה: ${weather.temp}°C\nמצב: ${weather.condition}\nלחות: ${weather.humidity}%\nרוח: ${weather.wind} קמ"ש\n\n_הזמן הטוב ביותר לבקר בדובאי הוא נובמבר עד מרץ כשהטמפרטורות נעימות!_`,
+    ar: `*طقس دبي الآن:*\n\nدرجة الحرارة: ${weather.temp}°C\nالحالة: ${weather.condition}\nالرطوبة: ${weather.humidity}%\nالرياح: ${weather.wind} كم/س\n\n_أفضل وقت لزيارة دبي هو من نوفمبر إلى مارس عندما تكون درجات الحرارة معتدلة!_`
+  };
+  
+  return messages[lang];
+}
+
+// Currency conversion rates (AED base)
+const currencyRates: Record<string, number> = {
+  USD: 0.272,
+  EUR: 0.251,
+  GBP: 0.215,
+  ILS: 1.00,
+  INR: 22.73,
+  RUB: 26.45
+};
+
+// Format currency message
+function formatCurrencyMessage(lang: LangCode): string {
+  const messages = {
+    en: `*AED Currency Converter:*\n\n100 AED =\n• $${(100 * currencyRates.USD).toFixed(2)} USD\n• €${(100 * currencyRates.EUR).toFixed(2)} EUR\n• £${(100 * currencyRates.GBP).toFixed(2)} GBP\n• ₪${(100 * currencyRates.ILS).toFixed(2)} ILS\n• ₹${(100 * currencyRates.INR).toFixed(2)} INR\n\n_Send "convert 500 AED" for custom amounts!_`,
+    he: `*המרת מטבע דירהם:*\n\n100 AED =\n• $${(100 * currencyRates.USD).toFixed(2)} דולר\n• €${(100 * currencyRates.EUR).toFixed(2)} יורו\n• £${(100 * currencyRates.GBP).toFixed(2)} לירה\n• ₪${(100 * currencyRates.ILS).toFixed(2)} שקל\n• ₹${(100 * currencyRates.INR).toFixed(2)} רופי\n\n_שלח "המר 500" לסכומים מותאמים!_`,
+    ar: `*تحويل العملات من الدرهم:*\n\n100 AED =\n• $${(100 * currencyRates.USD).toFixed(2)} دولار\n• €${(100 * currencyRates.EUR).toFixed(2)} يورو\n• £${(100 * currencyRates.GBP).toFixed(2)} جنيه\n• ₪${(100 * currencyRates.ILS).toFixed(2)} شيكل\n• ₹${(100 * currencyRates.INR).toFixed(2)} روبية\n\n_أرسل "تحويل 500" للمبالغ المخصصة!_`
+  };
+  
+  return messages[lang];
+}
+
+// Handle custom currency conversion
+function handleCurrencyConversion(text: string, lang: LangCode): string | null {
+  const match = text.match(/(?:convert|המר|تحويل)?\s*(\d+)\s*(?:aed|درهم)?/i);
+  if (!match) return null;
+  
+  const amount = parseInt(match[1]);
+  if (isNaN(amount) || amount <= 0) return null;
+  
+  const result = {
+    en: `*${amount} AED =*\n• $${(amount * currencyRates.USD).toFixed(2)} USD\n• €${(amount * currencyRates.EUR).toFixed(2)} EUR\n• £${(amount * currencyRates.GBP).toFixed(2)} GBP\n• ₪${(amount * currencyRates.ILS).toFixed(2)} ILS\n• ₹${(amount * currencyRates.INR).toFixed(2)} INR`,
+    he: `*${amount} דירהם =*\n• $${(amount * currencyRates.USD).toFixed(2)} דולר\n• €${(amount * currencyRates.EUR).toFixed(2)} יורו\n• £${(amount * currencyRates.GBP).toFixed(2)} לירה\n• ₪${(amount * currencyRates.ILS).toFixed(2)} שקל\n• ₹${(amount * currencyRates.INR).toFixed(2)} רופי`,
+    ar: `*${amount} درهم =*\n• $${(amount * currencyRates.USD).toFixed(2)} دولار\n• €${(amount * currencyRates.EUR).toFixed(2)} يورو\n• £${(amount * currencyRates.GBP).toFixed(2)} جنيه\n• ₪${(amount * currencyRates.ILS).toFixed(2)} شيكل\n• ₹${(amount * currencyRates.INR).toFixed(2)} روبية`
+  };
+  
+  return result[lang];
+}
+
+// Handle location sharing - find nearby places
+async function handleLocationMessage(chatId: number, latitude: number, longitude: number) {
+  const lang = getUserLang(chatId);
+  
+  // For now, respond with general Dubai location tips
+  // In a full implementation, you'd calculate distances to attractions
+  const messages = {
+    en: `*Location received!*\n\nI see you're in Dubai. Here are some tips:\n\n• Use the Dubai Metro for easy transport\n• Download RTA Dubai app for navigation\n• Most attractions are within 30 min drive\n\nAsk me "What's nearby?" for recommendations!`,
+    he: `*קיבלתי את המיקום!*\n\nאני רואה שאתה בדובאי. הנה כמה טיפים:\n\n• השתמש במטרו של דובאי לתחבורה קלה\n• הורד את אפליקציית RTA Dubai לניווט\n• רוב האטרקציות נמצאות עד 30 דקות נסיעה\n\nשאל אותי "מה יש בסביבה?" להמלצות!`,
+    ar: `*تم استلام موقعك!*\n\nأرى أنك في دبي. إليك بعض النصائح:\n\n• استخدم مترو دبي للتنقل السهل\n• حمّل تطبيق RTA Dubai للملاحة\n• معظم المعالم على بعد 30 دقيقة بالسيارة\n\nاسألني "ما القريب مني؟" للتوصيات!`
+  };
+  
+  await bot?.sendMessage(chatId, messages[lang], { 
+    parse_mode: 'Markdown',
+    reply_markup: getReplyKeyboard(lang)
+  });
 }
 
 async function getPerplexityResponse(chatId: number, userMessage: string): Promise<string> {
@@ -176,6 +513,24 @@ function showLanguageSelection(chatId: number) {
   });
 }
 
+// Check if message is a menu button press
+function isMenuButton(text: string, lang: LangCode): string | null {
+  const labels = menuLabels[lang];
+  
+  // Check all languages to handle edge cases
+  for (const l of ['en', 'he', 'ar'] as LangCode[]) {
+    const lbl = menuLabels[l];
+    if (text === lbl.attractions) return 'attractions';
+    if (text === lbl.hotels) return 'hotels';
+    if (text === lbl.restaurants) return 'restaurants';
+    if (text === lbl.weather) return 'weather';
+    if (text === lbl.currency) return 'currency';
+    if (text === lbl.help) return 'help';
+  }
+  
+  return null;
+}
+
 export function initTelegramBot() {
   if (!token) {
     console.log('[Telegram Bot] No TELEGRAM_BOT_TOKEN found, bot disabled');
@@ -188,16 +543,19 @@ export function initTelegramBot() {
 
   try {
     bot = new TelegramBot(token, { polling: true });
-    console.log('[Telegram Bot] AI Assistant Bot started with polling (Perplexity)');
+    console.log('[Telegram Bot] AI Assistant Bot started with polling (Perplexity + CMS)');
 
     // /start command
-    bot.onText(/\/start/, (msg) => {
+    bot.onText(/\/start/, async (msg) => {
       const chatId = msg.chat.id;
       
       if (userLanguages.has(chatId)) {
         const lang = getUserLang(chatId);
         const firstName = msg.from?.first_name || 'Guest';
-        bot?.sendMessage(chatId, welcomeMessages[lang](firstName), { parse_mode: 'Markdown' });
+        await bot?.sendMessage(chatId, welcomeMessages[lang](firstName), { 
+          parse_mode: 'Markdown',
+          reply_markup: getReplyKeyboard(lang)
+        });
       } else {
         showLanguageSelection(chatId);
       }
@@ -218,7 +576,32 @@ export function initTelegramBot() {
         he: 'השיחה נמחקה! מתחילים מחדש.',
         ar: 'تم مسح المحادثة! ابدأ من جديد.'
       };
-      bot?.sendMessage(chatId, clearMessages[lang]);
+      bot?.sendMessage(chatId, clearMessages[lang], {
+        reply_markup: getReplyKeyboard(lang)
+      });
+    });
+
+    // /weather command
+    bot.onText(/\/weather/, async (msg) => {
+      const chatId = msg.chat.id;
+      const lang = getUserLang(chatId);
+      await bot?.sendChatAction(chatId, 'typing');
+      const weatherMsg = await formatWeatherMessage(lang);
+      await bot?.sendMessage(chatId, weatherMsg, { 
+        parse_mode: 'Markdown',
+        reply_markup: getReplyKeyboard(lang)
+      });
+    });
+
+    // /currency command
+    bot.onText(/\/currency/, (msg) => {
+      const chatId = msg.chat.id;
+      const lang = getUserLang(chatId);
+      const currencyMsg = formatCurrencyMessage(lang);
+      bot?.sendMessage(chatId, currencyMsg, { 
+        parse_mode: 'Markdown',
+        reply_markup: getReplyKeyboard(lang)
+      });
     });
 
     // /help command
@@ -226,11 +609,14 @@ export function initTelegramBot() {
       const chatId = msg.chat.id;
       const lang = getUserLang(chatId);
       const helpMessages = {
-        en: '*Travi - Your Dubai Travel Assistant*\n\nJust type your question and I will help you!\n\n*Commands:*\n/start - Start conversation\n/language - Change language\n/clear - Clear conversation history\n/help - Show this help',
-        he: '*טראבי - העוזר שלך לטיולים בדובאי*\n\nפשוט כתוב את השאלה שלך ואני אעזור לך!\n\n*פקודות:*\n/start - התחל שיחה\n/language - שנה שפה\n/clear - נקה היסטוריית שיחה\n/help - הצג עזרה',
-        ar: '*ترافي - مساعدك للسفر في دبي*\n\nاكتب سؤالك وسأساعدك!\n\n*الأوامر:*\n/start - بدء المحادثة\n/language - تغيير اللغة\n/clear - مسح سجل المحادثة\n/help - عرض المساعدة'
+        en: '*Travi - Your Dubai Travel Assistant*\n\nUse the menu buttons below or type your question!\n\n*Commands:*\n/start - Start conversation\n/language - Change language\n/weather - Dubai weather\n/currency - Currency converter\n/clear - Clear history\n/help - Show this help\n\nYou can also share your location for nearby recommendations!',
+        he: '*טראבי - העוזר שלך לטיולים בדובאי*\n\nהשתמש בכפתורי התפריט למטה או כתוב את השאלה שלך!\n\n*פקודות:*\n/start - התחל שיחה\n/language - שנה שפה\n/weather - מזג אוויר\n/currency - המרת מטבע\n/clear - נקה היסטוריה\n/help - הצג עזרה\n\nאתה יכול גם לשתף את המיקום שלך להמלצות בסביבה!',
+        ar: '*ترافي - مساعدك للسفر في دبي*\n\nاستخدم أزرار القائمة أدناه أو اكتب سؤالك!\n\n*الأوامر:*\n/start - بدء المحادثة\n/language - تغيير اللغة\n/weather - الطقس\n/currency - تحويل العملات\n/clear - مسح السجل\n/help - عرض المساعدة\n\nيمكنك أيضاً مشاركة موقعك للحصول على توصيات قريبة!'
       };
-      bot?.sendMessage(chatId, helpMessages[lang], { parse_mode: 'Markdown' });
+      bot?.sendMessage(chatId, helpMessages[lang], { 
+        parse_mode: 'Markdown',
+        reply_markup: getReplyKeyboard(lang)
+      });
     });
 
     // Handle callback queries (language selection)
@@ -250,17 +636,28 @@ export function initTelegramBot() {
         userConversations.delete(chatId); // Clear history on language change
         
         await bot?.sendMessage(chatId, languageChangedMessages[langCode]);
-        await bot?.sendMessage(chatId, welcomeMessages[langCode](firstName), { parse_mode: 'Markdown' });
+        await bot?.sendMessage(chatId, welcomeMessages[langCode](firstName), { 
+          parse_mode: 'Markdown',
+          reply_markup: getReplyKeyboard(langCode)
+        });
       }
     });
 
-    // Handle all text messages (AI conversation)
+    // Handle location messages
+    bot.on('location', async (msg) => {
+      const chatId = msg.chat.id;
+      if (msg.location) {
+        await handleLocationMessage(chatId, msg.location.latitude, msg.location.longitude);
+      }
+    });
+
+    // Handle all text messages (AI conversation + menu buttons)
     bot.on('message', async (msg) => {
       const chatId = msg.chat.id;
       const text = msg.text;
 
-      // Ignore commands
-      if (!text || text.startsWith('/')) return;
+      // Ignore commands and location messages
+      if (!text || text.startsWith('/') || msg.location) return;
 
       // Check if user has selected language
       if (!userLanguages.has(chatId)) {
@@ -268,15 +665,124 @@ export function initTelegramBot() {
         return;
       }
 
+      const lang = getUserLang(chatId);
+
+      // Check if it's a menu button press
+      const menuAction = isMenuButton(text, lang);
+      if (menuAction) {
+        await bot?.sendChatAction(chatId, 'typing');
+        
+        switch (menuAction) {
+          case 'attractions': {
+            const { text: attractionsText, items } = await formatAttractionsMessage(lang);
+            
+            // Send first attraction image if available
+            if (items.length > 0 && items[0].heroImage) {
+              try {
+                await bot?.sendPhoto(chatId, items[0].heroImage, {
+                  caption: items[0].title
+                });
+              } catch (e) {
+                // Image might not be accessible, continue without it
+              }
+            }
+            
+            await bot?.sendMessage(chatId, attractionsText, { 
+              parse_mode: 'Markdown',
+              reply_markup: getReplyKeyboard(lang)
+            });
+            break;
+          }
+          case 'hotels': {
+            const { text: hotelsText, items } = await formatHotelsMessage(lang);
+            
+            if (items.length > 0 && items[0].heroImage) {
+              try {
+                await bot?.sendPhoto(chatId, items[0].heroImage, {
+                  caption: items[0].title
+                });
+              } catch (e) {
+                // Continue without image
+              }
+            }
+            
+            await bot?.sendMessage(chatId, hotelsText, { 
+              parse_mode: 'Markdown',
+              reply_markup: getReplyKeyboard(lang)
+            });
+            break;
+          }
+          case 'restaurants': {
+            const { text: diningText, items } = await formatDiningMessage(lang);
+            
+            if (items.length > 0 && items[0].heroImage) {
+              try {
+                await bot?.sendPhoto(chatId, items[0].heroImage, {
+                  caption: items[0].title
+                });
+              } catch (e) {
+                // Continue without image
+              }
+            }
+            
+            await bot?.sendMessage(chatId, diningText, { 
+              parse_mode: 'Markdown',
+              reply_markup: getReplyKeyboard(lang)
+            });
+            break;
+          }
+          case 'weather': {
+            const weatherMsg = await formatWeatherMessage(lang);
+            await bot?.sendMessage(chatId, weatherMsg, { 
+              parse_mode: 'Markdown',
+              reply_markup: getReplyKeyboard(lang)
+            });
+            break;
+          }
+          case 'currency': {
+            const currencyMsg = formatCurrencyMessage(lang);
+            await bot?.sendMessage(chatId, currencyMsg, { 
+              parse_mode: 'Markdown',
+              reply_markup: getReplyKeyboard(lang)
+            });
+            break;
+          }
+          case 'help': {
+            const helpMessages = {
+              en: '*Travi - Your Dubai Travel Assistant*\n\nUse the menu buttons or type your question!\n\n*Commands:*\n/start - Start conversation\n/language - Change language\n/weather - Dubai weather\n/currency - Currency converter\n/clear - Clear history\n/help - Show this help',
+              he: '*טראבי - העוזר שלך לטיולים בדובאי*\n\nהשתמש בכפתורי התפריט או כתוב את השאלה שלך!\n\n*פקודות:*\n/start - התחל שיחה\n/language - שנה שפה\n/weather - מזג אוויר\n/currency - המרת מטבע\n/clear - נקה היסטוריה\n/help - הצג עזרה',
+              ar: '*ترافي - مساعدك للسفر في دبي*\n\nاستخدم أزرار القائمة أو اكتب سؤالك!\n\n*الأوامر:*\n/start - بدء المحادثة\n/language - تغيير اللغة\n/weather - الطقس\n/currency - تحويل العملات\n/clear - مسح السجل\n/help - عرض المساعدة'
+            };
+            await bot?.sendMessage(chatId, helpMessages[lang], { 
+              parse_mode: 'Markdown',
+              reply_markup: getReplyKeyboard(lang)
+            });
+            break;
+          }
+        }
+        return;
+      }
+
+      // Check for currency conversion request
+      const conversionResult = handleCurrencyConversion(text, lang);
+      if (conversionResult) {
+        await bot?.sendMessage(chatId, conversionResult, { 
+          parse_mode: 'Markdown',
+          reply_markup: getReplyKeyboard(lang)
+        });
+        return;
+      }
+
       // Check if Perplexity API is available
       if (!perplexityApiKey) {
-        const lang = getUserLang(chatId);
         const errorMessages = {
           en: 'AI features are currently unavailable. Please try again later.',
           he: 'תכונות הבינה המלאכותית אינן זמינות כרגע. אנא נסה שוב מאוחר יותר.',
           ar: 'ميزات الذكاء الاصطناعي غير متوفرة حالياً. يرجى المحاولة لاحقاً.'
         };
-        await bot?.sendMessage(chatId, errorMessages[lang]);
+        await bot?.sendMessage(chatId, errorMessages[lang], {
+          reply_markup: getReplyKeyboard(lang)
+        });
         return;
       }
 
@@ -286,7 +792,10 @@ export function initTelegramBot() {
       // Get AI response from Perplexity
       const response = await getPerplexityResponse(chatId, text);
       
-      await bot?.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+      await bot?.sendMessage(chatId, response, { 
+        parse_mode: 'Markdown',
+        reply_markup: getReplyKeyboard(lang)
+      });
     });
 
     bot.on('polling_error', (error) => {
