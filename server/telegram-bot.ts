@@ -95,7 +95,7 @@ async function getPerplexityResponse(chatId: number, userMessage: string): Promi
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
+        model: 'sonar',
         messages: messages,
         temperature: 0.7,
         stream: false
