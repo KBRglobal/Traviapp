@@ -42,6 +42,12 @@ function AdminTransport() {
 function AdminArticles() {
   return <ContentList type="article" />;
 }
+function AdminEvents() {
+  return <ContentList type="event" />;
+}
+function AdminItineraries() {
+  return <ContentList type="itinerary" />;
+}
 import RssFeeds from "@/pages/rss-feeds";
 import AffiliateLinks from "@/pages/affiliate-links";
 import MediaLibrary from "@/pages/media-library";
@@ -82,6 +88,12 @@ function AdminRouter() {
       <Route path="/admin/articles" component={AdminArticles} />
       <Route path="/admin/articles/new" component={ContentEditor} />
       <Route path="/admin/articles/:id" component={ContentEditor} />
+      <Route path="/admin/events" component={AdminEvents} />
+      <Route path="/admin/events/new" component={ContentEditor} />
+      <Route path="/admin/events/:id" component={ContentEditor} />
+      <Route path="/admin/itineraries" component={AdminItineraries} />
+      <Route path="/admin/itineraries/new" component={ContentEditor} />
+      <Route path="/admin/itineraries/:id" component={ContentEditor} />
       <Route path="/admin/rss-feeds" component={RssFeeds} />
       <Route path="/admin/ai-generator" component={AIArticleGenerator} />
       <Route path="/admin/topic-bank" component={TopicBankPage} />

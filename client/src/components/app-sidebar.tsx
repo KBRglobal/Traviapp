@@ -33,6 +33,8 @@ import {
   ClipboardList,
   Mail,
   Send,
+  Calendar,
+  Route,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -91,6 +93,16 @@ const contentItems = [
     title: "Articles",
     url: "/admin/articles",
     icon: FileText,
+  },
+  {
+    title: "Events",
+    url: "/admin/events",
+    icon: Calendar,
+  },
+  {
+    title: "Itineraries",
+    url: "/admin/itineraries",
+    icon: Route,
   },
 ];
 

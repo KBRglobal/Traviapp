@@ -29,11 +29,13 @@ import {
   UtensilsCrossed,
   Map,
   Train,
+  Calendar,
+  Route,
 } from "lucide-react";
 import type { ContentWithRelations } from "@shared/schema";
 
 interface ContentListProps {
-  type: "attraction" | "hotel" | "article" | "dining" | "district" | "transport";
+  type: "attraction" | "hotel" | "article" | "dining" | "district" | "transport" | "event" | "itinerary";
 }
 
 const typeConfig = {
@@ -78,6 +80,20 @@ const typeConfig = {
     icon: Train,
     basePath: "/admin/transport",
     wordTarget: "~1200 words",
+  },
+  event: {
+    title: "Events",
+    singular: "Event",
+    icon: Calendar,
+    basePath: "/admin/events",
+    wordTarget: "~800 words",
+  },
+  itinerary: {
+    title: "Itineraries",
+    singular: "Itinerary",
+    icon: Route,
+    basePath: "/admin/itineraries",
+    wordTarget: "~1500 words",
   },
 };
 
@@ -162,7 +178,19 @@ export default function ContentList({ type }: ContentListProps) {
     },
     {
       label: "Preview",
-      onClick: (item) => window.open(`/${type === "district" ? "districts" : type === "dining" ? "dining" : type === "transport" ? "transport" : type + "s"}/${item.slug}`, "_blank"),
+      onClick: (item) => {
+        const pathMap: Record<string, string> = {
+          attraction: "attractions",
+          hotel: "hotels",
+          article: "articles",
+          dining: "dining",
+          district: "districts",
+          transport: "transport",
+          event: "events",
+          itinerary: "itineraries",
+        };
+        window.open(`/${pathMap[type]}/${item.slug}`, "_blank");
+      },
     },
     {
       label: "Delete",
