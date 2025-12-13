@@ -107,17 +107,11 @@ export default function ComingSoon() {
       `}</style>
 
       <div className="max-w-3xl w-full text-center space-y-6">
-        <div className="flex items-center justify-center gap-4 md:gap-6 mb-4">
+        <div className="flex items-center justify-center mb-4">
           <img 
             src={fullLogo} 
             alt="Travi" 
             className="h-20 md:h-28 w-auto"
-          />
-          <img 
-            src={mascot} 
-            alt="Travi Mascot" 
-            className="h-24 md:h-36 w-auto"
-            style={{ animation: "float 4s ease-in-out infinite" }}
           />
         </div>
 
@@ -227,7 +221,7 @@ export default function ComingSoon() {
         </div>
 
         <a 
-          href="https://wa.me/971000000000" 
+          href="https://wa.me/971559627997" 
           target="_blank" 
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#22c55e] text-white font-medium px-5 py-3 rounded-full transition-colors mt-2"
