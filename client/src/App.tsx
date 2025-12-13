@@ -13,13 +13,35 @@ import { initGA } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
 import ComingSoon from "@/pages/coming-soon";
 import Dashboard from "@/pages/dashboard";
+import ContentList from "@/pages/content-list";
+import ContentEditor from "@/pages/content-editor";
+// Public pages (for public routes, not admin)
 import Attractions from "@/pages/attractions";
 import Hotels from "@/pages/hotels";
 import Dining from "@/pages/dining";
 import Districts from "@/pages/districts";
 import Transport from "@/pages/transport";
 import Articles from "@/pages/articles";
-import ContentEditor from "@/pages/content-editor";
+
+// Admin list wrappers
+function AdminAttractions() {
+  return <ContentList type="attraction" />;
+}
+function AdminHotels() {
+  return <ContentList type="hotel" />;
+}
+function AdminDining() {
+  return <ContentList type="dining" />;
+}
+function AdminDistricts() {
+  return <ContentList type="district" />;
+}
+function AdminTransport() {
+  return <ContentList type="transport" />;
+}
+function AdminArticles() {
+  return <ContentList type="article" />;
+}
 import RssFeeds from "@/pages/rss-feeds";
 import AffiliateLinks from "@/pages/affiliate-links";
 import MediaLibrary from "@/pages/media-library";
@@ -42,22 +64,22 @@ function AdminRouter() {
   return (
     <Switch>
       <Route path="/admin" component={Dashboard} />
-      <Route path="/admin/attractions" component={Attractions} />
+      <Route path="/admin/attractions" component={AdminAttractions} />
       <Route path="/admin/attractions/new" component={ContentEditor} />
       <Route path="/admin/attractions/:id" component={ContentEditor} />
-      <Route path="/admin/hotels" component={Hotels} />
+      <Route path="/admin/hotels" component={AdminHotels} />
       <Route path="/admin/hotels/new" component={ContentEditor} />
       <Route path="/admin/hotels/:id" component={ContentEditor} />
-      <Route path="/admin/dining" component={Dining} />
+      <Route path="/admin/dining" component={AdminDining} />
       <Route path="/admin/dining/new" component={ContentEditor} />
       <Route path="/admin/dining/:id" component={ContentEditor} />
-      <Route path="/admin/districts" component={Districts} />
+      <Route path="/admin/districts" component={AdminDistricts} />
       <Route path="/admin/districts/new" component={ContentEditor} />
       <Route path="/admin/districts/:id" component={ContentEditor} />
-      <Route path="/admin/transport" component={Transport} />
+      <Route path="/admin/transport" component={AdminTransport} />
       <Route path="/admin/transport/new" component={ContentEditor} />
       <Route path="/admin/transport/:id" component={ContentEditor} />
-      <Route path="/admin/articles" component={Articles} />
+      <Route path="/admin/articles" component={AdminArticles} />
       <Route path="/admin/articles/new" component={ContentEditor} />
       <Route path="/admin/articles/:id" component={ContentEditor} />
       <Route path="/admin/rss-feeds" component={RssFeeds} />
