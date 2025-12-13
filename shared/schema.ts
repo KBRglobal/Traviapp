@@ -508,22 +508,51 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 
+// Subscriber status enum for newsletter
+export const subscriberStatusEnum = pgEnum("subscriber_status", [
+  "pending_confirmation",
+  "subscribed", 
+  "unsubscribed",
+  "bounced",
+  "complained"
+]);
+
+// Consent log entry type
+export interface ConsentLogEntry {
+  action: "subscribe" | "confirm" | "unsubscribe" | "resubscribe";
+  timestamp: string;
+  ipAddress?: string;
+  userAgent?: string;
+  source?: string;
+}
+
 // Newsletter Subscribers table - for coming soon page signups
 export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").notNull().unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
   source: varchar("source").default("coming_soon"),
+  status: subscriberStatusEnum("status").notNull().default("pending_confirmation"),
+  ipAddress: varchar("ip_address"),
+  confirmToken: varchar("confirm_token"),
   subscribedAt: timestamp("subscribed_at").defaultNow(),
+  confirmedAt: timestamp("confirmed_at"),
+  unsubscribedAt: timestamp("unsubscribed_at"),
+  consentLog: jsonb("consent_log").$type<ConsentLogEntry[]>().default([]),
   isActive: boolean("is_active").notNull().default(true),
 });
 
 export const insertNewsletterSubscriberSchema = createInsertSchema(newsletterSubscribers).omit({
   id: true,
   subscribedAt: true,
+  confirmedAt: true,
+  unsubscribedAt: true,
 });
 
 export type InsertNewsletterSubscriber = z.infer<typeof insertNewsletterSubscriberSchema>;
 export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
+export type SubscriberStatus = "pending_confirmation" | "subscribed" | "unsubscribed" | "bounced" | "complained";
 
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({

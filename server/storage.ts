@@ -211,9 +211,13 @@ export interface IStorage {
   }): Promise<number>;
 
   // Newsletter Subscribers
-  getNewsletterSubscribers(): Promise<NewsletterSubscriber[]>;
-  createNewsletterSubscriber(subscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber>;
+  getNewsletterSubscribers(filters?: { status?: string }): Promise<NewsletterSubscriber[]>;
+  getNewsletterSubscriber(id: string): Promise<NewsletterSubscriber | undefined>;
   getNewsletterSubscriberByEmail(email: string): Promise<NewsletterSubscriber | undefined>;
+  getNewsletterSubscriberByToken(token: string): Promise<NewsletterSubscriber | undefined>;
+  createNewsletterSubscriber(subscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber>;
+  updateNewsletterSubscriber(id: string, data: Partial<InsertNewsletterSubscriber>): Promise<NewsletterSubscriber | undefined>;
+  deleteNewsletterSubscriber(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1109,8 +1113,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Newsletter Subscribers
-  async getNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
+  async getNewsletterSubscribers(filters?: { status?: string }): Promise<NewsletterSubscriber[]> {
+    if (filters?.status) {
+      return await db.select().from(newsletterSubscribers)
+        .where(eq(newsletterSubscribers.status, filters.status as any))
+        .orderBy(desc(newsletterSubscribers.subscribedAt));
+    }
     return await db.select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.subscribedAt));
+  }
+
+  async getNewsletterSubscriber(id: string): Promise<NewsletterSubscriber | undefined> {
+    const [subscriber] = await db.select().from(newsletterSubscribers).where(eq(newsletterSubscribers.id, id));
+    return subscriber;
+  }
+
+  async getNewsletterSubscriberByEmail(email: string): Promise<NewsletterSubscriber | undefined> {
+    const [subscriber] = await db.select().from(newsletterSubscribers).where(sql`LOWER(${newsletterSubscribers.email}) = LOWER(${email})`);
+    return subscriber;
+  }
+
+  async getNewsletterSubscriberByToken(token: string): Promise<NewsletterSubscriber | undefined> {
+    const [subscriber] = await db.select().from(newsletterSubscribers).where(eq(newsletterSubscribers.confirmToken, token));
+    return subscriber;
   }
 
   async createNewsletterSubscriber(subscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber> {
@@ -1118,9 +1142,14 @@ export class DatabaseStorage implements IStorage {
     return newSubscriber;
   }
 
-  async getNewsletterSubscriberByEmail(email: string): Promise<NewsletterSubscriber | undefined> {
-    const [subscriber] = await db.select().from(newsletterSubscribers).where(sql`LOWER(${newsletterSubscribers.email}) = LOWER(${email})`);
+  async updateNewsletterSubscriber(id: string, data: Partial<InsertNewsletterSubscriber>): Promise<NewsletterSubscriber | undefined> {
+    const [subscriber] = await db.update(newsletterSubscribers).set(data).where(eq(newsletterSubscribers.id, id)).returning();
     return subscriber;
+  }
+
+  async deleteNewsletterSubscriber(id: string): Promise<boolean> {
+    await db.delete(newsletterSubscribers).where(eq(newsletterSubscribers.id, id));
+    return true;
   }
 }
 
