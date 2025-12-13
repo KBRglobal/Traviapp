@@ -78,6 +78,17 @@ function getConversation(chatId: number) {
   return userConversations.get(chatId)!;
 }
 
+// Remove Perplexity citation numbers from response (e.g., "text.12" -> "text.")
+function cleanCitations(text: string): string {
+  // Remove citation numbers like [1], [2], etc.
+  let cleaned = text.replace(/\[\d+\]/g, '');
+  // Remove citation numbers without brackets that appear after punctuation or at word boundaries
+  cleaned = cleaned.replace(/([.!?،,:])\s*\d{1,2}(?=\s|$|\n)/g, '$1');
+  // Remove standalone citation numbers at end of lines
+  cleaned = cleaned.replace(/\s+\d{1,2}(?=\s*$|\s*\n)/gm, '');
+  return cleaned;
+}
+
 async function getPerplexityResponse(chatId: number, userMessage: string): Promise<string> {
   const lang = getUserLang(chatId);
   const conversation = getConversation(chatId);
@@ -134,7 +145,9 @@ async function getPerplexityResponse(chatId: number, userMessage: string): Promi
     }
 
     const data = await response.json();
-    const assistantMessage = data.choices?.[0]?.message?.content || 'Sorry, I could not process your request.';
+    const rawMessage = data.choices?.[0]?.message?.content || 'Sorry, I could not process your request.';
+    // Clean citation numbers from Perplexity response
+    const assistantMessage = cleanCitations(rawMessage);
     
     // Save assistant response to conversation history
     conversation.push({ role: 'assistant', content: assistantMessage });
