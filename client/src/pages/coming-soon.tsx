@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plane, Mail } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import fullLogo from "@assets/Full_Logo_for_Dark_Background_1765637862936.png";
+import mascot from "@assets/Mascot_for_Dark_Background_1765637862937.png";
 
 export default function ComingSoon() {
   const { toast } = useToast();
@@ -80,11 +82,12 @@ export default function ComingSoon() {
       }}
     >
       <div className="max-w-2xl w-full text-center space-y-8">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <Plane className="w-10 h-10 text-white" />
-          <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">
-            TRAVI
-          </h1>
+        <div className="flex flex-col items-center justify-center mb-4">
+          <img 
+            src={fullLogo} 
+            alt="Travi" 
+            className="h-24 md:h-32 w-auto"
+          />
         </div>
 
         <div className="space-y-4">
