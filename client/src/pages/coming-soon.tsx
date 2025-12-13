@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Building2, MapPin, Lightbulb, MessageCircle, Check, Globe, Shield, Award } from "lucide-react";
-import { SiInstagram, SiTelegram, SiWhatsapp } from "react-icons/si";
+import { Loader2, Mail, Building2, MapPin, Lightbulb, Check, Globe, Shield, Award } from "lucide-react";
+import { SiInstagram, SiTelegram } from "react-icons/si";
 import { apiRequest } from "@/lib/queryClient";
 import fullLogo from "@assets/Full_Logo_for_Dark_Background_1765637862936.png";
 import mascot from "@assets/Mascot_for_Dark_Background_1765637862937.png";
@@ -28,14 +28,11 @@ const translations = {
     notifyMe: "Notify Me",
     subscribed: "Subscribed!",
     noSpam: "Be the first to know when we launch. No spam, we promise.",
-    whatsapp: "Chat with us on WhatsApp",
-    joinWaitlist: "Join Waitlist",
     secure: "Secure & Private",
     madein: "Made in Dubai",
     launching: "Launching 2025",
     bestPrices: "Best Prices",
     invalidEmail: "Please enter a valid email address",
-    telegram: "AI Assistant",
   },
   ar: {
     comingSoon: "قريباً",
@@ -54,14 +51,11 @@ const translations = {
     notifyMe: "أبلغني",
     subscribed: "تم الاشتراك!",
     noSpam: "كن أول من يعلم عند إطلاقنا. لا رسائل مزعجة، نعدك.",
-    whatsapp: "تحدث معنا عبر واتساب",
-    joinWaitlist: "انضم لقائمة الانتظار",
     secure: "آمن وخاص",
     madein: "صنع في دبي",
     launching: "إطلاق 2025",
     bestPrices: "أفضل الأسعار",
     invalidEmail: "يرجى إدخال بريد إلكتروني صحيح",
-    telegram: "مساعد ذكي",
   }
 };
 
@@ -151,13 +145,6 @@ export default function ComingSoon() {
     }
   };
 
-  const scrollToForm = () => {
-    const form = document.getElementById("newsletter-form");
-    if (form) {
-      form.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   const CountdownBox = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">
       <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 md:p-5 min-w-[60px] md:min-w-[90px]">
@@ -188,7 +175,7 @@ export default function ComingSoon() {
 
   return (
     <div 
-      className={`min-h-screen flex flex-col p-4 md:p-6 pb-24 md:pb-6 overflow-hidden relative ${isRTL ? "rtl" : "ltr"}`}
+      className={`min-h-screen flex flex-col p-4 md:p-6 overflow-hidden relative ${isRTL ? "rtl" : "ltr"}`}
       dir={isRTL ? "rtl" : "ltr"}
       style={{
         background: "linear-gradient(135deg, #6443F4 0%, #F94498 50%, #FF9327 100%)",
@@ -344,17 +331,6 @@ export default function ComingSoon() {
             </a>
           </div>
 
-          <a 
-            href="https://wa.me/971559627997" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="hidden md:inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#22c55e] text-white font-medium px-5 py-3 rounded-full transition-colors mt-2"
-            data-testid="link-whatsapp-contact"
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span>{t.whatsapp}</span>
-          </a>
-
           <div className="flex items-center justify-center gap-6 pt-4 text-white/50 text-xs">
             <span>{t.secure}</span>
             <span>|</span>
@@ -363,27 +339,6 @@ export default function ComingSoon() {
             <span>{t.launching}</span>
           </div>
         </div>
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 md:hidden bg-black/80 backdrop-blur-lg border-t border-white/10 p-3 flex items-center gap-3 z-50">
-        <a 
-          href="https://wa.me/971559627997" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="flex-1 flex items-center justify-center gap-2 bg-[#25D366] text-white font-medium py-3 rounded-full"
-          data-testid="link-whatsapp-mobile"
-        >
-          <SiWhatsapp className="w-5 h-5" />
-          <span>WhatsApp</span>
-        </a>
-        <button
-          onClick={scrollToForm}
-          className="flex-1 flex items-center justify-center gap-2 bg-[#24103E] text-white font-medium py-3 rounded-full"
-          data-testid="button-join-waitlist-mobile"
-        >
-          <Mail className="w-5 h-5" />
-          <span>{t.joinWaitlist}</span>
-        </button>
       </div>
     </div>
   );
