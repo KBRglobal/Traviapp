@@ -1,16 +1,153 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { db } from './db';
-import { contents, attractions, hotels, dining, affiliateLinks } from '@shared/schema';
-import { eq, and, ilike, sql } from 'drizzle-orm';
+import { contents, attractions, hotels, dining, affiliateLinks, telegramUserProfiles, telegramConversations, telegramUserFavorites, TELEGRAM_BADGES, TelegramUserProfile } from '@shared/schema';
+import { eq, and, ilike, sql, desc, inArray } from 'drizzle-orm';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
 
 let bot: TelegramBot | null = null;
 
-// Store user language preferences and conversation history
-const userLanguages: Map<number, string> = new Map();
-const userConversations: Map<number, Array<{ role: 'user' | 'assistant'; content: string }>> = new Map();
+// In-memory cache for faster access (falls back to DB)
+const userProfileCache: Map<number, TelegramUserProfile> = new Map();
+
+// Get or create user profile from database
+async function getOrCreateUserProfile(chatId: number, from?: TelegramBot.User): Promise<TelegramUserProfile> {
+  const telegramId = chatId.toString();
+  
+  // Check cache first
+  if (userProfileCache.has(chatId)) {
+    const cached = userProfileCache.get(chatId)!;
+    // Update last active in background
+    db.update(telegramUserProfiles)
+      .set({ 
+        lastActiveAt: new Date(),
+        totalInteractions: sql`total_interactions + 1`
+      })
+      .where(eq(telegramUserProfiles.telegramId, telegramId))
+      .catch(err => console.error('[Telegram Bot] Error updating profile:', err));
+    return cached;
+  }
+  
+  try {
+    let profile = await db.select().from(telegramUserProfiles)
+      .where(eq(telegramUserProfiles.telegramId, telegramId))
+      .limit(1).then(r => r[0]);
+    
+    if (!profile) {
+      const [newProfile] = await db.insert(telegramUserProfiles).values({
+        telegramId,
+        telegramUsername: from?.username,
+        firstName: from?.first_name,
+        lastName: from?.last_name,
+        language: 'en',
+        badges: ['first_timer'],
+        points: 5,
+      }).returning();
+      profile = newProfile;
+      console.log(`[Telegram Bot] Created new profile for ${telegramId}`);
+    } else {
+      await db.update(telegramUserProfiles)
+        .set({ 
+          lastActiveAt: new Date(),
+          totalInteractions: sql`total_interactions + 1`
+        })
+        .where(eq(telegramUserProfiles.telegramId, telegramId));
+    }
+    
+    userProfileCache.set(chatId, profile);
+    return profile;
+  } catch (error) {
+    console.error('[Telegram Bot] Error getting/creating profile:', error);
+    // Return a default profile object if DB fails
+    return {
+      id: telegramId,
+      telegramId,
+      telegramUsername: from?.username || null,
+      firstName: from?.first_name || null,
+      lastName: from?.last_name || null,
+      language: 'en',
+      interests: [],
+      favorites: [],
+      tripDates: null,
+      travelStyle: null,
+      budget: null,
+      notificationsEnabled: true,
+      dailyDigestEnabled: false,
+      isPremium: false,
+      totalInteractions: 0,
+      badges: [],
+      points: 0,
+      lastActiveAt: new Date(),
+      createdAt: new Date(),
+    };
+  }
+}
+
+// Save conversation message to database
+async function saveConversationMessage(profileId: string, role: string, content: string) {
+  try {
+    await db.insert(telegramConversations).values({
+      telegramUserId: profileId,
+      role,
+      content,
+    });
+    
+    // Keep only last 8 messages per user
+    const messages = await db.select({ id: telegramConversations.id })
+      .from(telegramConversations)
+      .where(eq(telegramConversations.telegramUserId, profileId))
+      .orderBy(desc(telegramConversations.createdAt));
+    
+    if (messages.length > 8) {
+      const toDelete = messages.slice(8).map(m => m.id);
+      await db.delete(telegramConversations)
+        .where(inArray(telegramConversations.id, toDelete));
+    }
+  } catch (error) {
+    console.error('[Telegram Bot] Error saving conversation:', error);
+  }
+}
+
+// Get conversation history from database
+async function getConversationHistory(profileId: string): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
+  try {
+    const messages = await db.select({
+      role: telegramConversations.role,
+      content: telegramConversations.content,
+    })
+    .from(telegramConversations)
+    .where(eq(telegramConversations.telegramUserId, profileId))
+    .orderBy(telegramConversations.createdAt);
+    
+    return messages.map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+  } catch (error) {
+    console.error('[Telegram Bot] Error fetching conversation:', error);
+    return [];
+  }
+}
+
+// Update user language in database
+async function updateUserLanguage(chatId: number, language: 'en' | 'he' | 'ar') {
+  const telegramId = chatId.toString();
+  try {
+    await db.update(telegramUserProfiles)
+      .set({ language })
+      .where(eq(telegramUserProfiles.telegramId, telegramId));
+    
+    // Update cache
+    const cached = userProfileCache.get(chatId);
+    if (cached) {
+      cached.language = language;
+      userProfileCache.set(chatId, cached);
+    }
+  } catch (error) {
+    console.error('[Telegram Bot] Error updating language:', error);
+  }
+}
 
 const systemPrompts = {
   en: `You are Travi, a friendly and helpful AI travel assistant specializing in Dubai. You help tourists and visitors with:
@@ -98,15 +235,23 @@ const menuLabels = {
 
 type LangCode = 'en' | 'he' | 'ar';
 
-function getUserLang(chatId: number): LangCode {
-  return (userLanguages.get(chatId) as LangCode) || 'en';
-}
-
-function getConversation(chatId: number) {
-  if (!userConversations.has(chatId)) {
-    userConversations.set(chatId, []);
+async function getUserLang(chatId: number): Promise<LangCode> {
+  // Check cache first
+  const cached = userProfileCache.get(chatId);
+  if (cached) {
+    return cached.language as LangCode;
   }
-  return userConversations.get(chatId)!;
+  
+  try {
+    const profile = await db.select({ language: telegramUserProfiles.language })
+      .from(telegramUserProfiles)
+      .where(eq(telegramUserProfiles.telegramId, chatId.toString()))
+      .limit(1).then(r => r[0]);
+    return (profile?.language as LangCode) || 'en';
+  } catch (error) {
+    console.error('[Telegram Bot] Error getting user lang:', error);
+    return 'en';
+  }
 }
 
 // Remove Perplexity citation numbers from response
@@ -410,7 +555,7 @@ function handleCurrencyConversion(text: string, lang: LangCode): string | null {
 
 // Handle location sharing - find nearby places
 async function handleLocationMessage(chatId: number, latitude: number, longitude: number) {
-  const lang = getUserLang(chatId);
+  const lang = await getUserLang(chatId);
   
   // For now, respond with general Dubai location tips
   // In a full implementation, you'd calculate distances to attractions
@@ -426,17 +571,14 @@ async function handleLocationMessage(chatId: number, latitude: number, longitude
   });
 }
 
-async function getPerplexityResponse(chatId: number, userMessage: string): Promise<string> {
-  const lang = getUserLang(chatId);
-  const conversation = getConversation(chatId);
+async function getPerplexityResponse(chatId: number, userMessage: string, profile: TelegramUserProfile): Promise<string> {
+  const lang = profile.language as LangCode;
   
-  // Add user message to history
-  conversation.push({ role: 'user', content: userMessage });
+  // Get conversation history from database
+  const conversation = await getConversationHistory(profile.id);
   
-  // Keep only last 8 messages for context
-  while (conversation.length > 8) {
-    conversation.shift();
-  }
+  // Save user message to database
+  await saveConversationMessage(profile.id, 'user', userMessage);
 
   // Build messages array with proper alternation
   const messages: Array<{ role: string; content: string }> = [
@@ -455,10 +597,8 @@ async function getPerplexityResponse(chatId: number, userMessage: string): Promi
     }
   }
   
-  // Ensure ending with user message
-  if (lastRole !== 'user') {
-    messages.push({ role: 'user', content: userMessage });
-  }
+  // Add current user message
+  messages.push({ role: 'user', content: userMessage });
 
   try {
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -486,8 +626,8 @@ async function getPerplexityResponse(chatId: number, userMessage: string): Promi
     // Clean citation numbers from Perplexity response
     const assistantMessage = cleanCitations(rawMessage);
     
-    // Save assistant response to conversation history
-    conversation.push({ role: 'assistant', content: assistantMessage });
+    // Save assistant response to database
+    await saveConversationMessage(profile.id, 'assistant', assistantMessage);
     
     return assistantMessage;
   } catch (error) {
@@ -548,9 +688,11 @@ export function initTelegramBot() {
     // /start command
     bot.onText(/\/start/, async (msg) => {
       const chatId = msg.chat.id;
+      const profile = await getOrCreateUserProfile(chatId, msg.from);
       
-      if (userLanguages.has(chatId)) {
-        const lang = getUserLang(chatId);
+      // Check if language was previously set (not default 'en' for new users, or user has interacted before)
+      if (profile.totalInteractions > 1 || profile.language !== 'en') {
+        const lang = profile.language as LangCode;
         const firstName = msg.from?.first_name || 'Guest';
         await bot?.sendMessage(chatId, welcomeMessages[lang](firstName), { 
           parse_mode: 'Markdown',
@@ -567,16 +709,25 @@ export function initTelegramBot() {
     });
 
     // /clear command - clear conversation history
-    bot.onText(/\/clear/, (msg) => {
+    bot.onText(/\/clear/, async (msg) => {
       const chatId = msg.chat.id;
-      userConversations.delete(chatId);
-      const lang = getUserLang(chatId);
+      const profile = await getOrCreateUserProfile(chatId, msg.from);
+      
+      // Clear conversation from database
+      try {
+        await db.delete(telegramConversations)
+          .where(eq(telegramConversations.telegramUserId, profile.id));
+      } catch (error) {
+        console.error('[Telegram Bot] Error clearing conversation:', error);
+      }
+      
+      const lang = profile.language as LangCode;
       const clearMessages = {
         en: 'Conversation cleared! Start fresh.',
         he: 'השיחה נמחקה! מתחילים מחדש.',
         ar: 'تم مسح المحادثة! ابدأ من جديد.'
       };
-      bot?.sendMessage(chatId, clearMessages[lang], {
+      await bot?.sendMessage(chatId, clearMessages[lang], {
         reply_markup: getReplyKeyboard(lang)
       });
     });
@@ -584,7 +735,7 @@ export function initTelegramBot() {
     // /weather command
     bot.onText(/\/weather/, async (msg) => {
       const chatId = msg.chat.id;
-      const lang = getUserLang(chatId);
+      const lang = await getUserLang(chatId);
       await bot?.sendChatAction(chatId, 'typing');
       const weatherMsg = await formatWeatherMessage(lang);
       await bot?.sendMessage(chatId, weatherMsg, { 
@@ -594,26 +745,26 @@ export function initTelegramBot() {
     });
 
     // /currency command
-    bot.onText(/\/currency/, (msg) => {
+    bot.onText(/\/currency/, async (msg) => {
       const chatId = msg.chat.id;
-      const lang = getUserLang(chatId);
+      const lang = await getUserLang(chatId);
       const currencyMsg = formatCurrencyMessage(lang);
-      bot?.sendMessage(chatId, currencyMsg, { 
+      await bot?.sendMessage(chatId, currencyMsg, { 
         parse_mode: 'Markdown',
         reply_markup: getReplyKeyboard(lang)
       });
     });
 
     // /help command
-    bot.onText(/\/help/, (msg) => {
+    bot.onText(/\/help/, async (msg) => {
       const chatId = msg.chat.id;
-      const lang = getUserLang(chatId);
+      const lang = await getUserLang(chatId);
       const helpMessages = {
         en: '*Travi - Your Dubai Travel Assistant*\n\nUse the menu buttons below or type your question!\n\n*Commands:*\n/start - Start conversation\n/language - Change language\n/weather - Dubai weather\n/currency - Currency converter\n/clear - Clear history\n/help - Show this help\n\nYou can also share your location for nearby recommendations!',
         he: '*טראבי - העוזר שלך לטיולים בדובאי*\n\nהשתמש בכפתורי התפריט למטה או כתוב את השאלה שלך!\n\n*פקודות:*\n/start - התחל שיחה\n/language - שנה שפה\n/weather - מזג אוויר\n/currency - המרת מטבע\n/clear - נקה היסטוריה\n/help - הצג עזרה\n\nאתה יכול גם לשתף את המיקום שלך להמלצות בסביבה!',
         ar: '*ترافي - مساعدك للسفر في دبي*\n\nاستخدم أزرار القائمة أدناه أو اكتب سؤالك!\n\n*الأوامر:*\n/start - بدء المحادثة\n/language - تغيير اللغة\n/weather - الطقس\n/currency - تحويل العملات\n/clear - مسح السجل\n/help - عرض المساعدة\n\nيمكنك أيضاً مشاركة موقعك للحصول على توصيات قريبة!'
       };
-      bot?.sendMessage(chatId, helpMessages[lang], { 
+      await bot?.sendMessage(chatId, helpMessages[lang], { 
         parse_mode: 'Markdown',
         reply_markup: getReplyKeyboard(lang)
       });
@@ -632,8 +783,16 @@ export function initTelegramBot() {
       // Handle language selection
       if (data?.startsWith('lang_')) {
         const langCode = data.replace('lang_', '') as LangCode;
-        userLanguages.set(chatId, langCode);
-        userConversations.delete(chatId); // Clear history on language change
+        const profile = await getOrCreateUserProfile(chatId, callbackQuery.from);
+        await updateUserLanguage(chatId, langCode);
+        
+        // Clear conversation history on language change
+        try {
+          await db.delete(telegramConversations)
+            .where(eq(telegramConversations.telegramUserId, profile.id));
+        } catch (error) {
+          console.error('[Telegram Bot] Error clearing conversation:', error);
+        }
         
         await bot?.sendMessage(chatId, languageChangedMessages[langCode]);
         await bot?.sendMessage(chatId, welcomeMessages[langCode](firstName), { 
@@ -659,13 +818,20 @@ export function initTelegramBot() {
       // Ignore commands and location messages
       if (!text || text.startsWith('/') || msg.location) return;
 
-      // Check if user has selected language
-      if (!userLanguages.has(chatId)) {
-        showLanguageSelection(chatId);
-        return;
+      // Get or create user profile
+      const profile = await getOrCreateUserProfile(chatId, msg.from);
+      
+      // Check if user has selected language (new users with default 'en' and no interactions)
+      if (profile.totalInteractions <= 1 && profile.language === 'en') {
+        // Check if cache indicates this is truly a new user
+        const cached = userProfileCache.get(chatId);
+        if (!cached || (cached.totalInteractions <= 1 && cached.language === 'en')) {
+          showLanguageSelection(chatId);
+          return;
+        }
       }
 
-      const lang = getUserLang(chatId);
+      const lang = profile.language as LangCode;
 
       // Check if it's a menu button press
       const menuAction = isMenuButton(text, lang);
@@ -789,8 +955,8 @@ export function initTelegramBot() {
       // Show typing indicator
       await bot?.sendChatAction(chatId, 'typing');
 
-      // Get AI response from Perplexity
-      const response = await getPerplexityResponse(chatId, text);
+      // Get AI response from Perplexity with user profile for conversation memory
+      const response = await getPerplexityResponse(chatId, text, profile);
       
       await bot?.sendMessage(chatId, response, { 
         parse_mode: 'Markdown',
