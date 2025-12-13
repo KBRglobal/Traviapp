@@ -1242,16 +1242,6 @@ export function initTelegramBot() {
 
       // Get or create user profile
       const profile = await getOrCreateUserProfile(chatId, msg.from);
-      
-      // Check if user has selected language (new users with default 'en' and no interactions)
-      if (profile.totalInteractions <= 1 && profile.language === 'en') {
-        // Check if cache indicates this is truly a new user
-        const cached = userProfileCache.get(chatId);
-        if (!cached || (cached.totalInteractions <= 1 && cached.language === 'en')) {
-          showLanguageSelection(chatId);
-          return;
-        }
-      }
 
       const lang = profile.language as LangCode;
 
