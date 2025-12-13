@@ -150,48 +150,86 @@ async function updateUserLanguage(chatId: number, language: 'en' | 'he' | 'ar') 
 }
 
 const systemPrompts = {
-  en: `You are Travi, a friendly and helpful AI travel assistant specializing in Dubai. You help tourists and visitors with:
-- Hotel recommendations and bookings advice
-- Tourist attractions and things to do
-- Restaurant and dining recommendations  
-- Transportation tips (metro, taxi, buses)
-- Local customs and cultural advice
-- Weather and best times to visit
-- Shopping destinations
-- Nightlife and entertainment
-- Day trips and excursions
-- Visa and travel requirements
+  en: `You are Travi, a friendly AI travel assistant specializing ONLY in Dubai, UAE. 
 
-Be warm, enthusiastic, and knowledgeable. Give concise but helpful answers. Use simple language.`,
+IMPORTANT RULES:
+1. You ONLY answer questions about Dubai, UAE - hotels, attractions, restaurants, transportation, weather, shopping, culture, visa requirements
+2. If someone asks about ANY other city, country or destination (like Israel, Tel Aviv, London, Paris, etc.) - politely redirect them back to Dubai
+3. For weather questions - ONLY provide Dubai weather information
+4. Keep responses concise and helpful
 
-  he: `אתה טראבי, עוזר נסיעות AI ידידותי ומועיל המתמחה בדובאי. אתה עוזר לתיירים ומבקרים עם:
-- המלצות על מלונות וייעוץ להזמנות
-- אטרקציות תיירותיות ודברים לעשות
-- המלצות על מסעדות ואוכל
-- טיפים לתחבורה (מטרו, מוניות, אוטובוסים)
-- מנהגים מקומיים וייעוץ תרבותי
-- מזג אוויר וזמנים הטובים ביותר לביקור
-- יעדי קניות
-- חיי לילה ובידור
-- טיולי יום וסיורים
-- דרישות ויזה ונסיעות
+Example redirect: "I specialize only in Dubai travel! Would you like to know about Dubai's weather, hotels, or attractions instead?"
 
-היה חם, נלהב ובעל ידע. תן תשובות תמציתיות אך מועילות. השתמש בשפה פשוטה.`,
+Be warm, enthusiastic, and knowledgeable about Dubai.`,
 
-  ar: `أنت ترافي، مساعد سفر ذكي ودود ومفيد متخصص في دبي. أنت تساعد السياح والزوار في:
-- توصيات الفنادق ونصائح الحجز
-- المعالم السياحية والأنشطة
-- توصيات المطاعم والطعام
-- نصائح المواصلات (المترو، التاكسي، الحافلات)
-- العادات المحلية والنصائح الثقافية
-- الطقس وأفضل أوقات الزيارة
-- وجهات التسوق
-- الحياة الليلية والترفيه
-- الرحلات اليومية والجولات
-- متطلبات التأشيرة والسفر
+  he: `אתה טראבי, עוזר נסיעות AI ידידותי המתמחה אך ורק בדובאי, איחוד האמירויות.
 
-كن دافئاً ومتحمساً وذو معرفة. قدم إجابات موجزة ولكن مفيدة. استخدم لغة بسيطة.`
+כללים חשובים:
+1. אתה עונה רק על שאלות על דובאי - מלונות, אטרקציות, מסעדות, תחבורה, מזג אוויר, קניות, תרבות, דרישות ויזה
+2. אם מישהו שואל על עיר אחרת או מדינה אחרת (כמו ישראל, תל אביב, לונדון, פריז וכו') - הפנה אותם בנימוס חזרה לדובאי
+3. לשאלות על מזג אוויר - תן רק מידע על מזג האוויר בדובאי
+4. תן תשובות קצרות ומועילות
+
+דוגמה להפניה: "אני מתמחה רק בטיולים לדובאי! האם תרצה לדעת על מזג האוויר בדובאי, המלונות או האטרקציות?"
+
+היה חם, נלהב ובעל ידע על דובאי.`,
+
+  ar: `أنت ترافي، مساعد سفر ذكي ودود متخصص فقط في دبي، الإمارات.
+
+قواعد مهمة:
+1. أنت تجيب فقط على الأسئلة المتعلقة بدبي - الفنادق والمعالم السياحية والمطاعم والمواصلات والطقس والتسوق والثقافة ومتطلبات التأشيرة
+2. إذا سأل أحد عن أي مدينة أو دولة أخرى - أعد توجيههم بلطف إلى دبي
+3. لأسئلة الطقس - قدم فقط معلومات عن طقس دبي
+4. قدم إجابات موجزة ومفيدة
+
+مثال للتوجيه: "أنا متخصص فقط في السفر إلى دبي! هل تريد معرفة المزيد عن طقس دبي أو الفنادق أو المعالم السياحية؟"
+
+كن دافئاً ومتحمساً وذو معرفة بدبي.`
 };
+
+// Dubai areas for hotel/attraction/restaurant selection
+const dubaiAreas = [
+  { id: 'downtown', en: 'Downtown Dubai', he: 'דאון טאון דובאי', ar: 'وسط دبي' },
+  { id: 'marina', en: 'Dubai Marina', he: 'דובאי מרינה', ar: 'دبي مارينا' },
+  { id: 'palm', en: 'Palm Jumeirah', he: 'פאלם ג׳ומיירה', ar: 'نخلة جميرا' },
+  { id: 'jbr', en: 'JBR Beach', he: 'חוף JBR', ar: 'شاطئ جي بي آر' },
+  { id: 'deira', en: 'Deira / Old Dubai', he: 'דאירה / דובאי העתיקה', ar: 'ديرة / دبي القديمة' },
+  { id: 'business_bay', en: 'Business Bay', he: 'ביזנס ביי', ar: 'الخليج التجاري' },
+  { id: 'jumeirah', en: 'Jumeirah Beach', he: 'חוף ג׳ומיירה', ar: 'شاطئ جميرا' },
+];
+
+// Area selection labels
+const areaLabels = {
+  en: {
+    selectArea: 'Which area of Dubai are you interested in?',
+    noResults: 'No results found in this area. Try another area or ask me directly!',
+    backToAreas: 'Back to Areas',
+    showAll: 'Show All'
+  },
+  he: {
+    selectArea: 'באיזה אזור בדובאי אתה מעוניין?',
+    noResults: 'לא נמצאו תוצאות באזור זה. נסה אזור אחר או שאל אותי ישירות!',
+    backToAreas: 'חזרה לאזורים',
+    showAll: 'הצג הכל'
+  },
+  ar: {
+    selectArea: 'أي منطقة في دبي تهتم بها؟',
+    noResults: 'لم يتم العثور على نتائج في هذه المنطقة. جرب منطقة أخرى أو اسألني مباشرة!',
+    backToAreas: 'العودة للمناطق',
+    showAll: 'عرض الكل'
+  }
+};
+
+// Get area selection keyboard
+function getAreaKeyboard(category: 'hotels' | 'attractions' | 'restaurants', lang: LangCode): TelegramBot.InlineKeyboardMarkup {
+  const labels = areaLabels[lang];
+  const buttons = dubaiAreas.map(area => [{ 
+    text: area[lang], 
+    callback_data: `area_${category}_${area.id}` 
+  }]);
+  buttons.push([{ text: labels.showAll, callback_data: `area_${category}_all` }]);
+  return { inline_keyboard: buttons };
+}
 
 const welcomeMessages = {
   en: (name: string) => `Hi ${name}! I'm *Travi*, your AI travel assistant for Dubai.\n\nUse the menu below or just type your question!\n\nHow can I help you plan your Dubai adventure?`,
@@ -481,6 +519,122 @@ async function formatDiningMessage(lang: LangCode): Promise<{ text: string; item
   return { text: message, items };
 }
 
+// Get area name for headers
+function getAreaName(areaId: string, lang: LangCode): string {
+  if (areaId === 'all') {
+    return lang === 'he' ? 'כל דובאי' : lang === 'ar' ? 'كل دبي' : 'All Dubai';
+  }
+  const area = dubaiAreas.find(a => a.id === areaId);
+  return area ? area[lang] : areaId;
+}
+
+// Format hotels by area
+async function formatHotelsMessageByArea(lang: LangCode, areaId: string): Promise<{ text: string; items: any[] }> {
+  const allItems = await getHotelsFromCMS(20);
+  
+  // Filter by area (match in location field) unless showing all
+  const items = areaId === 'all' 
+    ? allItems.slice(0, 5)
+    : allItems.filter(item => {
+        const loc = (item.location || '').toLowerCase();
+        const areaName = dubaiAreas.find(a => a.id === areaId)?.[lang].toLowerCase() || areaId;
+        return loc.includes(areaId) || loc.includes(areaName.split(' ')[0]) || loc.includes(areaName);
+      }).slice(0, 5);
+  
+  const areaName = getAreaName(areaId, lang);
+  
+  if (items.length === 0) {
+    return { text: areaLabels[lang].noResults, items: [] };
+  }
+
+  const headers = {
+    en: `*Hotels in ${areaName}:*\n\n`,
+    he: `*מלונות ב${areaName}:*\n\n`,
+    ar: `*فنادق في ${areaName}:*\n\n`
+  };
+
+  let message = headers[lang];
+  for (const item of items) {
+    const stars = item.starRating ? '⭐'.repeat(item.starRating) : '';
+    message += `*${item.title}* ${stars}\n`;
+    if (item.location) message += `${item.location}\n`;
+    message += `\n`;
+  }
+  message += areaLabels[lang].noResults.includes('!') ? '' : '\n';
+  
+  return { text: message, items };
+}
+
+// Format attractions by area
+async function formatAttractionsMessageByArea(lang: LangCode, areaId: string): Promise<{ text: string; items: any[] }> {
+  const allItems = await getAttractionsFromCMS(20);
+  
+  const items = areaId === 'all' 
+    ? allItems.slice(0, 5)
+    : allItems.filter(item => {
+        const loc = (item.location || '').toLowerCase();
+        const areaName = dubaiAreas.find(a => a.id === areaId)?.[lang].toLowerCase() || areaId;
+        return loc.includes(areaId) || loc.includes(areaName.split(' ')[0]) || loc.includes(areaName);
+      }).slice(0, 5);
+  
+  const areaName = getAreaName(areaId, lang);
+  
+  if (items.length === 0) {
+    return { text: areaLabels[lang].noResults, items: [] };
+  }
+
+  const headers = {
+    en: `*Attractions in ${areaName}:*\n\n`,
+    he: `*אטרקציות ב${areaName}:*\n\n`,
+    ar: `*معالم في ${areaName}:*\n\n`
+  };
+
+  let message = headers[lang];
+  for (const item of items) {
+    message += `*${item.title}*\n`;
+    if (item.location) message += `${item.location}\n`;
+    if (item.priceFrom) message += `${lang === 'he' ? 'מחיר: ' : lang === 'ar' ? 'السعر: ' : 'Price: '}${item.priceFrom}\n`;
+    message += `\n`;
+  }
+  
+  return { text: message, items };
+}
+
+// Format restaurants by area
+async function formatDiningMessageByArea(lang: LangCode, areaId: string): Promise<{ text: string; items: any[] }> {
+  const allItems = await getDiningFromCMS(20);
+  
+  const items = areaId === 'all' 
+    ? allItems.slice(0, 5)
+    : allItems.filter(item => {
+        const loc = (item.location || '').toLowerCase();
+        const areaName = dubaiAreas.find(a => a.id === areaId)?.[lang].toLowerCase() || areaId;
+        return loc.includes(areaId) || loc.includes(areaName.split(' ')[0]) || loc.includes(areaName);
+      }).slice(0, 5);
+  
+  const areaName = getAreaName(areaId, lang);
+  
+  if (items.length === 0) {
+    return { text: areaLabels[lang].noResults, items: [] };
+  }
+
+  const headers = {
+    en: `*Restaurants in ${areaName}:*\n\n`,
+    he: `*מסעדות ב${areaName}:*\n\n`,
+    ar: `*مطاعم في ${areaName}:*\n\n`
+  };
+
+  let message = headers[lang];
+  for (const item of items) {
+    message += `*${item.title}*\n`;
+    if (item.cuisineType) message += `${lang === 'he' ? 'סוג מטבח: ' : lang === 'ar' ? 'نوع المطبخ: ' : 'Cuisine: '}${item.cuisineType}\n`;
+    if (item.location) message += `${item.location}\n`;
+    message += `\n`;
+  }
+  
+  return { text: message, items };
+}
+
 // Get Dubai weather (using wttr.in free API)
 async function getDubaiWeather(): Promise<{ temp: string; condition: string; humidity: string; wind: string }> {
   try {
@@ -571,8 +725,41 @@ async function handleLocationMessage(chatId: number, latitude: number, longitude
   });
 }
 
+// Non-Dubai locations to filter out (cities, countries, regions)
+const nonDubaiKeywords = [
+  // Countries
+  'israel', 'ישראל', 'usa', 'uk', 'france', 'germany', 'italy', 'spain', 'egypt', 'turkey', 'greece', 'thailand', 'india', 'china', 'japan',
+  // Major cities
+  'tel aviv', 'תל אביב', 'jerusalem', 'ירושלים', 'haifa', 'חיפה', 'eilat', 'אילת',
+  'london', 'לונדון', 'paris', 'פריז', 'new york', 'ניו יורק', 'los angeles', 'tokyo', 'beijing', 'bangkok', 'singapore',
+  'cairo', 'קהיר', 'istanbul', 'rome', 'barcelona', 'madrid', 'berlin', 'amsterdam', 'athens', 'moscow',
+  // Hebrew cities
+  'באר שבע', 'נתניה', 'ראשון לציון', 'פתח תקווה', 'אשדוד', 'הרצליה',
+  // Arabic cities/countries  
+  'القاهرة', 'إسطنبول', 'لندن', 'باريس', 'تل أبيب', 'القدس'
+];
+
+// Check if query is about a non-Dubai location
+function isNonDubaiQuery(text: string): boolean {
+  const lowerText = text.toLowerCase();
+  return nonDubaiKeywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
+}
+
+// Redirect messages for non-Dubai queries
+const nonDubaiRedirectMessages = {
+  en: "I specialize only in Dubai travel! Would you like to know about Dubai's weather, hotels, attractions, or restaurants instead?",
+  he: "אני מתמחה רק בטיולים לדובאי! האם תרצה לדעת על מזג האוויר בדובאי, מלונות, אטרקציות או מסעדות?",
+  ar: "أنا متخصص فقط في السفر إلى دبي! هل تريد معرفة المزيد عن طقس دبي أو الفنادق أو المعالم السياحية أو المطاعم؟"
+};
+
 async function getPerplexityResponse(chatId: number, userMessage: string, profile: TelegramUserProfile): Promise<string> {
   const lang = profile.language as LangCode;
+  
+  // INPUT GUARD: Check if query is about non-Dubai locations
+  if (isNonDubaiQuery(userMessage)) {
+    console.log('[Telegram Bot] Blocked non-Dubai query:', userMessage.substring(0, 50));
+    return nonDubaiRedirectMessages[lang];
+  }
   
   // Get conversation history from database
   const conversation = await getConversationHistory(profile.id);
@@ -1107,6 +1294,53 @@ export function initTelegramBot() {
         return;
       }
 
+      // Handle area selection for hotels/attractions/restaurants
+      if (data?.startsWith('area_')) {
+        const parts = data.replace('area_', '').split('_');
+        const category = parts[0] as 'hotels' | 'attractions' | 'restaurants';
+        const areaId = parts.slice(1).join('_');
+        const profile = await getOrCreateUserProfile(chatId, callbackQuery.from);
+        const lang = profile.language as LangCode;
+        
+        await bot?.sendChatAction(chatId, 'typing');
+        
+        if (category === 'hotels') {
+          const { text, items } = await formatHotelsMessageByArea(lang, areaId);
+          if (items.length > 0 && items[0].heroImage) {
+            try {
+              await bot?.sendPhoto(chatId, items[0].heroImage, { caption: items[0].title });
+            } catch (e) { /* continue without image */ }
+          }
+          await bot?.sendMessage(chatId, text, { 
+            parse_mode: 'Markdown',
+            reply_markup: getReplyKeyboard(lang)
+          });
+        } else if (category === 'attractions') {
+          const { text, items } = await formatAttractionsMessageByArea(lang, areaId);
+          if (items.length > 0 && items[0].heroImage) {
+            try {
+              await bot?.sendPhoto(chatId, items[0].heroImage, { caption: items[0].title });
+            } catch (e) { /* continue without image */ }
+          }
+          await bot?.sendMessage(chatId, text, { 
+            parse_mode: 'Markdown',
+            reply_markup: getReplyKeyboard(lang)
+          });
+        } else if (category === 'restaurants') {
+          const { text, items } = await formatDiningMessageByArea(lang, areaId);
+          if (items.length > 0 && items[0].heroImage) {
+            try {
+              await bot?.sendPhoto(chatId, items[0].heroImage, { caption: items[0].title });
+            } catch (e) { /* continue without image */ }
+          }
+          await bot?.sendMessage(chatId, text, { 
+            parse_mode: 'Markdown',
+            reply_markup: getReplyKeyboard(lang)
+          });
+        }
+        return;
+      }
+
       // Profile-related callbacks
       const profile = await getOrCreateUserProfile(chatId, callbackQuery.from);
       const lang = profile.language as LangCode;
@@ -1252,60 +1486,23 @@ export function initTelegramBot() {
         
         switch (menuAction) {
           case 'attractions': {
-            const { text: attractionsText, items } = await formatAttractionsMessage(lang);
-            
-            // Send first attraction image if available
-            if (items.length > 0 && items[0].heroImage) {
-              try {
-                await bot?.sendPhoto(chatId, items[0].heroImage, {
-                  caption: items[0].title
-                });
-              } catch (e) {
-                // Image might not be accessible, continue without it
-              }
-            }
-            
-            await bot?.sendMessage(chatId, attractionsText, { 
-              parse_mode: 'Markdown',
-              reply_markup: getReplyKeyboard(lang)
+            // Show area selection for attractions
+            await bot?.sendMessage(chatId, areaLabels[lang].selectArea, { 
+              reply_markup: getAreaKeyboard('attractions', lang)
             });
             break;
           }
           case 'hotels': {
-            const { text: hotelsText, items } = await formatHotelsMessage(lang);
-            
-            if (items.length > 0 && items[0].heroImage) {
-              try {
-                await bot?.sendPhoto(chatId, items[0].heroImage, {
-                  caption: items[0].title
-                });
-              } catch (e) {
-                // Continue without image
-              }
-            }
-            
-            await bot?.sendMessage(chatId, hotelsText, { 
-              parse_mode: 'Markdown',
-              reply_markup: getReplyKeyboard(lang)
+            // Show area selection for hotels
+            await bot?.sendMessage(chatId, areaLabels[lang].selectArea, { 
+              reply_markup: getAreaKeyboard('hotels', lang)
             });
             break;
           }
           case 'restaurants': {
-            const { text: diningText, items } = await formatDiningMessage(lang);
-            
-            if (items.length > 0 && items[0].heroImage) {
-              try {
-                await bot?.sendPhoto(chatId, items[0].heroImage, {
-                  caption: items[0].title
-                });
-              } catch (e) {
-                // Continue without image
-              }
-            }
-            
-            await bot?.sendMessage(chatId, diningText, { 
-              parse_mode: 'Markdown',
-              reply_markup: getReplyKeyboard(lang)
+            // Show area selection for restaurants
+            await bot?.sendMessage(chatId, areaLabels[lang].selectArea, { 
+              reply_markup: getAreaKeyboard('restaurants', lang)
             });
             break;
           }
