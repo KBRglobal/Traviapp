@@ -3864,6 +3864,163 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // Migration endpoint - convert existing content to blocks format
+  app.post("/api/admin/migrate-blocks", requirePermission("canPublish"), async (req, res) => {
+    try {
+      // Get all content items with empty blocks
+      const allContents = await storage.getContents({});
+      let migratedCount = 0;
+      
+      for (const content of allContents) {
+        // Skip if already has blocks
+        if (content.blocks && Array.isArray(content.blocks) && content.blocks.length > 0) {
+          continue;
+        }
+        
+        const blocks: any[] = [];
+        let blockOrder = 0;
+        
+        // Add hero block if there's a hero image
+        if (content.heroImage) {
+          blocks.push({
+            id: `hero-${Date.now()}-${blockOrder}`,
+            type: "hero",
+            data: { 
+              image: content.heroImage, 
+              alt: content.heroImageAlt || content.title,
+              title: content.title 
+            },
+            order: blockOrder++
+          });
+        }
+        
+        // Get type-specific data
+        if (content.type === "attraction" && content.attraction) {
+          const attr = content.attraction;
+          
+          // Add intro text block
+          if (attr.introText) {
+            blocks.push({
+              id: `text-${Date.now()}-${blockOrder}`,
+              type: "text",
+              data: { content: attr.introText },
+              order: blockOrder++
+            });
+          }
+          
+          // Add expanded intro if different
+          if (attr.expandedIntroText && attr.expandedIntroText !== attr.introText) {
+            blocks.push({
+              id: `text-${Date.now()}-${blockOrder}`,
+              type: "text",
+              data: { content: attr.expandedIntroText },
+              order: blockOrder++
+            });
+          }
+          
+          // Add highlights block
+          if (attr.highlights && Array.isArray(attr.highlights) && attr.highlights.length > 0) {
+            blocks.push({
+              id: `highlights-${Date.now()}-${blockOrder}`,
+              type: "highlights",
+              data: { items: attr.highlights },
+              order: blockOrder++
+            });
+          }
+          
+          // Add visitor tips
+          if (attr.visitorTips && Array.isArray(attr.visitorTips) && attr.visitorTips.length > 0) {
+            blocks.push({
+              id: `tips-${Date.now()}-${blockOrder}`,
+              type: "tips",
+              data: { items: attr.visitorTips },
+              order: blockOrder++
+            });
+          }
+          
+          // Add FAQ items
+          if (attr.faq && Array.isArray(attr.faq) && attr.faq.length > 0) {
+            for (const faqItem of attr.faq) {
+              blocks.push({
+                id: `faq-${Date.now()}-${blockOrder}`,
+                type: "faq",
+                data: { question: faqItem.question, answer: faqItem.answer },
+                order: blockOrder++
+              });
+            }
+          }
+          
+          // Add gallery
+          if (attr.gallery && Array.isArray(attr.gallery) && attr.gallery.length > 0) {
+            blocks.push({
+              id: `gallery-${Date.now()}-${blockOrder}`,
+              type: "gallery",
+              data: { images: attr.gallery },
+              order: blockOrder++
+            });
+          }
+        } else if (content.type === "hotel" && content.hotel) {
+          const hotel = content.hotel;
+          
+          // Add description
+          if (hotel.description) {
+            blocks.push({
+              id: `text-${Date.now()}-${blockOrder}`,
+              type: "text",
+              data: { content: hotel.description },
+              order: blockOrder++
+            });
+          }
+          
+          // Add highlights
+          if (hotel.highlights && Array.isArray(hotel.highlights) && hotel.highlights.length > 0) {
+            blocks.push({
+              id: `highlights-${Date.now()}-${blockOrder}`,
+              type: "highlights",
+              data: { items: hotel.highlights },
+              order: blockOrder++
+            });
+          }
+          
+          // Add FAQ
+          if (hotel.faq && Array.isArray(hotel.faq) && hotel.faq.length > 0) {
+            for (const faqItem of hotel.faq) {
+              blocks.push({
+                id: `faq-${Date.now()}-${blockOrder}`,
+                type: "faq",
+                data: { question: faqItem.question, answer: faqItem.answer },
+                order: blockOrder++
+              });
+            }
+          }
+        } else if (content.type === "article" && content.article) {
+          const article = content.article;
+          
+          // Add body content
+          if (article.body) {
+            blocks.push({
+              id: `text-${Date.now()}-${blockOrder}`,
+              type: "text",
+              data: { content: article.body },
+              order: blockOrder++
+            });
+          }
+        }
+        
+        // Update content with generated blocks if any were created
+        if (blocks.length > 0) {
+          await storage.updateContent(content.id, { blocks });
+          migratedCount++;
+        }
+      }
+      
+      res.json({ success: true, migratedCount, message: `Migrated ${migratedCount} content items to blocks format` });
+    } catch (error) {
+      console.error("Migration error:", error);
+      res.status(500).json({ error: "Migration failed", details: String(error) });
+    }
+  });
+
   // Audit Logs Routes (admin only)
   app.get("/api/audit-logs", requirePermission("canViewAuditLogs"), async (req, res) => {
     try {

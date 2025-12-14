@@ -15,10 +15,37 @@ import {
   CheckCircle2,
   Plus,
   ArrowRight,
+  RefreshCw,
 } from "lucide-react";
+import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { ContentWithRelations } from "@shared/schema";
 
 export default function Dashboard() {
+  const { toast } = useToast();
+  const [isMigrating, setIsMigrating] = useState(false);
+
+  const handleMigrateBlocks = async () => {
+    setIsMigrating(true);
+    try {
+      const response = await apiRequest("POST", "/api/admin/migrate-blocks");
+      const result = await response.json();
+      toast({
+        title: "Migration Complete",
+        description: `Successfully migrated ${result.migrated} content items.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Migration Failed",
+        description: error.message || "Failed to migrate content blocks",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   const { data: stats, isLoading: statsLoading } = useQuery<{
     attractions: number;
     hotels: number;
@@ -214,6 +241,16 @@ export default function Dashboard() {
                 Manage Affiliate Links
               </Button>
             </Link>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start" 
+              onClick={handleMigrateBlocks}
+              disabled={isMigrating}
+              data-testid="button-migrate-blocks"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isMigrating ? 'animate-spin' : ''}`} />
+              {isMigrating ? 'Migrating...' : 'Migrate Legacy Content Blocks'}
+            </Button>
           </CardContent>
         </Card>
 
