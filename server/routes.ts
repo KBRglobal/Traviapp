@@ -26,6 +26,7 @@ import {
   insertTranslationSchema,
   insertUserSchema,
   insertHomepagePromotionSchema,
+  insertTagSchema,
   newsletterSubscribers,
   ROLE_PERMISSIONS,
   SUPPORTED_LOCALES,
@@ -4203,6 +4204,123 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     } catch (error) {
       console.error("Error fetching content clusters:", error);
       res.status(500).json({ error: "Failed to fetch content clusters" });
+    }
+  });
+
+  // Tags Routes
+  app.get("/api/tags", requireAuth, async (req, res) => {
+    try {
+      const allTags = await storage.getTags();
+      // Enrich with content count
+      const enrichedTags = await Promise.all(
+        allTags.map(async (tag) => {
+          const tagContents = await storage.getTagContents(tag.id);
+          return { ...tag, contentCount: tagContents.length, contents: tagContents.slice(0, 5) };
+        })
+      );
+      res.json(enrichedTags);
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+      res.status(500).json({ error: "Failed to fetch tags" });
+    }
+  });
+
+  app.get("/api/tags/:id", requireAuth, async (req, res) => {
+    try {
+      const tag = await storage.getTag(req.params.id);
+      if (!tag) {
+        return res.status(404).json({ error: "Tag not found" });
+      }
+      const tagContents = await storage.getTagContents(tag.id);
+      res.json({ ...tag, contents: tagContents });
+    } catch (error) {
+      console.error("Error fetching tag:", error);
+      res.status(500).json({ error: "Failed to fetch tag" });
+    }
+  });
+
+  app.post("/api/tags", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const parseResult = insertTagSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: "Validation failed", details: parseResult.error.flatten() });
+      }
+      const { name, slug, description, color } = parseResult.data;
+      const existing = await storage.getTagBySlug(slug);
+      if (existing) {
+        return res.status(400).json({ error: "Tag with this slug already exists" });
+      }
+      const tag = await storage.createTag({ name, slug, description, color });
+      res.status(201).json(tag);
+    } catch (error) {
+      console.error("Error creating tag:", error);
+      res.status(500).json({ error: "Failed to create tag" });
+    }
+  });
+
+  app.patch("/api/tags/:id", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const parseResult = insertTagSchema.partial().safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: "Validation failed", details: parseResult.error.flatten() });
+      }
+      const { name, slug, description, color } = parseResult.data;
+      const tag = await storage.updateTag(req.params.id, { name, slug, description, color });
+      if (!tag) {
+        return res.status(404).json({ error: "Tag not found" });
+      }
+      res.json(tag);
+    } catch (error) {
+      console.error("Error updating tag:", error);
+      res.status(500).json({ error: "Failed to update tag" });
+    }
+  });
+
+  app.delete("/api/tags/:id", requirePermission("canDelete"), async (req, res) => {
+    try {
+      await storage.deleteTag(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting tag:", error);
+      res.status(500).json({ error: "Failed to delete tag" });
+    }
+  });
+
+  // Content Tags Routes
+  app.get("/api/content/:contentId/tags", requireAuth, async (req, res) => {
+    try {
+      const contentTagsList = await storage.getContentTags(req.params.contentId);
+      res.json(contentTagsList);
+    } catch (error) {
+      console.error("Error fetching content tags:", error);
+      res.status(500).json({ error: "Failed to fetch content tags" });
+    }
+  });
+
+  app.post("/api/content/:contentId/tags", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { tagId } = req.body;
+      if (!tagId) {
+        return res.status(400).json({ error: "Tag ID is required" });
+      }
+      const contentTag = await storage.addContentTag({
+        contentId: req.params.contentId,
+        tagId,
+      });
+      res.status(201).json(contentTag);
+    } catch (error) {
+      console.error("Error adding content tag:", error);
+      res.status(500).json({ error: "Failed to add content tag" });
+    }
+  });
+
+  app.delete("/api/content/:contentId/tags/:tagId", requirePermission("canEdit"), async (req, res) => {
+    try {
+      await storage.removeContentTag(req.params.contentId, req.params.tagId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing content tag:", error);
+      res.status(500).json({ error: "Failed to remove content tag" });
     }
   });
 

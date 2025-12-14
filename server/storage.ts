@@ -23,6 +23,8 @@ import {
   newsletterSubscribers,
   contentClusters,
   clusterMembers,
+  tags,
+  contentTags,
   type User,
   type InsertUser,
   type UpsertUser,
@@ -75,6 +77,10 @@ import {
   type InsertContentCluster,
   type ClusterMember,
   type InsertClusterMember,
+  type Tag,
+  type InsertTag,
+  type ContentTag,
+  type InsertContentTag,
   homepagePromotions,
   newsletterCampaigns,
   campaignEvents,
@@ -257,6 +263,21 @@ export interface IStorage {
   removeClusterMember(id: string): Promise<boolean>;
   updateClusterMemberPosition(id: string, position: number): Promise<ClusterMember | undefined>;
   getContentClusterMembership(contentId: string): Promise<(ClusterMember & { cluster?: ContentCluster })[]>;
+
+  // Tags
+  getTags(): Promise<Tag[]>;
+  getTag(id: string): Promise<Tag | undefined>;
+  getTagBySlug(slug: string): Promise<Tag | undefined>;
+  createTag(tag: InsertTag): Promise<Tag>;
+  updateTag(id: string, data: Partial<InsertTag>): Promise<Tag | undefined>;
+  deleteTag(id: string): Promise<boolean>;
+  
+  // Content Tags
+  getContentTags(contentId: string): Promise<(ContentTag & { tag?: Tag })[]>;
+  getTagContents(tagId: string): Promise<(ContentTag & { content?: Content })[]>;
+  addContentTag(contentTag: InsertContentTag): Promise<ContentTag>;
+  removeContentTag(contentId: string, tagId: string): Promise<boolean>;
+  updateTagUsageCount(tagId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1315,6 +1336,86 @@ export class DatabaseStorage implements IStorage {
       result.push({ ...member, cluster });
     }
     return result;
+  }
+
+  // Tags
+  async getTags(): Promise<Tag[]> {
+    return await db.select().from(tags).orderBy(desc(tags.usageCount), tags.name);
+  }
+
+  async getTag(id: string): Promise<Tag | undefined> {
+    const [tag] = await db.select().from(tags).where(eq(tags.id, id));
+    return tag;
+  }
+
+  async getTagBySlug(slug: string): Promise<Tag | undefined> {
+    const [tag] = await db.select().from(tags).where(eq(tags.slug, slug));
+    return tag;
+  }
+
+  async createTag(tag: InsertTag): Promise<Tag> {
+    const [newTag] = await db.insert(tags).values(tag).returning();
+    return newTag;
+  }
+
+  async updateTag(id: string, data: Partial<InsertTag>): Promise<Tag | undefined> {
+    const [tag] = await db.update(tags)
+      .set(data)
+      .where(eq(tags.id, id))
+      .returning();
+    return tag;
+  }
+
+  async deleteTag(id: string): Promise<boolean> {
+    await db.delete(tags).where(eq(tags.id, id));
+    return true;
+  }
+
+  // Content Tags
+  async getContentTags(contentId: string): Promise<(ContentTag & { tag?: Tag })[]> {
+    const cts = await db.select().from(contentTags)
+      .where(eq(contentTags.contentId, contentId));
+    
+    const result: (ContentTag & { tag?: Tag })[] = [];
+    for (const ct of cts) {
+      const [tag] = await db.select().from(tags).where(eq(tags.id, ct.tagId));
+      result.push({ ...ct, tag });
+    }
+    return result;
+  }
+
+  async getTagContents(tagId: string): Promise<(ContentTag & { content?: Content })[]> {
+    const cts = await db.select().from(contentTags)
+      .where(eq(contentTags.tagId, tagId));
+    
+    const result: (ContentTag & { content?: Content })[] = [];
+    for (const ct of cts) {
+      const [content] = await db.select().from(contents).where(eq(contents.id, ct.contentId));
+      result.push({ ...ct, content });
+    }
+    return result;
+  }
+
+  async addContentTag(contentTag: InsertContentTag): Promise<ContentTag> {
+    const [newCt] = await db.insert(contentTags).values(contentTag).returning();
+    await this.updateTagUsageCount(contentTag.tagId);
+    return newCt;
+  }
+
+  async removeContentTag(contentId: string, tagId: string): Promise<boolean> {
+    await db.delete(contentTags)
+      .where(and(eq(contentTags.contentId, contentId), eq(contentTags.tagId, tagId)));
+    await this.updateTagUsageCount(tagId);
+    return true;
+  }
+
+  async updateTagUsageCount(tagId: string): Promise<void> {
+    const count = await db.select({ count: sql<number>`count(*)` })
+      .from(contentTags)
+      .where(eq(contentTags.tagId, tagId));
+    await db.update(tags)
+      .set({ usageCount: Number(count[0]?.count || 0) })
+      .where(eq(tags.id, tagId));
   }
 }
 

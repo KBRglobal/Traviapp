@@ -51,6 +51,7 @@ import AIArticleGenerator from "@/pages/ai-article-generator";
 import TopicBankPage from "@/pages/topic-bank";
 import KeywordsPage from "@/pages/keywords";
 import ClustersPage from "@/pages/clusters";
+import TagsPage from "@/pages/tags";
 import UsersPage from "@/pages/users";
 import HomepagePromotions from "@/pages/homepage-promotions";
 import Analytics from "@/pages/analytics";
@@ -95,6 +96,7 @@ function AdminRouter() {
       <Route path="/admin/topic-bank" component={TopicBankPage} />
       <Route path="/admin/keywords" component={KeywordsPage} />
       <Route path="/admin/clusters" component={ClustersPage} />
+      <Route path="/admin/tags" component={TagsPage} />
       <Route path="/admin/affiliate-links" component={AffiliateLinks} />
       <Route path="/admin/media" component={MediaLibrary} />
       <Route path="/admin/settings" component={Settings} />

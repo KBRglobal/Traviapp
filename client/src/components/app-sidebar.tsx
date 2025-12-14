@@ -36,6 +36,7 @@ import {
   Calendar,
   Route,
   Network,
+  Tags,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -159,6 +160,12 @@ const managementItems: Array<{
     title: "Clusters",
     url: "/admin/clusters",
     icon: Network,
+    requiredPermission: "canCreate",
+  },
+  {
+    title: "Tags",
+    url: "/admin/tags",
+    icon: Tags,
     requiredPermission: "canCreate",
   },
   {
