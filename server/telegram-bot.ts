@@ -1155,7 +1155,7 @@ function isMenuButton(text: string, lang: LangCode): string | null {
   return null;
 }
 
-export function initTelegramBot() {
+export async function initTelegramBot() {
   if (!token) {
     console.log('[Telegram Bot] No TELEGRAM_BOT_TOKEN found, bot disabled');
     return null;
@@ -1166,6 +1166,18 @@ export function initTelegramBot() {
   }
 
   try {
+    // First validate the token before starting polling
+    const testBot = new TelegramBot(token, { polling: false });
+    try {
+      await testBot.getMe();
+    } catch (validationError: any) {
+      if (validationError.message?.includes('401') || validationError.message?.includes('Unauthorized')) {
+        console.log('[Telegram Bot] Invalid token (401 Unauthorized), bot disabled. Please update TELEGRAM_BOT_TOKEN.');
+        return null;
+      }
+      throw validationError;
+    }
+    
     bot = new TelegramBot(token, { polling: true });
     console.log('[Telegram Bot] AI Assistant Bot started with polling (Perplexity + CMS)');
 
@@ -1175,7 +1187,7 @@ export function initTelegramBot() {
       const profile = await getOrCreateUserProfile(chatId, msg.from);
       
       // Check if language was previously set (not default 'en' for new users, or user has interacted before)
-      if (profile.totalInteractions > 1 || profile.language !== 'en') {
+      if ((profile.totalInteractions ?? 0) > 1 || profile.language !== 'en') {
         const lang = profile.language as LangCode;
         const firstName = msg.from?.first_name || 'Guest';
         await bot?.sendMessage(chatId, welcomeMessages[lang](firstName), { 

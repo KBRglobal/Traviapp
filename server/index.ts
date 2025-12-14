@@ -63,8 +63,8 @@ app.use((req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
-  // Initialize Telegram bot
-  initTelegramBot();
+  // Initialize Telegram bot (validates token before starting)
+  await initTelegramBot();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
