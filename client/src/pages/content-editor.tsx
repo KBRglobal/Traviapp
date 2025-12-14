@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { ContentWithRelations, ContentBlock, ContentVersion } from "@shared/schema";
+import { SeoScore } from "@/components/seo-score";
 
 type ContentType = "attraction" | "hotel" | "article" | "event" | "itinerary";
 
@@ -559,6 +560,59 @@ export default function ContentEditor() {
     return count;
   }, 0);
 
+  const seoContentText = useMemo(() => {
+    return blocks.map(b => {
+      if (b.type === "text") return (b.data?.content as string) || "";
+      if (b.type === "faq") return `${(b.data?.question as string) || ""} ${(b.data?.answer as string) || ""}`;
+      if (b.type === "hero") return (b.data?.title as string) || "";
+      if (b.type === "cta") return (b.data?.text as string) || "";
+      if (b.type === "highlights" || b.type === "tips" || b.type === "info_grid") {
+        if (typeof b.data?.content === "string") return b.data.content;
+        if (Array.isArray(b.data?.items)) {
+          return (b.data.items as Array<string | { title?: string; description?: string; text?: string }>)
+            .map(item => {
+              if (typeof item === "string") return item;
+              return `${item.title || ""} ${item.description || ""} ${item.text || ""}`;
+            }).join(" ");
+        }
+        return "";
+      }
+      return "";
+    }).join(" ");
+  }, [blocks]);
+
+  const seoHeadings = useMemo(() => {
+    const headings: { level: number; text: string }[] = [];
+    if (title) headings.push({ level: 1, text: title });
+    blocks.forEach(b => {
+      if (b.type === "text" && b.data?.heading) {
+        headings.push({ level: 2, text: (b.data.heading as string) || "" });
+      }
+    });
+    return headings;
+  }, [blocks, title]);
+
+  const seoImages = useMemo(() => {
+    const images: { url: string; alt: string }[] = [];
+    if (heroImage) {
+      images.push({ url: heroImage, alt: heroImageAlt || "" });
+    }
+    blocks.forEach(b => {
+      if (b.type === "hero" && b.data?.image) {
+        images.push({ url: (b.data.image as string) || "", alt: (b.data.alt as string) || "" });
+      }
+      if (b.type === "image" && b.data?.image) {
+        images.push({ url: (b.data.image as string) || "", alt: (b.data.alt as string) || "" });
+      }
+      if (b.type === "gallery" && Array.isArray(b.data?.images)) {
+        (b.data.images as Array<{ url: string; alt: string }>).forEach(img => {
+          images.push({ url: img.url || "", alt: img.alt || "" });
+        });
+      }
+    });
+    return images;
+  }, [blocks, heroImage, heroImageAlt]);
+
   const handleSave = () => {
     saveMutation.mutate({
       title,
@@ -871,20 +925,32 @@ export default function ContentEditor() {
                   isGeneratingImage={imageGeneratingBlock === selectedBlock.id}
                 />
               ) : (
-                <PageSettingsPanel
-                  title={title}
-                  onTitleChange={setTitle}
-                  slug={slug}
-                  onSlugChange={setSlug}
-                  status={status}
-                  onStatusChange={setStatus}
-                  metaTitle={metaTitle}
-                  onMetaTitleChange={setMetaTitle}
-                  metaDescription={metaDescription}
-                  onMetaDescriptionChange={setMetaDescription}
-                  primaryKeyword={primaryKeyword}
-                  onPrimaryKeywordChange={setPrimaryKeyword}
-                />
+                <>
+                  <PageSettingsPanel
+                    title={title}
+                    onTitleChange={setTitle}
+                    slug={slug}
+                    onSlugChange={setSlug}
+                    status={status}
+                    onStatusChange={setStatus}
+                    metaTitle={metaTitle}
+                    onMetaTitleChange={setMetaTitle}
+                    metaDescription={metaDescription}
+                    onMetaDescriptionChange={setMetaDescription}
+                    primaryKeyword={primaryKeyword}
+                    onPrimaryKeywordChange={setPrimaryKeyword}
+                  />
+                  <Separator />
+                  <SeoScore
+                    title={title}
+                    metaTitle={metaTitle}
+                    metaDescription={metaDescription}
+                    primaryKeyword={primaryKeyword}
+                    content={seoContentText}
+                    headings={seoHeadings}
+                    images={seoImages}
+                  />
+                </>
               )}
             </div>
           </ScrollArea>
