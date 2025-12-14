@@ -158,12 +158,250 @@ export default function ContentEditor() {
       setPrimaryKeyword(content.primaryKeyword || "");
       setHeroImage(content.heroImage || "");
       setHeroImageAlt(content.heroImageAlt || "");
-      setBlocks(content.blocks || []);
       setStatus(content.status || "draft");
+      
+      // Check if blocks are empty but extension data exists - auto-generate blocks
+      const existingBlocks = content.blocks || [];
+      if (existingBlocks.length === 0) {
+        const generatedBlocks = generateBlocksFromExtensionData(content);
+        if (generatedBlocks.length > 0) {
+          setBlocks(generatedBlocks);
+        } else {
+          setBlocks([]);
+        }
+      } else {
+        setBlocks(existingBlocks);
+      }
     } else if (isNew && blocks.length === 0) {
       setBlocks(defaultTemplateBlocks.map(b => ({ ...b, id: generateId() })));
     }
   }, [content, isNew]);
+
+  // Generate blocks from attraction/hotel/article extension data
+  // Blocks use simple string content (one item per line) for tips, highlights, info_grid
+  function generateBlocksFromExtensionData(content: ContentWithRelations): ContentBlock[] {
+    const blocks: ContentBlock[] = [];
+    let order = 0;
+
+    // Add hero block if heroImage exists
+    if (content.heroImage) {
+      blocks.push({
+        id: generateId(),
+        type: "hero",
+        data: { image: content.heroImage, alt: content.heroImageAlt || content.title, title: content.title },
+        order: order++,
+      });
+    }
+
+    // Add intro text block if metaDescription exists
+    if (content.metaDescription) {
+      blocks.push({
+        id: generateId(),
+        type: "text",
+        data: { content: content.metaDescription },
+        order: order++,
+      });
+    }
+
+    // Handle attraction-specific data
+    if (content.attraction) {
+      const attraction = content.attraction;
+      
+      // Add expanded intro if available
+      if (attraction.expandedIntroText) {
+        blocks.push({
+          id: generateId(),
+          type: "text",
+          data: { content: attraction.expandedIntroText },
+          order: order++,
+        });
+      }
+
+      // Add highlights block - convert HighlightItem[] to string content (one per line)
+      if (attraction.highlights && attraction.highlights.length > 0) {
+        const highlightsContent = attraction.highlights
+          .map(h => `${h.title}: ${h.description}`)
+          .join("\n");
+        blocks.push({
+          id: generateId(),
+          type: "highlights",
+          data: { content: highlightsContent },
+          order: order++,
+        });
+      }
+
+      // Add gallery if available - convert to images array with url/alt
+      if (attraction.gallery && attraction.gallery.length > 0) {
+        blocks.push({
+          id: generateId(),
+          type: "gallery",
+          data: { images: attraction.gallery.map(g => ({ url: g.image, alt: g.alt })) },
+          order: order++,
+        });
+      }
+
+      // Add visitor tips - convert string[] to string content (one per line)
+      if (attraction.visitorTips && attraction.visitorTips.length > 0) {
+        blocks.push({
+          id: generateId(),
+          type: "tips",
+          data: { content: attraction.visitorTips.join("\n") },
+          order: order++,
+        });
+      }
+
+      // Add insider tips as additional tips block
+      if (attraction.insiderTips && attraction.insiderTips.length > 0) {
+        blocks.push({
+          id: generateId(),
+          type: "tips",
+          data: { content: attraction.insiderTips.join("\n") },
+          order: order++,
+        });
+      }
+
+      // Add FAQ blocks
+      if (attraction.faq && attraction.faq.length > 0) {
+        attraction.faq.forEach((faqItem) => {
+          blocks.push({
+            id: generateId(),
+            type: "faq",
+            data: { question: faqItem.question, answer: faqItem.answer },
+            order: order++,
+          });
+        });
+      }
+
+      // Add CTA if primaryCta exists
+      if (attraction.primaryCta) {
+        blocks.push({
+          id: generateId(),
+          type: "cta",
+          data: { text: attraction.primaryCta, url: "" },
+          order: order++,
+        });
+      }
+    }
+
+    // Handle hotel-specific data
+    if (content.hotel) {
+      const hotel = content.hotel;
+
+      // Add highlights block - convert HighlightItem[] to string content
+      if (hotel.highlights && hotel.highlights.length > 0) {
+        const highlightsContent = hotel.highlights
+          .map(h => `${h.title}: ${h.description}`)
+          .join("\n");
+        blocks.push({
+          id: generateId(),
+          type: "highlights",
+          data: { content: highlightsContent },
+          order: order++,
+        });
+      }
+
+      // Add amenities as info grid - convert string[] to string content (one per line)
+      if (hotel.amenities && hotel.amenities.length > 0) {
+        blocks.push({
+          id: generateId(),
+          type: "info_grid",
+          data: { content: hotel.amenities.join("\n") },
+          order: order++,
+        });
+      }
+
+      // Add photo gallery - convert to images array with url/alt
+      if (hotel.photoGallery && hotel.photoGallery.length > 0) {
+        blocks.push({
+          id: generateId(),
+          type: "gallery",
+          data: { images: hotel.photoGallery.map(g => ({ url: g.image, alt: g.alt })) },
+          order: order++,
+        });
+      }
+
+      // Add traveler tips - convert string[] to string content
+      if (hotel.travelerTips && hotel.travelerTips.length > 0) {
+        blocks.push({
+          id: generateId(),
+          type: "tips",
+          data: { content: hotel.travelerTips.join("\n") },
+          order: order++,
+        });
+      }
+
+      // Add FAQ blocks
+      if (hotel.faq && hotel.faq.length > 0) {
+        hotel.faq.forEach((faqItem) => {
+          blocks.push({
+            id: generateId(),
+            type: "faq",
+            data: { question: faqItem.question, answer: faqItem.answer },
+            order: order++,
+          });
+        });
+      }
+
+      // Add CTA if primaryCta exists
+      if (hotel.primaryCta) {
+        blocks.push({
+          id: generateId(),
+          type: "cta",
+          data: { text: hotel.primaryCta, url: "" },
+          order: order++,
+        });
+      }
+    }
+
+    // Handle article-specific data
+    if (content.article) {
+      const article = content.article;
+
+      // Add quick facts as text block
+      if (article.quickFacts && article.quickFacts.length > 0) {
+        blocks.push({
+          id: generateId(),
+          type: "text",
+          data: { content: article.quickFacts.map(f => `- ${f}`).join("\n") },
+          order: order++,
+        });
+      }
+
+      // Add pro tips - convert string[] to string content
+      if (article.proTips && article.proTips.length > 0) {
+        blocks.push({
+          id: generateId(),
+          type: "tips",
+          data: { content: article.proTips.join("\n") },
+          order: order++,
+        });
+      }
+
+      // Add warnings as tips
+      if (article.warnings && article.warnings.length > 0) {
+        blocks.push({
+          id: generateId(),
+          type: "tips",
+          data: { content: article.warnings.join("\n") },
+          order: order++,
+        });
+      }
+
+      // Add FAQ blocks
+      if (article.faq && article.faq.length > 0) {
+        article.faq.forEach((faqItem) => {
+          blocks.push({
+            id: generateId(),
+            type: "faq",
+            data: { question: faqItem.question, answer: faqItem.answer },
+            order: order++,
+          });
+        });
+      }
+    }
+
+    return blocks;
+  }
 
   const saveMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
