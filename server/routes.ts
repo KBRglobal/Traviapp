@@ -1010,9 +1010,9 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Content not found" });
       }
       
-      // Check if user is authenticated
+      // Check if user is authenticated (supports both Replit Auth and local auth)
       const user = req.user as any;
-      const isAuthenticated = req.isAuthenticated() && user?.claims?.sub;
+      const isAuthenticated = req.isAuthenticated() && (user?.claims?.sub || user?.id);
       
       // Non-published content requires authentication
       if (content.status !== "published" && !isAuthenticated) {
@@ -1039,9 +1039,9 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Content not found" });
       }
       
-      // Check if user is authenticated
+      // Check if user is authenticated (supports both Replit Auth and local auth)
       const user = req.user as any;
-      const isAuthenticated = req.isAuthenticated() && user?.claims?.sub;
+      const isAuthenticated = req.isAuthenticated() && (user?.claims?.sub || user?.id);
       
       // Non-published content requires authentication
       if (content.status !== "published" && !isAuthenticated) {
