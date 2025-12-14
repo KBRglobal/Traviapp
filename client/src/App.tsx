@@ -15,13 +15,8 @@ import ComingSoon from "@/pages/coming-soon";
 import Dashboard from "@/pages/dashboard";
 import ContentList from "@/pages/content-list";
 import ContentEditor from "@/pages/content-editor";
-// Public pages (for public routes, not admin)
-import Attractions from "@/pages/attractions";
-import Hotels from "@/pages/hotels";
-import Dining from "@/pages/dining";
-import Districts from "@/pages/districts";
-import Transport from "@/pages/transport";
-import Articles from "@/pages/articles";
+// Public content viewer for all content types
+import PublicContentViewer from "@/pages/public-content-viewer";
 
 // Admin list wrappers
 function AdminAttractions() {
@@ -171,7 +166,16 @@ function App() {
           <Switch>
             <Route path="/login" component={Login} />
             <Route path="/access-denied" component={AccessDenied} />
-            <Route component={ComingSoon} />
+            <Route path="/attractions/:slug" component={PublicContentViewer} />
+            <Route path="/hotels/:slug" component={PublicContentViewer} />
+            <Route path="/dining/:slug" component={PublicContentViewer} />
+            <Route path="/districts/:slug" component={PublicContentViewer} />
+            <Route path="/transport/:slug" component={PublicContentViewer} />
+            <Route path="/articles/:slug" component={PublicContentViewer} />
+            <Route path="/events/:slug" component={PublicContentViewer} />
+            <Route path="/itineraries/:slug" component={PublicContentViewer} />
+            <Route path="/" component={ComingSoon} />
+            <Route component={NotFound} />
           </Switch>
         )}
         <Toaster />
