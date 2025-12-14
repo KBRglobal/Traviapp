@@ -4060,5 +4060,151 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // Content Clusters Routes
+  app.get("/api/clusters", requireAuth, async (req, res) => {
+    try {
+      const clusters = await storage.getContentClusters();
+      // Enrich clusters with members and pillar content
+      const enrichedClusters = await Promise.all(
+        clusters.map(async (cluster) => {
+          const members = await storage.getClusterMembers(cluster.id);
+          let pillarContent = null;
+          if (cluster.pillarContentId) {
+            pillarContent = await storage.getContent(cluster.pillarContentId);
+          }
+          return { ...cluster, members, pillarContent };
+        })
+      );
+      res.json(enrichedClusters);
+    } catch (error) {
+      console.error("Error fetching clusters:", error);
+      res.status(500).json({ error: "Failed to fetch clusters" });
+    }
+  });
+
+  app.get("/api/clusters/:id", requireAuth, async (req, res) => {
+    try {
+      const cluster = await storage.getContentCluster(req.params.id);
+      if (!cluster) {
+        return res.status(404).json({ error: "Cluster not found" });
+      }
+      const members = await storage.getClusterMembers(cluster.id);
+      res.json({ ...cluster, members });
+    } catch (error) {
+      console.error("Error fetching cluster:", error);
+      res.status(500).json({ error: "Failed to fetch cluster" });
+    }
+  });
+
+  app.post("/api/clusters", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const { name, slug, description, pillarContentId, primaryKeyword, color } = req.body;
+      if (!name || !slug) {
+        return res.status(400).json({ error: "Name and slug are required" });
+      }
+      const existing = await storage.getContentClusterBySlug(slug);
+      if (existing) {
+        return res.status(400).json({ error: "Cluster with this slug already exists" });
+      }
+      const cluster = await storage.createContentCluster({
+        name,
+        slug,
+        description,
+        pillarContentId,
+        primaryKeyword,
+        color,
+      });
+      res.status(201).json(cluster);
+    } catch (error) {
+      console.error("Error creating cluster:", error);
+      res.status(500).json({ error: "Failed to create cluster" });
+    }
+  });
+
+  app.patch("/api/clusters/:id", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { name, slug, description, pillarContentId, primaryKeyword, color } = req.body;
+      const cluster = await storage.updateContentCluster(req.params.id, {
+        name,
+        slug,
+        description,
+        pillarContentId,
+        primaryKeyword,
+        color,
+      });
+      if (!cluster) {
+        return res.status(404).json({ error: "Cluster not found" });
+      }
+      res.json(cluster);
+    } catch (error) {
+      console.error("Error updating cluster:", error);
+      res.status(500).json({ error: "Failed to update cluster" });
+    }
+  });
+
+  app.delete("/api/clusters/:id", requirePermission("canDelete"), async (req, res) => {
+    try {
+      await storage.deleteContentCluster(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting cluster:", error);
+      res.status(500).json({ error: "Failed to delete cluster" });
+    }
+  });
+
+  // Cluster Members Routes
+  app.post("/api/clusters/:clusterId/members", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { contentId, position } = req.body;
+      if (!contentId) {
+        return res.status(400).json({ error: "Content ID is required" });
+      }
+      const member = await storage.addClusterMember({
+        clusterId: req.params.clusterId,
+        contentId,
+        position: position || 0,
+      });
+      res.status(201).json(member);
+    } catch (error) {
+      console.error("Error adding cluster member:", error);
+      res.status(500).json({ error: "Failed to add cluster member" });
+    }
+  });
+
+  app.delete("/api/clusters/:clusterId/members/:memberId", requirePermission("canEdit"), async (req, res) => {
+    try {
+      await storage.removeClusterMember(req.params.memberId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing cluster member:", error);
+      res.status(500).json({ error: "Failed to remove cluster member" });
+    }
+  });
+
+  app.patch("/api/clusters/:clusterId/members/:memberId", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { position } = req.body;
+      const member = await storage.updateClusterMemberPosition(req.params.memberId, position);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      console.error("Error updating cluster member:", error);
+      res.status(500).json({ error: "Failed to update cluster member" });
+    }
+  });
+
+  // Get clusters for a specific content
+  app.get("/api/content/:contentId/clusters", requireAuth, async (req, res) => {
+    try {
+      const memberships = await storage.getContentClusterMembership(req.params.contentId);
+      res.json(memberships);
+    } catch (error) {
+      console.error("Error fetching content clusters:", error);
+      res.status(500).json({ error: "Failed to fetch content clusters" });
+    }
+  });
+
   return httpServer;
 }

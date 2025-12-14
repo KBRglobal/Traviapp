@@ -21,6 +21,8 @@ import {
   contentViews,
   auditLogs,
   newsletterSubscribers,
+  contentClusters,
+  clusterMembers,
   type User,
   type InsertUser,
   type UpsertUser,
@@ -69,6 +71,10 @@ import {
   type InsertCampaign,
   type CampaignEvent,
   type InsertCampaignEvent,
+  type ContentCluster,
+  type InsertContentCluster,
+  type ClusterMember,
+  type InsertClusterMember,
   homepagePromotions,
   newsletterCampaigns,
   campaignEvents,
@@ -236,6 +242,21 @@ export interface IStorage {
   // Campaign Events
   createCampaignEvent(event: InsertCampaignEvent): Promise<CampaignEvent>;
   getCampaignEvents(campaignId: string): Promise<CampaignEvent[]>;
+
+  // Content Clusters
+  getContentClusters(): Promise<ContentCluster[]>;
+  getContentCluster(id: string): Promise<ContentCluster | undefined>;
+  getContentClusterBySlug(slug: string): Promise<ContentCluster | undefined>;
+  createContentCluster(cluster: InsertContentCluster): Promise<ContentCluster>;
+  updateContentCluster(id: string, data: Partial<InsertContentCluster>): Promise<ContentCluster | undefined>;
+  deleteContentCluster(id: string): Promise<boolean>;
+  
+  // Cluster Members
+  getClusterMembers(clusterId: string): Promise<(ClusterMember & { content?: Content })[]>;
+  addClusterMember(member: InsertClusterMember): Promise<ClusterMember>;
+  removeClusterMember(id: string): Promise<boolean>;
+  updateClusterMemberPosition(id: string, position: number): Promise<ClusterMember | undefined>;
+  getContentClusterMembership(contentId: string): Promise<(ClusterMember & { cluster?: ContentCluster })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1217,6 +1238,83 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(campaignEvents)
       .where(eq(campaignEvents.campaignId, campaignId))
       .orderBy(desc(campaignEvents.createdAt));
+  }
+
+  // Content Clusters
+  async getContentClusters(): Promise<ContentCluster[]> {
+    return await db.select().from(contentClusters).orderBy(desc(contentClusters.createdAt));
+  }
+
+  async getContentCluster(id: string): Promise<ContentCluster | undefined> {
+    const [cluster] = await db.select().from(contentClusters).where(eq(contentClusters.id, id));
+    return cluster;
+  }
+
+  async getContentClusterBySlug(slug: string): Promise<ContentCluster | undefined> {
+    const [cluster] = await db.select().from(contentClusters).where(eq(contentClusters.slug, slug));
+    return cluster;
+  }
+
+  async createContentCluster(cluster: InsertContentCluster): Promise<ContentCluster> {
+    const [newCluster] = await db.insert(contentClusters).values(cluster).returning();
+    return newCluster;
+  }
+
+  async updateContentCluster(id: string, data: Partial<InsertContentCluster>): Promise<ContentCluster | undefined> {
+    const [cluster] = await db.update(contentClusters)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(contentClusters.id, id))
+      .returning();
+    return cluster;
+  }
+
+  async deleteContentCluster(id: string): Promise<boolean> {
+    await db.delete(contentClusters).where(eq(contentClusters.id, id));
+    return true;
+  }
+
+  // Cluster Members
+  async getClusterMembers(clusterId: string): Promise<(ClusterMember & { content?: Content })[]> {
+    const members = await db.select().from(clusterMembers)
+      .where(eq(clusterMembers.clusterId, clusterId))
+      .orderBy(clusterMembers.position);
+    
+    const result: (ClusterMember & { content?: Content })[] = [];
+    for (const member of members) {
+      const [content] = await db.select().from(contents).where(eq(contents.id, member.contentId));
+      result.push({ ...member, content });
+    }
+    return result;
+  }
+
+  async addClusterMember(member: InsertClusterMember): Promise<ClusterMember> {
+    const [newMember] = await db.insert(clusterMembers).values(member).returning();
+    return newMember;
+  }
+
+  async removeClusterMember(id: string): Promise<boolean> {
+    await db.delete(clusterMembers).where(eq(clusterMembers.id, id));
+    return true;
+  }
+
+  async updateClusterMemberPosition(id: string, position: number): Promise<ClusterMember | undefined> {
+    const [member] = await db.update(clusterMembers)
+      .set({ position })
+      .where(eq(clusterMembers.id, id))
+      .returning();
+    return member;
+  }
+
+  async getContentClusterMembership(contentId: string): Promise<(ClusterMember & { cluster?: ContentCluster })[]> {
+    const members = await db.select().from(clusterMembers)
+      .where(eq(clusterMembers.contentId, contentId));
+    
+    const result: (ClusterMember & { cluster?: ContentCluster })[] = [];
+    for (const member of members) {
+      const [cluster] = await db.select().from(contentClusters).where(eq(contentClusters.id, member.clusterId));
+      result.push({ ...member, cluster });
+    }
+    return result;
   }
 }
 
