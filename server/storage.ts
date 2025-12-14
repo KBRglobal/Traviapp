@@ -1,4 +1,4 @@
-import { eq, desc, sql, and, ilike } from "drizzle-orm";
+import { eq, desc, sql, and, ilike, inArray } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
@@ -84,6 +84,9 @@ import {
   homepagePromotions,
   newsletterCampaigns,
   campaignEvents,
+  contentTemplates,
+  type ContentTemplate,
+  type InsertContentTemplate,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -278,6 +281,20 @@ export interface IStorage {
   addContentTag(contentTag: InsertContentTag): Promise<ContentTag>;
   removeContentTag(contentId: string, tagId: string): Promise<boolean>;
   updateTagUsageCount(tagId: string): Promise<void>;
+
+  // Bulk Operations
+  bulkUpdateContentStatus(ids: string[], status: string): Promise<number>;
+  bulkDeleteContents(ids: string[]): Promise<number>;
+  bulkAddTagToContents(contentIds: string[], tagId: string): Promise<number>;
+  bulkRemoveTagFromContents(contentIds: string[], tagId: string): Promise<number>;
+
+  // Content Templates
+  getContentTemplates(): Promise<ContentTemplate[]>;
+  getContentTemplate(id: string): Promise<ContentTemplate | undefined>;
+  createContentTemplate(template: InsertContentTemplate): Promise<ContentTemplate>;
+  updateContentTemplate(id: string, data: Partial<InsertContentTemplate>): Promise<ContentTemplate | undefined>;
+  deleteContentTemplate(id: string): Promise<boolean>;
+  incrementTemplateUsage(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1416,6 +1433,81 @@ export class DatabaseStorage implements IStorage {
     await db.update(tags)
       .set({ usageCount: Number(count[0]?.count || 0) })
       .where(eq(tags.id, tagId));
+  }
+
+  // Bulk Operations
+  async bulkUpdateContentStatus(ids: string[], status: string): Promise<number> {
+    const result = await db.update(contents)
+      .set({ status: status as any, updatedAt: new Date() })
+      .where(inArray(contents.id, ids))
+      .returning();
+    return result.length;
+  }
+
+  async bulkDeleteContents(ids: string[]): Promise<number> {
+    const result = await db.delete(contents)
+      .where(inArray(contents.id, ids))
+      .returning();
+    return result.length;
+  }
+
+  async bulkAddTagToContents(contentIds: string[], tagId: string): Promise<number> {
+    let added = 0;
+    for (const contentId of contentIds) {
+      const existing = await db.select().from(contentTags)
+        .where(and(eq(contentTags.contentId, contentId), eq(contentTags.tagId, tagId)));
+      if (existing.length === 0) {
+        await db.insert(contentTags).values({ contentId, tagId });
+        added++;
+      }
+    }
+    await this.updateTagUsageCount(tagId);
+    return added;
+  }
+
+  async bulkRemoveTagFromContents(contentIds: string[], tagId: string): Promise<number> {
+    const result = await db.delete(contentTags)
+      .where(and(
+        inArray(contentTags.contentId, contentIds),
+        eq(contentTags.tagId, tagId)
+      ))
+      .returning();
+    await this.updateTagUsageCount(tagId);
+    return result.length;
+  }
+
+  // Content Templates
+  async getContentTemplates(): Promise<ContentTemplate[]> {
+    return await db.select().from(contentTemplates).orderBy(desc(contentTemplates.usageCount), contentTemplates.name);
+  }
+
+  async getContentTemplate(id: string): Promise<ContentTemplate | undefined> {
+    const [template] = await db.select().from(contentTemplates).where(eq(contentTemplates.id, id));
+    return template;
+  }
+
+  async createContentTemplate(template: InsertContentTemplate): Promise<ContentTemplate> {
+    const [newTemplate] = await db.insert(contentTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateContentTemplate(id: string, data: Partial<InsertContentTemplate>): Promise<ContentTemplate | undefined> {
+    const [template] = await db.update(contentTemplates)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(contentTemplates.id, id))
+      .returning();
+    return template;
+  }
+
+  async deleteContentTemplate(id: string): Promise<boolean> {
+    await db.delete(contentTemplates).where(eq(contentTemplates.id, id));
+    return true;
+  }
+
+  async incrementTemplateUsage(id: string): Promise<void> {
+    await db.update(contentTemplates)
+      .set({ usageCount: sql`${contentTemplates.usageCount} + 1` })
+      .where(eq(contentTemplates.id, id));
   }
 }
 

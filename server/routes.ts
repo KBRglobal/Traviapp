@@ -4324,5 +4324,211 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // Bulk Operations Routes
+  app.post("/api/contents/bulk-status", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { ids, status } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "ids array is required" });
+      }
+      if (!status) {
+        return res.status(400).json({ error: "status is required" });
+      }
+      const count = await storage.bulkUpdateContentStatus(ids, status);
+      res.json({ success: true, count });
+    } catch (error) {
+      console.error("Error bulk updating status:", error);
+      res.status(500).json({ error: "Failed to bulk update status" });
+    }
+  });
+
+  app.post("/api/contents/bulk-delete", requirePermission("canDelete"), async (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "ids array is required" });
+      }
+      const count = await storage.bulkDeleteContents(ids);
+      res.json({ success: true, count });
+    } catch (error) {
+      console.error("Error bulk deleting:", error);
+      res.status(500).json({ error: "Failed to bulk delete" });
+    }
+  });
+
+  app.post("/api/contents/bulk-add-tag", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { ids, tagId } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "ids array is required" });
+      }
+      if (!tagId) {
+        return res.status(400).json({ error: "tagId is required" });
+      }
+      const count = await storage.bulkAddTagToContents(ids, tagId);
+      res.json({ success: true, count });
+    } catch (error) {
+      console.error("Error bulk adding tag:", error);
+      res.status(500).json({ error: "Failed to bulk add tag" });
+    }
+  });
+
+  app.post("/api/contents/bulk-remove-tag", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { ids, tagId } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "ids array is required" });
+      }
+      if (!tagId) {
+        return res.status(400).json({ error: "tagId is required" });
+      }
+      const count = await storage.bulkRemoveTagFromContents(ids, tagId);
+      res.json({ success: true, count });
+    } catch (error) {
+      console.error("Error bulk removing tag:", error);
+      res.status(500).json({ error: "Failed to bulk remove tag" });
+    }
+  });
+
+  app.get("/api/contents/export", requireAuth, async (req, res) => {
+    try {
+      const { ids, format = "json" } = req.query;
+      let contents;
+      if (ids && typeof ids === "string") {
+        const idArray = ids.split(",");
+        const allContents = await storage.getContentsWithRelations();
+        contents = allContents.filter(c => idArray.includes(c.id));
+      } else {
+        contents = await storage.getContentsWithRelations();
+      }
+      
+      if (format === "csv") {
+        const headers = ["id", "title", "slug", "type", "status", "wordCount", "createdAt", "updatedAt"];
+        const csvRows = [headers.join(",")];
+        for (const c of contents) {
+          csvRows.push([
+            c.id,
+            `"${(c.title || "").replace(/"/g, '""')}"`,
+            c.slug,
+            c.type,
+            c.status,
+            c.wordCount || 0,
+            c.createdAt ? new Date(c.createdAt).toISOString() : "",
+            c.updatedAt ? new Date(c.updatedAt).toISOString() : ""
+          ].join(","));
+        }
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", "attachment; filename=contents-export.csv");
+        return res.send(csvRows.join("\n"));
+      }
+      
+      res.json(contents);
+    } catch (error) {
+      console.error("Error exporting contents:", error);
+      res.status(500).json({ error: "Failed to export contents" });
+    }
+  });
+
+  // Content Templates Routes
+  app.get("/api/content-templates", requireAuth, async (req, res) => {
+    try {
+      const templates = await storage.getContentTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      res.status(500).json({ error: "Failed to fetch templates" });
+    }
+  });
+
+  app.get("/api/content-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getContentTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching template:", error);
+      res.status(500).json({ error: "Failed to fetch template" });
+    }
+  });
+
+  app.post("/api/content-templates", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const { name, description, type, blocks, seoDefaults } = req.body;
+      if (!name || !type) {
+        return res.status(400).json({ error: "Name and type are required" });
+      }
+      const template = await storage.createContentTemplate({
+        name,
+        description,
+        type,
+        blocks: blocks || [],
+        seoDefaults: seoDefaults || {},
+      });
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating template:", error);
+      res.status(500).json({ error: "Failed to create template" });
+    }
+  });
+
+  app.patch("/api/content-templates/:id", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { name, description, type, blocks, seoDefaults } = req.body;
+      const template = await storage.updateContentTemplate(req.params.id, {
+        name,
+        description,
+        type,
+        blocks,
+        seoDefaults,
+      });
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating template:", error);
+      res.status(500).json({ error: "Failed to update template" });
+    }
+  });
+
+  app.delete("/api/content-templates/:id", requirePermission("canDelete"), async (req, res) => {
+    try {
+      await storage.deleteContentTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      res.status(500).json({ error: "Failed to delete template" });
+    }
+  });
+
+  app.post("/api/content-templates/:id/apply", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const template = await storage.getContentTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      const { title, slug } = req.body;
+      if (!title || !slug) {
+        return res.status(400).json({ error: "Title and slug are required" });
+      }
+      const content = await storage.createContent({
+        title,
+        slug,
+        type: template.type as any,
+        status: "draft",
+        blocks: template.blocks as any[],
+        metaTitle: (template.seoDefaults as any)?.metaTitle || title,
+        metaDescription: (template.seoDefaults as any)?.metaDescription || "",
+      });
+      await storage.incrementTemplateUsage(req.params.id);
+      res.status(201).json(content);
+    } catch (error) {
+      console.error("Error applying template:", error);
+      res.status(500).json({ error: "Failed to apply template" });
+    }
+  });
+
   return httpServer;
 }

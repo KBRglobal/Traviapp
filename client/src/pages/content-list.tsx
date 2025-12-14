@@ -19,6 +19,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Plus,
   Search,
   MapPin,
@@ -31,8 +37,12 @@ import {
   Train,
   Calendar,
   Route,
+  Tag,
+  Trash2,
+  Download,
+  ChevronDown,
 } from "lucide-react";
-import type { ContentWithRelations } from "@shared/schema";
+import type { ContentWithRelations, Tag as TagType } from "@shared/schema";
 
 interface ContentListProps {
   type: "attraction" | "hotel" | "article" | "dining" | "district" | "transport" | "event" | "itinerary";
@@ -127,6 +137,62 @@ export default function ContentList({ type }: ContentListProps) {
         description: "Failed to delete content. Please try again.",
         variant: "destructive",
       });
+    },
+  });
+
+  const { data: tags } = useQuery<TagType[]>({ queryKey: ["/api/tags"] });
+
+  const bulkStatusMutation = useMutation({
+    mutationFn: async (data: { ids: string[]; status: string }) => {
+      await apiRequest("POST", "/api/contents/bulk-status", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${type}`] });
+      setSelectedIds([]);
+      toast({ title: "Status updated", description: "Selected items have been updated." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await apiRequest("POST", "/api/contents/bulk-delete", { ids });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${type}`] });
+      setSelectedIds([]);
+      toast({ title: "Deleted", description: "Selected items have been deleted." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete items.", variant: "destructive" });
+    },
+  });
+
+  const bulkAddTagMutation = useMutation({
+    mutationFn: async (data: { ids: string[]; tagId: string }) => {
+      await apiRequest("POST", "/api/contents/bulk-add-tag", data);
+    },
+    onSuccess: () => {
+      setSelectedIds([]);
+      toast({ title: "Tag added", description: "Tag has been added to selected items." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add tag.", variant: "destructive" });
+    },
+  });
+
+  const bulkRemoveTagMutation = useMutation({
+    mutationFn: async (data: { ids: string[]; tagId: string }) => {
+      await apiRequest("POST", "/api/contents/bulk-remove-tag", data);
+    },
+    onSuccess: () => {
+      setSelectedIds([]);
+      toast({ title: "Tag removed", description: "Tag has been removed from selected items." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to remove tag.", variant: "destructive" });
     },
   });
 
@@ -264,6 +330,99 @@ export default function ContentList({ type }: ContentListProps) {
           </div>
         </CardHeader>
         <CardContent>
+          {selectedIds.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 p-3 bg-muted rounded-md mb-4" data-testid="bulk-actions-toolbar">
+              <span className="text-sm font-medium">{selectedIds.length} selected</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" data-testid="button-bulk-status">
+                    Status <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {["draft", "in_review", "approved", "scheduled", "published"].map((s) => (
+                    <DropdownMenuItem
+                      key={s}
+                      onClick={() => bulkStatusMutation.mutate({ ids: selectedIds, status: s })}
+                      data-testid={`menu-item-status-${s}`}
+                    >
+                      {s.replace("_", " ")}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" data-testid="button-bulk-add-tag">
+                    <Tag className="mr-1 h-4 w-4" /> Add Tag
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {tags?.length === 0 && (
+                    <DropdownMenuItem disabled>No tags available</DropdownMenuItem>
+                  )}
+                  {tags?.map((tag) => (
+                    <DropdownMenuItem
+                      key={tag.id}
+                      onClick={() => bulkAddTagMutation.mutate({ ids: selectedIds, tagId: tag.id })}
+                      data-testid={`menu-item-add-tag-${tag.id}`}
+                    >
+                      {tag.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" data-testid="button-bulk-remove-tag">
+                    <X className="mr-1 h-4 w-4" /> Remove Tag
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {tags?.length === 0 && (
+                    <DropdownMenuItem disabled>No tags available</DropdownMenuItem>
+                  )}
+                  {tags?.map((tag) => (
+                    <DropdownMenuItem
+                      key={tag.id}
+                      onClick={() => bulkRemoveTagMutation.mutate({ ids: selectedIds, tagId: tag.id })}
+                      data-testid={`menu-item-remove-tag-${tag.id}`}
+                    >
+                      {tag.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(`/api/contents/export?ids=${selectedIds.join(",")}&format=csv`)}
+                data-testid="button-bulk-export"
+              >
+                <Download className="mr-1 h-4 w-4" /> Export
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete the selected items?")) {
+                    bulkDeleteMutation.mutate(selectedIds);
+                  }
+                }}
+                data-testid="button-bulk-delete"
+              >
+                <Trash2 className="mr-1 h-4 w-4" /> Delete
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds([])}
+                data-testid="button-clear-selection"
+              >
+                Clear
+              </Button>
+            </div>
+          )}
           {isLoading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (

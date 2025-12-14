@@ -65,7 +65,7 @@ export function DataTable<T>({
   const handleSelectAll = (checked: boolean) => {
     if (!onSelectionChange) return;
     if (checked) {
-      const newIds = [...new Set([...selectedIds, ...paginatedData.map(getItemId)])];
+      const newIds = Array.from(new Set([...selectedIds, ...paginatedData.map(getItemId)]));
       onSelectionChange(newIds);
     } else {
       const pageIds = paginatedData.map(getItemId);
