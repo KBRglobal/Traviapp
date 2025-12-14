@@ -43,8 +43,10 @@ import {
   FileText,
   PanelLeft,
   ImagePlus,
+  History,
+  RotateCcw,
 } from "lucide-react";
-import type { ContentWithRelations, ContentBlock } from "@shared/schema";
+import type { ContentWithRelations, ContentBlock, ContentVersion } from "@shared/schema";
 
 type ContentType = "attraction" | "hotel" | "article" | "event" | "itinerary";
 
@@ -141,6 +143,8 @@ export default function ContentEditor() {
   const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
   const [aiGenerateInput, setAiGenerateInput] = useState("");
   const [imageGeneratingBlock, setImageGeneratingBlock] = useState<string | null>(null);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState<ContentVersion | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -515,6 +519,39 @@ export default function ContentEditor() {
     },
   });
 
+  const { data: versions = [], isLoading: isLoadingVersions } = useQuery<ContentVersion[]>({
+    queryKey: ['/api/contents', contentId, 'versions'],
+    enabled: !!contentId && versionHistoryOpen,
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: async (versionId: string) => {
+      const res = await apiRequest("POST", `/api/contents/${contentId}/versions/${versionId}/restore`);
+      return res.json();
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contents/${contentId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contents', contentId, 'versions'] });
+      setVersionHistoryOpen(false);
+      setSelectedVersion(null);
+      if (result) {
+        setTitle(result.title || "");
+        setSlug(result.slug || "");
+        setMetaTitle(result.metaTitle || "");
+        setMetaDescription(result.metaDescription || "");
+        setPrimaryKeyword(result.primaryKeyword || "");
+        setHeroImage(result.heroImage || "");
+        setHeroImageAlt(result.heroImageAlt || "");
+        setBlocks(result.blocks || []);
+        setStatus(result.status || "draft");
+      }
+      toast({ title: "Restored", description: "Content restored from previous version." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to restore version.", variant: "destructive" });
+    },
+  });
+
   const wordCount = blocks.reduce((count, block) => {
     if (block.type === "text" && typeof block.data?.content === "string") {
       return count + block.data.content.split(/\s+/).filter(Boolean).length;
@@ -725,6 +762,12 @@ export default function ContentEditor() {
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button>
+          {contentId && (
+            <Button variant="outline" size="sm" onClick={() => setVersionHistoryOpen(true)} data-testid="button-history">
+              <History className="h-4 w-4 mr-2" />
+              History
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={handleSave} disabled={saveMutation.isPending} data-testid="button-save-draft">
             {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Save
@@ -908,6 +951,115 @@ export default function ContentEditor() {
               Generate
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Version History Dialog */}
+      <Dialog open={versionHistoryOpen} onOpenChange={(open) => { setVersionHistoryOpen(open); if (!open) setSelectedVersion(null); }}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Version History</DialogTitle>
+            <DialogDescription>View and restore previous versions of this content</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-4 min-h-[400px]">
+            {/* Version List */}
+            <div className="w-1/3 border-r pr-4">
+              <ScrollArea className="h-[400px]">
+                {isLoadingVersions ? (
+                  <div className="flex items-center justify-center py-8" data-testid="loading-versions">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : versions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4" data-testid="empty-versions">No versions saved yet. Versions are created when you save changes.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {versions.map((version) => (
+                      <button
+                        key={version.id}
+                        onClick={() => setSelectedVersion(version)}
+                        className={`w-full text-left p-3 rounded-md border transition-colors ${
+                          selectedVersion?.id === version.id ? "border-primary bg-primary/5" : "hover-elevate"
+                        }`}
+                        data-testid={`version-item-${version.versionNumber}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-sm">Version {version.versionNumber}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {version.createdAt ? new Date(version.createdAt).toLocaleDateString() : ""}
+                          </Badge>
+                        </div>
+                        {version.changeNote && (
+                          <p className="text-xs text-muted-foreground mt-1 truncate">{version.changeNote}</p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+            
+            {/* Version Details */}
+            <div className="flex-1 pl-4">
+              {selectedVersion ? (
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-sm mb-2">Version {selectedVersion.versionNumber} Details</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Created:</span>
+                        <span>{selectedVersion.createdAt ? new Date(selectedVersion.createdAt).toLocaleString() : "Unknown"}</span>
+                      </div>
+                      {selectedVersion.changeNote && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Note:</span>
+                          <span>{selectedVersion.changeNote}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h4 className="font-medium text-sm mb-2">Title</h4>
+                    <p className="text-sm bg-muted p-2 rounded">{selectedVersion.title}</p>
+                  </div>
+                  
+                  {selectedVersion.metaDescription && (
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Meta Description</h4>
+                      <p className="text-sm bg-muted p-2 rounded">{selectedVersion.metaDescription}</p>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <h4 className="font-medium text-sm mb-2">Content Blocks</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {Array.isArray(selectedVersion.blocks) ? selectedVersion.blocks.length : 0} blocks
+                    </p>
+                  </div>
+                  
+                  <Button 
+                    onClick={() => restoreMutation.mutate(selectedVersion.id)} 
+                    disabled={restoreMutation.isPending}
+                    className="w-full"
+                    data-testid="button-restore-version"
+                  >
+                    {restoreMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                    )}
+                    Restore This Version
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <p className="text-sm">Select a version to view details</p>
+                </div>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

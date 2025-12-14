@@ -398,8 +398,13 @@ export const contentVersions = pgTable("content_versions", {
   contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
   versionNumber: integer("version_number").notNull(),
   title: text("title").notNull(),
-  blocks: jsonb("blocks").$type<ContentBlock[]>().default([]),
+  slug: text("slug"),
+  metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
+  primaryKeyword: text("primary_keyword"),
+  heroImage: text("hero_image"),
+  heroImageAlt: text("hero_image_alt"),
+  blocks: jsonb("blocks").$type<ContentBlock[]>().default([]),
   changedBy: varchar("changed_by"),
   changeNote: text("change_note"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1077,6 +1082,167 @@ export const TELEGRAM_BADGES = {
   first_timer: { id: 'first_timer', name: { en: 'First Timer', he: 'פעם ראשונה', ar: 'أول مرة' }, icon: 'sparkles', points: 5 },
 } as const;
 
+// Content Tags table - for smart tagging system
+export const tags = pgTable("tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  color: varchar("color"),
+  usageCount: integer("usage_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTagSchema = createInsertSchema(tags).omit({
+  id: true,
+  usageCount: true,
+  createdAt: true,
+});
+export type InsertTag = z.infer<typeof insertTagSchema>;
+export type Tag = typeof tags.$inferSelect;
+
+// Content-Tag junction table
+export const contentTags = pgTable("content_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  tagId: varchar("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_content_tags_content").on(table.contentId),
+  index("IDX_content_tags_tag").on(table.tagId),
+]);
+
+export const insertContentTagSchema = createInsertSchema(contentTags).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertContentTag = z.infer<typeof insertContentTagSchema>;
+export type ContentTag = typeof contentTags.$inferSelect;
+
+// Content Clusters table - for pillar page structure
+export const contentClusters = pgTable("content_clusters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  pillarContentId: varchar("pillar_content_id").references(() => contents.id, { onDelete: "set null" }),
+  primaryKeyword: text("primary_keyword"),
+  color: varchar("color"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertContentClusterSchema = createInsertSchema(contentClusters).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertContentCluster = z.infer<typeof insertContentClusterSchema>;
+export type ContentCluster = typeof contentClusters.$inferSelect;
+
+// Cluster Members - linking content to clusters
+export const clusterMembers = pgTable("cluster_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clusterId: varchar("cluster_id").notNull().references(() => contentClusters.id, { onDelete: "cascade" }),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  position: integer("position").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_cluster_members_cluster").on(table.clusterId),
+  index("IDX_cluster_members_content").on(table.contentId),
+]);
+
+export const insertClusterMemberSchema = createInsertSchema(clusterMembers).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertClusterMember = z.infer<typeof insertClusterMemberSchema>;
+export type ClusterMember = typeof clusterMembers.$inferSelect;
+
+// Content Templates table - for reusable content structures
+export const contentTemplates = pgTable("content_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  contentType: contentTypeEnum("content_type").notNull(),
+  blocks: jsonb("blocks").$type<ContentBlock[]>().default([]),
+  extensionDefaults: jsonb("extension_defaults").$type<Record<string, unknown>>(),
+  seoDefaults: jsonb("seo_defaults").$type<Record<string, unknown>>(),
+  isPublic: boolean("is_public").default(false),
+  usageCount: integer("usage_count").default(0),
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertContentTemplateSchema = createInsertSchema(contentTemplates).omit({
+  id: true,
+  usageCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertContentTemplate = z.infer<typeof insertContentTemplateSchema>;
+export type ContentTemplate = typeof contentTemplates.$inferSelect;
+
+// Site Settings table - for global configuration
+export const siteSettings = pgTable("site_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key").notNull().unique(),
+  value: jsonb("value").$type<unknown>(),
+  category: varchar("category").notNull(),
+  description: text("description"),
+  updatedBy: varchar("updated_by").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSiteSettingSchema = createInsertSchema(siteSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+export type InsertSiteSetting = z.infer<typeof insertSiteSettingSchema>;
+export type SiteSetting = typeof siteSettings.$inferSelect;
+
+// SEO Analysis Results table - cached analysis for content
+export const seoAnalysisResults = pgTable("seo_analysis_results", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  overallScore: integer("overall_score").notNull(),
+  titleScore: integer("title_score"),
+  metaDescriptionScore: integer("meta_description_score"),
+  keywordScore: integer("keyword_score"),
+  contentScore: integer("content_score"),
+  readabilityScore: integer("readability_score"),
+  technicalScore: integer("technical_score"),
+  issues: jsonb("issues").$type<SeoIssue[]>().default([]),
+  suggestions: jsonb("suggestions").$type<SeoSuggestion[]>().default([]),
+  analyzedAt: timestamp("analyzed_at").defaultNow(),
+}, (table) => [
+  index("IDX_seo_analysis_content").on(table.contentId),
+]);
+
+// SEO Issue and Suggestion types
+export interface SeoIssue {
+  type: "error" | "warning" | "info";
+  category: string;
+  message: string;
+  field?: string;
+  impact: "high" | "medium" | "low";
+}
+
+export interface SeoSuggestion {
+  category: string;
+  suggestion: string;
+  priority: "high" | "medium" | "low";
+  estimatedImpact?: string;
+}
+
+export const insertSeoAnalysisResultSchema = createInsertSchema(seoAnalysisResults).omit({
+  id: true,
+  analyzedAt: true,
+});
+export type InsertSeoAnalysisResult = z.infer<typeof insertSeoAnalysisResultSchema>;
+export type SeoAnalysisResult = typeof seoAnalysisResults.$inferSelect;
+
 // Full content types with relations
 export type ContentWithRelations = Content & {
   author?: User;
@@ -1091,4 +1257,8 @@ export type ContentWithRelations = Content & {
   affiliateLinks?: AffiliateLink[];
   translations?: Translation[];
   views?: ContentView[];
+  tags?: Tag[];
+  cluster?: ContentCluster;
+  versions?: ContentVersion[];
+  seoAnalysis?: SeoAnalysisResult;
 };

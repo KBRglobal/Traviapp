@@ -1130,8 +1130,13 @@ export async function registerRoutes(
         contentId: req.params.id,
         versionNumber: latestVersion + 1,
         title: existingContent.title,
-        blocks: existingContent.blocks || [],
+        slug: existingContent.slug,
+        metaTitle: existingContent.metaTitle,
         metaDescription: existingContent.metaDescription,
+        primaryKeyword: existingContent.primaryKeyword,
+        heroImage: existingContent.heroImage,
+        heroImageAlt: existingContent.heroImageAlt,
+        blocks: existingContent.blocks || [],
         changedBy: req.body.changedBy || null,
         changeNote: req.body.changeNote || null,
       });
@@ -1194,6 +1199,52 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching content version:", error);
       res.status(500).json({ error: "Failed to fetch content version" });
+    }
+  });
+
+  app.post("/api/contents/:id/versions/:versionId/restore", requireAuth, async (req, res) => {
+    try {
+      const version = await storage.getContentVersion(req.params.versionId);
+      if (!version || version.contentId !== req.params.id) {
+        return res.status(404).json({ error: "Version not found" });
+      }
+      const updated = await storage.updateContent(req.params.id, {
+        title: version.title,
+        slug: version.slug,
+        metaTitle: version.metaTitle,
+        metaDescription: version.metaDescription,
+        primaryKeyword: version.primaryKeyword,
+        heroImage: version.heroImage,
+        heroImageAlt: version.heroImageAlt,
+        blocks: version.blocks,
+      });
+      const latestNum = await storage.getLatestVersionNumber(req.params.id) || 0;
+      await storage.createContentVersion({
+        contentId: req.params.id,
+        versionNumber: latestNum + 1,
+        title: version.title,
+        slug: version.slug,
+        metaTitle: version.metaTitle,
+        metaDescription: version.metaDescription,
+        primaryKeyword: version.primaryKeyword,
+        heroImage: version.heroImage,
+        heroImageAlt: version.heroImageAlt,
+        blocks: version.blocks,
+        changedBy: (req.user as any)?.claims?.sub,
+        changeNote: `Restored from version ${version.versionNumber}`,
+      });
+      
+      const user = req.user as any;
+      await logAuditEvent(req, "restore", "content", req.params.id, 
+        `Restored from version ${version.versionNumber}`,
+        null,
+        { title: version.title, versionNumber: version.versionNumber }
+      );
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error restoring version:", error);
+      res.status(500).json({ error: "Failed to restore version" });
     }
   });
 
