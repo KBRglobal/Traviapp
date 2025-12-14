@@ -1035,6 +1035,60 @@ export async function registerRoutes(
     }
   });
 
+  // Generate JSON-LD schema for content
+  app.get("/api/contents/:id/schema", async (req, res) => {
+    try {
+      const content = await storage.getContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+      
+      const { generateAllSchemas, schemasToJsonLd } = await import("./lib/schema-generator");
+      
+      // Get type-specific data
+      let typeData: Record<string, unknown> = {};
+      let authorName: string | undefined;
+      
+      if (content.type === "attraction" && content.attraction) {
+        typeData = content.attraction;
+      } else if (content.type === "hotel" && content.hotel) {
+        typeData = content.hotel;
+      } else if (content.type === "article" && content.article) {
+        typeData = content.article;
+      } else if (content.type === "event" && content.event) {
+        typeData = content.event;
+      } else if (content.type === "dining" && content.dining) {
+        typeData = content.dining;
+      } else if (content.type === "district" && content.district) {
+        typeData = content.district;
+      } else if (content.type === "transport" && content.transport) {
+        typeData = content.transport;
+      } else if (content.type === "itinerary" && content.itinerary) {
+        typeData = content.itinerary;
+      }
+      
+      // Get author name if available
+      if (content.authorId) {
+        const author = await storage.getUser(content.authorId);
+        if (author) {
+          authorName = [author.firstName, author.lastName].filter(Boolean).join(" ") || author.username || undefined;
+        }
+      }
+      
+      const schemas = generateAllSchemas(content, typeData as any, authorName);
+      const jsonLd = schemasToJsonLd(schemas);
+      
+      res.json({
+        schemas,
+        jsonLd,
+        htmlEmbed: `<script type="application/ld+json">\n${jsonLd}\n</script>`
+      });
+    } catch (error) {
+      console.error("Error generating schema:", error);
+      res.status(500).json({ error: "Failed to generate schema" });
+    }
+  });
+
   // Public API for published content only (for public website)
   app.get("/api/public/contents", async (req, res) => {
     try {

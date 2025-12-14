@@ -1692,6 +1692,7 @@ function PageSettingsPanel({
   onMetaDescriptionChange,
   primaryKeyword,
   onPrimaryKeywordChange,
+  contentId,
 }: {
   title: string;
   onTitleChange: (v: string) => void;
@@ -1705,6 +1706,7 @@ function PageSettingsPanel({
   onMetaDescriptionChange: (v: string) => void;
   primaryKeyword: string;
   onPrimaryKeywordChange: (v: string) => void;
+  contentId?: string;
 }) {
   return (
     <div className="space-y-6">
@@ -1817,6 +1819,13 @@ function PageSettingsPanel({
           </div>
         </div>
       </div>
+
+      {contentId && (
+        <>
+          <Separator />
+          <SchemaPreview contentId={contentId} />
+        </>
+      )}
     </div>
   );
 }
