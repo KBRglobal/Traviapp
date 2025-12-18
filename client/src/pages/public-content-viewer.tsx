@@ -13,21 +13,23 @@ type ContentWithExtensions = Content & {
 };
 
 function renderBlock(block: any, index: number) {
+  const data = block.data || block;
+  
   switch (block.type) {
     case "hero":
       return (
         <div key={index} className="relative h-[50vh] min-h-[400px] w-full overflow-hidden">
-          {block.imageUrl && (
+          {data.imageUrl && (
             <img
-              src={block.imageUrl}
-              alt={block.title || "Hero image"}
+              src={data.imageUrl}
+              alt={data.title || "Hero image"}
               className="w-full h-full object-cover"
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-            {block.title && <h1 className="text-4xl font-bold mb-2">{block.title}</h1>}
-            {block.subtitle && <p className="text-xl opacity-90">{block.subtitle}</p>}
+            {data.title && <h1 className="text-4xl font-bold mb-2">{data.title}</h1>}
+            {data.subtitle && <p className="text-xl opacity-90">{data.subtitle}</p>}
           </div>
         </div>
       );
@@ -35,24 +37,24 @@ function renderBlock(block: any, index: number) {
     case "text":
       return (
         <div key={index} className="prose prose-lg max-w-none dark:prose-invert py-6">
-          {block.title && <h2 className="text-2xl font-semibold mb-4">{block.title}</h2>}
-          <div dangerouslySetInnerHTML={{ __html: block.content || "" }} />
+          {data.title && <h2 className="text-2xl font-semibold mb-4">{data.title}</h2>}
+          <div dangerouslySetInnerHTML={{ __html: data.content || "" }} />
         </div>
       );
 
     case "image":
       return (
         <figure key={index} className="py-6">
-          {block.url && (
+          {data.url && (
             <img
-              src={block.url}
-              alt={block.alt || block.caption || "Image"}
+              src={data.url}
+              alt={data.alt || data.caption || "Image"}
               className="w-full rounded-lg"
             />
           )}
-          {block.caption && (
+          {data.caption && (
             <figcaption className="text-center text-muted-foreground mt-2">
-              {block.caption}
+              {data.caption}
             </figcaption>
           )}
         </figure>
@@ -61,9 +63,9 @@ function renderBlock(block: any, index: number) {
     case "gallery":
       return (
         <div key={index} className="py-6">
-          {block.title && <h2 className="text-2xl font-semibold mb-4">{block.title}</h2>}
+          {data.title && <h2 className="text-2xl font-semibold mb-4">{data.title}</h2>}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {block.images?.map((img: any, i: number) => (
+            {data.images?.map((img: any, i: number) => (
               <img
                 key={i}
                 src={img.url}
@@ -76,11 +78,12 @@ function renderBlock(block: any, index: number) {
       );
 
     case "faq":
+      const faqs = data.faqs || data.items || [];
       return (
         <div key={index} className="py-6">
-          {block.title && <h2 className="text-2xl font-semibold mb-4">{block.title}</h2>}
+          {data.title && <h2 className="text-2xl font-semibold mb-4">{data.title}</h2>}
           <div className="space-y-4">
-            {block.items?.map((item: any, i: number) => (
+            {faqs.map((item: any, i: number) => (
               <div key={i} className="border rounded-lg p-4">
                 <h3 className="font-medium mb-2">{item.question}</h3>
                 <p className="text-muted-foreground">{item.answer}</p>
@@ -93,14 +96,14 @@ function renderBlock(block: any, index: number) {
     case "cta":
       return (
         <div key={index} className="py-6 text-center bg-primary/10 rounded-lg p-8">
-          {block.title && <h2 className="text-2xl font-semibold mb-2">{block.title}</h2>}
-          {block.description && <p className="text-muted-foreground mb-4">{block.description}</p>}
-          {block.buttonText && block.buttonUrl && (
+          {data.title && <h2 className="text-2xl font-semibold mb-2">{data.title}</h2>}
+          {(data.description || data.content) && <p className="text-muted-foreground mb-4">{data.description || data.content}</p>}
+          {data.buttonText && (data.buttonUrl || data.buttonLink) && (
             <a
-              href={block.buttonUrl}
+              href={data.buttonUrl || data.buttonLink}
               className="inline-block bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium"
             >
-              {block.buttonText}
+              {data.buttonText}
             </a>
           )}
         </div>
@@ -109,9 +112,9 @@ function renderBlock(block: any, index: number) {
     case "info_grid":
       return (
         <div key={index} className="py-6">
-          {block.title && <h2 className="text-2xl font-semibold mb-4">{block.title}</h2>}
+          {data.title && <h2 className="text-2xl font-semibold mb-4">{data.title}</h2>}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {block.items?.map((item: any, i: number) => (
+            {data.items?.map((item: any, i: number) => (
               <div key={i} className="text-center p-4 bg-muted rounded-lg">
                 <div className="font-semibold">{item.label}</div>
                 <div className="text-muted-foreground">{item.value}</div>
@@ -122,11 +125,12 @@ function renderBlock(block: any, index: number) {
       );
 
     case "highlights":
+      const highlights = data.items || [];
       return (
         <div key={index} className="py-6">
-          {block.title && <h2 className="text-2xl font-semibold mb-4">{block.title}</h2>}
+          {data.title && <h2 className="text-2xl font-semibold mb-4">{data.title}</h2>}
           <ul className="space-y-2">
-            {block.items?.map((item: any, i: number) => (
+            {highlights.map((item: any, i: number) => (
               <li key={i} className="flex items-start gap-2">
                 <Star className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                 <span>{typeof item === 'string' ? item : item.title || item.text}</span>
@@ -137,11 +141,12 @@ function renderBlock(block: any, index: number) {
       );
 
     case "tips":
+      const tips = data.tips || data.items || [];
       return (
         <div key={index} className="py-6 bg-muted/50 rounded-lg p-6">
-          {block.title && <h2 className="text-2xl font-semibold mb-4">{block.title}</h2>}
+          {data.title && <h2 className="text-2xl font-semibold mb-4">{data.title}</h2>}
           <ul className="space-y-2">
-            {block.items?.map((item: any, i: number) => (
+            {tips.map((item: any, i: number) => (
               <li key={i} className="flex items-start gap-2">
                 <span className="text-primary font-bold">•</span>
                 <span>{typeof item === 'string' ? item : item.text}</span>
