@@ -1,0 +1,648 @@
+להלן FULL PROMPT מוכן ל־Replit (להדבקה אחת) שיבצע את כל דרישות ה־Security/Stability/Go-Live + QA, בלי שינוי תשתית / בלי פיצול שרתים — רק לוגיקה, ראוטינג, מידלוור וקונפיג בבקאנד.
+
+⸻
+
+FULL PROMPT FOR REPLIT — TRAVI CMS (Node.js / Express / PostgreSQL)
+
+You are working on the Travi CMS backend (Node.js, Express, PostgreSQL).
+Goal: prepare for public launch safely, without changing infrastructure or splitting servers.
+Scope: backend logic, routing, middleware, configuration only.
+
+Hard Constraints
+	•	Do NOT split servers
+	•	Do NOT redesign architecture
+	•	Do NOT add new infrastructure (no Redis, no new services)
+	•	Allowed: new middleware, new route files, new DB table/migration if needed (still within Postgres)
+
+⸻
+
+A) REQUIRED DELIVERABLES
+
+1) Introduce strict routing separation
+
+Implement two routers:
+	•	Public API: /api/public/* — read-only only, returns published only
+	•	Admin API: /api/* (existing admin endpoints) — requires auth + RBAC for any write
+
+No write logic may be reachable from public routes.
+
+⸻
+
+B) IMPLEMENTATION PLAN (DO THIS EXACTLY)
+
+Step 0 — Add Environment Flags (Emergency Safe Mode + Security)
+
+Add these env vars (use existing config loader):
+	•	NODE_ENV=production
+	•	ADMIN_ORIGIN=https://YOUR_ADMIN_DOMAIN (single origin)
+	•	READ_ONLY_MODE=false (when true: block all writes)
+	•	AI_DISABLED=false (when true: AI endpoints disabled)
+	•	RATE_LIMIT_AUTH_WINDOW_MS=600000
+	•	RATE_LIMIT_AUTH_MAX=20
+	•	RATE_LIMIT_AI_WINDOW_MS=60000
+	•	RATE_LIMIT_AI_MAX=30
+	•	RATE_LIMIT_WRITE_WINDOW_MS=60000
+	•	RATE_LIMIT_WRITE_MAX=60
+	•	RATE_LIMIT_ANALYTICS_WINDOW_MS=60000
+	•	RATE_LIMIT_ANALYTICS_MAX=120
+	•	UPLOAD_MAX_BYTES=10485760 (10MB default)
+	•	COOKIE_SECURE=true
+	•	COOKIE_SAMESITE=lax (or strict)
+	•	COOKIE_HTTPONLY=true
+
+If you already have a config module, wire these there; otherwise read from process.env.
+
+⸻
+
+Step 1 — Create Middleware Modules
+
+Create these new files:
+
+src/middleware/safeMode.js
+	•	blockWritesIfReadOnly: blocks POST/PATCH/PUT/DELETE when READ_ONLY_MODE=true (return 503)
+	•	blockAIIfDisabled: blocks all AI endpoints when AI_DISABLED=true (return 503)
+
+// src/middleware/safeMode.js
+export function blockWritesIfReadOnly(req, res, next) {
+  if (process.env.READ_ONLY_MODE === 'true') {
+    const m = req.method.toUpperCase();
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(m)) {
+      return res.status(503).json({ error: 'Read-only mode enabled' });
+    }
+  }
+  next();
+}
+
+export function blockAIIfDisabled(req, res, next) {
+  if (process.env.AI_DISABLED === 'true') {
+    return res.status(503).json({ error: 'AI disabled' });
+  }
+  next();
+}
+
+
+⸻
+
+src/middleware/auth.js
+
+Implement requireAuth that:
+	•	Verifies the existing auth mechanism in the project (JWT or cookie session).
+	•	On success sets req.user = { id, role, ... }.
+	•	On failure returns 401.
+
+Do not change auth architecture — adapt to existing token/session logic.
+If the project already has such middleware, export and reuse it.
+
+// src/middleware/auth.js
+export function requireAuth(req, res, next) {
+  // TODO: integrate with existing auth (JWT/cookie session).
+  // Must set req.user = { id, role } when valid.
+  // Must return 401 when missing/invalid.
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
+If you have an existing authenticate middleware: wrap it and standardize 401.
+
+⸻
+
+src/middleware/rbac.js
+
+Implement:
+	•	requireRole(...roles) → 401 if no user, 403 if role not allowed
+	•	requireOwnershipOrRole({ getOwnerId, roles }) for author/contributor “own drafts only”
+
+// src/middleware/rbac.js
+export const requireRole = (...roles) => (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!roles.includes(req.user.role)) return res.status(403).json({ error: 'Forbidden' });
+  next();
+};
+
+export const requireOwnershipOrRole = ({ getOwnerId, roles }) => async (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  if (roles.includes(req.user.role)) return next();
+  const ownerId = await getOwnerId(req);
+  if (ownerId !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
+  next();
+};
+
+Role rules:
+	•	Admin: full access
+	•	Editor: create/edit/publish
+	•	Author/Contributor: create/edit own drafts only
+	•	Viewer: read-only
+
+⸻
+
+src/middleware/originCheck.js
+
+Validate Origin/Referer for admin write requests only.
+	•	Allow only process.env.ADMIN_ORIGIN
+	•	If missing origin/referer → block in production for admin writes (403)
+
+// src/middleware/originCheck.js
+const allowed = new Set([process.env.ADMIN_ORIGIN].filter(Boolean));
+
+export function requireSameOriginForAdminWrites(req, res, next) {
+  const m = req.method.toUpperCase();
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(m)) return next();
+
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+
+  const ok =
+    (origin && allowed.has(origin)) ||
+    (referer && [...allowed].some((o) => referer.startsWith(o)));
+
+  const isProd = process.env.NODE_ENV === 'production';
+  if (isProd && !ok) return res.status(403).json({ error: 'CSRF blocked' });
+
+  next();
+}
+
+
+⸻
+
+src/middleware/rateLimiters.js
+
+Use express-rate-limit (add dependency if missing) with separate limiters:
+	•	rateLimitAuth (IP key)
+	•	rateLimitAI (userId if exists else IP)
+	•	rateLimitWrites (userId+IP)
+	•	rateLimitAnalytics (IP+contentId)
+
+Return 429.
+
+// src/middleware/rateLimiters.js
+import rateLimit from 'express-rate-limit';
+
+const ms = (v, fallback) => (v ? Number(v) : fallback);
+
+export const rateLimitAuth = rateLimit({
+  windowMs: ms(process.env.RATE_LIMIT_AUTH_WINDOW_MS, 10 * 60 * 1000),
+  max: ms(process.env.RATE_LIMIT_AUTH_MAX, 20),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many requests' }),
+});
+
+export const rateLimitAI = rateLimit({
+  windowMs: ms(process.env.RATE_LIMIT_AI_WINDOW_MS, 60 * 1000),
+  max: ms(process.env.RATE_LIMIT_AI_MAX, 30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.user?.id ? `u:${req.user.id}` : `ip:${req.ip}`),
+  handler: (_req, res) => res.status(429).json({ error: 'Too many requests' }),
+});
+
+export const rateLimitWrites = rateLimit({
+  windowMs: ms(process.env.RATE_LIMIT_WRITE_WINDOW_MS, 60 * 1000),
+  max: ms(process.env.RATE_LIMIT_WRITE_MAX, 60),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${req.user?.id || 'anon'}:${req.ip}`,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many requests' }),
+});
+
+export const rateLimitAnalytics = rateLimit({
+  windowMs: ms(process.env.RATE_LIMIT_ANALYTICS_WINDOW_MS, 60 * 1000),
+  max: ms(process.env.RATE_LIMIT_ANALYTICS_MAX, 120),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${req.ip}:${req.body?.contentId || 'none'}`,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many requests' }),
+});
+
+
+⸻
+
+src/middleware/errorHandler.js
+
+Global error handler:
+	•	No stack traces to client in production
+	•	Always return generic error with optional requestId
+	•	Ensure logs redact secrets
+
+// src/middleware/errorHandler.js
+export function errorHandler(err, req, res, _next) {
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // Avoid logging secrets
+  const safeMeta = {
+    path: req.path,
+    method: req.method,
+    userId: req.user?.id,
+  };
+
+  console.error('ERROR', safeMeta, isProd ? err.message : err);
+
+  const payload = { error: 'Internal server error' };
+  if (!isProd) payload.details = err.message;
+
+  res.status(500).json(payload);
+}
+
+Also ensure you do NOT log Authorization header, cookies, tokens.
+
+⸻
+
+Step 2 — Cookies Security (Admin cookies)
+
+Wherever cookies are set (login endpoint), ensure:
+	•	HttpOnly true
+	•	Secure true (in production)
+	•	SameSite lax/strict
+Do not modify auth design; only cookie flags.
+
+⸻
+
+Step 3 — Public Router (Read-only + Published-only)
+
+Create: src/routes/public/index.js
+
+Rules:
+	•	Only GET routes
+	•	Filter content strictly: status='published'
+	•	Exclude draft / in_review / scheduled
+	•	Exclude incomplete translations
+	•	Never expose admin/internal routes
+	•	Never expose unpublished data
+
+Implement public versions of content fetch endpoints by reusing service/repo methods but applying mandatory filters server-side.
+
+Example (pseudo; adapt to existing DB layer):
+
+// src/routes/public/index.js
+import express from 'express';
+export const publicRouter = express.Router();
+
+// GET /api/public/contents
+publicRouter.get('/contents', async (req, res, next) => {
+  try {
+    const items = await req.db.contents.findPublishedOnly({
+      locale: req.query.locale,
+      // MUST enforce published + translation complete
+    });
+    res.json(items);
+  } catch (e) { next(e); }
+});
+
+// GET /api/public/contents/:id
+publicRouter.get('/contents/:id', async (req, res, next) => {
+  try {
+    const item = await req.db.contents.findOnePublishedOnly(req.params.id, {
+      locale: req.query.locale,
+    });
+    if (!item) return res.status(404).json({ error: 'Not found' });
+    res.json(item);
+  } catch (e) { next(e); }
+});
+
+export default publicRouter;
+
+If you already have /api/contents GET endpoints, DO NOT expose them publicly unless you hard-enforce published-only.
+
+⸻
+
+Step 4 — Admin Router Protection (Auth + RBAC + Rate limits + CSRF/origin)
+
+Create src/routes/admin/index.js that mounts existing routers but wraps them:
+
+Mandatory: Lock all write endpoints (401)
+
+Apply requireAuth on admin routers that include any writes.
+
+Mandatory: RBAC enforcement
+
+Enforce per-route:
+	•	Contents:
+	•	Admin: all
+	•	Editor: create/edit/publish
+	•	Author/Contributor: create/edit own drafts only
+	•	Viewer: none
+	•	Media upload:
+	•	Admin, Editor only (or Admin/Editor/Author if you decide; but must NOT allow Viewer)
+	•	Affiliate links / RSS feeds:
+	•	Admin/Editor only
+	•	AI:
+	•	Auth required + rate limit + per-user usage limit
+	•	Analytics write endpoint:
+	•	keep public unauthenticated but rate limited and validated (handled separately)
+
+Example mounting logic:
+
+// src/routes/admin/index.js
+import express from 'express';
+import { requireAuth } from '../../middleware/auth.js';
+import { requireSameOriginForAdminWrites } from '../../middleware/originCheck.js';
+import { rateLimitWrites, rateLimitAI } from '../../middleware/rateLimiters.js';
+import { blockAIIfDisabled } from '../../middleware/safeMode.js';
+
+// Existing routers (adapt paths)
+import contentsRouter from '../contents.js';
+import mediaRouter from '../media.js';
+import affiliateRouter from '../affiliateLinks.js';
+import rssRouter from '../rssFeeds.js';
+import aiRouter from '../ai.js';
+
+export const adminRouter = express.Router();
+
+// CSRF/origin only for writes in admin scope
+adminRouter.use(requireSameOriginForAdminWrites);
+
+// Auth for all admin routes that mutate or expose admin data
+adminRouter.use(requireAuth);
+
+// General write rate limit (applies to POST/PATCH/DELETE etc)
+adminRouter.use(rateLimitWrites);
+
+// Mount existing routers
+adminRouter.use('/contents', contentsRouter);
+adminRouter.use('/media', mediaRouter);
+adminRouter.use('/affiliate-links', affiliateRouter);
+adminRouter.use('/rss-feeds', rssRouter);
+
+// AI: extra limiter + safe mode
+adminRouter.use('/ai', blockAIIfDisabled, rateLimitAI, aiRouter);
+
+export default adminRouter;
+
+Now enforce RBAC inside each router:
+
+You must edit the existing route files to apply RBAC per method.
+
+Contents RBAC example
+	•	POST create:
+	•	Admin, Editor, Author, Contributor allowed
+	•	PATCH edit:
+	•	Admin, Editor allowed for any
+	•	Author/Contributor: only if owner AND status is draft
+	•	DELETE:
+	•	Admin only (or Admin+Editor if you allow, but your QA says Author delete → 403)
+	•	Publish endpoint:
+	•	Admin, Editor only
+
+Example:
+
+// routes/contents.js (adapt)
+import express from 'express';
+import { requireRole, requireOwnershipOrRole } from '../middleware/rbac.js';
+
+const router = express.Router();
+
+router.post(
+  '/',
+  requireRole('admin', 'editor', 'author', 'contributor'),
+  async (req, res, next) => { /* create */ }
+);
+
+router.patch(
+  '/:id',
+  // Admin/Editor can edit any; Author/Contributor only own draft
+  requireOwnershipOrRole({
+    roles: ['admin', 'editor'],
+    getOwnerId: async (req) => {
+      const row = await req.db.contents.getById(req.params.id);
+      // also enforce "draft only" for author/contributor:
+      if (req.user.role === 'author' || req.user.role === 'contributor') {
+        if (!row || row.status !== 'draft') return null; // forces 403
+      }
+      return row?.authorId;
+    },
+  }),
+  async (req, res, next) => { /* edit */ }
+);
+
+router.delete(
+  '/:id',
+  requireRole('admin'),
+  async (req, res, next) => { /* delete */ }
+);
+
+// Publish example
+router.post(
+  '/:id/publish',
+  requireRole('admin', 'editor'),
+  async (req, res, next) => { /* publish */ }
+);
+
+export default router;
+
+
+⸻
+
+Step 5 — Secure AI per-user usage limit (basic quota)
+
+Add DB table (migration) if not present:
+
+Migration: ai_usage
+	•	user_id (PK part)
+	•	window_start (timestamp)
+	•	count (int)
+
+Logic:
+	•	Window: 1 minute or 1 hour (choose 1 hour for stability)
+	•	Limit: from env, e.g. AI_USAGE_MAX_PER_HOUR=200
+
+Implement helper:
+	•	src/services/aiUsage.js
+	•	checkAndIncrementAiUsage(userId) within transaction; if exceed → throw 429
+
+No new infra required; only Postgres.
+
+⸻
+
+Step 6 — Global Rate Limiting
+
+Apply:
+	•	Auth endpoints (/api/auth/*) → rateLimitAuth
+	•	AI endpoints → rateLimitAI
+	•	Content writes → rateLimitWrites
+	•	Analytics record-view → rateLimitAnalytics
+
+Ensure all return 429.
+
+⸻
+
+Step 7 — Analytics Abuse Protection (keep unauthenticated)
+
+Update /api/analytics/record-view:
+	•	Keep public (no auth)
+	•	Apply rateLimitAnalytics
+	•	Validate contentId exists (DB lookup)
+	•	Schema validate payload
+	•	Block repeated spam: same IP+contentId within short TTL (if no infra, use in-memory Map with expiry)
+
+Return:
+	•	invalid contentId → 400 or 404 (prefer 400 with clear message)
+	•	spam/rate → 429
+
+⸻
+
+Step 8 — Audit Log Protection (append-only)
+	•	Remove/disable any routes that update/delete audit logs
+	•	Ensure audit logs are written on create/update/delete operations
+	•	Ensure audit log table is only INSERT in code paths
+
+If there is any admin endpoint for audit logs, it must be GET only.
+
+⸻
+
+Step 9 — Media Upload Limits
+
+Update /api/media/upload:
+	•	Require auth (already enforced by admin router)
+	•	RBAC: allow only admin/editor (at minimum)
+	•	Multer config:
+	•	fileSize from UPLOAD_MAX_BYTES
+	•	whitelist mimetypes:
+	•	Images: image/jpeg, image/png, image/webp, image/gif
+	•	Videos: video/mp4, video/webm, video/quicktime
+	•	reject all others
+
+Return 400 on invalid type, 413/400 on size.
+
+⸻
+
+Step 10 — Sitemap Safety
+
+Update sitemap generation:
+	•	Include only published content
+	•	Include only completed translations
+	•	Exclude admin/draft/internal routes
+	•	Use same query filters as public content API
+
+⸻
+
+Step 11 — Error & Secrets Hygiene
+	•	Ensure no stack traces returned in production
+	•	Ensure logger does not log cookies/authorization
+	•	Ensure secrets only from env
+	•	Install global errorHandler at end of Express stack
+
+⸻
+
+C) REQUIRED ROUTING WIRING (ENTRYPOINT)
+
+In your main Express app file (e.g. src/app.js or server.js):
+	1.	Put blockWritesIfReadOnly globally BEFORE routes.
+	2.	Mount routers:
+
+	•	/api/public → publicRouter (GET only)
+	•	/api → adminRouter (protected)
+
+	3.	Apply errorHandler last.
+
+Example:
+
+import express from 'express';
+import publicRouter from './routes/public/index.js';
+import adminRouter from './routes/admin/index.js';
+import { blockWritesIfReadOnly } from './middleware/safeMode.js';
+import { errorHandler } from './middleware/errorHandler.js';
+
+const app = express();
+app.use(express.json());
+
+// emergency read-only
+app.use(blockWritesIfReadOnly);
+
+// Public read-only
+app.use('/api/public', publicRouter);
+
+// Admin API (existing /api endpoints protected)
+app.use('/api', adminRouter);
+
+// error handler last
+app.use(errorHandler);
+
+export default app;
+
+IMPORTANT:
+	•	Ensure /api/public/* has NO POST/PATCH/DELETE.
+	•	Ensure old “public” endpoints do not leak unpublished content; either remove or force filters.
+
+⸻
+
+D) QA VALIDATION — MUST ADD SUPERTEST TESTS
+
+Create test/security.qa.test.js with tests:
+
+Authentication
+	•	POST /api/contents without auth → 401
+	•	PATCH /api/contents/:id without auth → 401
+	•	DELETE /api/contents/:id without auth → 401
+	•	POST /api/media/upload without auth → 401
+	•	All /api/ai/* without auth → 401
+
+Authorization
+	•	Author tries delete content → 403
+	•	Editor tries manage users → 403 (if users route exists)
+	•	Viewer tries create content → 403
+
+Public vs Admin
+	•	GET /api/public/contents returns only published
+	•	Ensure draft/scheduled never appears
+
+AI
+	•	Anonymous AI call blocked → 401
+	•	Auth user exceeds rate limit → 429
+
+Rate limiting
+	•	100 rapid requests → 429 for auth & ai & writes
+
+Origin/CSRF
+	•	Cross-origin POST to /api/contents blocked → 403 (in production mode)
+
+Upload
+	•	Large file rejected
+	•	Non image/video rejected
+
+Analytics
+	•	invalid contentId rejected
+	•	spam events rate limited
+
+Audit logs
+	•	delete audit log route absent or rejected
+	•	logs created on create/update/delete
+
+Safe Mode
+	•	READ_ONLY_MODE=true blocks all writes
+	•	AI_DISABLED=true returns disabled response
+
+⸻
+
+E) DEFINITION OF DONE (STRICT)
+	•	Anonymous users cannot modify anything (401 on every write)
+	•	Public site is strictly read-only and published-only
+	•	Admin actions require auth + RBAC (403 on disallowed)
+	•	AI endpoints: auth + rate limit + per-user usage limit
+	•	Rate limiting returns 429 appropriately
+	•	CSRF/origin checks block cross-origin admin writes
+	•	Upload is restricted by size + MIME whitelist
+	•	Audit logs append-only
+	•	No stack traces or secrets leaked in prod
+	•	Safe modes work without code changes (env flags)
+
+⸻
+
+F) OUTPUT FORMAT REQUIRED FROM YOU (THE ASSISTANT)
+	1.	List exact files you created/modified.
+	2.	Provide code changes (full file contents for new files; diffs or full contents for modified files).
+	3.	Explain where you integrated with existing auth and DB layers.
+	4.	Provide the supertest QA file and how to run tests.
+
+⸻
+
+Notes for the implementer
+	•	If there is an existing req.db / repository layer, reuse it.
+	•	If you do not have DB helpers for “published-only” queries, implement them in the repository layer and ensure public endpoints call only those.
+	•	Do not introduce any new infrastructure services.
+
+⸻
+
+אם תרצה, הדבק לי כאן את מבנה ה־routes הקיים (רשימת קבצים/נתיבים או את server.js/app.js + ראוטר contents) ואני אעשה לך “התאמה” של הפרומפט הזה לשמות הקבצים המדויקים אצלכם (כדי שיישב 1:1 על הקוד), אבל הפרומפט למעלה כבר תקין כ־Go-Live blueprint לביצוע ב־Replit.

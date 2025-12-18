@@ -1,0 +1,249 @@
+FULL PROMPT FOR REPLIT – TRAVI CMS
+Security, Stability, Go-Live Tasks + QA Validation
+
+Context:
+You are working on the Travi CMS backend (Node.js, Express, PostgreSQL).
+Goal: prepare the system for public launch safely, without changing infrastructure or splitting servers.
+Scope: backend logic, routing, middleware, configuration only.
+
+PART 1 — DEVELOPMENT TASKS (MANDATORY)
+1. Lock All Write Endpoints
+
+All POST / PATCH / DELETE routes must require authentication.
+
+Apply auth middleware to:
+
+/api/contents (POST, PATCH, DELETE, bulk-delete)
+
+/api/media/upload
+
+/api/affiliate-links
+
+/api/rss-feeds/*
+
+/api/ai/*
+
+Unauthenticated requests must return 401.
+
+2. Enforce Role-Based Authorization (RBAC)
+
+Enforce roles on backend only.
+
+Rules:
+
+Admin: full access
+
+Editor: create/edit/publish
+
+Author/Contributor: create/edit own drafts only
+
+Viewer: read-only
+
+Unauthorized actions must return 403.
+
+3. Logical Separation: Public vs Admin API
+
+Public routes:
+
+Read-only
+
+Return only status = published
+
+Admin routes:
+
+Require authentication
+
+Require role checks
+
+Ensure no write logic is reachable from public routes.
+
+4. Secure AI Endpoints
+
+All /api/ai/* routes must:
+
+Require authentication
+
+Have rate limiting
+
+Have basic per-user usage limits
+
+Anonymous access must be blocked.
+
+5. Add Global Rate Limiting
+
+Apply rate limiting to:
+
+Auth endpoints
+
+AI endpoints
+
+Content write endpoints
+
+Analytics write endpoint
+
+Return 429 when exceeded.
+
+6. CSRF / Cross-Origin Protection
+
+Admin cookies must be:
+
+HttpOnly
+
+Secure
+
+SameSite = strict or lax
+
+Validate Origin / Referer for admin write requests.
+
+7. Restrict Public Content Exposure
+
+Public content APIs must:
+
+Exclude draft / in_review / scheduled
+
+Exclude incomplete translations
+
+/api/public/* must never return unpublished data.
+
+8. Sitemap Safety
+
+Sitemap must include:
+
+Only published content
+
+Only completed translations
+
+Exclude admin, draft, internal routes.
+
+9. Media Upload Limits
+
+Enforce:
+
+Max file size
+
+MIME type whitelist (images/videos only)
+
+Reject executable or unknown file types.
+
+10. Analytics Abuse Protection
+
+/api/analytics/record-view:
+
+Keep unauthenticated
+
+Add rate limiting
+
+Validate contentId exists
+
+Block spam submissions
+
+11. Audit Log Protection
+
+Audit logs must be append-only.
+
+No delete or update operations allowed.
+
+12. Error & Secrets Hygiene
+
+Do not return stack traces to clients.
+
+Do not log secrets or tokens.
+
+Secrets must come only from environment variables.
+
+13. Emergency Safe Mode
+
+Add config flags to:
+
+Disable AI features
+
+Disable all write operations (read-only mode)
+
+Must be toggleable without code changes.
+
+PART 2 — QA VALIDATION CHECKLIST (MANDATORY)
+Authentication QA
+
+POST / PATCH / DELETE without auth → 401
+
+Access /admin without login → blocked
+
+Authorization QA
+
+Author tries to delete content → 403
+
+Editor tries to manage users → 403
+
+Viewer tries to create content → 403
+
+Public vs Admin QA
+
+Public API returns only published content
+
+Draft or scheduled content is never visible publicly
+
+AI QA
+
+Anonymous user calls AI endpoint → blocked
+
+Authenticated user exceeds rate limit → 429
+
+Rate Limiting QA
+
+Send 100 rapid requests from same IP → 429
+
+Auth & AI endpoints enforce limits
+
+CSRF / Origin QA
+
+Cross-origin POST to admin endpoint → blocked
+
+Media Upload QA
+
+Upload large file → rejected
+
+Upload non-image/video file → rejected
+
+Analytics QA
+
+Invalid contentId → rejected
+
+Rapid spam events → rate limited
+
+Audit Log QA
+
+Attempt to delete audit log → rejected
+
+Verify logs are written on create/update/delete
+
+Safe Mode QA
+
+Enable read-only mode:
+
+All write operations blocked
+
+Disable AI:
+
+AI endpoints return disabled response
+
+DEFINITION OF DONE
+
+Anonymous users cannot modify anything.
+
+Public site is strictly read-only.
+
+Admin actions are fully protected.
+
+AI usage is controlled and limited.
+
+No single endpoint can destabilize the system.
+
+Constraints:
+
+Do NOT split servers
+
+Do NOT redesign architecture
+
+Do NOT add new infrastructure
+
+Backend logic and config only

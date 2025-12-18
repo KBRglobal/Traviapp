@@ -1,0 +1,424 @@
+import type { Request, Response, NextFunction } from "express";
+import { storage } from "./storage";
+import { ROLE_PERMISSIONS, type UserRole } from "@shared/schema";
+
+// ============================================================================
+// SAFE MODE CONFIGURATION
+// Toggle via environment variables - no code changes needed
+// ============================================================================
+export const safeMode = {
+  get readOnlyMode(): boolean {
+    return process.env.SAFE_MODE_READ_ONLY === "true";
+  },
+  get aiDisabled(): boolean {
+    return process.env.SAFE_MODE_DISABLE_AI === "true";
+  },
+};
+
+// ============================================================================
+// RATE LIMITING
+// In-memory rate limiting (for single-instance deployment)
+// ============================================================================
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+
+const rateLimitStore = new Map<string, RateLimitEntry>();
+
+// Clean up expired entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore.entries()) {
+    if (entry.resetTime < now) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
+interface RateLimitConfig {
+  windowMs: number;
+  maxRequests: number;
+  keyPrefix?: string;
+}
+
+export function createRateLimiter(config: RateLimitConfig) {
+  const { windowMs, maxRequests, keyPrefix = "" } = config;
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    const userId = (req.user as any)?.claims?.sub || "anonymous";
+    const key = `${keyPrefix}:${ip}:${userId}`;
+
+    const now = Date.now();
+    const entry = rateLimitStore.get(key);
+
+    if (!entry || entry.resetTime < now) {
+      rateLimitStore.set(key, { count: 1, resetTime: now + windowMs });
+      return next();
+    }
+
+    if (entry.count >= maxRequests) {
+      res.setHeader("Retry-After", Math.ceil((entry.resetTime - now) / 1000));
+      return res.status(429).json({
+        error: "Too many requests",
+        retryAfter: Math.ceil((entry.resetTime - now) / 1000),
+      });
+    }
+
+    entry.count++;
+    next();
+  };
+}
+
+// Pre-configured rate limiters
+export const rateLimiters = {
+  auth: createRateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    maxRequests: 10,
+    keyPrefix: "auth",
+  }),
+  ai: createRateLimiter({
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 10,
+    keyPrefix: "ai",
+  }),
+  contentWrite: createRateLimiter({
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 30,
+    keyPrefix: "content-write",
+  }),
+  analytics: createRateLimiter({
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 100,
+    keyPrefix: "analytics",
+  }),
+  newsletter: createRateLimiter({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    maxRequests: 5,
+    keyPrefix: "newsletter",
+  }),
+};
+
+// ============================================================================
+// AI USAGE LIMITS (per user, per day)
+// ============================================================================
+interface AiUsageEntry {
+  count: number;
+  resetTime: number;
+}
+
+const aiUsageStore = new Map<string, AiUsageEntry>();
+
+const AI_DAILY_LIMIT = 100; // requests per user per day
+
+export function checkAiUsageLimit(req: Request, res: Response, next: NextFunction) {
+  if (safeMode.aiDisabled) {
+    return res.status(503).json({
+      error: "AI features are temporarily disabled",
+      code: "AI_DISABLED",
+    });
+  }
+
+  const userId = (req.user as any)?.claims?.sub;
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required for AI features" });
+  }
+
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const entry = aiUsageStore.get(userId);
+
+  if (!entry || entry.resetTime < now) {
+    aiUsageStore.set(userId, { count: 1, resetTime: now + dayMs });
+    return next();
+  }
+
+  if (entry.count >= AI_DAILY_LIMIT) {
+    return res.status(429).json({
+      error: "Daily AI usage limit exceeded",
+      limit: AI_DAILY_LIMIT,
+      resetIn: Math.ceil((entry.resetTime - now) / 1000 / 60), // minutes
+    });
+  }
+
+  entry.count++;
+  next();
+}
+
+// ============================================================================
+// AUTHENTICATION MIDDLEWARE
+// ============================================================================
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const user = req.user as any;
+  if (!req.isAuthenticated() || !user?.claims?.sub) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  next();
+}
+
+// ============================================================================
+// SAFE MODE MIDDLEWARE
+// ============================================================================
+export function checkReadOnlyMode(req: Request, res: Response, next: NextFunction) {
+  if (safeMode.readOnlyMode) {
+    return res.status(503).json({
+      error: "System is in read-only mode",
+      code: "READ_ONLY_MODE",
+    });
+  }
+  next();
+}
+
+// ============================================================================
+// AUTHORIZATION / RBAC MIDDLEWARE
+// ============================================================================
+type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
+
+function hasPermission(role: UserRole, permission: PermissionKey): boolean {
+  const permissions = ROLE_PERMISSIONS[role];
+  return permissions ? permissions[permission] : false;
+}
+
+export function requirePermission(permission: PermissionKey) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user as any;
+    if (!req.isAuthenticated() || !user?.claims?.sub) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const dbUser = await storage.getUser(user.claims.sub);
+    const userRole: UserRole = dbUser?.role || "viewer";
+
+    if (!hasPermission(userRole, permission)) {
+      return res.status(403).json({
+        error: "Permission denied",
+        required: permission,
+        currentRole: userRole,
+      });
+    }
+
+    // Attach user info to request for later use
+    (req as any).dbUser = dbUser;
+    (req as any).userRole = userRole;
+
+    next();
+  };
+}
+
+// Check if user can only edit their own content (Author/Contributor)
+export function requireOwnContentOrPermission(permission: PermissionKey) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user as any;
+    if (!req.isAuthenticated() || !user?.claims?.sub) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const dbUser = await storage.getUser(user.claims.sub);
+    const userRole: UserRole = dbUser?.role || "viewer";
+
+    // Admin and Editor can edit any content
+    if (hasPermission(userRole, permission)) {
+      (req as any).dbUser = dbUser;
+      (req as any).userRole = userRole;
+      return next();
+    }
+
+    // Author/Contributor can only edit their own content
+    if (userRole === "author" || userRole === "contributor") {
+      const contentId = req.params.id;
+      if (contentId) {
+        const content = await storage.getContentById(contentId);
+        if (content && content.authorId === user.claims.sub) {
+          (req as any).dbUser = dbUser;
+          (req as any).userRole = userRole;
+          return next();
+        }
+      }
+    }
+
+    return res.status(403).json({
+      error: "Permission denied - you can only modify your own content",
+      currentRole: userRole,
+    });
+  };
+}
+
+// ============================================================================
+// CSRF PROTECTION
+// ============================================================================
+const ALLOWED_ORIGINS = [
+  process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : null,
+  "http://localhost:5000",
+  "http://127.0.0.1:5000",
+].filter(Boolean) as string[];
+
+export function csrfProtection(req: Request, res: Response, next: NextFunction) {
+  // Only check for state-changing methods
+  if (!["POST", "PATCH", "PUT", "DELETE"].includes(req.method)) {
+    return next();
+  }
+
+  // Skip for webhooks and public newsletter endpoints
+  if (req.path.startsWith("/api/webhooks/") || 
+      req.path === "/api/newsletter/subscribe" ||
+      req.path === "/api/analytics/record-view") {
+    return next();
+  }
+
+  const origin = req.get("Origin") || req.get("Referer");
+
+  // If no origin header, check if it's a same-origin request
+  if (!origin) {
+    // Allow requests without Origin if they're from the same host
+    const host = req.get("Host");
+    if (host && (host.includes("localhost") || host.includes("replit"))) {
+      return next();
+    }
+    // For API calls without Origin, require authentication
+    if (req.isAuthenticated()) {
+      return next();
+    }
+    return res.status(403).json({ error: "CSRF validation failed - missing origin" });
+  }
+
+  // Check if origin is allowed
+  const isAllowed = ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed));
+  if (!isAllowed) {
+    console.warn(`CSRF blocked request from origin: ${origin}`);
+    return res.status(403).json({ error: "CSRF validation failed - invalid origin" });
+  }
+
+  next();
+}
+
+// ============================================================================
+// MEDIA UPLOAD VALIDATION
+// ============================================================================
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+];
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+export function validateMediaUpload(req: Request, res: Response, next: NextFunction) {
+  const file = (req as any).file;
+  
+  if (!file) {
+    return next(); // Let the route handler deal with missing file
+  }
+
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    return res.status(413).json({
+      error: "File too large",
+      maxSize: `${MAX_FILE_SIZE / 1024 / 1024}MB`,
+    });
+  }
+
+  // Check MIME type
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    return res.status(415).json({
+      error: "Invalid file type",
+      allowedTypes: ALLOWED_MIME_TYPES,
+    });
+  }
+
+  // Check for executable extensions
+  const dangerousExtensions = [".exe", ".bat", ".cmd", ".sh", ".ps1", ".js", ".php"];
+  const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf("."));
+  if (dangerousExtensions.includes(ext)) {
+    return res.status(415).json({
+      error: "Executable files are not allowed",
+    });
+  }
+
+  next();
+}
+
+// ============================================================================
+// ANALYTICS VALIDATION
+// ============================================================================
+export async function validateAnalyticsRequest(req: Request, res: Response, next: NextFunction) {
+  const { contentId } = req.params;
+
+  if (!contentId) {
+    return res.status(400).json({ error: "Content ID required" });
+  }
+
+  // Validate contentId exists
+  const content = await storage.getContentById(contentId);
+  if (!content) {
+    return res.status(404).json({ error: "Content not found" });
+  }
+
+  // Only allow tracking views for published content
+  if (content.status !== "published") {
+    return res.status(400).json({ error: "Cannot track views for unpublished content" });
+  }
+
+  next();
+}
+
+// ============================================================================
+// ERROR HANDLING (no stack traces to client)
+// ============================================================================
+export function secureErrorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
+  // Log full error for debugging (but never log secrets)
+  const sanitizedError = {
+    message: err.message,
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+  };
+  console.error("[Error]", JSON.stringify(sanitizedError));
+
+  // Never expose stack traces or internal details to clients
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  // Check for specific error types
+  if (err.name === "ValidationError") {
+    return res.status(400).json({ error: "Validation error", message: err.message });
+  }
+
+  if (err.name === "UnauthorizedError") {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  // Generic error response (no details)
+  res.status(500).json({ error: "Internal server error" });
+}
+
+// ============================================================================
+// SESSION/COOKIE CONFIGURATION
+// ============================================================================
+export const sessionConfig = {
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production" || !!process.env.REPLIT_DEV_DOMAIN,
+    sameSite: "lax" as const,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  },
+};
+
+// ============================================================================
+// AUDIT LOG PROTECTION - No delete/update operations
+// ============================================================================
+export function auditLogReadOnly(req: Request, res: Response, next: NextFunction) {
+  if (["DELETE", "PATCH", "PUT"].includes(req.method)) {
+    return res.status(403).json({
+      error: "Audit logs are immutable",
+      message: "Audit logs cannot be modified or deleted",
+    });
+  }
+  next();
+}

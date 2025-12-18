@@ -35,6 +35,20 @@ import {
 } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
+import {
+  safeMode,
+  rateLimiters,
+  checkAiUsageLimit,
+  requireAuth,
+  requirePermission,
+  requireOwnContentOrPermission,
+  checkReadOnlyMode,
+  csrfProtection,
+  validateMediaUpload,
+  validateAnalyticsRequest,
+  secureErrorHandler,
+  auditLogReadOnly,
+} from "./security";
 import * as fs from "fs";
 import * as path from "path";
 import { 
@@ -48,41 +62,8 @@ import {
   type ImageGenerationOptions
 } from "./ai-generator";
 
-// Permission checking utilities
+// Permission checking utilities (imported from security.ts for route-level checks)
 type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
-
-function hasPermission(role: UserRole, permission: PermissionKey): boolean {
-  const permissions = ROLE_PERMISSIONS[role];
-  return permissions ? permissions[permission] : false;
-}
-
-// Authentication middleware - requires valid Replit Auth session
-function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const user = req.user as any;
-  if (!req.isAuthenticated() || !user?.claims?.sub) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-  next();
-}
-
-function requirePermission(permission: PermissionKey) {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    const user = req.user as any;
-    if (!req.isAuthenticated() || !user?.claims?.sub) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-    const dbUser = await storage.getUser(user.claims.sub);
-    const userRole: UserRole = dbUser?.role || "viewer";
-    if (!hasPermission(userRole, permission)) {
-      return res.status(403).json({ 
-        error: "Permission denied", 
-        required: permission,
-        currentRole: userRole 
-      });
-    }
-    next();
-  };
-}
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -582,15 +563,18 @@ export async function registerRoutes(
   }
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
   
-  // Setup Replit Auth
+  // Setup Replit Auth FIRST (so CSRF can use req.isAuthenticated)
   await setupAuth(app);
+  
+  // Global CSRF protection for admin write endpoints (AFTER setupAuth)
+  app.use("/api", csrfProtection);
   
   // Admin credentials from environment variables (hashed password stored in env)
   const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
   const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
   
-  // Username/password login endpoint
-  app.post('/api/auth/login', async (req: Request, res: Response) => {
+  // Username/password login endpoint (with rate limiting)
+  app.post('/api/auth/login', rateLimiters.auth, async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
       
@@ -1110,8 +1094,8 @@ export async function registerRoutes(
     }
   });
 
-  // TEMPORARILY no auth for testing (TODO: restore requirePermission("canCreate"))
-  app.post("/api/contents", async (req, res) => {
+  // Content creation - requires authentication and permission
+  app.post("/api/contents", requirePermission("canCreate"), checkReadOnlyMode, rateLimiters.contentWrite, async (req, res) => {
     try {
       const parsed = insertContentSchema.parse(req.body);
       
@@ -1169,8 +1153,8 @@ export async function registerRoutes(
     }
   });
 
-  // TEMPORARILY no auth for testing (TODO: restore requirePermission("canEdit"))
-  app.patch("/api/contents/:id", async (req, res) => {
+  // Content update - requires authentication and permission (Author/Contributor can edit own content)
+  app.patch("/api/contents/:id", requireOwnContentOrPermission("canEdit"), checkReadOnlyMode, rateLimiters.contentWrite, async (req, res) => {
     try {
       const existingContent = await storage.getContent(req.params.id);
       if (!existingContent) {
@@ -1257,7 +1241,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/contents/:id/versions/:versionId/restore", requireAuth, async (req, res) => {
+  app.post("/api/contents/:id/versions/:versionId/restore", requireAuth, checkReadOnlyMode, async (req, res) => {
     try {
       const version = await storage.getContentVersion(req.params.versionId);
       if (!version || version.contentId !== req.params.id) {
@@ -1335,7 +1319,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/contents/:id/translations", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/contents/:id/translations", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
       const content = await storage.getContent(req.params.id);
       if (!content) {
@@ -1363,7 +1347,7 @@ export async function registerRoutes(
     reviewedBy: z.string().optional(),
   });
 
-  app.patch("/api/translations/:id", requirePermission("canEdit"), async (req, res) => {
+  app.patch("/api/translations/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const parsed = updateTranslationSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -1380,7 +1364,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/translations/:id", requirePermission("canDelete"), async (req, res) => {
+  app.delete("/api/translations/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
       await storage.deleteTranslation(req.params.id);
       res.status(204).send();
@@ -1390,8 +1374,8 @@ export async function registerRoutes(
     }
   });
 
-  // TEMPORARILY no auth for testing (TODO: restore requirePermission("canDelete"))
-  app.delete("/api/contents/:id", async (req, res) => {
+  // Content deletion - requires authentication and permission
+  app.delete("/api/contents/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
       const existingContent = await storage.getContent(req.params.id);
       await storage.deleteContent(req.params.id);
@@ -1431,7 +1415,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/rss-feeds", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/rss-feeds", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
       const parsed = insertRssFeedSchema.parse(req.body);
       const feed = await storage.createRssFeed(parsed);
@@ -1445,7 +1429,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/rss-feeds/:id", requirePermission("canEdit"), async (req, res) => {
+  app.patch("/api/rss-feeds/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const feed = await storage.updateRssFeed(req.params.id, req.body);
       if (!feed) {
@@ -1458,7 +1442,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/rss-feeds/:id", requirePermission("canDelete"), async (req, res) => {
+  app.delete("/api/rss-feeds/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
       await storage.deleteRssFeed(req.params.id);
       res.status(204).send();
@@ -1468,7 +1452,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/rss-feeds/:id/fetch", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/rss-feeds/:id/fetch", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
       const feed = await storage.getRssFeed(req.params.id);
       if (!feed) {
@@ -1513,7 +1497,7 @@ export async function registerRoutes(
     return `fp_${Math.abs(hash).toString(36)}`;
   }
 
-  app.post("/api/rss-feeds/:id/import", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/rss-feeds/:id/import", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
       const feed = await storage.getRssFeed(req.params.id);
       if (!feed) {
@@ -1650,7 +1634,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/affiliate-links", requirePermission("canAccessAffiliates"), async (req, res) => {
+  app.post("/api/affiliate-links", requirePermission("canAccessAffiliates"), checkReadOnlyMode, async (req, res) => {
     try {
       const parsed = insertAffiliateLinkSchema.parse(req.body);
       const link = await storage.createAffiliateLink(parsed);
@@ -1664,7 +1648,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/affiliate-links/:id", requirePermission("canAccessAffiliates"), async (req, res) => {
+  app.patch("/api/affiliate-links/:id", requirePermission("canAccessAffiliates"), checkReadOnlyMode, async (req, res) => {
     try {
       const link = await storage.updateAffiliateLink(req.params.id, req.body);
       if (!link) {
@@ -1677,7 +1661,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/affiliate-links/:id", requirePermission("canAccessAffiliates"), async (req, res) => {
+  app.delete("/api/affiliate-links/:id", requirePermission("canAccessAffiliates"), checkReadOnlyMode, async (req, res) => {
     try {
       await storage.deleteAffiliateLink(req.params.id);
       res.status(204).send();
@@ -1710,7 +1694,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/media/upload", requirePermission("canAccessMediaLibrary"), upload.single("file"), async (req, res) => {
+  app.post("/api/media/upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.single("file"), validateMediaUpload, async (req, res) => {
     let localPath: string | null = null;
     let objectPath: string | null = null;
     
@@ -1759,7 +1743,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/media/:id", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+  app.patch("/api/media/:id", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, async (req, res) => {
     try {
       const file = await storage.updateMediaFile(req.params.id, req.body);
       if (!file) {
@@ -1772,7 +1756,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/media/:id", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+  app.delete("/api/media/:id", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, async (req, res) => {
     try {
       const file = await storage.getMediaFile(req.params.id);
       if (file) {
@@ -1813,7 +1797,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/internal-links", requirePermission("canEdit"), async (req, res) => {
+  app.post("/api/internal-links", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const link = await storage.createInternalLink(req.body);
       res.status(201).json(link);
@@ -1823,7 +1807,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/internal-links/:id", requirePermission("canEdit"), async (req, res) => {
+  app.delete("/api/internal-links/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       await storage.deleteInternalLink(req.params.id);
       res.status(204).send();
@@ -1833,11 +1817,16 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ai/generate", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/generate", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     try {
       const openai = getOpenAIClient();
       if (!openai) {
         return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      }
+      
+      // Check safe mode
+      if (safeMode.aiDisabled) {
+        return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
       }
 
       const { type, topic, keywords, tone = "informative" } = req.body;
@@ -1897,7 +1886,10 @@ Format the response as JSON with the following structure:
     }
   });
 
-  app.post("/api/ai/suggest-internal-links", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/suggest-internal-links", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -1939,7 +1931,10 @@ Format the response as JSON with the following structure:
   });
 
   // Comprehensive AI Article Generator - Full Spec Implementation
-  app.post("/api/ai/generate-article", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/generate-article", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -2087,7 +2082,10 @@ Return valid JSON only.`;
     }
   });
 
-  app.post("/api/ai/generate-seo-schema", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/generate-seo-schema", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -2130,7 +2128,10 @@ Return valid JSON-LD that can be embedded in a webpage.`,
   });
 
   // Full content generation endpoints
-  app.post("/api/ai/generate-hotel", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/generate-hotel", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
     try {
       const { name } = req.body;
       if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -2150,7 +2151,10 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     }
   });
 
-  app.post("/api/ai/generate-attraction", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/generate-attraction", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
     try {
       const { name } = req.body;
       if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -2170,7 +2174,10 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     }
   });
 
-  app.post("/api/ai/generate-article", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/generate-article-simple", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
     try {
       const { topic, category } = req.body;
       if (!topic || typeof topic !== "string" || topic.trim().length === 0) {
@@ -2191,7 +2198,10 @@ Return valid JSON-LD that can be embedded in a webpage.`,
   });
 
   // AI Image Generation endpoint
-  app.post("/api/ai/generate-images", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/generate-images", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
     try {
       const { contentType, title, description, location, generateHero, generateContentImages: genContentImages, contentImageCount } = req.body;
 
@@ -2273,7 +2283,10 @@ Return valid JSON-LD that can be embedded in a webpage.`,
   });
 
   // Generate single image with custom prompt
-  app.post("/api/ai/generate-single-image", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/generate-single-image", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
     try {
       const { prompt, size, quality, style, filename } = req.body;
 
@@ -2330,7 +2343,10 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     }
   });
 
-  app.post("/api/ai/block-action", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/block-action", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -2395,7 +2411,10 @@ Return valid JSON-LD that can be embedded in a webpage.`,
   });
 
   // AI Assistant Chat
-  app.post("/api/ai/assistant", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/ai/assistant", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
     try {
       const openai = getOpenAIClient();
       if (!openai) {
@@ -2872,7 +2891,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/keywords", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/keywords", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
       const parsed = insertKeywordRepositorySchema.parse(req.body);
       const item = await storage.createKeyword(parsed);
@@ -2886,7 +2905,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.patch("/api/keywords/:id", requirePermission("canEdit"), async (req, res) => {
+  app.patch("/api/keywords/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const item = await storage.updateKeyword(req.params.id, req.body);
       if (!item) {
@@ -2899,7 +2918,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.delete("/api/keywords/:id", requirePermission("canDelete"), async (req, res) => {
+  app.delete("/api/keywords/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
       await storage.deleteKeyword(req.params.id);
       res.status(204).send();
@@ -2909,7 +2928,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/keywords/:id/use", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/keywords/:id/use", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
       const item = await storage.incrementKeywordUsage(req.params.id);
       if (!item) {
@@ -2923,7 +2942,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // Bulk import keywords
-  app.post("/api/keywords/bulk-import", requirePermission("canManageSettings"), async (req, res) => {
+  app.post("/api/keywords/bulk-import", requirePermission("canManageSettings"), checkReadOnlyMode, async (req, res) => {
     try {
       const { keywords } = req.body;
       if (!Array.isArray(keywords) || keywords.length === 0) {
@@ -3025,7 +3044,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/users", requirePermission("canManageUsers"), async (req, res) => {
+  app.post("/api/users", requirePermission("canManageUsers"), checkReadOnlyMode, async (req, res) => {
     try {
       const { username, password, firstName, lastName, email, role } = req.body;
       
@@ -3079,7 +3098,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.patch("/api/users/:id", requirePermission("canManageUsers"), async (req, res) => {
+  app.patch("/api/users/:id", requirePermission("canManageUsers"), checkReadOnlyMode, async (req, res) => {
     try {
       const existingUser = await storage.getUser(req.params.id);
       
@@ -3114,7 +3133,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.delete("/api/users/:id", requirePermission("canManageUsers"), async (req, res) => {
+  app.delete("/api/users/:id", requirePermission("canManageUsers"), checkReadOnlyMode, async (req, res) => {
     try {
       const existingUser = await storage.getUser(req.params.id);
       await storage.deleteUser(req.params.id);
@@ -3159,7 +3178,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/homepage-promotions", requirePermission("canEdit"), async (req, res) => {
+  app.post("/api/homepage-promotions", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const parsed = insertHomepagePromotionSchema.parse(req.body);
       const promotion = await storage.createHomepagePromotion(parsed);
@@ -3173,7 +3192,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.patch("/api/homepage-promotions/:id", requirePermission("canEdit"), async (req, res) => {
+  app.patch("/api/homepage-promotions/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       // Validate update payload - only allow specific fields
       const updateSchema = z.object({
@@ -3198,7 +3217,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.delete("/api/homepage-promotions/:id", requirePermission("canEdit"), async (req, res) => {
+  app.delete("/api/homepage-promotions/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       await storage.deleteHomepagePromotion(req.params.id);
       res.status(204).send();
@@ -3208,7 +3227,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/homepage-promotions/reorder", requirePermission("canEdit"), async (req, res) => {
+  app.post("/api/homepage-promotions/reorder", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const reorderSchema = z.object({
         section: z.enum(["featured", "attractions", "hotels", "articles", "trending"]),
@@ -3270,13 +3289,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/analytics/record-view/:contentId", async (req, res) => {
+  app.post("/api/analytics/record-view/:contentId", rateLimiters.analytics, validateAnalyticsRequest, async (req, res) => {
     try {
       const { contentId } = req.params;
-      const content = await storage.getContent(contentId);
-      if (!content) {
-        return res.json({ success: true });
-      }
       await storage.recordContentView(contentId, {
         userAgent: req.headers["user-agent"],
         referrer: req.headers.referer,
@@ -3289,8 +3304,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  // Newsletter subscription (public) - Double Opt-In flow
-  app.post("/api/newsletter/subscribe", async (req, res) => {
+  // Newsletter subscription (public) - Double Opt-In flow with rate limiting
+  app.post("/api/newsletter/subscribe", rateLimiters.newsletter, async (req, res) => {
     try {
       const { email, firstName, lastName, source } = req.body;
       if (!email || typeof email !== "string" || !email.includes("@")) {
@@ -3621,7 +3636,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/campaigns", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/campaigns", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
       const user = req.user as any;
       const campaignData = {
@@ -3637,7 +3652,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.patch("/api/campaigns/:id", requirePermission("canEdit"), async (req, res) => {
+  app.patch("/api/campaigns/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const { id } = req.params;
       const existing = await storage.getCampaign(id);
@@ -3657,7 +3672,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.delete("/api/campaigns/:id", requirePermission("canDelete"), async (req, res) => {
+  app.delete("/api/campaigns/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
       const { id } = req.params;
       const existing = await storage.getCampaign(id);
@@ -4092,7 +4107,17 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  // Audit Logs Routes (admin only)
+  // Audit Logs Routes (admin only) - Read-only, no modifications allowed
+  app.all("/api/audit-logs", (req, res, next) => {
+    if (["DELETE", "PATCH", "PUT", "POST"].includes(req.method)) {
+      return res.status(403).json({
+        error: "Audit logs are immutable",
+        message: "Audit logs cannot be modified or deleted",
+      });
+    }
+    next();
+  });
+  
   app.get("/api/audit-logs", requirePermission("canViewAuditLogs"), async (req, res) => {
     try {
       const { userId, entityType, entityId, actionType, limit, offset } = req.query;
@@ -4151,7 +4176,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/clusters", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/clusters", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
       const { name, slug, description, pillarContentId, primaryKeyword, color } = req.body;
       if (!name || !slug) {
@@ -4176,7 +4201,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.patch("/api/clusters/:id", requirePermission("canEdit"), async (req, res) => {
+  app.patch("/api/clusters/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const { name, slug, description, pillarContentId, primaryKeyword, color } = req.body;
       const cluster = await storage.updateContentCluster(req.params.id, {
@@ -4197,7 +4222,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.delete("/api/clusters/:id", requirePermission("canDelete"), async (req, res) => {
+  app.delete("/api/clusters/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
       await storage.deleteContentCluster(req.params.id);
       res.json({ success: true });
@@ -4208,7 +4233,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // Cluster Members Routes
-  app.post("/api/clusters/:clusterId/members", requirePermission("canEdit"), async (req, res) => {
+  app.post("/api/clusters/:clusterId/members", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const { contentId, position } = req.body;
       if (!contentId) {
@@ -4226,7 +4251,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.delete("/api/clusters/:clusterId/members/:memberId", requirePermission("canEdit"), async (req, res) => {
+  app.delete("/api/clusters/:clusterId/members/:memberId", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       await storage.removeClusterMember(req.params.memberId);
       res.json({ success: true });
@@ -4236,7 +4261,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.patch("/api/clusters/:clusterId/members/:memberId", requirePermission("canEdit"), async (req, res) => {
+  app.patch("/api/clusters/:clusterId/members/:memberId", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const { position } = req.body;
       const member = await storage.updateClusterMemberPosition(req.params.memberId, position);
@@ -4293,7 +4318,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/tags", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/tags", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
       const parseResult = insertTagSchema.safeParse(req.body);
       if (!parseResult.success) {
@@ -4312,7 +4337,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.patch("/api/tags/:id", requirePermission("canEdit"), async (req, res) => {
+  app.patch("/api/tags/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const parseResult = insertTagSchema.partial().safeParse(req.body);
       if (!parseResult.success) {
@@ -4330,7 +4355,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.delete("/api/tags/:id", requirePermission("canDelete"), async (req, res) => {
+  app.delete("/api/tags/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
       await storage.deleteTag(req.params.id);
       res.json({ success: true });
@@ -4351,7 +4376,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/content/:contentId/tags", requirePermission("canEdit"), async (req, res) => {
+  app.post("/api/content/:contentId/tags", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const { tagId } = req.body;
       if (!tagId) {
@@ -4368,7 +4393,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.delete("/api/content/:contentId/tags/:tagId", requirePermission("canEdit"), async (req, res) => {
+  app.delete("/api/content/:contentId/tags/:tagId", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       await storage.removeContentTag(req.params.contentId, req.params.tagId);
       res.json({ success: true });
@@ -4557,7 +4582,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  app.post("/api/content-templates/:id/apply", requirePermission("canCreate"), async (req, res) => {
+  app.post("/api/content-templates/:id/apply", requirePermission("canCreate"), checkReadOnlyMode, rateLimiters.contentWrite, async (req, res) => {
     try {
       const template = await storage.getContentTemplate(req.params.id);
       if (!template) {
@@ -4583,6 +4608,54 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       res.status(500).json({ error: "Failed to apply template" });
     }
   });
+
+  // ============================================================================
+  // SITEMAP - Only published content (Security requirement)
+  // ============================================================================
+  app.get("/sitemap.xml", async (req, res) => {
+    try {
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : 'https://dubaitravel.com';
+      
+      // Only fetch published content
+      const contents = await storage.getContentsWithRelations({ status: "published" });
+      
+      const urls = contents
+        .filter(c => c.status === "published") // Double-check published status
+        .map(content => {
+          const lastmod = content.updatedAt || content.createdAt || new Date();
+          const priority = content.type === "attraction" ? "0.9" : content.type === "hotel" ? "0.9" : "0.7";
+          return `
+    <url>
+      <loc>${baseUrl}/${content.type}/${content.slug}</loc>
+      <lastmod>${new Date(lastmod).toISOString().split('T')[0]}</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>${priority}</priority>
+    </url>`;
+        }).join("");
+      
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+      <loc>${baseUrl}/</loc>
+      <changefreq>daily</changefreq>
+      <priority>1.0</priority>
+    </url>${urls}
+</urlset>`;
+      
+      res.set("Content-Type", "application/xml");
+      res.send(sitemap);
+    } catch (error) {
+      console.error("Error generating sitemap:", error);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  // ============================================================================
+  // SECURE ERROR HANDLER (no stack traces to client)
+  // ============================================================================
+  app.use(secureErrorHandler);
 
   return httpServer;
 }
