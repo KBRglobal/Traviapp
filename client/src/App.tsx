@@ -60,6 +60,15 @@ const CaseStudyGoldenVisa = lazy(() => import("@/pages/case-study-golden-visa"))
 const Compare6040vs8020 = lazy(() => import("@/pages/compare-60-40-vs-80-20"));
 const CompareSobhaVsMeraas = lazy(() => import("@/pages/compare-sobha-vs-meraas"));
 const CompareCryptoVsBankTransfer = lazy(() => import("@/pages/compare-crypto-vs-bank-transfer"));
+const CaseStudyExpatFamily = lazy(() => import("@/pages/case-study-expat-family"));
+const CaseStudyInvestorFlip = lazy(() => import("@/pages/case-study-investor-flip"));
+const ToolsCurrencyConverter = lazy(() => import("@/pages/tools-currency-converter"));
+const CompareBusinessBayVsJLT = lazy(() => import("@/pages/compare-business-bay-vs-jlt"));
+const CompareNewVsResale = lazy(() => import("@/pages/compare-new-vs-resale"));
+const ToolsStampDutyCalculator = lazy(() => import("@/pages/tools-stamp-duty-calculator"));
+const CompareNakheelVsAzizi = lazy(() => import("@/pages/compare-nakheel-vs-azizi"));
+const CompareVillaVsApartment = lazy(() => import("@/pages/compare-villa-vs-apartment"));
+const ToolsRentalYieldCalculator = lazy(() => import("@/pages/tools-rental-yield-calculator"));
 const GlossaryHub = lazy(() => import("@/pages/glossary-hub"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
@@ -288,6 +297,15 @@ function App() {
               <Route path="/compare-60-40-vs-80-20" component={Compare6040vs8020} />
               <Route path="/compare-sobha-vs-meraas" component={CompareSobhaVsMeraas} />
               <Route path="/compare-crypto-vs-bank-transfer" component={CompareCryptoVsBankTransfer} />
+              <Route path="/case-study-expat-family" component={CaseStudyExpatFamily} />
+              <Route path="/case-study-investor-flip" component={CaseStudyInvestorFlip} />
+              <Route path="/tools-currency-converter" component={ToolsCurrencyConverter} />
+              <Route path="/compare-business-bay-vs-jlt" component={CompareBusinessBayVsJLT} />
+              <Route path="/compare-new-vs-resale" component={CompareNewVsResale} />
+              <Route path="/tools-fees-calculator" component={ToolsStampDutyCalculator} />
+              <Route path="/compare-nakheel-vs-azizi" component={CompareNakheelVsAzizi} />
+              <Route path="/compare-villa-vs-apartment" component={CompareVillaVsApartment} />
+              <Route path="/tools-rental-yield-calculator" component={ToolsRentalYieldCalculator} />
               <Route path="/glossary" component={GlossaryHub} />
               <Route path="/" component={PublicHome} />
               <Route component={NotFound} />
