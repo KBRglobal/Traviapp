@@ -5,8 +5,9 @@ import {
   Mail, User, ArrowRight, Landmark, ChevronLeft,
   Sparkles, Bitcoin, Banknote, Building, CalendarDays,
   Key, BadgeCheck, Wallet, Lock, Zap, Heart, X, ThumbsDown,
-  CreditCard, Search
+  CreditCard, Search, Calculator, FileText, Compass, BookOpen, Scale, Users
 } from "lucide-react";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
@@ -1242,6 +1243,96 @@ export default function PublicOffPlan() {
                 </AccordionItem>
               ))}
             </Accordion>
+          </div>
+        </section>
+
+        {/* Resources Hub - Links to all tools, comparisons, case studies */}
+        <section className="py-16 md:py-20 bg-muted/30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Investment Resources</h2>
+              <p className="text-muted-foreground text-lg">Free tools, guides, and real success stories</p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Calculator Tools */}
+              <Card className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Calculator className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <h3 className="font-bold">Calculator Tools</h3>
+                </div>
+                <ul className="space-y-2">
+                  <li><Link href="/tools-roi-calculator" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-tool-roi">ROI Calculator</Link></li>
+                  <li><Link href="/tools-payment-calculator" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-tool-payment">Payment Plan Calculator</Link></li>
+                  <li><Link href="/tools-affordability-calculator" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-tool-affordability">Affordability Calculator</Link></li>
+                  <li><Link href="/tools-currency-converter" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-tool-currency">Currency Converter</Link></li>
+                  <li><Link href="/tools-fees-calculator" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-tool-fees">Fees Calculator</Link></li>
+                  <li><Link href="/tools-rental-yield-calculator" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-tool-rental">Rental Yield Calculator</Link></li>
+                  <li><Link href="/tools-mortgage-calculator" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-tool-mortgage">Mortgage Calculator</Link></li>
+                </ul>
+              </Card>
+
+              {/* Comparison Guides */}
+              <Card className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <Scale className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <h3 className="font-bold">Comparison Guides</h3>
+                </div>
+                <ul className="space-y-2">
+                  <li><Link href="/compare-off-plan-vs-ready" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-compare-offplan-ready">Off-Plan vs Ready</Link></li>
+                  <li><Link href="/compare-jvc-vs-dubai-south" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-compare-jvc-south">JVC vs Dubai South</Link></li>
+                  <li><Link href="/compare-emaar-vs-damac" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-compare-emaar-damac">Emaar vs DAMAC</Link></li>
+                  <li><Link href="/compare-downtown-vs-marina" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-compare-downtown-marina">Downtown vs Marina</Link></li>
+                  <li><Link href="/compare-crypto-vs-bank-transfer" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-compare-crypto-bank">Crypto vs Bank Payment</Link></li>
+                  <li><Link href="/compare-villa-vs-apartment" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-compare-villa-apt">Villa vs Apartment</Link></li>
+                  <li><Link href="/compare-studio-vs-1bed" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-compare-studio-1bed">Studio vs 1-Bedroom</Link></li>
+                  <li><Link href="/glossary" className="text-sm text-primary hover:underline transition-colors block font-medium" data-testid="link-glossary">View All Terms</Link></li>
+                </ul>
+              </Card>
+
+              {/* Case Studies */}
+              <Card className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-green-600" />
+                  </div>
+                  <h3 className="font-bold">Investor Case Studies</h3>
+                </div>
+                <ul className="space-y-2">
+                  <li><Link href="/case-study-jvc-investor" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-case-jvc">JVC Studio Investor</Link></li>
+                  <li><Link href="/case-study-crypto-buyer" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-case-crypto">Crypto Buyer Success</Link></li>
+                  <li><Link href="/case-study-golden-visa" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-case-goldenvisa">Golden Visa Journey</Link></li>
+                  <li><Link href="/case-study-expat-family" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-case-expat">Expat Family Home</Link></li>
+                  <li><Link href="/case-study-investor-flip" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-case-flip">Investor Flip Strategy</Link></li>
+                  <li><Link href="/case-study-portfolio-diversification" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-case-portfolio">Portfolio Diversification</Link></li>
+                  <li><Link href="/case-study-off-plan-launch" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-case-launch">Off-Plan Launch Day</Link></li>
+                  <li><Link href="/case-study-retirement-planning" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-case-retirement">Retirement Planning</Link></li>
+                </ul>
+              </Card>
+
+              {/* Guides & Glossary */}
+              <Card className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <BookOpen className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <h3 className="font-bold">Guides & Resources</h3>
+                </div>
+                <ul className="space-y-2">
+                  <li><Link href="/dubai-off-plan-investment-guide" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-investment">Investment Guide</Link></li>
+                  <li><Link href="/how-to-buy-dubai-off-plan" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-howtobuy">How to Buy Off-Plan</Link></li>
+                  <li><Link href="/dubai-off-plan-payment-plans" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-payment">Payment Plan Guide</Link></li>
+                  <li><Link href="/best-off-plan-projects-dubai-2025" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-best2025">Best Projects 2025</Link></li>
+                  <li><Link href="/dubai-roi-rental-yields" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-roi">ROI & Yields Guide</Link></li>
+                  <li><Link href="/dubai-legal-security-guide" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-legal">Legal & Security Guide</Link></li>
+                  <li><Link href="/glossary" className="text-sm text-primary hover:underline transition-colors block font-medium" data-testid="link-glossary-main">Glossary (25+ Terms)</Link></li>
+                </ul>
+              </Card>
+            </div>
           </div>
         </section>
 
