@@ -1,4 +1,4 @@
-import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail } from "lucide-react";
+import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail, Globe } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -105,13 +105,9 @@ export default function PublicHome() {
       .slice(0, 6);
   };
 
-  const trendingContent = getActiveContent(featuredPromotions).length > 0 
-    ? getActiveContent(featuredPromotions) 
-    : (publishedContent?.slice(0, 4) || []);
+  const trendingContent = getActiveContent(featuredPromotions);
   
-  const exploreContent = getActiveContent(attractionsPromotions).length > 0
-    ? getActiveContent(attractionsPromotions)
-    : (publishedContent?.filter(c => c.type === "attraction").slice(0, 4) || []);
+  const exploreContent = getActiveContent(attractionsPromotions);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -310,54 +306,64 @@ export default function PublicHome() {
               </p>
             </div>
 
-            {/* Tilted Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {exploreContent.slice(0, 4).map((content, index) => (
-                <Link 
-                  key={content.id} 
-                  href={getContentPath(content)}
-                  data-testid={`explore-card-${content.id}`}
-                >
-                  <article 
-                    className={`tilted-card relative overflow-hidden rounded-2xl shadow-xl cursor-pointer aspect-[3/4] ${
-                      index % 2 === 0 ? 'tilt-left-sm' : 'tilt-right-sm'
-                    }`}
-                  >
-                    <img
-                      src={content.heroImage || dubaiImages[index % dubaiImages.length]}
-                      alt={content.heroImageAlt || content.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                    
-                    <div className="absolute top-4 left-4">
-                      <Badge className="bg-white/90 text-[#6C5CE7] border-0 text-xs font-semibold">
-                        {content.type}
-                      </Badge>
-                    </div>
+            {/* Content or Coming Soon */}
+            {exploreContent.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                  {exploreContent.slice(0, 4).map((content, index) => (
+                    <Link 
+                      key={content.id} 
+                      href={getContentPath(content)}
+                      data-testid={`explore-card-${content.id}`}
+                    >
+                      <article 
+                        className={`tilted-card relative overflow-hidden rounded-2xl shadow-xl cursor-pointer aspect-[3/4] ${
+                          index % 2 === 0 ? 'tilt-left-sm' : 'tilt-right-sm'
+                        }`}
+                      >
+                        <img
+                          src={content.heroImage || dubaiImages[index % dubaiImages.length]}
+                          alt={content.heroImageAlt || content.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                        
+                        <div className="absolute top-4 left-4">
+                          <Badge className="bg-white/90 text-[#6C5CE7] border-0 text-xs font-semibold">
+                            {content.type}
+                          </Badge>
+                        </div>
 
-                    <div className="absolute bottom-0 left-0 right-0 p-5">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Star className="w-4 h-4 fill-[#FACC15] text-[#FACC15]" />
-                        <span className="text-white text-sm font-medium">4.8</span>
-                      </div>
-                      <h3 className="text-white font-bold text-lg line-clamp-2">
-                        {content.title}
-                      </h3>
-                    </div>
-                  </article>
-                </Link>
-              ))}
-            </div>
+                        <div className="absolute bottom-0 left-0 right-0 p-5">
+                          <h3 className="text-white font-bold text-lg line-clamp-2">
+                            {content.title}
+                          </h3>
+                        </div>
+                      </article>
+                    </Link>
+                  ))}
+                </div>
 
-            <div className="text-center mt-10">
-              <Link href="/attractions" data-testid="link-view-all-explore">
-                <Button className="btn-gold rounded-full px-8 py-6 text-lg" data-testid="button-view-all-explore">
-                  View All Attractions
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
-            </div>
+                <div className="text-center mt-10">
+                  <Link href="/attractions" data-testid="link-view-all-explore">
+                    <Button className="btn-gold rounded-full px-8 py-6 text-lg" data-testid="button-view-all-explore">
+                      View All Attractions
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center mx-auto mb-6">
+                  <MapPin className="w-10 h-10 text-[#6C5CE7]" />
+                </div>
+                <h3 className="text-2xl font-bold text-[#1E1B4B] mb-3">Coming Soon</h3>
+                <p className="text-[#64748B] max-w-md mx-auto">
+                  We're curating the best Dubai experiences for you. Check back soon for hand-picked destinations!
+                </p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -369,70 +375,88 @@ export default function PublicHome() {
           </div>
 
           <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="flex items-end justify-between mb-12">
+            <div className="flex items-end justify-between mb-12 gap-4 flex-wrap">
               <div>
                 <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-2">
                   Trending in Dubai
                 </h2>
                 <p className="text-xl text-[#64748B]">What everyone's talking about</p>
               </div>
-              <Link href="/articles" className="hidden sm:block" data-testid="link-view-all-trending">
-                <Button variant="outline" className="border-[#6C5CE7] text-[#6C5CE7] rounded-full px-6" data-testid="button-view-all-trending">
-                  View All <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </Link>
-            </div>
-
-            {/* Overlapping Cards Row */}
-            <div className="flex flex-wrap justify-center gap-6 lg:gap-0 lg:justify-start">
-              {trendingContent.slice(0, 4).map((content, index) => (
-                <Link 
-                  key={content.id} 
-                  href={getContentPath(content)}
-                  className={`w-full sm:w-72 lg:w-80 ${index > 0 ? 'lg:-ml-8' : ''}`}
-                  style={{ zIndex: 4 - index }}
-                  data-testid={`trending-card-${content.id}`}
-                >
-                  <article 
-                    className={`tilted-card relative overflow-hidden rounded-2xl shadow-2xl cursor-pointer aspect-[4/5] ${
-                      index === 0 ? '' : index === 1 ? 'tilt-right-sm' : index === 2 ? 'tilt-left-sm' : 'tilt-right-sm'
-                    }`}
-                  >
-                    <img
-                      src={content.heroImage || dubaiImages[index % dubaiImages.length]}
-                      alt={content.heroImageAlt || content.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    
-                    <div className="absolute top-4 right-4">
-                      <Badge className="bg-[#EC4899] text-white border-0 text-xs font-semibold">
-                        Hot
-                      </Badge>
-                    </div>
-
-                    <div className="absolute bottom-0 left-0 right-0 p-5">
-                      <span className="text-[#A855F7] text-sm font-medium uppercase tracking-wide mb-2 block">
-                        {content.type}
-                      </span>
-                      <h3 className="text-white font-bold text-xl line-clamp-2 mb-2">
-                        {content.title}
-                      </h3>
-                      <div className="flex items-center gap-3 text-white/70 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span>5 min</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 fill-[#FACC15] text-[#FACC15]" />
-                          <span>4.9</span>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
+              {trendingContent.length > 0 && (
+                <Link href="/articles" className="hidden sm:block" data-testid="link-view-all-trending">
+                  <Button variant="outline" className="border-[#6C5CE7] text-[#6C5CE7] rounded-full px-6" data-testid="button-view-all-trending">
+                    View All <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
                 </Link>
-              ))}
+              )}
             </div>
+
+            {/* Content or Coming Soon */}
+            {trendingContent.length > 0 ? (
+              <div className="flex flex-wrap justify-center gap-6 lg:gap-0 lg:justify-start">
+                {trendingContent.slice(0, 4).map((content, index) => (
+                  <Link 
+                    key={content.id} 
+                    href={getContentPath(content)}
+                    className={`w-full sm:w-72 lg:w-80 ${index > 0 ? 'lg:-ml-8' : ''}`}
+                    style={{ zIndex: 4 - index }}
+                    data-testid={`trending-card-${content.id}`}
+                  >
+                    <article 
+                      className={`tilted-card relative overflow-hidden rounded-2xl shadow-2xl cursor-pointer aspect-[4/5] ${
+                        index === 0 ? '' : index === 1 ? 'tilt-right-sm' : index === 2 ? 'tilt-left-sm' : 'tilt-right-sm'
+                      }`}
+                    >
+                      <img
+                        src={content.heroImage || dubaiImages[index % dubaiImages.length]}
+                        alt={content.heroImageAlt || content.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      
+                      <div className="absolute top-4 right-4">
+                        <Badge className="bg-[#EC4899] text-white border-0 text-xs font-semibold">
+                          Hot
+                        </Badge>
+                      </div>
+
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <span className="text-[#A855F7] text-sm font-medium uppercase tracking-wide mb-2 block">
+                          {content.type}
+                        </span>
+                        <h3 className="text-white font-bold text-xl line-clamp-2">
+                          {content.title}
+                        </h3>
+                      </div>
+                    </article>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 rounded-full bg-[#EC4899]/10 flex items-center justify-center mx-auto mb-6">
+                  <Star className="w-10 h-10 text-[#EC4899]" />
+                </div>
+                <h3 className="text-2xl font-bold text-[#1E1B4B] mb-3">Coming Soon</h3>
+                <p className="text-[#64748B] max-w-md mx-auto">
+                  We're gathering the hottest trends in Dubai. Stay tuned for exciting content!
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* REGION NOTICE - Dubai Only Banner */}
+        <section className="py-8 bg-gradient-to-r from-[#6C5CE7]/10 via-[#A855F7]/10 to-[#EC4899]/10 border-y border-[#6C5CE7]/20">
+          <div className="max-w-4xl mx-auto px-6 text-center">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <Globe className="w-6 h-6 text-[#6C5CE7]" />
+              <h3 className="text-lg font-semibold text-[#1E1B4B]">Currently Focused on Dubai</h3>
+            </div>
+            <p className="text-[#64748B]">
+              Travi is your dedicated Dubai travel companion. We're expanding to more destinations in the coming months - 
+              stay tuned for Abu Dhabi, Saudi Arabia, and beyond!
+            </p>
           </div>
         </section>
 

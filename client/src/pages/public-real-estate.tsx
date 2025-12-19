@@ -2,8 +2,8 @@ import { useState } from "react";
 import { 
   Building2, Home, TrendingUp, MapPin, DollarSign, 
   Briefcase, Globe, Shield, Clock, CheckCircle2, ChevronDown,
-  Phone, Mail, User, X, ArrowRight, Landmark, CreditCard,
-  FileText, Sparkles, Users, Palmtree, Waves, Mountain
+  Mail, User, ArrowRight, Landmark, CreditCard,
+  FileText, Sparkles, Users, Palmtree, Waves, Mountain, MessageCircle
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
@@ -218,17 +218,20 @@ function ContactPopup({
     email: "",
     phone: "",
     message: inquiry || "",
+    consentMarketing: false,
+    consentPrivacy: false,
   });
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.consentPrivacy) return;
     setSubmitted(true);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Contact Thrivestate</DialogTitle>
           <DialogDescription>
@@ -258,13 +261,13 @@ function ContactPopup({
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Name</label>
+              <label className="text-sm font-medium mb-1.5 block">Full Name *</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
                   required
-                  placeholder="Your name"
+                  placeholder="Your full name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border bg-background"
@@ -274,7 +277,7 @@ function ContactPopup({
             </div>
             
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Email</label>
+              <label className="text-sm font-medium mb-1.5 block">Email Address *</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
@@ -290,23 +293,19 @@ function ContactPopup({
             </div>
             
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Phone</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="tel"
-                  required
-                  placeholder="+971 50 123 4567"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border bg-background"
-                  data-testid="input-contact-phone"
-                />
-              </div>
+              <label className="text-sm font-medium mb-1.5 block">Phone Number (Optional)</label>
+              <input
+                type="tel"
+                placeholder="+971 50 123 4567"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-lg border bg-background"
+                data-testid="input-contact-phone"
+              />
             </div>
             
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Message (Optional)</label>
+              <label className="text-sm font-medium mb-1.5 block">Your Message (Optional)</label>
               <textarea
                 placeholder="Tell us about your property interests..."
                 value={formData.message}
@@ -316,14 +315,52 @@ function ContactPopup({
                 data-testid="input-contact-message"
               />
             </div>
+
+            {/* Consent Checkboxes */}
+            <div className="space-y-3 pt-2">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  required
+                  checked={formData.consentPrivacy}
+                  onChange={(e) => setFormData({ ...formData, consentPrivacy: e.target.checked })}
+                  className="mt-1 w-4 h-4 rounded border-gray-300"
+                  data-testid="checkbox-consent-privacy"
+                />
+                <span className="text-xs text-muted-foreground">
+                  I agree to the processing of my personal data by Thrivestate for the purpose of responding to my inquiry. 
+                  I understand my data will be handled in accordance with applicable privacy laws. *
+                </span>
+              </label>
+              
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.consentMarketing}
+                  onChange={(e) => setFormData({ ...formData, consentMarketing: e.target.checked })}
+                  className="mt-1 w-4 h-4 rounded border-gray-300"
+                  data-testid="checkbox-consent-marketing"
+                />
+                <span className="text-xs text-muted-foreground">
+                  I would like to receive marketing communications about real estate opportunities, market updates, and special offers from Thrivestate. (Optional)
+                </span>
+              </label>
+            </div>
             
-            <Button type="submit" className="w-full" size="lg" data-testid="button-contact-submit">
-              <Phone className="w-4 h-4 mr-2" />
-              Contact Expert
+            <Button 
+              type="submit" 
+              className="w-full" 
+              size="lg" 
+              disabled={!formData.consentPrivacy}
+              data-testid="button-contact-submit"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Send Inquiry
             </Button>
             
             <p className="text-xs text-center text-muted-foreground">
-              We respect your privacy. Your data will only be used to contact you.
+              Your inquiry will be forwarded to Thrivestate, a licensed real estate agency in Dubai. 
+              You can withdraw consent at any time by contacting us.
             </p>
           </form>
         )}
@@ -390,7 +427,7 @@ export default function PublicRealEstate() {
             onClick={() => openContactWith("")}
             data-testid="button-hero-contact"
           >
-            <Phone className="w-5 h-5 mr-2" />
+            <MessageCircle className="w-5 h-5 mr-2" />
             Contact Our Experts
           </Button>
           
@@ -503,7 +540,7 @@ export default function PublicRealEstate() {
                           onClick={() => openContactWith(`Interested in ${type.title}`)}
                           data-testid={`button-inquire-${type.title.toLowerCase().replace(/\s+/g, '-')}`}
                         >
-                          <Phone className="w-4 h-4 mr-2" />
+                          <MessageCircle className="w-4 h-4 mr-2" />
                           Inquire
                         </Button>
                       </div>
@@ -516,7 +553,7 @@ export default function PublicRealEstate() {
             <div className="text-center mt-10">
               <p className="text-muted-foreground mb-4">Not sure what's right for you?</p>
               <Button onClick={() => openContactWith("")} data-testid="button-contact-expert">
-                <Phone className="w-4 h-4 mr-2" />
+                <MessageCircle className="w-4 h-4 mr-2" />
                 Contact Thrivestate Experts
               </Button>
             </div>
@@ -594,7 +631,7 @@ export default function PublicRealEstate() {
                         onClick={() => openContactWith(`Interested in ${area.name}`)}
                         data-testid={`button-contact-${area.id}`}
                       >
-                        <Phone className="w-3.5 h-3.5 mr-2" />
+                        <MessageCircle className="w-3.5 h-3.5 mr-2" />
                         Contact About {area.name.split(' ')[0]}
                       </Button>
                     </div>
@@ -671,7 +708,7 @@ export default function PublicRealEstate() {
                 onClick={() => openContactWith("I want to start my property journey")}
                 data-testid="button-start-journey"
               >
-                <Phone className="w-4 h-4 mr-2" />
+                <MessageCircle className="w-4 h-4 mr-2" />
                 Start Your Property Journey
               </Button>
             </div>
@@ -717,7 +754,7 @@ export default function PublicRealEstate() {
               onClick={() => openContactWith("")}
               data-testid="button-final-cta"
             >
-              <Phone className="w-5 h-5 mr-2" />
+              <MessageCircle className="w-5 h-5 mr-2" />
               Contact Our Experts
             </Button>
             <p className="text-sm text-primary-foreground/60 mt-6">
