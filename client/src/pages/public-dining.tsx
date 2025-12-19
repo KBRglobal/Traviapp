@@ -332,7 +332,7 @@ export default function PublicDining() {
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.title.toLowerCase().includes(query) ||
         r.metaDescription?.toLowerCase().includes(query) ||
         r.dining?.location?.toLowerCase().includes(query) ||
@@ -344,7 +344,7 @@ export default function PublicDining() {
       const districtInfo = DUBAI_DINING_DISTRICTS.find(d => d.id === activeDistrict);
       if (districtInfo) {
         const districtName = districtInfo.name.toLowerCase();
-        filtered = filtered.filter(r => 
+        filtered = filtered.filter(r =>
           r.dining?.location?.toLowerCase().includes(districtName) ||
           r.dining?.location?.toLowerCase().includes(activeDistrict)
         );

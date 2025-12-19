@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -11,12 +11,44 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { initGA } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
-import ComingSoon from "@/pages/coming-soon";
-import Dashboard from "@/pages/dashboard";
-import ContentList from "@/pages/content-list";
-import ContentEditor from "@/pages/content-editor";
-// Public content viewer for all content types
-import PublicContentViewer from "@/pages/public-content-viewer";
+
+// Lazy load all pages for better performance
+const ComingSoon = lazy(() => import("@/pages/coming-soon"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const ContentList = lazy(() => import("@/pages/content-list"));
+const ContentEditor = lazy(() => import("@/pages/content-editor"));
+const PublicContentViewer = lazy(() => import("@/pages/public-content-viewer"));
+
+const RssFeeds = lazy(() => import("@/pages/rss-feeds"));
+const AffiliateLinks = lazy(() => import("@/pages/affiliate-links"));
+const MediaLibrary = lazy(() => import("@/pages/media-library"));
+const Settings = lazy(() => import("@/pages/settings"));
+const AIArticleGenerator = lazy(() => import("@/pages/ai-article-generator"));
+const TopicBankPage = lazy(() => import("@/pages/topic-bank"));
+const KeywordsPage = lazy(() => import("@/pages/keywords"));
+const ClustersPage = lazy(() => import("@/pages/clusters"));
+const TagsPage = lazy(() => import("@/pages/tags"));
+const UsersPage = lazy(() => import("@/pages/users"));
+const HomepagePromotions = lazy(() => import("@/pages/homepage-promotions"));
+const Analytics = lazy(() => import("@/pages/analytics"));
+const AuditLogs = lazy(() => import("@/pages/audit-logs"));
+const NewsletterSubscribers = lazy(() => import("@/pages/newsletter-subscribers"));
+const Campaigns = lazy(() => import("@/pages/campaigns"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Login = lazy(() => import("@/pages/login"));
+const AccessDenied = lazy(() => import("@/pages/access-denied"));
+
+// Eager load AI Assistant as it's critical UI
+import { AIAssistant } from "@/components/ai-assistant";
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="min-h-[400px] flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 // Admin list wrappers
 function AdminAttractions() {
@@ -43,71 +75,54 @@ function AdminEvents() {
 function AdminItineraries() {
   return <ContentList type="itinerary" />;
 }
-import RssFeeds from "@/pages/rss-feeds";
-import AffiliateLinks from "@/pages/affiliate-links";
-import MediaLibrary from "@/pages/media-library";
-import Settings from "@/pages/settings";
-import AIArticleGenerator from "@/pages/ai-article-generator";
-import TopicBankPage from "@/pages/topic-bank";
-import KeywordsPage from "@/pages/keywords";
-import ClustersPage from "@/pages/clusters";
-import TagsPage from "@/pages/tags";
-import UsersPage from "@/pages/users";
-import HomepagePromotions from "@/pages/homepage-promotions";
-import Analytics from "@/pages/analytics";
-import AuditLogs from "@/pages/audit-logs";
-import NewsletterSubscribers from "@/pages/newsletter-subscribers";
-import Campaigns from "@/pages/campaigns";
-import NotFound from "@/pages/not-found";
-import Login from "@/pages/login";
-import AccessDenied from "@/pages/access-denied";
-import { AIAssistant } from "@/components/ai-assistant";
 
 function AdminRouter() {
   return (
-    <Switch>
-      <Route path="/admin" component={Dashboard} />
-      <Route path="/admin/attractions" component={AdminAttractions} />
-      <Route path="/admin/attractions/new" component={ContentEditor} />
-      <Route path="/admin/attractions/:id" component={ContentEditor} />
-      <Route path="/admin/hotels" component={AdminHotels} />
-      <Route path="/admin/hotels/new" component={ContentEditor} />
-      <Route path="/admin/hotels/:id" component={ContentEditor} />
-      <Route path="/admin/dining" component={AdminDining} />
-      <Route path="/admin/dining/new" component={ContentEditor} />
-      <Route path="/admin/dining/:id" component={ContentEditor} />
-      <Route path="/admin/districts" component={AdminDistricts} />
-      <Route path="/admin/districts/new" component={ContentEditor} />
-      <Route path="/admin/districts/:id" component={ContentEditor} />
-      <Route path="/admin/transport" component={AdminTransport} />
-      <Route path="/admin/transport/new" component={ContentEditor} />
-      <Route path="/admin/transport/:id" component={ContentEditor} />
-      <Route path="/admin/articles" component={AdminArticles} />
-      <Route path="/admin/articles/new" component={ContentEditor} />
-      <Route path="/admin/articles/:id" component={ContentEditor} />
-      <Route path="/admin/events" component={AdminEvents} />
-      <Route path="/admin/events/new" component={ContentEditor} />
-      <Route path="/admin/events/:id" component={ContentEditor} />
-      <Route path="/admin/itineraries" component={AdminItineraries} />
-      <Route path="/admin/itineraries/new" component={ContentEditor} />
-      <Route path="/admin/itineraries/:id" component={ContentEditor} />
-      <Route path="/admin/rss-feeds" component={RssFeeds} />
-      <Route path="/admin/ai-generator" component={AIArticleGenerator} />
-      <Route path="/admin/topic-bank" component={TopicBankPage} />
-      <Route path="/admin/keywords" component={KeywordsPage} />
-      <Route path="/admin/clusters" component={ClustersPage} />
-      <Route path="/admin/tags" component={TagsPage} />
-      <Route path="/admin/affiliate-links" component={AffiliateLinks} />
-      <Route path="/admin/media" component={MediaLibrary} />
-      <Route path="/admin/settings" component={Settings} />
-      <Route path="/admin/users" component={UsersPage} />
-      <Route path="/admin/homepage-promotions" component={HomepagePromotions} />
-      <Route path="/admin/analytics" component={Analytics} />
-      <Route path="/admin/audit-logs" component={AuditLogs} />
-      <Route path="/admin/newsletter" component={NewsletterSubscribers} />
-      <Route path="/admin/campaigns" component={Campaigns} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<PageLoader />}>
+      <Switch>
+        <Route path="/admin" component={Dashboard} />
+        <Route path="/admin/attractions" component={AdminAttractions} />
+        <Route path="/admin/attractions/new" component={ContentEditor} />
+        <Route path="/admin/attractions/:id" component={ContentEditor} />
+        <Route path="/admin/hotels" component={AdminHotels} />
+        <Route path="/admin/hotels/new" component={ContentEditor} />
+        <Route path="/admin/hotels/:id" component={ContentEditor} />
+        <Route path="/admin/dining" component={AdminDining} />
+        <Route path="/admin/dining/new" component={ContentEditor} />
+        <Route path="/admin/dining/:id" component={ContentEditor} />
+        <Route path="/admin/districts" component={AdminDistricts} />
+        <Route path="/admin/districts/new" component={ContentEditor} />
+        <Route path="/admin/districts/:id" component={ContentEditor} />
+        <Route path="/admin/transport" component={AdminTransport} />
+        <Route path="/admin/transport/new" component={ContentEditor} />
+        <Route path="/admin/transport/:id" component={ContentEditor} />
+        <Route path="/admin/articles" component={AdminArticles} />
+        <Route path="/admin/articles/new" component={ContentEditor} />
+        <Route path="/admin/articles/:id" component={ContentEditor} />
+        <Route path="/admin/events" component={AdminEvents} />
+        <Route path="/admin/events/new" component={ContentEditor} />
+        <Route path="/admin/events/:id" component={ContentEditor} />
+        <Route path="/admin/itineraries" component={AdminItineraries} />
+        <Route path="/admin/itineraries/new" component={ContentEditor} />
+        <Route path="/admin/itineraries/:id" component={ContentEditor} />
+        <Route path="/admin/rss-feeds" component={RssFeeds} />
+        <Route path="/admin/ai-generator" component={AIArticleGenerator} />
+        <Route path="/admin/topic-bank" component={TopicBankPage} />
+        <Route path="/admin/keywords" component={KeywordsPage} />
+        <Route path="/admin/clusters" component={ClustersPage} />
+        <Route path="/admin/tags" component={TagsPage} />
+        <Route path="/admin/affiliate-links" component={AffiliateLinks} />
+        <Route path="/admin/media" component={MediaLibrary} />
+        <Route path="/admin/settings" component={Settings} />
+        <Route path="/admin/users" component={UsersPage} />
+        <Route path="/admin/homepage-promotions" component={HomepagePromotions} />
+        <Route path="/admin/analytics" component={Analytics} />
+        <Route path="/admin/audit-logs" component={AuditLogs} />
+        <Route path="/admin/newsletter" component={NewsletterSubscribers} />
+        <Route path="/admin/campaigns" component={Campaigns} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
@@ -164,24 +179,26 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        {isAdminRoute ? (
-          <AdminLayout />
-        ) : (
-          <Switch>
-            <Route path="/login" component={Login} />
-            <Route path="/access-denied" component={AccessDenied} />
-            <Route path="/attractions/:slug" component={PublicContentViewer} />
-            <Route path="/hotels/:slug" component={PublicContentViewer} />
-            <Route path="/dining/:slug" component={PublicContentViewer} />
-            <Route path="/districts/:slug" component={PublicContentViewer} />
-            <Route path="/transport/:slug" component={PublicContentViewer} />
-            <Route path="/articles/:slug" component={PublicContentViewer} />
-            <Route path="/events/:slug" component={PublicContentViewer} />
-            <Route path="/itineraries/:slug" component={PublicContentViewer} />
-            <Route path="/" component={ComingSoon} />
-            <Route component={NotFound} />
-          </Switch>
-        )}
+        <Suspense fallback={<PageLoader />}>
+          {isAdminRoute ? (
+            <AdminLayout />
+          ) : (
+            <Switch>
+              <Route path="/login" component={Login} />
+              <Route path="/access-denied" component={AccessDenied} />
+              <Route path="/attractions/:slug" component={PublicContentViewer} />
+              <Route path="/hotels/:slug" component={PublicContentViewer} />
+              <Route path="/dining/:slug" component={PublicContentViewer} />
+              <Route path="/districts/:slug" component={PublicContentViewer} />
+              <Route path="/transport/:slug" component={PublicContentViewer} />
+              <Route path="/articles/:slug" component={PublicContentViewer} />
+              <Route path="/events/:slug" component={PublicContentViewer} />
+              <Route path="/itineraries/:slug" component={PublicContentViewer} />
+              <Route path="/" component={ComingSoon} />
+              <Route component={NotFound} />
+            </Switch>
+          )}
+        </Suspense>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

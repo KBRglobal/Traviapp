@@ -12,6 +12,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -47,11 +48,25 @@ import {
   RotateCcw,
   Check,
 } from "lucide-react";
-import type { ContentWithRelations, ContentBlock, ContentVersion } from "@shared/schema";
+import type {
+  ContentWithRelations,
+  ContentBlock,
+  ContentVersion,
+  QuickInfoItem,
+  HighlightItem,
+  TicketInfoItem,
+  EssentialInfoItem,
+  RelatedItem
+} from "@shared/schema";
 import { SeoScore } from "@/components/seo-score";
 import { SchemaPreview } from "@/components/schema-preview";
+import { AttractionSeoEditor } from "@/components/attraction-seo-editor";
+import { HotelSeoEditor } from "@/components/hotel-seo-editor";
+import { DiningSeoEditor } from "@/components/dining-seo-editor";
+import { DistrictSeoEditor } from "@/components/district-seo-editor";
 
-type ContentType = "attraction" | "hotel" | "article" | "event" | "itinerary";
+type ContentType = "attraction" | "hotel" | "article" | "dining" | "district";
+// TEMPORARILY DISABLED: "transport" | "event" | "itinerary" - Will be enabled later
 
 interface BlockTypeConfig {
   type: ContentBlock["type"];
@@ -120,8 +135,12 @@ export default function ContentEditor() {
   const getContentType = (): ContentType => {
     if (attractionMatch || attractionNewMatch) return "attraction";
     if (hotelMatch || hotelNewMatch) return "hotel";
-    if (eventMatch || eventNewMatch) return "event";
-    if (itineraryMatch || itineraryNewMatch) return "itinerary";
+    if (diningMatch || diningNewMatch) return "dining";
+    if (districtMatch || districtNewMatch) return "district";
+    // TEMPORARILY DISABLED: transport, event, and itinerary will be enabled later
+    // if (transportMatch || transportNewMatch) return "transport";
+    // if (eventMatch || eventNewMatch) return "event";
+    // if (itineraryMatch || itineraryNewMatch) return "itinerary";
     return "article";
   };
   const contentType: ContentType = getContentType();
@@ -151,6 +170,85 @@ export default function ContentEditor() {
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [lastAutosaveTime, setLastAutosaveTime] = useState<string | null>(null);
 
+  // Attraction-specific SEO data
+  const [attractionSeoData, setAttractionSeoData] = useState({
+    introText: "",
+    expandedIntroText: "",
+    quickInfoBar: [] as QuickInfoItem[],
+    highlights: [] as HighlightItem[],
+    ticketInfo: [] as TicketInfoItem[],
+    essentialInfo: [] as EssentialInfoItem[],
+    visitorTips: [] as string[],
+    relatedAttractions: [] as RelatedItem[],
+    trustSignals: [] as string[],
+    primaryCta: "",
+    location: "",
+    priceFrom: "",
+    duration: "",
+  });
+
+  // Hotel-specific SEO data
+  const [hotelSeoData, setHotelSeoData] = useState({
+    location: "",
+    starRating: "",
+    numberOfRooms: "",
+    amenities: [] as string[],
+    targetAudience: [] as string[],
+    primaryCta: "",
+    quickInfoBar: [] as QuickInfoItem[],
+    highlights: [] as HighlightItem[],
+    roomTypes: [] as any[],
+    essentialInfo: [] as EssentialInfoItem[],
+    diningPreview: [] as any[],
+    activities: [] as string[],
+    travelerTips: [] as string[],
+    faq: [] as any[],
+    locationNearby: [] as any[],
+    relatedHotels: [] as RelatedItem[],
+    photoGallery: [] as any[],
+    trustSignals: [] as string[],
+  });
+
+  // Dining-specific SEO data
+  const [diningSeoData, setDiningSeoData] = useState({
+    location: "",
+    cuisineType: "",
+    priceRange: "",
+    targetAudience: [] as string[],
+    primaryCta: "",
+    quickInfoBar: [] as QuickInfoItem[],
+    highlights: [] as HighlightItem[],
+    menuHighlights: [] as any[],
+    essentialInfo: [] as EssentialInfoItem[],
+    diningTips: [] as string[],
+    faq: [] as any[],
+    relatedDining: [] as RelatedItem[],
+    photoGallery: [] as any[],
+    trustSignals: [] as string[],
+  });
+
+  // District-specific SEO data
+  const [districtSeoData, setDistrictSeoData] = useState({
+    location: "",
+    neighborhood: "",
+    subcategory: "",
+    targetAudience: [] as string[],
+    primaryCta: "",
+    introText: "",
+    expandedIntroText: "",
+    quickInfoBar: [] as QuickInfoItem[],
+    highlights: [] as HighlightItem[],
+    thingsToDo: [] as any[],
+    attractionsGrid: [] as any[],
+    diningHighlights: [] as any[],
+    essentialInfo: [] as EssentialInfoItem[],
+    localTips: [] as string[],
+    faq: [] as any[],
+    relatedDistricts: [] as RelatedItem[],
+    photoGallery: [] as any[],
+    trustSignals: [] as string[],
+  });
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const hasChangedRef = useRef(false);
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -171,7 +269,94 @@ export default function ContentEditor() {
       setHeroImage(content.heroImage || "");
       setHeroImageAlt(content.heroImageAlt || "");
       setStatus(content.status || "draft");
-      
+
+      // Load attraction-specific SEO data if it exists
+      if (content.attraction) {
+        setAttractionSeoData({
+          introText: content.attraction.introText || "",
+          expandedIntroText: content.attraction.expandedIntroText || "",
+          quickInfoBar: content.attraction.quickInfoBar || [],
+          highlights: content.attraction.highlights || [],
+          ticketInfo: content.attraction.ticketInfo || [],
+          essentialInfo: content.attraction.essentialInfo || [],
+          visitorTips: content.attraction.visitorTips || [],
+          relatedAttractions: content.attraction.relatedAttractions || [],
+          trustSignals: content.attraction.trustSignals || [],
+          primaryCta: content.attraction.primaryCta || "",
+          location: content.attraction.location || "",
+          priceFrom: content.attraction.priceFrom || "",
+          duration: content.attraction.duration || "",
+        });
+      }
+
+      // Load hotel-specific SEO data if it exists
+      if (content.hotel) {
+        setHotelSeoData({
+          location: content.hotel.location || "",
+          starRating: content.hotel.starRating?.toString() || "",
+          numberOfRooms: content.hotel.numberOfRooms?.toString() || "",
+          amenities: content.hotel.amenities || [],
+          targetAudience: content.hotel.targetAudience || [],
+          primaryCta: content.hotel.primaryCta || "",
+          quickInfoBar: content.hotel.quickInfoBar || [],
+          highlights: content.hotel.highlights || [],
+          roomTypes: content.hotel.roomTypes || [],
+          essentialInfo: content.hotel.essentialInfo || [],
+          diningPreview: content.hotel.diningPreview || [],
+          activities: content.hotel.activities || [],
+          travelerTips: content.hotel.travelerTips || [],
+          faq: content.hotel.faq || [],
+          locationNearby: content.hotel.locationNearby || [],
+          relatedHotels: content.hotel.relatedHotels || [],
+          photoGallery: content.hotel.photoGallery || [],
+          trustSignals: content.hotel.trustSignals || [],
+        });
+      }
+
+      // Load dining-specific SEO data if it exists
+      if (content.dining) {
+        setDiningSeoData({
+          location: content.dining.location || "",
+          cuisineType: content.dining.cuisineType || "",
+          priceRange: content.dining.priceRange || "",
+          targetAudience: content.dining.targetAudience || [],
+          primaryCta: content.dining.primaryCta || "",
+          quickInfoBar: content.dining.quickInfoBar || [],
+          highlights: content.dining.highlights || [],
+          menuHighlights: content.dining.menuHighlights || [],
+          essentialInfo: content.dining.essentialInfo || [],
+          diningTips: content.dining.diningTips || [],
+          faq: content.dining.faq || [],
+          relatedDining: content.dining.relatedDining || [],
+          photoGallery: content.dining.photoGallery || [],
+          trustSignals: content.dining.trustSignals || [],
+        });
+      }
+
+      // Load district-specific SEO data if it exists
+      if (content.district) {
+        setDistrictSeoData({
+          location: content.district.location || "",
+          neighborhood: content.district.neighborhood || "",
+          subcategory: content.district.subcategory || "",
+          targetAudience: content.district.targetAudience || [],
+          primaryCta: content.district.primaryCta || "",
+          introText: content.district.introText || "",
+          expandedIntroText: content.district.expandedIntroText || "",
+          quickInfoBar: content.district.quickInfoBar || [],
+          highlights: content.district.highlights || [],
+          thingsToDo: content.district.thingsToDo || [],
+          attractionsGrid: content.district.attractionsGrid || [],
+          diningHighlights: content.district.diningHighlights || [],
+          essentialInfo: content.district.essentialInfo || [],
+          localTips: content.district.localTips || [],
+          faq: content.district.faq || [],
+          relatedDistricts: content.district.relatedDistricts || [],
+          photoGallery: content.district.photoGallery || [],
+          trustSignals: content.district.trustSignals || [],
+        });
+      }
+
       // Check if blocks are empty but extension data exists - auto-generate blocks
       const existingBlocks = content.blocks || [];
       if (existingBlocks.length === 0) {
@@ -220,8 +405,8 @@ export default function ContentEditor() {
           }
           return count;
         }, 0);
-        
-        autosaveMutation.mutate({
+
+        const autosaveData: Record<string, unknown> = {
           title,
           slug: slug || generateSlug(title),
           metaTitle,
@@ -232,7 +417,14 @@ export default function ContentEditor() {
           blocks,
           wordCount: currentWordCount,
           status,
-        });
+        };
+
+        // Include attraction-specific SEO data if this is an attraction
+        if (contentType === "attraction") {
+          autosaveData.attractionData = attractionSeoData;
+        }
+
+        autosaveMutation.mutate(autosaveData);
       }
     }, 30000);
 
@@ -242,7 +434,7 @@ export default function ContentEditor() {
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [title, slug, metaTitle, metaDescription, primaryKeyword, heroImage, heroImageAlt, blocks, status, contentId]);
+  }, [title, slug, metaTitle, metaDescription, primaryKeyword, heroImage, heroImageAlt, blocks, status, contentId, contentType, attractionSeoData]);
 
   // Generate blocks from attraction/hotel/article extension data
   // Blocks use simple string content (one item per line) for tips, highlights, info_grid
@@ -573,12 +765,20 @@ export default function ContentEditor() {
 
   const aiGenerateMutation = useMutation({
     mutationFn: async (input: string) => {
-      const endpoint = contentType === "hotel" 
-        ? "/api/ai/generate-hotel" 
-        : contentType === "attraction" 
-        ? "/api/ai/generate-attraction" 
-        : "/api/ai/generate-article";
+      const endpoint =
+        contentType === "hotel" ? "/api/ai/generate-hotel" :
+        contentType === "attraction" ? "/api/ai/generate-attraction" :
+        contentType === "dining" ? "/api/ai/generate-dining" :
+        contentType === "district" ? "/api/ai/generate-district" :
+        // TEMPORARILY DISABLED: transport, event, and itinerary will be enabled later
+        // contentType === "transport" ? "/api/ai/generate-transport" :
+        // contentType === "event" ? "/api/ai/generate-event" :
+        // contentType === "itinerary" ? "/api/ai/generate-itinerary" :
+        "/api/ai/generate-article";
+
       const body = contentType === "article" ? { topic: input } : { name: input };
+      // Note: When itinerary is re-enabled, use: contentType === "itinerary" ? { duration: input } : { name: input }
+
       const res = await apiRequest("POST", endpoint, body);
       return res.json();
     },
@@ -696,7 +896,7 @@ export default function ContentEditor() {
   }, [blocks, heroImage, heroImageAlt]);
 
   const handleSave = () => {
-    saveMutation.mutate({
+    const saveData: Record<string, unknown> = {
       title,
       slug: slug || generateSlug(title),
       metaTitle,
@@ -707,11 +907,24 @@ export default function ContentEditor() {
       blocks,
       wordCount,
       status,
-    });
+    };
+
+    // Include content-type-specific SEO data
+    if (contentType === "attraction") {
+      saveData.attractionData = attractionSeoData;
+    } else if (contentType === "hotel") {
+      saveData.hotelData = hotelSeoData;
+    } else if (contentType === "dining") {
+      saveData.diningData = diningSeoData;
+    } else if (contentType === "district") {
+      saveData.districtData = districtSeoData;
+    }
+
+    saveMutation.mutate(saveData);
   };
 
   const handlePublish = () => {
-    publishMutation.mutate({
+    const publishData: Record<string, unknown> = {
       title,
       slug: slug || generateSlug(title),
       metaTitle,
@@ -723,7 +936,20 @@ export default function ContentEditor() {
       wordCount,
       status: "published",
       publishedAt: new Date().toISOString(),
-    });
+    };
+
+    // Include content-type-specific SEO data
+    if (contentType === "attraction") {
+      publishData.attractionData = attractionSeoData;
+    } else if (contentType === "hotel") {
+      publishData.hotelData = hotelSeoData;
+    } else if (contentType === "dining") {
+      publishData.diningData = diningSeoData;
+    } else if (contentType === "district") {
+      publishData.districtData = districtSeoData;
+    }
+
+    publishMutation.mutate(publishData);
   };
 
   const getDefaultBlockData = (type: ContentBlock["type"]): Record<string, unknown> => {
@@ -1012,7 +1238,7 @@ export default function ContentEditor() {
             </h3>
           </div>
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-6">
+            <div className="p-4">
               {selectedBlock ? (
                 <BlockSettingsPanel
                   block={selectedBlock}
@@ -1020,8 +1246,68 @@ export default function ContentEditor() {
                   onGenerateImage={() => handleGenerateImage(selectedBlock.id ?? '', selectedBlock.type === "hero" ? "hero" : "image")}
                   isGeneratingImage={imageGeneratingBlock === selectedBlock.id}
                 />
+              ) : (contentType === "attraction" || contentType === "hotel" || contentType === "dining" || contentType === "district") ? (
+                <Tabs defaultValue="basic" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="basic">Basic</TabsTrigger>
+                    <TabsTrigger value="seo">SEO Sections</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="basic" className="space-y-6 mt-4">
+                    <PageSettingsPanel
+                      title={title}
+                      onTitleChange={setTitle}
+                      slug={slug}
+                      onSlugChange={setSlug}
+                      status={status}
+                      onStatusChange={setStatus}
+                      metaTitle={metaTitle}
+                      onMetaTitleChange={setMetaTitle}
+                      metaDescription={metaDescription}
+                      onMetaDescriptionChange={setMetaDescription}
+                      primaryKeyword={primaryKeyword}
+                      onPrimaryKeywordChange={setPrimaryKeyword}
+                      contentId={contentId}
+                    />
+                    <Separator />
+                    <SeoScore
+                      title={title}
+                      metaTitle={metaTitle}
+                      metaDescription={metaDescription}
+                      primaryKeyword={primaryKeyword}
+                      content={seoContentText}
+                      headings={seoHeadings}
+                      images={seoImages}
+                    />
+                  </TabsContent>
+                  <TabsContent value="seo" className="mt-4">
+                    {contentType === "attraction" && (
+                      <AttractionSeoEditor
+                        data={attractionSeoData}
+                        onChange={setAttractionSeoData}
+                      />
+                    )}
+                    {contentType === "hotel" && (
+                      <HotelSeoEditor
+                        data={hotelSeoData}
+                        onChange={setHotelSeoData}
+                      />
+                    )}
+                    {contentType === "dining" && (
+                      <DiningSeoEditor
+                        data={diningSeoData}
+                        onChange={setDiningSeoData}
+                      />
+                    )}
+                    {contentType === "district" && (
+                      <DistrictSeoEditor
+                        data={districtSeoData}
+                        onChange={setDistrictSeoData}
+                      />
+                    )}
+                  </TabsContent>
+                </Tabs>
               ) : (
-                <>
+                <div className="space-y-6">
                   <PageSettingsPanel
                     title={title}
                     onTitleChange={setTitle}
@@ -1035,6 +1321,7 @@ export default function ContentEditor() {
                     onMetaDescriptionChange={setMetaDescription}
                     primaryKeyword={primaryKeyword}
                     onPrimaryKeywordChange={setPrimaryKeyword}
+                    contentId={contentId}
                   />
                   <Separator />
                   <SeoScore
@@ -1046,7 +1333,7 @@ export default function ContentEditor() {
                     headings={seoHeadings}
                     images={seoImages}
                   />
-                </>
+                </div>
               )}
             </div>
           </ScrollArea>

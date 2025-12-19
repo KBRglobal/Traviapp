@@ -1,7 +1,7 @@
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { Loader2, MapPin, Clock, Star, Users, DollarSign, Calendar, Building } from "lucide-react";
+import { Loader2, MapPin, Clock, Star, Users, DollarSign, Calendar, Building, Utensils, Tag } from "lucide-react";
 import posthog from "posthog-js";
 import type { Content, Attraction, Hotel, Dining, District, Transport, Article, HighlightItem, RoomTypeItem, FaqItem, ContentCluster } from "@shared/schema";
 
@@ -287,6 +287,76 @@ function ArticleMeta({ article, publishedAt }: { article: Article; publishedAt?:
   );
 }
 
+function DiningMeta({ dining }: { dining: Dining }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-y">
+      {dining.cuisineType && (
+        <div className="flex items-center gap-2">
+          <Utensils className="h-5 w-5 text-muted-foreground" />
+          <span>{dining.cuisineType}</span>
+        </div>
+      )}
+      {dining.priceRange && (
+        <div className="flex items-center gap-2">
+          <DollarSign className="h-5 w-5 text-muted-foreground" />
+          <span>{dining.priceRange}</span>
+        </div>
+      )}
+      {dining.location && (
+        <div className="flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-muted-foreground" />
+          <span>{dining.location}</span>
+        </div>
+      )}
+      {dining.quickInfoBar && dining.quickInfoBar.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Clock className="h-5 w-5 text-muted-foreground" />
+          <span>
+            {dining.quickInfoBar.find((item) => item.label?.toLowerCase().includes("hour"))?.value ||
+             dining.quickInfoBar.find((item) => item.label?.toLowerCase().includes("time"))?.value ||
+             "See hours"}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DistrictMeta({ district }: { district: District }) {
+  const hotelCount = district.attractionsGrid?.filter((a) => a.type?.toLowerCase().includes("hotel")).length || 0;
+  const restaurantCount = district.diningHighlights?.length || 0;
+  const activityCount = district.thingsToDo?.length || 0;
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-y">
+      {hotelCount > 0 && (
+        <div className="flex items-center gap-2">
+          <Building className="h-5 w-5 text-muted-foreground" />
+          <span>{hotelCount} Hotel{hotelCount !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+      {restaurantCount > 0 && (
+        <div className="flex items-center gap-2">
+          <Utensils className="h-5 w-5 text-muted-foreground" />
+          <span>{restaurantCount} Restaurant{restaurantCount !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+      {activityCount > 0 && (
+        <div className="flex items-center gap-2">
+          <Star className="h-5 w-5 text-muted-foreground" />
+          <span>{activityCount} Thing{activityCount !== 1 ? 's' : ''} to Do</span>
+        </div>
+      )}
+      {district.targetAudience && district.targetAudience.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Tag className="h-5 w-5 text-muted-foreground" />
+          <span>Best for: {district.targetAudience.slice(0, 2).join(", ")}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PublicContentViewer() {
   const [, params] = useRoute("/:type/:slug");
   const slug = params?.slug;
@@ -391,6 +461,8 @@ export default function PublicContentViewer() {
           
           {content.attraction && <AttractionMeta attraction={content.attraction} />}
           {content.hotel && <HotelMeta hotel={content.hotel} />}
+          {content.dining && <DiningMeta dining={content.dining} />}
+          {content.district && <DistrictMeta district={content.district} />}
           {content.article && <ArticleMeta article={content.article} publishedAt={content.publishedAt} />}
 
           {content.metaDescription && (

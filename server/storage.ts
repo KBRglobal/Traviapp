@@ -1227,7 +1227,7 @@ export class DatabaseStorage implements IStorage {
   async getActiveNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
     return await db.select().from(newsletterSubscribers)
       .where(and(
-        eq(newsletterSubscribers.status, "subscribed" as any),
+        eq(newsletterSubscribers.status, "subscribed"),
         eq(newsletterSubscribers.isActive, true)
       ))
       .orderBy(desc(newsletterSubscribers.subscribedAt));

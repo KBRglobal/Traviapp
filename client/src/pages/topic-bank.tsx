@@ -182,7 +182,7 @@ export default function TopicBankPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="topic-category">Category</Label>
-                <Select value={category} onValueChange={(value) => setCategory(value as TopicCategory | "")}>
+                <Select value={category} onValueChange={(value) => setCategory(value as typeof category)}>
                   <SelectTrigger data-testid="select-topic-category">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
