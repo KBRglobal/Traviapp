@@ -1528,7 +1528,8 @@ export async function registerRoutes(
 
       // Process translations and save to database
       translationPromise.then(async (results) => {
-        for (const [locale, translation] of results) {
+        const entries = Array.from(results.entries());
+        for (const [locale, translation] of entries) {
           try {
             // Check if translation already exists
             const existingTranslations = await storage.getTranslationsByContentId(content.id);
