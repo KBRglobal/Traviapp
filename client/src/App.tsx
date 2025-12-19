@@ -69,6 +69,7 @@ const ToolsStampDutyCalculator = lazy(() => import("@/pages/tools-stamp-duty-cal
 const CompareNakheelVsAzizi = lazy(() => import("@/pages/compare-nakheel-vs-azizi"));
 const CompareVillaVsApartment = lazy(() => import("@/pages/compare-villa-vs-apartment"));
 const ToolsRentalYieldCalculator = lazy(() => import("@/pages/tools-rental-yield-calculator"));
+const ToolsMortgageCalculator = lazy(() => import("@/pages/tools-mortgage-calculator"));
 const GlossaryHub = lazy(() => import("@/pages/glossary-hub"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
@@ -306,6 +307,7 @@ function App() {
               <Route path="/compare-nakheel-vs-azizi" component={CompareNakheelVsAzizi} />
               <Route path="/compare-villa-vs-apartment" component={CompareVillaVsApartment} />
               <Route path="/tools-rental-yield-calculator" component={ToolsRentalYieldCalculator} />
+              <Route path="/tools-mortgage-calculator" component={ToolsMortgageCalculator} />
               <Route path="/glossary" component={GlossaryHub} />
               <Route path="/" component={PublicHome} />
               <Route component={NotFound} />
