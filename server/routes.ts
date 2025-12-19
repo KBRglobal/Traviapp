@@ -2533,28 +2533,29 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     }
   });
 
-  app.post("/api/ai/generate-transport", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
-    if (safeMode.aiDisabled) {
-      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
-    }
-    try {
-      const { name } = req.body;
-      if (!name || typeof name !== "string" || name.trim().length === 0) {
-        return res.status(400).json({ error: "Transport type is required" });
-      }
-
-      const result = await generateTransportContent(name.trim());
-      if (!result) {
-        return res.status(500).json({ error: "Failed to generate transport content" });
-      }
-
-      res.json(result);
-    } catch (error) {
-      console.error("Error generating transport content:", error);
-      const message = error instanceof Error ? error.message : "Failed to generate transport content";
-      res.status(500).json({ error: message });
-    }
-  });
+  // TEMPORARILY DISABLED - Will be enabled later
+  // app.post("/api/ai/generate-transport", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+  //   if (safeMode.aiDisabled) {
+  //     return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+  //   }
+  //   try {
+  //     const { name } = req.body;
+  //     if (!name || typeof name !== "string" || name.trim().length === 0) {
+  //       return res.status(400).json({ error: "Transport type is required" });
+  //     }
+  //
+  //     const result = await generateTransportContent(name.trim());
+  //     if (!result) {
+  //       return res.status(500).json({ error: "Failed to generate transport content" });
+  //     }
+  //
+  //     res.json(result);
+  //   } catch (error) {
+  //     console.error("Error generating transport content:", error);
+  //     const message = error instanceof Error ? error.message : "Failed to generate transport content";
+  //     res.status(500).json({ error: message });
+  //   }
+  // });
 
   app.post("/api/ai/generate-event", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
@@ -2579,28 +2580,29 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     }
   });
 
-  app.post("/api/ai/generate-itinerary", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
-    if (safeMode.aiDisabled) {
-      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
-    }
-    try {
-      const { duration, tripType } = req.body;
-      if (!duration || typeof duration !== "string" || duration.trim().length === 0) {
-        return res.status(400).json({ error: "Duration is required (e.g., '3 days', '1 week')" });
-      }
-
-      const result = await generateItineraryContent(duration.trim(), tripType);
-      if (!result) {
-        return res.status(500).json({ error: "Failed to generate itinerary content" });
-      }
-
-      res.json(result);
-    } catch (error) {
-      console.error("Error generating itinerary content:", error);
-      const message = error instanceof Error ? error.message : "Failed to generate itinerary content";
-      res.status(500).json({ error: message });
-    }
-  });
+  // TEMPORARILY DISABLED - Will be enabled later
+  // app.post("/api/ai/generate-itinerary", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+  //   if (safeMode.aiDisabled) {
+  //     return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+  //   }
+  //   try {
+  //     const { duration, tripType } = req.body;
+  //     if (!duration || typeof duration !== "string" || duration.trim().length === 0) {
+  //       return res.status(400).json({ error: "Duration is required (e.g., '3 days', '1 week')" });
+  //     }
+  //
+  //     const result = await generateItineraryContent(duration.trim(), tripType);
+  //     if (!result) {
+  //       return res.status(500).json({ error: "Failed to generate itinerary content" });
+  //     }
+  //
+  //     res.json(result);
+  //   } catch (error) {
+  //     console.error("Error generating itinerary content:", error);
+  //     const message = error instanceof Error ? error.message : "Failed to generate itinerary content";
+  //     res.status(500).json({ error: message });
+  //   }
+  // });
 
   app.post("/api/ai/generate-article-simple", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
