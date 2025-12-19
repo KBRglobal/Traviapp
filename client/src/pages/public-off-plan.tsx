@@ -404,7 +404,8 @@ function LeadWizard({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto p-0" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Off-Plan Property Lead Wizard</DialogTitle>
         {submitted ? (
           <div className="py-12 px-6 text-center">
             <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-6">
