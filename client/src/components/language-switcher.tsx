@@ -21,7 +21,7 @@ interface LanguageSwitcherProps {
   className?: string;
 }
 
-// Get flag emoji from locale code (12 Dubai/UAE focused languages)
+// Get flag emoji from locale code (17 Dubai/UAE focused languages)
 const getFlag = (locale: Locale): string => {
   const flagMap: Record<string, string> = {
     // Tier 1 - Core
@@ -29,17 +29,22 @@ const getFlag = (locale: Locale): string => {
     ar: "🇦🇪",   // Arabic (UAE flag)
     hi: "🇮🇳",   // Hindi (India)
     // Tier 2 - High ROI
-    ur: "🇵🇰",   // Urdu (Pakistan)
-    ru: "🇷🇺",   // Russian
-    fa: "🇮🇷",   // Persian (Iran)
     zh: "🇨🇳",   // Chinese
-    // Tier 3 - European
+    ru: "🇷🇺",   // Russian
+    ur: "🇵🇰",   // Urdu (Pakistan)
     fr: "🇫🇷",   // French
+    // Tier 3 - Growing
     de: "🇩🇪",   // German
-    it: "🇮🇹",   // Italian
-    // Tier 4 - Optional
+    fa: "🇮🇷",   // Persian (Iran)
+    bn: "🇧🇩",   // Bengali (Bangladesh)
+    fil: "🇵🇭",  // Filipino (Philippines)
+    // Tier 4 - Niche
     es: "🇪🇸",   // Spanish
     tr: "🇹🇷",   // Turkish
+    it: "🇮🇹",   // Italian
+    ja: "🇯🇵",   // Japanese
+    ko: "🇰🇷",   // Korean
+    he: "🇮🇱",   // Hebrew (Israel)
   };
   return flagMap[locale] || "🌐";
 };

@@ -302,8 +302,13 @@ const publicRoutes = [
   { path: "/glossary", component: GlossaryHub },
 ];
 
-// Locale codes for URL prefixes
-const LOCALE_PREFIXES = ["ar", "hi", "ur", "ru", "fa", "zh", "fr", "de", "it", "es", "tr"];
+// Locale codes for URL prefixes (16 languages, English is default without prefix)
+const LOCALE_PREFIXES = [
+  "ar", "hi",                    // Tier 1
+  "zh", "ru", "ur", "fr",        // Tier 2
+  "de", "fa", "bn", "fil",       // Tier 3
+  "es", "tr", "it", "ja", "ko", "he"  // Tier 4
+];
 
 function PublicRouter() {
   return (
