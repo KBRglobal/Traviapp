@@ -249,9 +249,9 @@ function RestaurantCard({ content, index }: { content: ContentWithRelations; ind
     "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=600&h=400&fit=crop",
   ];
   const imageUrl = content.heroImage || defaultImages[index % defaultImages.length];
-  const location = content.dining?.location || "Dubai";
-  const cuisineType = content.dining?.cuisineType || "Fine Dining";
-  const priceRange = content.dining?.priceRange || "$$$";
+  const location = content.diningData?.location || "Dubai";
+  const cuisineType = content.diningData?.cuisineType || "Fine Dining";
+  const priceRange = content.diningData?.priceRange || "$$$";
   
   return (
     <Link href={`/dining/${content.slug}`}>
@@ -332,11 +332,11 @@ export default function PublicDining() {
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.title.toLowerCase().includes(query) ||
         r.metaDescription?.toLowerCase().includes(query) ||
-        r.dining?.location?.toLowerCase().includes(query) ||
-        r.dining?.cuisineType?.toLowerCase().includes(query)
+        r.diningData?.location?.toLowerCase().includes(query) ||
+        r.diningData?.cuisineType?.toLowerCase().includes(query)
       );
     }
     
@@ -344,9 +344,9 @@ export default function PublicDining() {
       const districtInfo = DUBAI_DINING_DISTRICTS.find(d => d.id === activeDistrict);
       if (districtInfo) {
         const districtName = districtInfo.name.toLowerCase();
-        filtered = filtered.filter(r => 
-          r.dining?.location?.toLowerCase().includes(districtName) ||
-          r.dining?.location?.toLowerCase().includes(activeDistrict)
+        filtered = filtered.filter(r =>
+          r.diningData?.location?.toLowerCase().includes(districtName) ||
+          r.diningData?.location?.toLowerCase().includes(activeDistrict)
         );
       }
     }

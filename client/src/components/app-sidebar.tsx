@@ -371,7 +371,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
       <SidebarFooter className="p-4 border-t border-sidebar-border space-y-3">
         {user && (
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium truncate">{user.name || user.email}</span>
+            <span className="text-sm font-medium truncate">{user.firstName || user.email}</span>
             <span className="text-xs text-muted-foreground capitalize">{user.role}</span>
           </div>
         )}

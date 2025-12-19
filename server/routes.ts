@@ -4855,7 +4855,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const template = await storage.createContentTemplate({
         name,
         description,
-        type,
+        contentType: type,
         blocks: blocks || [],
         seoDefaults: seoDefaults || {},
       });
@@ -4872,7 +4872,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const template = await storage.updateContentTemplate(req.params.id, {
         name,
         description,
-        type,
+        contentType: type,
         blocks,
         seoDefaults,
       });
@@ -4909,7 +4909,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const content = await storage.createContent({
         title,
         slug,
-        type: template.type as any,
+        type: template.contentType as any,
         status: "draft",
         blocks: template.blocks as any[],
         metaTitle: (template.seoDefaults as any)?.metaTitle || title,

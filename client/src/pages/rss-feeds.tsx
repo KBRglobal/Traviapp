@@ -28,10 +28,7 @@ export default function RssFeeds() {
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string; url: string; category?: string }) =>
-      apiRequest("/api/rss-feeds", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/rss-feeds", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rss-feeds"] });
       setDialogOpen(false);
@@ -47,7 +44,7 @@ export default function RssFeeds() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      apiRequest(`/api/rss-feeds/${id}`, { method: "DELETE" }),
+      apiRequest("DELETE", `/api/rss-feeds/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rss-feeds"] });
       toast({ title: "RSS Feed deleted" });
@@ -56,10 +53,7 @@ export default function RssFeeds() {
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      apiRequest(`/api/rss-feeds/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ isActive }),
-      }),
+      apiRequest("PATCH", `/api/rss-feeds/${id}`, { isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rss-feeds"] });
     },

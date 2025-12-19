@@ -52,12 +52,6 @@ function generateJsonLd(content: ContentWithRelations, imageUrl: string): object
     if (content.hotel.numberOfRooms) {
       hotelSchema.numberOfRooms = content.hotel.numberOfRooms;
     }
-    if (content.hotel.checkInTime) {
-      hotelSchema.checkinTime = content.hotel.checkInTime;
-    }
-    if (content.hotel.checkOutTime) {
-      hotelSchema.checkoutTime = content.hotel.checkOutTime;
-    }
     
     schemas.push(hotelSchema);
   } else if (content.type === 'attraction' && content.attraction) {
@@ -496,8 +490,8 @@ export default function PublicContentDetail() {
                 <div className="space-y-3">
                   {content.attraction.ticketInfo.map((ticket, index) => (
                     <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
-                      <span className="font-medium">{ticket.label}</span>
-                      <span className="text-muted-foreground">{ticket.value}</span>
+                      <span className="font-medium">{ticket.type}</span>
+                      <span className="text-muted-foreground">{ticket.description}</span>
                     </div>
                   ))}
                 </div>
@@ -520,15 +514,12 @@ export default function PublicContentDetail() {
                       data-testid={`affiliate-link-${link.id}`}
                     >
                       <div>
-                        <div className="font-medium">{link.label}</div>
+                        <div className="font-medium">{link.anchor}</div>
                         {link.provider && (
                           <div className="text-sm text-muted-foreground">via {link.provider}</div>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        {link.price && (
-                          <span className="font-bold text-primary">{link.price}</span>
-                        )}
                         <ExternalLink className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                       </div>
                     </a>

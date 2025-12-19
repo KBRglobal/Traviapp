@@ -26,7 +26,7 @@ function generateJsonLd(content: ContentWithRelations, imageUrl: string): object
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const pageUrl = `${baseUrl}/dining/${content.slug}`;
   
-  if (!content.dining) return null;
+  if (!content.diningData) return null;
   
   const restaurantSchema: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -34,17 +34,17 @@ function generateJsonLd(content: ContentWithRelations, imageUrl: string): object
     name: content.title,
     url: pageUrl,
     image: imageUrl,
-    servesCuisine: content.dining.cuisineType || "International",
-    priceRange: content.dining.priceRange || "$$$",
+    servesCuisine: content.diningData.cuisineType || "International",
+    priceRange: content.diningData.priceRange || "$$$",
   };
   
   if (content.metaDescription) {
     restaurantSchema.description = content.metaDescription;
   }
-  if (content.dining.location) {
+  if (content.diningData.location) {
     restaurantSchema.address = {
       "@type": "PostalAddress",
-      addressLocality: content.dining.location,
+      addressLocality: content.diningData.location,
       addressRegion: "Dubai",
       addressCountry: "UAE"
     };
@@ -52,7 +52,7 @@ function generateJsonLd(content: ContentWithRelations, imageUrl: string): object
   
   const schemas: object[] = [restaurantSchema];
   
-  const faqItems = content.dining.faq || [];
+  const faqItems = content.diningData.faq || [];
   if (faqItems.length > 0) {
     schemas.push({
       "@context": "https://schema.org",
@@ -120,7 +120,7 @@ export default function PublicDiningDetail() {
     enabled: !!slug,
   });
 
-  const dining = content?.dining;
+  const dining = content?.diningData;
   const imageUrl = content?.heroImage || defaultHeroImage;
 
   useDocumentMeta({

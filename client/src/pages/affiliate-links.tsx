@@ -28,10 +28,7 @@ export default function AffiliateLinks() {
 
   const createMutation = useMutation({
     mutationFn: (data: { provider: string; anchor: string; url: string; productId?: string; placement?: string }) =>
-      apiRequest("/api/affiliate-links", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/affiliate-links", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/affiliate-links"] });
       setDialogOpen(false);
@@ -49,7 +46,7 @@ export default function AffiliateLinks() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      apiRequest(`/api/affiliate-links/${id}`, { method: "DELETE" }),
+      apiRequest("DELETE", `/api/affiliate-links/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/affiliate-links"] });
       toast({ title: "Affiliate link deleted" });
