@@ -78,26 +78,7 @@ export function LanguageSwitcher({
   const handleLanguageChange = async (locale: Locale) => {
     await changeLanguage(locale);
     setIsOpen(false);
-
-    // Update URL with new locale
-    const currentPath = window.location.pathname;
-    const pathParts = currentPath.split("/").filter(Boolean);
-
-    // Check if current path already has a locale prefix
-    const hasLocalePrefix = SUPPORTED_LOCALES.some((l) => l.code === pathParts[0]);
-
-    let newPath: string;
-    if (hasLocalePrefix) {
-      // Replace existing locale
-      pathParts[0] = locale;
-      newPath = "/" + pathParts.join("/");
-    } else {
-      // Add locale prefix
-      newPath = `/${locale}${currentPath}`;
-    }
-
-    // Use replaceState to update URL without reload
-    window.history.replaceState({}, "", newPath);
+    // Language is saved in localStorage, no URL change needed
   };
 
   if (variant === "icon-only") {
