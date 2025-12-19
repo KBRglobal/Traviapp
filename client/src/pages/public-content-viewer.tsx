@@ -1,7 +1,8 @@
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Loader2, MapPin, Clock, Star, Users, DollarSign, Calendar, Building } from "lucide-react";
+import posthog from "posthog-js";
 import type { Content, Attraction, Hotel, Dining, District, Transport, Article, HighlightItem, RoomTypeItem, FaqItem, ContentCluster } from "@shared/schema";
 
 type ContentWithExtensions = Content & {
@@ -289,11 +290,24 @@ function ArticleMeta({ article, publishedAt }: { article: Article; publishedAt?:
 export default function PublicContentViewer() {
   const [, params] = useRoute("/:type/:slug");
   const slug = params?.slug;
+  const trackedRef = useRef<string | null>(null);
 
   const { data: content, isLoading, error } = useQuery<ContentWithExtensions>({
     queryKey: ["/api/contents/slug", slug],
     enabled: !!slug,
   });
+
+  useEffect(() => {
+    if (content?.id && trackedRef.current !== content.id) {
+      trackedRef.current = content.id;
+      posthog.capture("content_view", {
+        content_id: content.id,
+        content_type: content.type,
+        content_slug: content.slug,
+        content_title: content.title,
+      });
+    }
+  }, [content?.id, content?.type, content?.slug, content?.title]);
 
   useEffect(() => {
     if (content?.slug && content?.type) {
