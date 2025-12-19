@@ -116,6 +116,7 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   totpSecret: varchar("totp_secret"),
   totpEnabled: boolean("totp_enabled").notNull().default(false),
+  totpRecoveryCodes: jsonb("totp_recovery_codes").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -145,6 +146,7 @@ export const contents = pgTable("contents", {
   authorId: varchar("author_id").references(() => users.id),
   scheduledAt: timestamp("scheduled_at"),
   publishedAt: timestamp("published_at"),
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

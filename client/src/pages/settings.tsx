@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,17 +6,102 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Database, Key, Globe, Bell, Shield } from "lucide-react";
+import { Settings as SettingsIcon, Database, Key, Globe, Bell, Shield, Loader2 } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+
+interface SettingsData {
+  site?: {
+    siteName?: string;
+    siteUrl?: string;
+    defaultLanguage?: string;
+  };
+  api?: {
+    gygAffiliateId?: string;
+    bookingAffiliateId?: string;
+  };
+  content?: {
+    autoSlug?: boolean;
+    autoSave?: boolean;
+    aiSuggestions?: boolean;
+  };
+  notifications?: {
+    emailNotifications?: boolean;
+    browserNotifications?: boolean;
+  };
+  security?: {
+    sessionTimeout?: boolean;
+  };
+}
 
 export default function Settings() {
   const { toast } = useToast();
+  
+  const { data: settings, isLoading } = useQuery<SettingsData>({
+    queryKey: ["/api/settings/grouped"],
+  });
+
+  const [formData, setFormData] = useState<SettingsData>({
+    site: { siteName: "Dubai Travel Guide", siteUrl: "https://dubaitravelguide.com", defaultLanguage: "English" },
+    api: { gygAffiliateId: "", bookingAffiliateId: "" },
+    content: { autoSlug: true, autoSave: true, aiSuggestions: true },
+    notifications: { emailNotifications: false, browserNotifications: false },
+    security: { sessionTimeout: true },
+  });
+
+  useEffect(() => {
+    if (settings) {
+      setFormData(prev => ({
+        site: { ...prev.site, ...settings.site },
+        api: { ...prev.api, ...settings.api },
+        content: { ...prev.content, ...settings.content },
+        notifications: { ...prev.notifications, ...settings.notifications },
+        security: { ...prev.security, ...settings.security },
+      }));
+    }
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: SettingsData) => {
+      return apiRequest("POST", "/api/settings/bulk", { settings: data });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/settings/grouped"] });
+      toast({
+        title: "Settings saved",
+        description: "Your settings have been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSave = () => {
-    toast({
-      title: "Settings saved",
-      description: "Your settings have been updated successfully.",
-    });
+    saveMutation.mutate(formData);
   };
+
+  const updateField = (category: keyof SettingsData, field: string, value: unknown) => {
+    setFormData(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [field]: value,
+      },
+    }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -38,7 +124,8 @@ export default function Settings() {
               <Label htmlFor="site-name">Site Name</Label>
               <Input
                 id="site-name"
-                defaultValue="Dubai Travel Guide"
+                value={formData.site?.siteName || ""}
+                onChange={(e) => updateField("site", "siteName", e.target.value)}
                 placeholder="Your site name"
                 data-testid="input-site-name"
               />
@@ -47,7 +134,8 @@ export default function Settings() {
               <Label htmlFor="site-url">Site URL</Label>
               <Input
                 id="site-url"
-                defaultValue="https://dubaitravelguide.com"
+                value={formData.site?.siteUrl || ""}
+                onChange={(e) => updateField("site", "siteUrl", e.target.value)}
                 placeholder="https://example.com"
                 data-testid="input-site-url"
               />
@@ -56,7 +144,8 @@ export default function Settings() {
               <Label htmlFor="default-language">Default Language</Label>
               <Input
                 id="default-language"
-                defaultValue="English"
+                value={formData.site?.defaultLanguage || ""}
+                onChange={(e) => updateField("site", "defaultLanguage", e.target.value)}
                 placeholder="English"
                 data-testid="input-default-language"
               />
@@ -91,6 +180,8 @@ export default function Settings() {
               <Label htmlFor="gyg-key">GetYourGuide Affiliate ID</Label>
               <Input
                 id="gyg-key"
+                value={formData.api?.gygAffiliateId || ""}
+                onChange={(e) => updateField("api", "gygAffiliateId", e.target.value)}
                 placeholder="Your affiliate ID"
                 data-testid="input-gyg-key"
               />
@@ -99,6 +190,8 @@ export default function Settings() {
               <Label htmlFor="booking-key">Booking.com Affiliate ID</Label>
               <Input
                 id="booking-key"
+                value={formData.api?.bookingAffiliateId || ""}
+                onChange={(e) => updateField("api", "bookingAffiliateId", e.target.value)}
                 placeholder="Your affiliate ID"
                 data-testid="input-booking-key"
               />
@@ -115,34 +208,46 @@ export default function Settings() {
             <CardDescription>Configure content creation defaults</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label>Auto-generate slugs</Label>
                 <p className="text-sm text-muted-foreground">
                   Automatically generate URL slugs from titles
                 </p>
               </div>
-              <Switch defaultChecked data-testid="switch-auto-slug" />
+              <Switch 
+                checked={formData.content?.autoSlug ?? true}
+                onCheckedChange={(checked) => updateField("content", "autoSlug", checked)}
+                data-testid="switch-auto-slug" 
+              />
             </div>
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label>Auto-save drafts</Label>
                 <p className="text-sm text-muted-foreground">
                   Automatically save content while editing
                 </p>
               </div>
-              <Switch defaultChecked data-testid="switch-auto-save" />
+              <Switch 
+                checked={formData.content?.autoSave ?? true}
+                onCheckedChange={(checked) => updateField("content", "autoSave", checked)}
+                data-testid="switch-auto-save" 
+              />
             </div>
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label>AI content suggestions</Label>
                 <p className="text-sm text-muted-foreground">
                   Show AI-powered writing suggestions
                 </p>
               </div>
-              <Switch defaultChecked data-testid="switch-ai-suggestions" />
+              <Switch 
+                checked={formData.content?.aiSuggestions ?? true}
+                onCheckedChange={(checked) => updateField("content", "aiSuggestions", checked)}
+                data-testid="switch-ai-suggestions" 
+              />
             </div>
           </CardContent>
         </Card>
@@ -156,24 +261,32 @@ export default function Settings() {
             <CardDescription>Configure notification preferences</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label>Email notifications</Label>
                 <p className="text-sm text-muted-foreground">
                   Receive emails for content updates
                 </p>
               </div>
-              <Switch data-testid="switch-email-notifications" />
+              <Switch 
+                checked={formData.notifications?.emailNotifications ?? false}
+                onCheckedChange={(checked) => updateField("notifications", "emailNotifications", checked)}
+                data-testid="switch-email-notifications" 
+              />
             </div>
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label>Browser notifications</Label>
                 <p className="text-sm text-muted-foreground">
                   Show browser push notifications
                 </p>
               </div>
-              <Switch data-testid="switch-browser-notifications" />
+              <Switch 
+                checked={formData.notifications?.browserNotifications ?? false}
+                onCheckedChange={(checked) => updateField("notifications", "browserNotifications", checked)}
+                data-testid="switch-browser-notifications" 
+              />
             </div>
           </CardContent>
         </Card>
@@ -187,31 +300,45 @@ export default function Settings() {
             <CardDescription>Manage security settings</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label>Two-factor authentication</Label>
                 <p className="text-sm text-muted-foreground">
-                  Add extra security to your account
+                  Configure in your Profile page
                 </p>
               </div>
-              <Switch data-testid="switch-2fa" />
+              <Button variant="outline" size="sm" disabled data-testid="button-configure-2fa">
+                Configure in Profile
+              </Button>
             </div>
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <Label>Session timeout</Label>
                 <p className="text-sm text-muted-foreground">
                   Automatically log out after inactivity
                 </p>
               </div>
-              <Switch defaultChecked data-testid="switch-session-timeout" />
+              <Switch 
+                checked={formData.security?.sessionTimeout ?? true}
+                onCheckedChange={(checked) => updateField("security", "sessionTimeout", checked)}
+                data-testid="switch-session-timeout" 
+              />
             </div>
           </CardContent>
         </Card>
 
         <div className="flex justify-end">
-          <Button onClick={handleSave} data-testid="button-save-settings">
-            <SettingsIcon className="h-4 w-4 mr-2" />
+          <Button 
+            onClick={handleSave} 
+            disabled={saveMutation.isPending}
+            data-testid="button-save-settings"
+          >
+            {saveMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <SettingsIcon className="h-4 w-4 mr-2" />
+            )}
             Save Settings
           </Button>
         </div>

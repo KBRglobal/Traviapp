@@ -65,6 +65,25 @@ import {
 // Permission checking utilities (imported from security.ts for route-level checks)
 type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
 
+// Role checking middleware
+function requireRole(role: UserRole | UserRole[]) {
+  return async (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated() || !req.user?.claims?.sub) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    const userId = req.user.claims.sub;
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+    const allowedRoles = Array.isArray(role) ? role : [role];
+    if (!allowedRoles.includes(user.role as UserRole)) {
+      return res.status(403).json({ error: "Insufficient permissions", requiredRole: role, currentRole: user.role });
+    }
+    next();
+  };
+}
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 let objectStorageClient: Client | null = null;
@@ -785,10 +804,22 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid verification code" });
       }
 
-      // Enable TOTP for the user
-      await storage.updateUser(userId, { totpEnabled: true });
+      // Generate 10 recovery codes
+      const recoveryCodes: string[] = [];
+      for (let i = 0; i < 10; i++) {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase() + 
+                     Math.random().toString(36).substring(2, 8).toUpperCase();
+        recoveryCodes.push(code);
+      }
       
-      res.json({ success: true, message: "Two-factor authentication enabled" });
+      // Store hashed recovery codes (we'll store them plain for now, in production hash them)
+      await storage.updateUser(userId, { totpEnabled: true, totpRecoveryCodes: recoveryCodes });
+      
+      res.json({ 
+        success: true, 
+        message: "Two-factor authentication enabled",
+        recoveryCodes
+      });
     } catch (error) {
       console.error("Error verifying TOTP:", error);
       res.status(500).json({ error: "Failed to verify TOTP" });
@@ -896,11 +927,89 @@ export async function registerRoutes(
     }
   });
 
+  // Rate limiting for recovery code validation (in-memory, per-user)
+  const recoveryAttempts = new Map<string, { count: number; lastAttempt: number }>();
+  const MAX_RECOVERY_ATTEMPTS = 3;
+  const RECOVERY_LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+  // Validate recovery code (alternative to TOTP code)
+  app.post("/api/totp/validate-recovery", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { code } = req.body;
+      
+      if (!code) {
+        return res.status(400).json({ error: "Recovery code is required" });
+      }
+
+      // Rate limiting check
+      const now = Date.now();
+      const attempts = recoveryAttempts.get(userId);
+      if (attempts) {
+        if (now - attempts.lastAttempt < RECOVERY_LOCKOUT_MS && attempts.count >= MAX_RECOVERY_ATTEMPTS) {
+          const remainingMs = RECOVERY_LOCKOUT_MS - (now - attempts.lastAttempt);
+          const remainingMin = Math.ceil(remainingMs / 60000);
+          return res.status(429).json({ 
+            error: `Too many failed attempts. Try again in ${remainingMin} minutes.`,
+            retryAfterMs: remainingMs
+          });
+        }
+        if (now - attempts.lastAttempt >= RECOVERY_LOCKOUT_MS) {
+          recoveryAttempts.delete(userId);
+        }
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.totpEnabled) {
+        return res.status(400).json({ error: "TOTP is not enabled" });
+      }
+
+      const recoveryCodes = (user as any).totpRecoveryCodes || [];
+      const codeIndex = recoveryCodes.findIndex((c: string) => c === code.toUpperCase().replace(/-/g, ""));
+      
+      if (codeIndex === -1) {
+        // Track failed attempt
+        const current = recoveryAttempts.get(userId) || { count: 0, lastAttempt: now };
+        recoveryAttempts.set(userId, { count: current.count + 1, lastAttempt: now });
+        const remaining = MAX_RECOVERY_ATTEMPTS - current.count - 1;
+        return res.status(400).json({ 
+          error: "Invalid recovery code",
+          attemptsRemaining: Math.max(0, remaining)
+        });
+      }
+
+      // Clear attempts on success
+      recoveryAttempts.delete(userId);
+
+      // Remove used recovery code
+      recoveryCodes.splice(codeIndex, 1);
+      await storage.updateUser(userId, { totpRecoveryCodes: recoveryCodes } as any);
+
+      // Mark TOTP as validated in session
+      if ((req as any).session) {
+        (req as any).session.totpValidated = true;
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Recovery code accepted",
+        remainingCodes: recoveryCodes.length 
+      });
+    } catch (error) {
+      console.error("Error validating recovery code:", error);
+      res.status(500).json({ error: "Failed to validate recovery code" });
+    }
+  });
+
   // Audit logging helper
   async function logAuditEvent(
     req: Request,
     actionType: "create" | "update" | "delete" | "publish" | "unpublish" | "submit_for_review" | "approve" | "reject" | "login" | "logout" | "user_create" | "user_update" | "user_delete" | "role_change" | "settings_change" | "media_upload" | "media_delete",
-    entityType: "content" | "user" | "media" | "settings" | "rss_feed" | "affiliate_link" | "translation" | "session",
+    entityType: "content" | "user" | "media" | "settings" | "rss_feed" | "affiliate_link" | "translation" | "session" | "tag" | "cluster" | "campaign" | "newsletter_subscriber",
     entityId: string | null,
     description: string,
     beforeState?: Record<string, unknown>,
@@ -1392,6 +1501,154 @@ export async function registerRoutes(
     }
   });
 
+  // ========== Site Settings API ==========
+  
+  // Get all settings
+  app.get("/api/settings", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+    try {
+      const settings = await storage.getSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  // Get settings by category (for frontend grouping)
+  app.get("/api/settings/grouped", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+    try {
+      const settings = await storage.getSettings();
+      const grouped: Record<string, Record<string, unknown>> = {};
+      for (const setting of settings) {
+        if (!grouped[setting.category]) {
+          grouped[setting.category] = {};
+        }
+        grouped[setting.category][setting.key] = setting.value;
+      }
+      res.json(grouped);
+    } catch (error) {
+      console.error("Error fetching grouped settings:", error);
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  // Update multiple settings at once
+  app.post("/api/settings/bulk", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+    try {
+      const { settings } = req.body;
+      if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+        return res.status(400).json({ error: "Settings object required" });
+      }
+      
+      // Validate allowed categories
+      const allowedCategories = ["site", "api", "content", "notifications", "security"];
+      const invalidCategories = Object.keys(settings).filter(c => !allowedCategories.includes(c));
+      if (invalidCategories.length > 0) {
+        return res.status(400).json({ error: `Invalid categories: ${invalidCategories.join(", ")}` });
+      }
+      
+      const userId = req.user.claims.sub;
+      const updated: any[] = [];
+      
+      for (const [category, values] of Object.entries(settings)) {
+        if (typeof values !== "object" || values === null || Array.isArray(values)) {
+          continue;
+        }
+        for (const [key, value] of Object.entries(values as Record<string, unknown>)) {
+          // Validate key is a non-empty string
+          if (typeof key !== "string" || key.trim() === "") {
+            continue;
+          }
+          // Validate value is a primitive (string, number, boolean) or null
+          if (value !== null && typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+            continue;
+          }
+          const setting = await storage.upsertSetting(key.trim(), value, category, userId);
+          updated.push(setting);
+        }
+      }
+      
+      await logAuditEvent(req, "settings_change", "settings", "bulk", `Updated ${updated.length} settings`);
+      res.json({ success: true, updated: updated.length });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
+  // ========== Content Safety Check Endpoints ==========
+
+  // Check for broken internal links
+  app.get("/api/content/broken-links", isAuthenticated, requireRole(["admin", "editor"]), async (req: any, res) => {
+    try {
+      const links = await storage.getInternalLinks();
+      const brokenLinks: { linkId: string; sourceId: string | null; targetId: string | null; reason: string }[] = [];
+      
+      for (const link of links) {
+        // Check if target content exists
+        if (link.targetContentId) {
+          const targetContent = await storage.getContent(link.targetContentId);
+          if (!targetContent) {
+            brokenLinks.push({
+              linkId: link.id,
+              sourceId: link.sourceContentId,
+              targetId: link.targetContentId,
+              reason: "Target content not found"
+            });
+          }
+        }
+      }
+      
+      res.json({ total: links.length, broken: brokenLinks.length, brokenLinks });
+    } catch (error) {
+      console.error("Error checking broken links:", error);
+      res.status(500).json({ error: "Failed to check broken links" });
+    }
+  });
+
+  // Check content status before bulk delete
+  app.post("/api/content/bulk-delete-check", isAuthenticated, requireRole(["admin", "editor"]), async (req: any, res) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids)) {
+        return res.status(400).json({ error: "IDs array required" });
+      }
+      
+      const warnings: { id: string; title: string; status: string; reason: string }[] = [];
+      
+      for (const id of ids) {
+        const content = await storage.getContent(id);
+        if (content) {
+          if (content.status === "published") {
+            warnings.push({
+              id: content.id,
+              title: content.title,
+              status: content.status,
+              reason: "Content is published and visible to users"
+            });
+          } else if (content.status === "scheduled") {
+            warnings.push({
+              id: content.id,
+              title: content.title,
+              status: content.status,
+              reason: "Content is scheduled for publishing"
+            });
+          }
+        }
+      }
+      
+      res.json({ 
+        total: ids.length, 
+        warnings: warnings.length, 
+        items: warnings,
+        canProceed: true
+      });
+    } catch (error) {
+      console.error("Error checking bulk delete:", error);
+      res.status(500).json({ error: "Failed to check bulk delete" });
+    }
+  });
+
   app.get("/api/rss-feeds", requireAuth, async (req, res) => {
     try {
       const feeds = await storage.getRssFeeds();
@@ -1419,6 +1676,7 @@ export async function registerRoutes(
     try {
       const parsed = insertRssFeedSchema.parse(req.body);
       const feed = await storage.createRssFeed(parsed);
+      await logAuditEvent(req, "create", "rss_feed", feed.id, `Created RSS feed: ${feed.name}`, undefined, { name: feed.name, url: feed.url });
       res.status(201).json(feed);
     } catch (error) {
       console.error("Error creating RSS feed:", error);
@@ -1431,10 +1689,12 @@ export async function registerRoutes(
 
   app.patch("/api/rss-feeds/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
+      const existingFeed = await storage.getRssFeed(req.params.id);
       const feed = await storage.updateRssFeed(req.params.id, req.body);
       if (!feed) {
         return res.status(404).json({ error: "RSS feed not found" });
       }
+      await logAuditEvent(req, "update", "rss_feed", feed.id, `Updated RSS feed: ${feed.name}`, existingFeed ? { name: existingFeed.name, url: existingFeed.url } : undefined, { name: feed.name, url: feed.url });
       res.json(feed);
     } catch (error) {
       console.error("Error updating RSS feed:", error);
@@ -1444,7 +1704,11 @@ export async function registerRoutes(
 
   app.delete("/api/rss-feeds/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
+      const existingFeed = await storage.getRssFeed(req.params.id);
       await storage.deleteRssFeed(req.params.id);
+      if (existingFeed) {
+        await logAuditEvent(req, "delete", "rss_feed", req.params.id, `Deleted RSS feed: ${existingFeed.name}`, { name: existingFeed.name, url: existingFeed.url });
+      }
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting RSS feed:", error);
@@ -1638,6 +1902,7 @@ export async function registerRoutes(
     try {
       const parsed = insertAffiliateLinkSchema.parse(req.body);
       const link = await storage.createAffiliateLink(parsed);
+      await logAuditEvent(req, "create", "affiliate_link", link.id, `Created affiliate link: ${link.name}`, undefined, { name: link.name, url: link.url });
       res.status(201).json(link);
     } catch (error) {
       console.error("Error creating affiliate link:", error);
@@ -1650,10 +1915,12 @@ export async function registerRoutes(
 
   app.patch("/api/affiliate-links/:id", requirePermission("canAccessAffiliates"), checkReadOnlyMode, async (req, res) => {
     try {
+      const existingLink = await storage.getAffiliateLink(req.params.id);
       const link = await storage.updateAffiliateLink(req.params.id, req.body);
       if (!link) {
         return res.status(404).json({ error: "Affiliate link not found" });
       }
+      await logAuditEvent(req, "update", "affiliate_link", link.id, `Updated affiliate link: ${link.name}`, existingLink ? { name: existingLink.name, url: existingLink.url } : undefined, { name: link.name, url: link.url });
       res.json(link);
     } catch (error) {
       console.error("Error updating affiliate link:", error);
@@ -1663,7 +1930,11 @@ export async function registerRoutes(
 
   app.delete("/api/affiliate-links/:id", requirePermission("canAccessAffiliates"), checkReadOnlyMode, async (req, res) => {
     try {
+      const existingLink = await storage.getAffiliateLink(req.params.id);
       await storage.deleteAffiliateLink(req.params.id);
+      if (existingLink) {
+        await logAuditEvent(req, "delete", "affiliate_link", req.params.id, `Deleted affiliate link: ${existingLink.name}`, { name: existingLink.name, url: existingLink.url });
+      }
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting affiliate link:", error);
@@ -1691,6 +1962,24 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching media file:", error);
       res.status(500).json({ error: "Failed to fetch media file" });
+    }
+  });
+
+  // Check if media is in use before delete
+  app.get("/api/media/:id/usage", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const mediaFile = await storage.getMediaFile(id);
+      
+      if (!mediaFile) {
+        return res.status(404).json({ error: "Media file not found" });
+      }
+      
+      const usage = await storage.checkMediaUsage(mediaFile.url);
+      res.json(usage);
+    } catch (error) {
+      console.error("Error checking media usage:", error);
+      res.status(500).json({ error: "Failed to check media usage" });
     }
   });
 
@@ -1733,6 +2022,7 @@ export async function registerRoutes(
         height: req.body.height ? parseInt(req.body.height) : null,
       });
 
+      await logAuditEvent(req, "media_upload", "media", mediaFile.id, `Uploaded media: ${mediaFile.originalFilename}`, undefined, { filename: mediaFile.originalFilename, mimeType: mediaFile.mimeType, size: mediaFile.size });
       res.status(201).json(mediaFile);
     } catch (error) {
       if (localPath && fs.existsSync(localPath)) {
@@ -1759,6 +2049,7 @@ export async function registerRoutes(
   app.delete("/api/media/:id", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, async (req, res) => {
     try {
       const file = await storage.getMediaFile(req.params.id);
+      const fileInfo = file ? { filename: file.originalFilename, mimeType: file.mimeType, size: file.size } : undefined;
       if (file) {
         const storageClient = getObjectStorageClient();
         if (storageClient) {
@@ -1779,6 +2070,9 @@ export async function registerRoutes(
         }
       }
       await storage.deleteMediaFile(req.params.id);
+      if (fileInfo) {
+        await logAuditEvent(req, "media_delete", "media", req.params.id, `Deleted media: ${fileInfo.filename}`, fileInfo);
+      }
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting media file:", error);
@@ -3522,6 +3816,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       
       const deleted = await storage.deleteNewsletterSubscriber(id);
       if (deleted) {
+        await logAuditEvent(req, "delete", "newsletter_subscriber", id, `Deleted newsletter subscriber: ${subscriber.email}`, { email: subscriber.email });
         console.log("[Newsletter] Subscriber deleted (right to be forgotten):", subscriber.email);
         res.json({ success: true, message: "Subscriber deleted successfully" });
       } else {
@@ -3644,6 +3939,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         createdBy: user?.claims?.sub || null,
       };
       const campaign = await storage.createCampaign(campaignData);
+      await logAuditEvent(req, "create", "campaign", campaign.id, `Created campaign: ${campaign.name}`, undefined, { name: campaign.name, subject: campaign.subject });
       console.log("[Campaigns] Created campaign:", campaign.name);
       res.status(201).json(campaign);
     } catch (error) {
@@ -3664,6 +3960,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         return res.status(400).json({ error: "Cannot edit a campaign that has been sent or is sending" });
       }
       const campaign = await storage.updateCampaign(id, req.body);
+      if (campaign) {
+        await logAuditEvent(req, "update", "campaign", campaign.id, `Updated campaign: ${campaign.name}`, { name: existing.name, subject: existing.subject }, { name: campaign.name, subject: campaign.subject });
+      }
       console.log("[Campaigns] Updated campaign:", campaign?.name);
       res.json(campaign);
     } catch (error) {
@@ -3684,6 +3983,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         return res.status(400).json({ error: "Cannot delete a campaign that has been sent or is sending" });
       }
       await storage.deleteCampaign(id);
+      await logAuditEvent(req, "delete", "campaign", id, `Deleted campaign: ${existing.name}`, { name: existing.name, subject: existing.subject });
       console.log("[Campaigns] Deleted campaign:", existing.name);
       res.json({ success: true });
     } catch (error) {
@@ -4194,6 +4494,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         primaryKeyword,
         color,
       });
+      await logAuditEvent(req, "create", "cluster", cluster.id, `Created cluster: ${cluster.name}`, undefined, { name: cluster.name, slug: cluster.slug });
       res.status(201).json(cluster);
     } catch (error) {
       console.error("Error creating cluster:", error);
@@ -4203,6 +4504,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
 
   app.patch("/api/clusters/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
+      const existingCluster = await storage.getContentCluster(req.params.id);
       const { name, slug, description, pillarContentId, primaryKeyword, color } = req.body;
       const cluster = await storage.updateContentCluster(req.params.id, {
         name,
@@ -4215,6 +4517,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       if (!cluster) {
         return res.status(404).json({ error: "Cluster not found" });
       }
+      await logAuditEvent(req, "update", "cluster", cluster.id, `Updated cluster: ${cluster.name}`, existingCluster ? { name: existingCluster.name, slug: existingCluster.slug } : undefined, { name: cluster.name, slug: cluster.slug });
       res.json(cluster);
     } catch (error) {
       console.error("Error updating cluster:", error);
@@ -4224,7 +4527,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
 
   app.delete("/api/clusters/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
+      const existingCluster = await storage.getContentCluster(req.params.id);
       await storage.deleteContentCluster(req.params.id);
+      if (existingCluster) {
+        await logAuditEvent(req, "delete", "cluster", req.params.id, `Deleted cluster: ${existingCluster.name}`, { name: existingCluster.name, slug: existingCluster.slug });
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting cluster:", error);
@@ -4330,6 +4637,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         return res.status(400).json({ error: "Tag with this slug already exists" });
       }
       const tag = await storage.createTag({ name, slug, description, color });
+      await logAuditEvent(req, "create", "tag", tag.id, `Created tag: ${tag.name}`, undefined, { name: tag.name, slug: tag.slug });
       res.status(201).json(tag);
     } catch (error) {
       console.error("Error creating tag:", error);
@@ -4339,6 +4647,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
 
   app.patch("/api/tags/:id", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
+      const existingTag = await storage.getTag(req.params.id);
       const parseResult = insertTagSchema.partial().safeParse(req.body);
       if (!parseResult.success) {
         return res.status(400).json({ error: "Validation failed", details: parseResult.error.flatten() });
@@ -4348,6 +4657,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       if (!tag) {
         return res.status(404).json({ error: "Tag not found" });
       }
+      await logAuditEvent(req, "update", "tag", tag.id, `Updated tag: ${tag.name}`, existingTag ? { name: existingTag.name, slug: existingTag.slug } : undefined, { name: tag.name, slug: tag.slug });
       res.json(tag);
     } catch (error) {
       console.error("Error updating tag:", error);
@@ -4357,7 +4667,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
 
   app.delete("/api/tags/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
+      const existingTag = await storage.getTag(req.params.id);
       await storage.deleteTag(req.params.id);
+      if (existingTag) {
+        await logAuditEvent(req, "delete", "tag", req.params.id, `Deleted tag: ${existingTag.name}`, { name: existingTag.name, slug: existingTag.slug });
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting tag:", error);

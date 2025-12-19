@@ -1,7 +1,8 @@
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Loader2, MapPin, Clock, Star, Users, DollarSign, Calendar, Building } from "lucide-react";
-import type { Content, Attraction, Hotel, Dining, District, Transport, Article, HighlightItem, RoomTypeItem, FaqItem } from "@shared/schema";
+import type { Content, Attraction, Hotel, Dining, District, Transport, Article, HighlightItem, RoomTypeItem, FaqItem, ContentCluster } from "@shared/schema";
 
 type ContentWithExtensions = Content & {
   attraction?: Attraction | null;
@@ -10,7 +11,53 @@ type ContentWithExtensions = Content & {
   district?: District | null;
   transport?: Transport | null;
   article?: Article | null;
+  cluster?: ContentCluster | null;
+  clusterMembers?: Array<{ id: string; title: string; slug: string; type: string }>;
 };
+
+function generateContentSchema(content: ContentWithExtensions, baseUrl: string) {
+  const canonicalUrl = `${baseUrl}/${content.type}/${content.slug}`;
+  
+  const schema: Record<string, any> = {
+    "@context": "https://schema.org",
+    "@type": content.type === "article" ? "Article" : 
+             content.type === "hotel" ? "Hotel" :
+             content.type === "attraction" ? "TouristAttraction" :
+             content.type === "dining" ? "Restaurant" : "WebPage",
+    "name": content.title,
+    "description": content.metaDescription || content.title,
+    "url": canonicalUrl,
+  };
+
+  if (content.heroImage) {
+    schema.image = content.heroImage;
+  }
+
+  if (content.publishedAt) {
+    schema.datePublished = new Date(content.publishedAt).toISOString();
+  }
+
+  if (content.updatedAt) {
+    schema.dateModified = new Date(content.updatedAt).toISOString();
+  }
+
+  if (content.cluster) {
+    schema.isPartOf = {
+      "@type": "CollectionPage",
+      "name": content.cluster.name,
+    };
+  }
+
+  if (content.clusterMembers && content.clusterMembers.length > 0) {
+    schema.hasPart = content.clusterMembers.map(member => ({
+      "@type": "WebPage",
+      "name": member.title,
+      "url": `${baseUrl}/${member.type}/${member.slug}`
+    }));
+  }
+
+  return schema;
+}
 
 function renderBlock(block: any, index: number) {
   const data = block.data || block;
@@ -247,6 +294,43 @@ export default function PublicContentViewer() {
     queryKey: ["/api/contents/slug", slug],
     enabled: !!slug,
   });
+
+  useEffect(() => {
+    if (content?.slug && content?.type) {
+      const baseUrl = "https://dubaitravelguide.com";
+      const canonicalUrl = `${baseUrl}/${content.type}/${content.slug}`;
+      
+      const existingCanonical = document.querySelector('link[rel="canonical"]');
+      if (existingCanonical) {
+        existingCanonical.remove();
+      }
+      
+      const link = document.createElement("link");
+      link.rel = "canonical";
+      link.href = canonicalUrl;
+      document.head.appendChild(link);
+
+      const existingSchema = document.querySelector('script[type="application/ld+json"][data-content-viewer-schema]');
+      if (existingSchema) {
+        existingSchema.remove();
+      }
+
+      const schema = generateContentSchema(content, baseUrl);
+      const schemaScript = document.createElement('script');
+      schemaScript.type = 'application/ld+json';
+      schemaScript.setAttribute('data-content-viewer-schema', 'true');
+      schemaScript.textContent = JSON.stringify(schema);
+      document.head.appendChild(schemaScript);
+      
+      return () => {
+        link.remove();
+        const schemaToRemove = document.querySelector('script[type="application/ld+json"][data-content-viewer-schema]');
+        if (schemaToRemove) {
+          schemaToRemove.remove();
+        }
+      };
+    }
+  }, [content?.slug, content?.type, content?.cluster, content?.clusterMembers]);
 
   if (isLoading) {
     return (

@@ -5,12 +5,32 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Upload, Image, Trash2, Copy, Search, X } from "lucide-react";
+import { Upload, Image, Trash2, Copy, Search, AlertTriangle } from "lucide-react";
 import type { MediaFile } from "@shared/schema";
+
+interface MediaUsage {
+  isUsed: boolean;
+  usedIn: Array<{
+    id: number;
+    title: string;
+    type: string;
+    slug: string;
+  }>;
+}
 
 export default function MediaLibrary() {
   const { toast } = useToast();
@@ -18,6 +38,9 @@ export default function MediaLibrary() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
   const [editAltText, setEditAltText] = useState("");
+  const [usageWarningOpen, setUsageWarningOpen] = useState(false);
+  const [mediaUsage, setMediaUsage] = useState<MediaUsage | null>(null);
+  const [checkingUsage, setCheckingUsage] = useState(false);
 
   const { data: files, isLoading } = useQuery<MediaFile[]>({
     queryKey: ["/api/media"],
@@ -45,7 +68,7 @@ export default function MediaLibrary() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      apiRequest(`/api/media/${id}`, { method: "DELETE" }),
+      apiRequest("DELETE", `/api/media/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/media"] });
       setSelectedFile(null);
@@ -55,10 +78,7 @@ export default function MediaLibrary() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, altText }: { id: string; altText: string }) =>
-      apiRequest(`/api/media/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ altText }),
-      }),
+      apiRequest("PATCH", `/api/media/${id}`, { altText }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/media"] });
       toast({ title: "Alt text updated" });
@@ -69,6 +89,42 @@ export default function MediaLibrary() {
     const file = e.target.files?.[0];
     if (file) {
       uploadMutation.mutate(file);
+    }
+  };
+
+  const handleDeleteClick = async () => {
+    if (!selectedFile) return;
+    
+    setCheckingUsage(true);
+    try {
+      const response = await fetch(`/api/media/${selectedFile.id}/usage`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        deleteMutation.mutate(selectedFile.id);
+        return;
+      }
+      
+      const usage: MediaUsage = await response.json();
+      
+      if (usage.isUsed && usage.usedIn.length > 0) {
+        setMediaUsage(usage);
+        setUsageWarningOpen(true);
+      } else {
+        deleteMutation.mutate(selectedFile.id);
+      }
+    } catch {
+      deleteMutation.mutate(selectedFile.id);
+    } finally {
+      setCheckingUsage(false);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedFile) {
+      deleteMutation.mutate(selectedFile.id);
+      setUsageWarningOpen(false);
+      setMediaUsage(null);
     }
   };
 
@@ -150,14 +206,8 @@ export default function MediaLibrary() {
               ? "Try adjusting your search query."
               : "Upload images and files to use in your content."
           }
-          action={
-            !searchQuery && (
-              <Button onClick={openFileDialog} data-testid="button-upload-first">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Your First File
-              </Button>
-            )
-          }
+          actionLabel={!searchQuery ? "Upload Your First File" : undefined}
+          onAction={!searchQuery ? openFileDialog : undefined}
         />
       ) : (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
@@ -280,12 +330,12 @@ export default function MediaLibrary() {
           <DialogFooter>
             <Button
               variant="destructive"
-              onClick={() => selectedFile && deleteMutation.mutate(selectedFile.id)}
-              disabled={deleteMutation.isPending}
+              onClick={handleDeleteClick}
+              disabled={deleteMutation.isPending || checkingUsage}
               data-testid="button-delete-file"
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete File
+              {checkingUsage ? "Checking..." : "Delete File"}
             </Button>
             <Button variant="outline" onClick={() => setSelectedFile(null)}>
               Close
@@ -293,6 +343,45 @@ export default function MediaLibrary() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={usageWarningOpen} onOpenChange={setUsageWarningOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Media In Use
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>This media file is currently used in the following content items:</p>
+                {mediaUsage && mediaUsage.usedIn.length > 0 && (
+                  <ul className="list-disc pl-5 space-y-1">
+                    {mediaUsage.usedIn.map((item) => (
+                      <li key={`${item.type}-${item.id}`} className="text-sm">
+                        <span className="font-medium">{item.title}</span>
+                        <span className="text-muted-foreground"> ({item.type})</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="text-destructive font-medium">
+                  Deleting this file will break these content items and cause missing images.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              Delete Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

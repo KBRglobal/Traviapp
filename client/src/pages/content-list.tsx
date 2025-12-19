@@ -25,6 +25,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Plus,
   Search,
   MapPin,
@@ -41,8 +51,16 @@ import {
   Trash2,
   Download,
   ChevronDown,
+  AlertTriangle,
 } from "lucide-react";
 import type { ContentWithRelations, Tag as TagType } from "@shared/schema";
+
+interface DeleteWarning {
+  id: string;
+  title: string;
+  status: string;
+  reason: string;
+}
 
 interface ContentListProps {
   type: "attraction" | "hotel" | "article" | "dining" | "district" | "transport" | "event" | "itinerary";
@@ -115,6 +133,9 @@ export default function ContentList({ type }: ContentListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteWarnings, setDeleteWarnings] = useState<DeleteWarning[]>([]);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [isCheckingDelete, setIsCheckingDelete] = useState(false);
 
   const { data: contents, isLoading } = useQuery<ContentWithRelations[]>({
     queryKey: [`/api/contents?type=${type}`],
@@ -195,6 +216,38 @@ export default function ContentList({ type }: ContentListProps) {
       toast({ title: "Error", description: "Failed to remove tag.", variant: "destructive" });
     },
   });
+
+  const handleBulkDeleteClick = async () => {
+    if (selectedIds.length === 0) return;
+    
+    setIsCheckingDelete(true);
+    try {
+      const response = await apiRequest("POST", "/api/content/bulk-delete-check", { ids: selectedIds });
+      const data = await response.json();
+      
+      if (data.warnings && data.warnings.length > 0) {
+        setDeleteWarnings(data.warnings);
+        setShowDeleteWarning(true);
+      } else {
+        bulkDeleteMutation.mutate(selectedIds);
+      }
+    } catch (error) {
+      bulkDeleteMutation.mutate(selectedIds);
+    } finally {
+      setIsCheckingDelete(false);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    setShowDeleteWarning(false);
+    setDeleteWarnings([]);
+    bulkDeleteMutation.mutate(selectedIds);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteWarning(false);
+    setDeleteWarnings([]);
+  };
 
   const filteredContents = contents?.filter((content) => {
     const matchesSearch = content.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -404,14 +457,11 @@ export default function ContentList({ type }: ContentListProps) {
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={() => {
-                  if (confirm("Are you sure you want to delete the selected items?")) {
-                    bulkDeleteMutation.mutate(selectedIds);
-                  }
-                }}
+                onClick={handleBulkDeleteClick}
+                disabled={isCheckingDelete || bulkDeleteMutation.isPending}
                 data-testid="button-bulk-delete"
               >
-                <Trash2 className="mr-1 h-4 w-4" /> Delete
+                <Trash2 className="mr-1 h-4 w-4" /> {isCheckingDelete ? "Checking..." : "Delete"}
               </Button>
               <Button
                 variant="ghost"
@@ -463,6 +513,53 @@ export default function ContentList({ type }: ContentListProps) {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={showDeleteWarning} onOpenChange={setShowDeleteWarning}>
+        <AlertDialogContent data-testid="dialog-delete-warning">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Warning: Published or Scheduled Content
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  The following items are published or scheduled and deleting them will remove them from the public site:
+                </p>
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {deleteWarnings.map((warning) => (
+                    <div
+                      key={warning.id}
+                      className="flex items-center justify-between p-2 bg-muted rounded-md text-sm"
+                      data-testid={`warning-item-${warning.id}`}
+                    >
+                      <span className="font-medium truncate flex-1 mr-2">{warning.title}</span>
+                      <StatusBadge status={warning.status as "draft" | "in_review" | "approved" | "scheduled" | "published"} />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Are you sure you want to delete {deleteWarnings.length === selectedIds.length 
+                    ? "all" 
+                    : `${deleteWarnings.length} of ${selectedIds.length}`} selected items?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete} data-testid="button-cancel-delete">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              Delete Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

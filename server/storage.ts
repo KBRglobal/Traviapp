@@ -87,6 +87,9 @@ import {
   contentTemplates,
   type ContentTemplate,
   type InsertContentTemplate,
+  siteSettings,
+  type SiteSetting,
+  type InsertSiteSetting,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -295,6 +298,15 @@ export interface IStorage {
   updateContentTemplate(id: string, data: Partial<InsertContentTemplate>): Promise<ContentTemplate | undefined>;
   deleteContentTemplate(id: string): Promise<boolean>;
   incrementTemplateUsage(id: string): Promise<void>;
+
+  // Site Settings
+  getSettings(): Promise<SiteSetting[]>;
+  getSetting(key: string): Promise<SiteSetting | undefined>;
+  upsertSetting(key: string, value: unknown, category: string, updatedBy?: string): Promise<SiteSetting>;
+  deleteSetting(key: string): Promise<boolean>;
+
+  // Media Usage
+  checkMediaUsage(mediaUrl: string): Promise<{ isUsed: boolean; usedIn: { id: string; title: string; type: string }[] }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -367,6 +379,8 @@ export class DatabaseStorage implements IStorage {
     let query = db.select().from(contents);
     
     const conditions = [];
+    // Filter out soft-deleted content
+    conditions.push(sql`${contents.deletedAt} IS NULL`);
     if (filters?.type) {
       conditions.push(eq(contents.type, filters.type as any));
     }
@@ -515,8 +529,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteContent(id: string): Promise<boolean> {
-    const result = await db.delete(contents).where(eq(contents.id, id));
-    return true;
+    // Soft delete - set deletedAt instead of actually deleting
+    const [result] = await db
+      .update(contents)
+      .set({ deletedAt: new Date() })
+      .where(eq(contents.id, id))
+      .returning();
+    return !!result;
   }
 
   async getAttraction(contentId: string): Promise<Attraction | undefined> {
@@ -1508,6 +1527,70 @@ export class DatabaseStorage implements IStorage {
     await db.update(contentTemplates)
       .set({ usageCount: sql`${contentTemplates.usageCount} + 1` })
       .where(eq(contentTemplates.id, id));
+  }
+
+  // Site Settings
+  async getSettings(): Promise<SiteSetting[]> {
+    return await db.select().from(siteSettings).orderBy(siteSettings.category, siteSettings.key);
+  }
+
+  async getSetting(key: string): Promise<SiteSetting | undefined> {
+    const [setting] = await db.select().from(siteSettings).where(eq(siteSettings.key, key));
+    return setting;
+  }
+
+  async upsertSetting(key: string, value: unknown, category: string, updatedBy?: string): Promise<SiteSetting> {
+    const existing = await this.getSetting(key);
+    if (existing) {
+      const [updated] = await db
+        .update(siteSettings)
+        .set({ value, category, updatedBy, updatedAt: new Date() })
+        .where(eq(siteSettings.key, key))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(siteSettings)
+      .values({ key, value, category, updatedBy })
+      .returning();
+    return created;
+  }
+
+  async deleteSetting(key: string): Promise<boolean> {
+    const result = await db.delete(siteSettings).where(eq(siteSettings.key, key));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Media Usage Check
+  async checkMediaUsage(mediaUrl: string): Promise<{ isUsed: boolean; usedIn: { id: string; title: string; type: string }[] }> {
+    const usedIn: { id: string; title: string; type: string }[] = [];
+    
+    // Check heroImage
+    const heroMatches = await db
+      .select({ id: contents.id, title: contents.title, type: contents.type })
+      .from(contents)
+      .where(and(eq(contents.heroImage, mediaUrl), sql`${contents.deletedAt} IS NULL`));
+    
+    for (const match of heroMatches) {
+      usedIn.push({ id: match.id, title: match.title, type: match.type });
+    }
+    
+    // Check blocks JSON for image URLs
+    const allContent = await db
+      .select({ id: contents.id, title: contents.title, type: contents.type, blocks: contents.blocks })
+      .from(contents)
+      .where(sql`${contents.deletedAt} IS NULL`);
+    
+    for (const content of allContent) {
+      const blocksStr = JSON.stringify(content.blocks || []);
+      if (blocksStr.includes(mediaUrl)) {
+        if (!usedIn.find(u => u.id === content.id)) {
+          usedIn.push({ id: content.id, title: content.title, type: content.type });
+        }
+      }
+    }
+    
+    return { isUsed: usedIn.length > 0, usedIn };
   }
 }
 

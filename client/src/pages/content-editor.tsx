@@ -45,9 +45,11 @@ import {
   ImagePlus,
   History,
   RotateCcw,
+  Check,
 } from "lucide-react";
 import type { ContentWithRelations, ContentBlock, ContentVersion } from "@shared/schema";
 import { SeoScore } from "@/components/seo-score";
+import { SchemaPreview } from "@/components/schema-preview";
 
 type ContentType = "attraction" | "hotel" | "article" | "event" | "itinerary";
 
@@ -146,8 +148,13 @@ export default function ContentEditor() {
   const [imageGeneratingBlock, setImageGeneratingBlock] = useState<string | null>(null);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<ContentVersion | null>(null);
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [lastAutosaveTime, setLastAutosaveTime] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const hasChangedRef = useRef(false);
+  const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoadRef = useRef(true);
 
   const { data: content, isLoading } = useQuery<ContentWithRelations>({
     queryKey: [`/api/contents/${contentId}`],
@@ -181,6 +188,61 @@ export default function ContentEditor() {
       setBlocks(defaultTemplateBlocks.map(b => ({ ...b, id: generateId() })));
     }
   }, [content, isNew]);
+
+  // Autosave effect - debounce changes and auto-save after 30 seconds of inactivity
+  useEffect(() => {
+    // Skip on initial load
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      return;
+    }
+
+    // Only autosave for existing draft content
+    if (!contentId || status !== "draft") {
+      return;
+    }
+
+    // Mark as changed
+    hasChangedRef.current = true;
+
+    // Clear existing timer
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+
+    // Set new timer for 30 seconds
+    autosaveTimerRef.current = setTimeout(() => {
+      if (hasChangedRef.current && status === "draft" && !saveMutation.isPending && !autosaveMutation.isPending) {
+        setAutosaveStatus("saving");
+        const currentWordCount = blocks.reduce((count, block) => {
+          if (block.type === "text" && typeof block.data?.content === "string") {
+            return count + block.data.content.split(/\s+/).filter(Boolean).length;
+          }
+          return count;
+        }, 0);
+        
+        autosaveMutation.mutate({
+          title,
+          slug: slug || generateSlug(title),
+          metaTitle,
+          metaDescription,
+          primaryKeyword,
+          heroImage,
+          heroImageAlt,
+          blocks,
+          wordCount: currentWordCount,
+          status,
+        });
+      }
+    }, 30000);
+
+    // Cleanup on unmount or before next effect
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, [title, slug, metaTitle, metaDescription, primaryKeyword, heroImage, heroImageAlt, blocks, status, contentId]);
 
   // Generate blocks from attraction/hotel/article extension data
   // Blocks use simple string content (one item per line) for tips, highlights, info_grid
@@ -423,12 +485,32 @@ export default function ContentEditor() {
       queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${contentType}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({ title: "Saved", description: "Your content has been saved." });
+      hasChangedRef.current = false;
       if (isNew && result?.id) {
         navigate(`/admin/${contentType}s/${result.id}`);
       }
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to save content.", variant: "destructive" });
+    },
+  });
+
+  const autosaveMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      if (!contentId) return null;
+      const res = await apiRequest("PATCH", `/api/contents/${contentId}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      hasChangedRef.current = false;
+      setAutosaveStatus("saved");
+      const now = new Date();
+      setLastAutosaveTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      queryClient.invalidateQueries({ queryKey: [`/api/contents/${contentId}`] });
+      setTimeout(() => setAutosaveStatus("idle"), 3000);
+    },
+    onError: () => {
+      setAutosaveStatus("idle");
     },
   });
 
@@ -826,6 +908,18 @@ export default function ContentEditor() {
             {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Save
           </Button>
+          {autosaveStatus === "saving" && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1" data-testid="autosave-saving">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Saving...
+            </span>
+          )}
+          {autosaveStatus === "saved" && lastAutosaveTime && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1" data-testid="autosave-saved">
+              <Check className="h-3 w-3 text-green-500" />
+              Autosaved at {lastAutosaveTime}
+            </span>
+          )}
           {canPublish && (
             <Button size="sm" onClick={handlePublish} disabled={publishMutation.isPending} data-testid="button-publish">
               {publishMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
