@@ -21,57 +21,25 @@ interface LanguageSwitcherProps {
   className?: string;
 }
 
-// Get flag emoji from locale code
+// Get flag emoji from locale code (12 Dubai/UAE focused languages)
 const getFlag = (locale: Locale): string => {
   const flagMap: Record<string, string> = {
-    en: "🇺🇸",
-    ar: "🇸🇦",
-    hi: "🇮🇳",
-    ru: "🇷🇺",
-    zh: "🇨🇳",
-    de: "🇩🇪",
-    fr: "🇫🇷",
-    es: "🇪🇸",
-    it: "🇮🇹",
-    pt: "🇵🇹",
-    nl: "🇳🇱",
-    pl: "🇵🇱",
-    uk: "🇺🇦",
-    ta: "🇮🇳",
-    te: "🇮🇳",
-    bn: "🇧🇩",
-    mr: "🇮🇳",
-    gu: "🇮🇳",
-    ml: "🇮🇳",
-    kn: "🇮🇳",
-    pa: "🇮🇳",
-    ur: "🇵🇰",
-    si: "🇱🇰",
-    ne: "🇳🇵",
-    ja: "🇯🇵",
-    ko: "🇰🇷",
-    th: "🇹🇭",
-    vi: "🇻🇳",
-    id: "🇮🇩",
-    ms: "🇲🇾",
-    tl: "🇵🇭",
-    "zh-TW": "🇹🇼",
-    fa: "🇮🇷",
-    tr: "🇹🇷",
-    he: "🇮🇱",
-    kk: "🇰🇿",
-    uz: "🇺🇿",
-    az: "🇦🇿",
-    cs: "🇨🇿",
-    el: "🇬🇷",
-    sv: "🇸🇪",
-    no: "🇳🇴",
-    da: "🇩🇰",
-    fi: "🇫🇮",
-    hu: "🇭🇺",
-    ro: "🇷🇴",
-    sw: "🇰🇪",
-    am: "🇪🇹",
+    // Tier 1 - Core
+    en: "🇬🇧",   // English (UK flag for Dubai context)
+    ar: "🇦🇪",   // Arabic (UAE flag)
+    hi: "🇮🇳",   // Hindi (India)
+    // Tier 2 - High ROI
+    ur: "🇵🇰",   // Urdu (Pakistan)
+    ru: "🇷🇺",   // Russian
+    fa: "🇮🇷",   // Persian (Iran)
+    zh: "🇨🇳",   // Chinese
+    // Tier 3 - European
+    fr: "🇫🇷",   // French
+    de: "🇩🇪",   // German
+    it: "🇮🇹",   // Italian
+    // Tier 4 - Optional
+    es: "🇪🇸",   // Spanish
+    tr: "🇹🇷",   // Turkish
   };
   return flagMap[locale] || "🌐";
 };

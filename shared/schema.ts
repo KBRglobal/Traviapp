@@ -430,69 +430,27 @@ export const contentVersions = pgTable("content_versions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Supported locales enum - 50 languages for Dubai tourism
+// Supported locales enum - Dubai/UAE focused languages
 export const localeEnum = pgEnum("locale", [
-  // Tier 1: Primary markets (highest tourist volume)
-  "en",  // English
-  "ar",  // Arabic (Gulf, Saudi, MENA)
-  "hi",  // Hindi (India - #1 source market)
-  "ru",  // Russian (CIS)
-  "zh",  // Chinese Mandarin
+  // 🔴 TIER 1 - Core Markets (Must Have)
+  "en",  // English - primary business language
+  "ar",  // Arabic - official language, 20% untapped potential
+  "hi",  // Hindi - 38% of population (Indians)
 
-  // Tier 2: Major European markets
-  "de",  // German
-  "fr",  // French
-  "es",  // Spanish
-  "it",  // Italian
-  "pt",  // Portuguese
-  "nl",  // Dutch
-  "pl",  // Polish
-  "uk",  // Ukrainian
+  // 🟡 TIER 2 - High ROI Markets
+  "ur",  // Urdu - Pakistanis (12% of population)
+  "ru",  // Russian - wealthy investors
+  "fa",  // Farsi/Persian - Iranian business community
+  "zh",  // Chinese Simplified - growing investors
 
-  // Tier 3: South Asian languages (17% of tourists)
-  "ta",  // Tamil
-  "te",  // Telugu
-  "bn",  // Bengali
-  "mr",  // Marathi
-  "gu",  // Gujarati
-  "ml",  // Malayalam
-  "kn",  // Kannada
-  "pa",  // Punjabi
-  "ur",  // Urdu (Pakistan)
-  "si",  // Sinhala (Sri Lanka)
-  "ne",  // Nepali
+  // 🟢 TIER 3 - Niche European Markets
+  "fr",  // French - French, Moroccans, Algerians, Tunisians
+  "de",  // German - German/Austrian/Swiss investors
+  "it",  // Italian - wealthy Italian community
 
-  // Tier 4: East & Southeast Asian
-  "ja",  // Japanese
-  "ko",  // Korean
-  "th",  // Thai
-  "vi",  // Vietnamese
-  "id",  // Indonesian
-  "ms",  // Malay
-  "tl",  // Tagalog (Filipino)
-  "zh-TW", // Chinese Traditional (Taiwan/HK)
-
-  // Tier 5: Middle East & Central Asia
-  "fa",  // Persian/Farsi (Iran)
-  "tr",  // Turkish
-  "he",  // Hebrew (Israel)
-  "kk",  // Kazakh
-  "uz",  // Uzbek
-  "az",  // Azerbaijani
-
-  // Tier 6: Other European
-  "cs",  // Czech
-  "el",  // Greek
-  "sv",  // Swedish
-  "no",  // Norwegian
-  "da",  // Danish
-  "fi",  // Finnish
-  "hu",  // Hungarian
-  "ro",  // Romanian
-
-  // Tier 7: African markets
-  "sw",  // Swahili (East Africa)
-  "am"   // Amharic (Ethiopia)
+  // ⚪ TIER 4 - Optional
+  "es",  // Spanish - Latin American speakers
+  "tr",  // Turkish - Turkish community
 ]);
 
 export const translationStatusEnum = pgEnum("translation_status", ["pending", "in_progress", "completed", "needs_review"]);
@@ -1112,83 +1070,39 @@ export const insertContentViewSchema = createInsertSchema(contentViews).omit({
 export type InsertContentView = z.infer<typeof insertContentViewSchema>;
 export type ContentView = typeof contentViews.$inferSelect;
 
+// Dubai/UAE focused languages (12 languages)
 export type Locale =
-  | "en" | "ar" | "hi" | "ru" | "zh"  // Tier 1
-  | "de" | "fr" | "es" | "it" | "pt" | "nl" | "pl" | "uk"  // Tier 2
-  | "ta" | "te" | "bn" | "mr" | "gu" | "ml" | "kn" | "pa" | "ur" | "si" | "ne"  // Tier 3
-  | "ja" | "ko" | "th" | "vi" | "id" | "ms" | "tl" | "zh-TW"  // Tier 4
-  | "fa" | "tr" | "he" | "kk" | "uz" | "az"  // Tier 5
-  | "cs" | "el" | "sv" | "no" | "da" | "fi" | "hu" | "ro"  // Tier 6
-  | "sw" | "am";  // Tier 7
+  | "en" | "ar" | "hi"           // Tier 1 - Core
+  | "ur" | "ru" | "fa" | "zh"    // Tier 2 - High ROI
+  | "fr" | "de" | "it"           // Tier 3 - European
+  | "es" | "tr";                 // Tier 4 - Optional
 
 export type TranslationStatus = "pending" | "in_progress" | "completed" | "needs_review";
 
 // RTL languages (right-to-left)
-export const RTL_LOCALES: Locale[] = ["ar", "he", "fa", "ur"];
+export const RTL_LOCALES: Locale[] = ["ar", "fa", "ur"];
 
-// 50 Supported Languages for Dubai Tourism
+// 12 Supported Languages for Dubai/UAE Market
 export const SUPPORTED_LOCALES: { code: Locale; name: string; nativeName: string; region: string; tier: number }[] = [
-  // Tier 1: Primary markets (highest tourist volume)
+  // 🔴 TIER 1 - Core Markets (Must Have)
   { code: "en", name: "English", nativeName: "English", region: "Global", tier: 1 },
   { code: "ar", name: "Arabic", nativeName: "العربية", region: "Middle East", tier: 1 },
   { code: "hi", name: "Hindi", nativeName: "हिन्दी", region: "South Asia", tier: 1 },
-  { code: "ru", name: "Russian", nativeName: "Русский", region: "CIS", tier: 1 },
-  { code: "zh", name: "Chinese (Simplified)", nativeName: "简体中文", region: "East Asia", tier: 1 },
 
-  // Tier 2: Major European markets
-  { code: "de", name: "German", nativeName: "Deutsch", region: "Europe", tier: 2 },
-  { code: "fr", name: "French", nativeName: "Français", region: "Europe", tier: 2 },
-  { code: "es", name: "Spanish", nativeName: "Español", region: "Europe/Americas", tier: 2 },
-  { code: "it", name: "Italian", nativeName: "Italiano", region: "Europe", tier: 2 },
-  { code: "pt", name: "Portuguese", nativeName: "Português", region: "Europe/Americas", tier: 2 },
-  { code: "nl", name: "Dutch", nativeName: "Nederlands", region: "Europe", tier: 2 },
-  { code: "pl", name: "Polish", nativeName: "Polski", region: "Europe", tier: 2 },
-  { code: "uk", name: "Ukrainian", nativeName: "Українська", region: "Europe", tier: 2 },
+  // 🟡 TIER 2 - High ROI Markets
+  { code: "ur", name: "Urdu", nativeName: "اردو", region: "South Asia", tier: 2 },
+  { code: "ru", name: "Russian", nativeName: "Русский", region: "CIS", tier: 2 },
+  { code: "fa", name: "Persian", nativeName: "فارسی", region: "Middle East", tier: 2 },
+  { code: "zh", name: "Chinese", nativeName: "简体中文", region: "East Asia", tier: 2 },
 
-  // Tier 3: South Asian languages (17% of tourists)
-  { code: "ta", name: "Tamil", nativeName: "தமிழ்", region: "South Asia", tier: 3 },
-  { code: "te", name: "Telugu", nativeName: "తెలుగు", region: "South Asia", tier: 3 },
-  { code: "bn", name: "Bengali", nativeName: "বাংলা", region: "South Asia", tier: 3 },
-  { code: "mr", name: "Marathi", nativeName: "मराठी", region: "South Asia", tier: 3 },
-  { code: "gu", name: "Gujarati", nativeName: "ગુજરાતી", region: "South Asia", tier: 3 },
-  { code: "ml", name: "Malayalam", nativeName: "മലയാളം", region: "South Asia", tier: 3 },
-  { code: "kn", name: "Kannada", nativeName: "ಕನ್ನಡ", region: "South Asia", tier: 3 },
-  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", region: "South Asia", tier: 3 },
-  { code: "ur", name: "Urdu", nativeName: "اردو", region: "South Asia", tier: 3 },
-  { code: "si", name: "Sinhala", nativeName: "සිංහල", region: "South Asia", tier: 3 },
-  { code: "ne", name: "Nepali", nativeName: "नेपाली", region: "South Asia", tier: 3 },
+  // 🟢 TIER 3 - European Niche Markets
+  { code: "fr", name: "French", nativeName: "Français", region: "Europe", tier: 3 },
+  { code: "de", name: "German", nativeName: "Deutsch", region: "Europe", tier: 3 },
+  { code: "it", name: "Italian", nativeName: "Italiano", region: "Europe", tier: 3 },
 
-  // Tier 4: East & Southeast Asian
-  { code: "ja", name: "Japanese", nativeName: "日本語", region: "East Asia", tier: 4 },
-  { code: "ko", name: "Korean", nativeName: "한국어", region: "East Asia", tier: 4 },
-  { code: "th", name: "Thai", nativeName: "ไทย", region: "Southeast Asia", tier: 4 },
-  { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", region: "Southeast Asia", tier: 4 },
-  { code: "id", name: "Indonesian", nativeName: "Bahasa Indonesia", region: "Southeast Asia", tier: 4 },
-  { code: "ms", name: "Malay", nativeName: "Bahasa Melayu", region: "Southeast Asia", tier: 4 },
-  { code: "tl", name: "Filipino", nativeName: "Tagalog", region: "Southeast Asia", tier: 4 },
-  { code: "zh-TW", name: "Chinese (Traditional)", nativeName: "繁體中文", region: "East Asia", tier: 4 },
-
-  // Tier 5: Middle East & Central Asia
-  { code: "fa", name: "Persian", nativeName: "فارسی", region: "Middle East", tier: 5 },
-  { code: "tr", name: "Turkish", nativeName: "Türkçe", region: "Middle East", tier: 5 },
-  { code: "he", name: "Hebrew", nativeName: "עברית", region: "Middle East", tier: 5 },
-  { code: "kk", name: "Kazakh", nativeName: "Қазақша", region: "Central Asia", tier: 5 },
-  { code: "uz", name: "Uzbek", nativeName: "Oʻzbekcha", region: "Central Asia", tier: 5 },
-  { code: "az", name: "Azerbaijani", nativeName: "Azərbaycan", region: "Central Asia", tier: 5 },
-
-  // Tier 6: Other European
-  { code: "cs", name: "Czech", nativeName: "Čeština", region: "Europe", tier: 6 },
-  { code: "el", name: "Greek", nativeName: "Ελληνικά", region: "Europe", tier: 6 },
-  { code: "sv", name: "Swedish", nativeName: "Svenska", region: "Europe", tier: 6 },
-  { code: "no", name: "Norwegian", nativeName: "Norsk", region: "Europe", tier: 6 },
-  { code: "da", name: "Danish", nativeName: "Dansk", region: "Europe", tier: 6 },
-  { code: "fi", name: "Finnish", nativeName: "Suomi", region: "Europe", tier: 6 },
-  { code: "hu", name: "Hungarian", nativeName: "Magyar", region: "Europe", tier: 6 },
-  { code: "ro", name: "Romanian", nativeName: "Română", region: "Europe", tier: 6 },
-
-  // Tier 7: African markets
-  { code: "sw", name: "Swahili", nativeName: "Kiswahili", region: "Africa", tier: 7 },
-  { code: "am", name: "Amharic", nativeName: "አማርኛ", region: "Africa", tier: 7 },
+  // ⚪ TIER 4 - Optional
+  { code: "es", name: "Spanish", nativeName: "Español", region: "Americas", tier: 4 },
+  { code: "tr", name: "Turkish", nativeName: "Türkçe", region: "Middle East", tier: 4 },
 ];
 
 // Telegram Bot User Profiles - for premium personalized experience

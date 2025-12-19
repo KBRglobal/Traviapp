@@ -117,13 +117,10 @@ export function TranslationManager({ contentId, contentTitle }: TranslationManag
   }, [status]);
 
   const tierGroups = [
-    { tier: 1, name: "Tier 1 - Primary Markets", count: 5 },
-    { tier: 2, name: "Tier 2 - European Markets", count: 8 },
-    { tier: 3, name: "Tier 3 - South Asian Languages", count: 11 },
-    { tier: 4, name: "Tier 4 - East & SE Asian", count: 8 },
-    { tier: 5, name: "Tier 5 - Middle East & Central Asia", count: 6 },
-    { tier: 6, name: "Tier 6 - Other European", count: 8 },
-    { tier: 7, name: "Tier 7 - African Markets", count: 2 },
+    { tier: 1, name: "🔴 Tier 1 - Core (EN, AR, HI)", count: 3 },
+    { tier: 2, name: "🟡 Tier 2 - High ROI (UR, RU, FA, ZH)", count: 4 },
+    { tier: 3, name: "🟢 Tier 3 - European (FR, DE, IT)", count: 3 },
+    { tier: 4, name: "⚪ Tier 4 - Optional (ES, TR)", count: 2 },
   ];
 
   const toggleTier = (tier: number) => {
