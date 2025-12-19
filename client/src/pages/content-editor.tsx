@@ -47,6 +47,8 @@ import {
   History,
   RotateCcw,
   Check,
+  FolderOpen,
+  Search,
 } from "lucide-react";
 import type {
   ContentWithRelations,
@@ -107,6 +109,229 @@ function generateSlug(title: string): string {
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
+}
+
+// Topic categories for filtering media
+const MEDIA_TOPICS = [
+  { value: "all", label: "All Images" },
+  { value: "property", label: "Properties" },
+  { value: "dubai", label: "Dubai" },
+  { value: "luxury", label: "Luxury" },
+  { value: "interior", label: "Interior" },
+  { value: "exterior", label: "Exterior" },
+  { value: "amenities", label: "Amenities" },
+  { value: "lifestyle", label: "Lifestyle" },
+  { value: "skyline", label: "Skyline" },
+  { value: "beach", label: "Beach" },
+  { value: "pool", label: "Pool" },
+];
+
+interface MediaFile {
+  id: string;
+  filename: string;
+  originalFilename: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  altText?: string;
+  width?: number;
+  height?: number;
+  createdAt?: string;
+}
+
+// Auto-generate tags from filename
+function generateAutoTags(filename: string): string[] {
+  const name = filename.toLowerCase().replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+  const words = name.split(/\s+/).filter(w => w.length > 2);
+  const tags: string[] = [];
+  
+  const topicKeywords: Record<string, string[]> = {
+    property: ["property", "apartment", "villa", "tower", "residence", "unit", "home", "house", "flat"],
+    dubai: ["dubai", "marina", "downtown", "palm", "jumeirah", "creek", "business", "bay"],
+    luxury: ["luxury", "premium", "elegant", "exclusive", "high-end", "penthouse"],
+    interior: ["interior", "living", "bedroom", "bathroom", "kitchen", "room", "lounge"],
+    exterior: ["exterior", "facade", "building", "entrance", "lobby"],
+    amenities: ["amenities", "gym", "spa", "fitness", "sauna", "restaurant"],
+    lifestyle: ["lifestyle", "family", "couple", "dining", "entertainment"],
+    skyline: ["skyline", "view", "panorama", "city", "night"],
+    beach: ["beach", "sea", "ocean", "coast", "sand"],
+    pool: ["pool", "swimming", "infinity", "rooftop"],
+  };
+  
+  for (const [topic, keywords] of Object.entries(topicKeywords)) {
+    if (words.some(w => keywords.some(k => w.includes(k)))) {
+      tags.push(topic);
+    }
+  }
+  
+  return tags.length > 0 ? tags : ["general"];
+}
+
+// Media Library Picker Dialog
+function MediaLibraryPicker({
+  open,
+  onOpenChange,
+  onSelect,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (url: string, alt: string) => void;
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTopic, setSelectedTopic] = useState("all");
+  const [selectedImage, setSelectedImage] = useState<MediaFile | null>(null);
+  
+  const { data: mediaFiles = [], isLoading } = useQuery<MediaFile[]>({
+    queryKey: ["/api/media"],
+    enabled: open,
+  });
+  
+  // Filter and tag media files
+  const filteredMedia = useMemo(() => {
+    return mediaFiles.filter((file) => {
+      if (!file.mimeType.startsWith("image/")) return false;
+      
+      const tags = generateAutoTags(file.originalFilename);
+      const matchesSearch = searchQuery === "" || 
+        file.originalFilename.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (file.altText && file.altText.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesTopic = selectedTopic === "all" || tags.includes(selectedTopic);
+      
+      return matchesSearch && matchesTopic;
+    });
+  }, [mediaFiles, searchQuery, selectedTopic]);
+  
+  const handleSelect = () => {
+    if (selectedImage) {
+      onSelect(selectedImage.url, selectedImage.altText || selectedImage.originalFilename);
+      onOpenChange(false);
+      setSelectedImage(null);
+    }
+  };
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Media Library</DialogTitle>
+          <DialogDescription>Select an image from your media library</DialogDescription>
+        </DialogHeader>
+        
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search images..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+              data-testid="input-media-search"
+            />
+          </div>
+          <Select value={selectedTopic} onValueChange={setSelectedTopic}>
+            <SelectTrigger className="w-full sm:w-48" data-testid="select-media-topic">
+              <SelectValue placeholder="Filter by topic" />
+            </SelectTrigger>
+            <SelectContent>
+              {MEDIA_TOPICS.map((topic) => (
+                <SelectItem key={topic.value} value={topic.value}>
+                  {topic.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+          {isLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-square rounded-lg" />
+              ))}
+            </div>
+          ) : filteredMedia.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <FolderOpen className="h-12 w-12 mb-4" />
+              <p>No images found</p>
+              <p className="text-sm">Try adjusting your search or topic filter</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
+              {filteredMedia.map((file) => {
+                const tags = generateAutoTags(file.originalFilename);
+                const isSelected = selectedImage?.id === file.id;
+                return (
+                  <button
+                    key={file.id}
+                    onClick={() => setSelectedImage(file)}
+                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                      isSelected 
+                        ? "border-primary ring-2 ring-primary/20" 
+                        : "border-transparent hover:border-muted-foreground/30"
+                    }`}
+                    data-testid={`media-image-${file.id}`}
+                  >
+                    <img
+                      src={file.url}
+                      alt={file.altText || file.originalFilename}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                        <div className="bg-primary text-primary-foreground rounded-full p-1">
+                          <Check className="h-4 w-4" />
+                        </div>
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                      <div className="flex flex-wrap gap-1">
+                        {tags.slice(0, 2).map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-[10px] px-1 py-0">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </ScrollArea>
+        
+        {selectedImage && (
+          <div className="border-t pt-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <img
+                src={selectedImage.url}
+                alt={selectedImage.altText || selectedImage.originalFilename}
+                className="h-12 w-12 rounded object-cover flex-shrink-0"
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{selectedImage.originalFilename}</p>
+                <p className="text-xs text-muted-foreground">
+                  {selectedImage.width && selectedImage.height && `${selectedImage.width} x ${selectedImage.height} • `}
+                  {(selectedImage.size / 1024).toFixed(0)} KB
+                </p>
+              </div>
+            </div>
+            <Button onClick={handleSelect} data-testid="button-select-media">
+              Select Image
+            </Button>
+          </div>
+        )}
+        
+        {!selectedImage && (
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export default function ContentEditor() {
@@ -1650,12 +1875,11 @@ function HeroBlockCanvas({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const hasImage = !!block.data?.image;
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
+  const uploadFile = async (file: File) => {
     setIsUploading(true);
     try {
       const formData = new FormData();
@@ -1671,12 +1895,50 @@ function HeroBlockCanvas({
       console.error("Upload error:", error);
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      await uploadFile(file);
+    }
+  };
+
+  const handleLibrarySelect = (url: string, alt: string) => {
+    onUpdate({ image: url, alt });
+  };
+
   return (
-    <div className="relative aspect-[21/9] bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
+    <div 
+      className={`relative aspect-[21/9] bg-gradient-to-br from-muted to-muted/50 overflow-hidden transition-all ${isDragging ? "ring-4 ring-primary ring-inset" : ""}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <MediaLibraryPicker open={showLibrary} onOpenChange={setShowLibrary} onSelect={handleLibrarySelect} />
       <input
         ref={fileInputRef}
         type="file"
@@ -1685,26 +1947,51 @@ function HeroBlockCanvas({
         onChange={handleFileSelect}
       />
       {hasImage ? (
-        <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full h-full object-cover" />
-      ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-          <ImagePlus className="h-12 w-12 text-muted-foreground/50" />
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-upload-${block.id}`}>
-              {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-              Upload
+        <div className="relative w-full h-full group">
+          <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full h-full object-cover" />
+          {/* Controls to change image - visible on hover (desktop) or when selected (touch) */}
+          <div className={`absolute top-4 right-4 z-30 transition-opacity flex gap-2 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-change-upload-${block.id}`}>
+              {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             </Button>
-            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`hero-generate-${block.id}`}>
-              {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-              Generate
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`hero-change-library-${block.id}`}>
+              <FolderOpen className="h-4 w-4" />
+            </Button>
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); onUpdate({ image: "", alt: "" }); }} data-testid={`hero-remove-${block.id}`}>
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10">
+          <ImagePlus className="h-12 w-12 text-muted-foreground/50" />
+          {isDragging ? (
+            <p className="text-lg font-medium text-primary">Drop image here</p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">Drag & drop an image or</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-upload-${block.id}`}>
+                  {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                  Upload
+                </Button>
+                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`hero-library-${block.id}`}>
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  Library
+                </Button>
+                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`hero-generate-${block.id}`}>
+                  {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  Generate
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       )}
-      {/* Dark overlay for text */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+      {/* Dark overlay for text - pointer-events-none so buttons remain clickable */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
       {/* Inline editable title */}
-      <div className="absolute bottom-0 left-0 right-0 p-6">
+      <div className="absolute bottom-0 left-0 right-0 p-6 z-20">
         <input
           type="text"
           value={title}
@@ -1761,12 +2048,11 @@ function ImageBlockCanvas({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const hasImage = !!block.data?.image;
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
+  const uploadFile = async (file: File) => {
     setIsUploading(true);
     try {
       const formData = new FormData();
@@ -1782,12 +2068,50 @@ function ImageBlockCanvas({
       console.error("Upload error:", error);
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      await uploadFile(file);
+    }
+  };
+
+  const handleLibrarySelect = (url: string, alt: string) => {
+    onUpdate({ image: url, alt });
+  };
+
   return (
-    <div className="p-4">
+    <div 
+      className="p-4"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <MediaLibraryPicker open={showLibrary} onOpenChange={setShowLibrary} onSelect={handleLibrarySelect} />
       <input
         ref={fileInputRef}
         type="file"
@@ -1796,22 +2120,45 @@ function ImageBlockCanvas({
         onChange={handleFileSelect}
       />
       {hasImage ? (
-        <div className="relative aspect-video rounded-lg overflow-hidden">
+        <div className="relative aspect-video rounded-lg overflow-hidden group">
           <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full h-full object-cover" />
-        </div>
-      ) : (
-        <div className="aspect-video rounded-lg bg-muted flex flex-col items-center justify-center gap-4">
-          <ImagePlus className="h-10 w-10 text-muted-foreground/50" />
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-upload-${block.id}`}>
-              {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-              Upload
+          {/* Controls to change image - visible on hover (desktop) or when selected (touch) */}
+          <div className={`absolute top-4 right-4 z-10 transition-opacity flex gap-2 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-change-upload-${block.id}`}>
+              {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             </Button>
-            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`image-generate-${block.id}`}>
-              {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-              Generate
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`image-change-library-${block.id}`}>
+              <FolderOpen className="h-4 w-4" />
+            </Button>
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); onUpdate({ image: "", alt: "" }); }} data-testid={`image-remove-${block.id}`}>
+              <X className="h-4 w-4" />
             </Button>
           </div>
+        </div>
+      ) : (
+        <div className={`aspect-video rounded-lg bg-muted flex flex-col items-center justify-center gap-4 transition-all ${isDragging ? "ring-4 ring-primary ring-inset" : ""}`}>
+          <ImagePlus className="h-10 w-10 text-muted-foreground/50" />
+          {isDragging ? (
+            <p className="text-lg font-medium text-primary">Drop image here</p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">Drag & drop an image or</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-upload-${block.id}`}>
+                  {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                  Upload
+                </Button>
+                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`image-library-${block.id}`}>
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  Library
+                </Button>
+                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`image-generate-${block.id}`}>
+                  {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  Generate
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
