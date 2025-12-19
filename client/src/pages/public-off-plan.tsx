@@ -908,7 +908,7 @@ export default function PublicOffPlan() {
       </section>
 
       {/* Sub-Navigation Menu */}
-      <section className="bg-muted/50 border-b sticky top-36 z-30">
+      <section className="bg-background border-b">
         <div className="max-w-7xl mx-auto px-4">
           <div className="py-2 overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-1 min-w-max">
