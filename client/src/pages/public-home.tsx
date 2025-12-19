@@ -1,4 +1,4 @@
-import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail, Globe } from "lucide-react";
+import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail, Globe, Building2, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -443,6 +443,65 @@ export default function PublicHome() {
                 </p>
               </div>
             )}
+          </div>
+        </section>
+
+        {/* OFF-PLAN PROPERTIES SECTION */}
+        <section className="py-16 bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4C1D95] relative overflow-hidden" data-testid="section-off-plan">
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="text-center mb-12">
+              <Badge className="bg-[#F59E0B] text-white border-0 mb-4">
+                <Building2 className="w-3 h-3 mr-1" />
+                Investment Hub
+              </Badge>
+              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">
+                Dubai Off-Plan Properties
+              </h2>
+              <p className="text-xl text-white/80 max-w-2xl mx-auto">
+                Invest in Dubai real estate with cryptocurrency (BTC/USDT/ETH) or cash. 
+                Entry from AED 420K with 15-30% ROI potential.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <Link href="/dubai-off-plan-properties" data-testid="link-offplan-hub">
+                <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
+                  <Building2 className="w-8 h-8 text-[#F59E0B] mb-3" />
+                  <h3 className="font-semibold text-white mb-1">Property Hub</h3>
+                  <p className="text-sm text-white/70">1,577+ Active Projects</p>
+                </div>
+              </Link>
+              <Link href="/tools-roi-calculator" data-testid="link-roi-calculator">
+                <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
+                  <TrendingUp className="w-8 h-8 text-[#10B981] mb-3" />
+                  <h3 className="font-semibold text-white mb-1">ROI Calculator</h3>
+                  <p className="text-sm text-white/70">Calculate Returns</p>
+                </div>
+              </Link>
+              <Link href="/compare-off-plan-vs-ready" data-testid="link-compare">
+                <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
+                  <Users className="w-8 h-8 text-[#8B5CF6] mb-3" />
+                  <h3 className="font-semibold text-white mb-1">Comparisons</h3>
+                  <p className="text-sm text-white/70">11 Analysis Guides</p>
+                </div>
+              </Link>
+              <Link href="/glossary" data-testid="link-glossary">
+                <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
+                  <MapPin className="w-8 h-8 text-[#EC4899] mb-3" />
+                  <h3 className="font-semibold text-white mb-1">Glossary</h3>
+                  <p className="text-sm text-white/70">25+ Terms Explained</p>
+                </div>
+              </Link>
+            </div>
+
+            <div className="text-center">
+              <Link href="/dubai-off-plan-properties">
+                <Button size="lg" className="btn-gold rounded-full px-8" data-testid="button-explore-offplan">
+                  Explore All Properties
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </section>
 

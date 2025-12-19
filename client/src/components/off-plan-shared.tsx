@@ -285,18 +285,68 @@ export function TrustSignals() {
     { icon: Clock, text: "24-48hr Processing" },
   ];
 
+  const offices = [
+    { city: "Dubai", country: "UAE", status: "HQ" },
+    { city: "Tel Aviv", country: "Israel", status: "Active" },
+    { city: "Vienna", country: "Austria", status: "Active" },
+    { city: "Budapest", country: "Hungary", status: "Active" },
+    { city: "Milan", country: "Italy", status: "Active" },
+  ];
+
   return (
-    <div className="flex flex-wrap justify-center gap-4 md:gap-8 py-6">
-      {signals.map((signal) => {
-        const Icon = signal.icon;
-        return (
-          <div key={signal.text} className="flex items-center gap-2 text-sm">
-            <Icon className="w-5 h-5 text-primary" />
-            <span className="text-muted-foreground">{signal.text}</span>
-          </div>
-        );
-      })}
-    </div>
+    <section className="py-12 bg-muted/30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap justify-center gap-4 md:gap-8 mb-10">
+          {signals.map((signal) => {
+            const Icon = signal.icon;
+            return (
+              <div key={signal.text} className="flex items-center gap-2 text-sm">
+                <Icon className="w-5 h-5 text-primary" />
+                <span className="text-muted-foreground">{signal.text}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="text-center mb-8">
+          <Badge variant="secondary" className="mb-3">
+            <BadgeCheck className="w-3 h-3 mr-1" />
+            You're in Good Hands
+          </Badge>
+          <h2 className="text-2xl font-bold mb-2">Thrivestate Global Network</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            100+ agents across 5 offices worldwide. DED Licensed (#1096500). 
+            Partners with Emaar, DAMAC, Nakheel, Sobha, and Meraas.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {offices.map((office) => (
+            <Card key={office.city} className="p-4 text-center">
+              <Badge variant={office.status === "HQ" ? "default" : "outline"} className="mb-2">
+                {office.status}
+              </Badge>
+              <h3 className="font-semibold">{office.city}</h3>
+              <p className="text-xs text-muted-foreground">{office.country}</p>
+            </Card>
+          ))}
+        </div>
+
+        <div className="mt-8 text-center">
+          <p className="text-sm text-muted-foreground mb-3">
+            Dubai HQ: Office 1705, Marina Plaza Building, Dubai Marina
+          </p>
+          <Button 
+            variant="outline" 
+            onClick={() => window.open('https://thrivestate.io', '_blank')}
+            data-testid="button-thrivestate-contact"
+          >
+            Contact Thrivestate
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      </div>
+    </section>
   );
 }
 
