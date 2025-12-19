@@ -49,6 +49,17 @@ const CompareOffPlanVsReady = lazy(() => import("@/pages/compare-off-plan-vs-rea
 const CompareJVCvsDubaiSouth = lazy(() => import("@/pages/compare-jvc-vs-dubai-south"));
 const CompareEmaarVsDamac = lazy(() => import("@/pages/compare-emaar-vs-damac"));
 const ToolsROICalculator = lazy(() => import("@/pages/tools-roi-calculator"));
+const ToolsPaymentCalculator = lazy(() => import("@/pages/tools-payment-calculator"));
+const ToolsAffordabilityCalculator = lazy(() => import("@/pages/tools-affordability-calculator"));
+const CompareDowntownVsMarina = lazy(() => import("@/pages/compare-downtown-vs-marina"));
+const CaseStudyInvestorJVC = lazy(() => import("@/pages/case-study-investor-jvc"));
+const CaseStudyCryptoBuyer = lazy(() => import("@/pages/case-study-crypto-buyer"));
+const PillarROIRentalYields = lazy(() => import("@/pages/pillar-roi-rental-yields"));
+const PillarLegalSecurity = lazy(() => import("@/pages/pillar-legal-security"));
+const CaseStudyGoldenVisa = lazy(() => import("@/pages/case-study-golden-visa"));
+const Compare6040vs8020 = lazy(() => import("@/pages/compare-60-40-vs-80-20"));
+const CompareSobhaVsMeraas = lazy(() => import("@/pages/compare-sobha-vs-meraas"));
+const CompareCryptoVsBankTransfer = lazy(() => import("@/pages/compare-crypto-vs-bank-transfer"));
 const GlossaryHub = lazy(() => import("@/pages/glossary-hub"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
@@ -266,6 +277,17 @@ function App() {
               <Route path="/compare-jvc-vs-dubai-south" component={CompareJVCvsDubaiSouth} />
               <Route path="/compare-emaar-vs-damac" component={CompareEmaarVsDamac} />
               <Route path="/tools-roi-calculator" component={ToolsROICalculator} />
+              <Route path="/tools-payment-calculator" component={ToolsPaymentCalculator} />
+              <Route path="/tools-affordability-calculator" component={ToolsAffordabilityCalculator} />
+              <Route path="/compare-downtown-vs-marina" component={CompareDowntownVsMarina} />
+              <Route path="/case-study-jvc-investor" component={CaseStudyInvestorJVC} />
+              <Route path="/case-study-crypto-buyer" component={CaseStudyCryptoBuyer} />
+              <Route path="/dubai-roi-rental-yields" component={PillarROIRentalYields} />
+              <Route path="/dubai-legal-security-guide" component={PillarLegalSecurity} />
+              <Route path="/case-study-golden-visa" component={CaseStudyGoldenVisa} />
+              <Route path="/compare-60-40-vs-80-20" component={Compare6040vs8020} />
+              <Route path="/compare-sobha-vs-meraas" component={CompareSobhaVsMeraas} />
+              <Route path="/compare-crypto-vs-bank-transfer" component={CompareCryptoVsBankTransfer} />
               <Route path="/glossary" component={GlossaryHub} />
               <Route path="/" component={PublicHome} />
               <Route component={NotFound} />
