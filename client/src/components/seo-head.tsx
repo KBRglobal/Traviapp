@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useLocale, useLocalizedUrl } from "@/lib/i18n/LocaleProvider";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { SUPPORTED_LOCALES, RTL_LOCALES, type Locale } from "@shared/schema";
 
 interface SEOHeadProps {
@@ -29,8 +29,14 @@ export function SEOHead({
   noIndex = false,
   availableTranslations,
 }: SEOHeadProps) {
-  const { locale, isRTL } = useLocale();
-  const { getLocalizedUrl } = useLocalizedUrl();
+  const { locale, isRTL, localePath } = useLocale();
+
+  // Helper to generate localized URL for a specific locale
+  const getLocalizedUrl = (path: string, targetLocale?: Locale): string => {
+    const loc = targetLocale || locale;
+    if (loc === "en") return path;
+    return `/${loc}${path === "/" ? "" : path}`;
+  };
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://travi.world";
   const canonicalUrl = `${baseUrl}${getLocalizedUrl(canonicalPath)}`;
