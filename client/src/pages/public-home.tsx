@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PublicNav } from "@/components/public-nav";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
 import logoImg from "@assets/Full_Logo_for_Light_Background_1765570034686.png";
 
@@ -77,12 +78,13 @@ export default function PublicHome() {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
   const [, setLocation] = useLocation();
+  const { t, locale, localePath, isRTL } = useLocale();
 
   useDocumentMeta({
-    title: "Travi - Discover Dubai | Hotels, Attractions & Travel Guides",
-    description: "Explore world-class hotels, stunning attractions, and unforgettable experiences in Dubai. Plan your perfect Dubai adventure with Travi.",
-    ogTitle: "Travi - Your Dubai Travel Companion",
-    ogDescription: "Discover the magic of Dubai with curated hotels, attractions, and travel guides.",
+    title: `Travi - ${t("home.heroTitle")} | ${t("nav.hotels")}, ${t("nav.attractions")}`,
+    description: t("home.heroSubtitle"),
+    ogTitle: `Travi - ${t("home.heroTitle")}`,
+    ogDescription: t("home.heroSubtitle"),
     ogType: "website",
   });
 
@@ -192,8 +194,8 @@ export default function PublicHome() {
 
             {/* Tagline */}
             <div className="text-center mb-10">
-              <p className="text-2xl sm:text-3xl text-[#1E1B4B] font-medium">
-                Discover Dubai <span className="font-script text-3xl sm:text-4xl text-[#EC4899]">by experience</span>
+              <p className="text-2xl sm:text-3xl text-[#1E1B4B] font-medium" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.heroTitle")} <span className="font-script text-3xl sm:text-4xl text-[#EC4899]">{t("home.heroSubtitle")}</span>
               </p>
             </div>
 
@@ -223,7 +225,7 @@ export default function PublicHome() {
                   className="btn-gold rounded-full px-6 md:px-8 py-3 md:py-6 text-base md:text-lg shrink-0" 
                   data-testid="button-search"
                 >
-                  Explore
+                  {t("home.exploreAttractions")}
                 </Button>
               </div>
             </form>
@@ -255,8 +257,8 @@ export default function PublicHome() {
 
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-12">
-              <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4">
-                Explore From Wide Range
+              <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.topAttractions")}
               </h2>
               <p className="text-xl text-[#64748B]">
                 <span className="font-script text-2xl text-[#EC4899]">of activities</span> in Dubai
@@ -298,8 +300,8 @@ export default function PublicHome() {
 
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="text-center mb-12">
-              <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4">
-                Ready to Explore Dubai?
+              <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.exploreAttractions")}
               </h2>
               <p className="text-xl text-[#64748B]">
                 Hand-picked destinations <span className="font-script text-2xl text-[#6C5CE7]">just for you</span>
@@ -345,10 +347,10 @@ export default function PublicHome() {
                 </div>
 
                 <div className="text-center mt-10">
-                  <Link href="/attractions" data-testid="link-view-all-explore">
+                  <Link href={localePath("/attractions")} data-testid="link-view-all-explore">
                     <Button className="btn-gold rounded-full px-8 py-6 text-lg" data-testid="button-view-all-explore">
-                      View All Attractions
-                      <ArrowRight className="w-5 h-5 ml-2" />
+                      {t("home.viewAll")} {t("nav.attractions")}
+                      <ArrowRight className={`w-5 h-5 ${isRTL ? "mr-2 rotate-180" : "ml-2"}`} />
                     </Button>
                   </Link>
                 </div>
@@ -383,9 +385,9 @@ export default function PublicHome() {
                 <p className="text-xl text-[#64748B]">What everyone's talking about</p>
               </div>
               {trendingContent.length > 0 && (
-                <Link href="/articles" className="hidden sm:block" data-testid="link-view-all-trending">
+                <Link href={localePath("/articles")} className="hidden sm:block" data-testid="link-view-all-trending">
                   <Button variant="outline" className="border-[#6C5CE7] text-[#6C5CE7] rounded-full px-6" data-testid="button-view-all-trending">
-                    View All <ChevronRight className="w-4 h-4 ml-1" />
+                    {t("home.viewAll")} <ChevronRight className={`w-4 h-4 ${isRTL ? "mr-1 rotate-180" : "ml-1"}`} />
                   </Button>
                 </Link>
               )}
@@ -495,10 +497,10 @@ export default function PublicHome() {
             </div>
 
             <div className="text-center">
-              <Link href="/dubai-off-plan-properties">
+              <Link href={localePath("/dubai-off-plan-properties")}>
                 <Button size="lg" className="btn-gold rounded-full px-8" data-testid="button-explore-offplan">
-                  Explore All Properties
-                  <ChevronRight className="w-4 h-4 ml-2" />
+                  {t("home.viewAll")} {t("realEstate.offPlan")}
+                  <ChevronRight className={`w-4 h-4 ${isRTL ? "mr-2 rotate-180" : "ml-2"}`} />
                 </Button>
               </Link>
             </div>
