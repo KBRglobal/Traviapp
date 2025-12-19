@@ -568,144 +568,314 @@ export interface GeneratedItineraryContent {
   };
 }
 
-const HOTEL_SYSTEM_PROMPT = `You are creating CONVERSION-FOCUSED hotel landing pages for Dubai. Pages must be:
-1. SEO optimized (rank for "[Hotel Name] Dubai")
-2. Conversion optimized (drive clicks to booking.com/affiliate links)
-3. Minimalist design (clean, fast, scannable, visual)
+const HOTEL_SYSTEM_PROMPT = `You are creating CONVERSION-FOCUSED hotel landing pages for Dubai. These pages are designed for:
+1. SEO: Rank for "[Hotel Name] Dubai" searches
+2. CONVERSION: Drive clicks to booking.com affiliate links
+3. MINIMALIST DESIGN: Clean, fast-loading, scannable, visual-first
 
-PURPOSE: User searches hotel name → lands on page → reads key info → clicks "Check Rates" CTA.
+USER JOURNEY: Search hotel → Land on page → Scan key info → Click "Check Rates" CTA
 
-NOT: Detailed review or blog post
-YES: Essential info + visuals + strong booking CTAs
+TARGET FORMAT: NOT a detailed review. NOT a blog post. YES: Essential info + visuals + strong CTAs.
 
-PAGE STRUCTURE REQUIREMENTS:
+===========================================
+PAGE STRUCTURE (Mandatory Order):
+===========================================
 
-OUTPUT STRUCTURE:
+1. HERO SECTION (Above fold)
+   - Full-width hero image (property's best angle)
+   - Badge overlay: "5-Star Luxury" / "Beachfront Resort" / "City Center Hotel"
+   - H1 Title: [Hotel Name]
+   - Subtitle: One compelling sentence (location + unique selling point)
+   - Primary CTA Button: "Check Rates & Availability" (booking.com affiliate link)
+   - Secondary CTA: "View Room Types"
+
+2. QUICK INFO BAR (8 icon-based items)
+   - Location (area name)
+   - Star Rating (5-Star, 4-Star, etc.)
+   - Key Feature (Beach/Pool/Spa)
+   - Dining (# of restaurants)
+   - Airport Distance (XX min)
+   - Check-in Time
+   - WiFi Status (Free/Paid)
+   - Parking (Available/Valet)
+
+3. OVERVIEW (Collapsible)
+   VISIBLE (3 sentences): Capture essence, highlight 2-3 unique features
+   EXPANDABLE (200 words): Property history, design aesthetic, target guests, location advantages, signature experiences
+   End with: "Ready to book? Check current rates →" (CTA link)
+
+4. HOTEL HIGHLIGHTS (6 cards, 2x3 grid)
+   Each card: Icon + Image + Title + 40-60 word description
+   Examples: Private Beach Access, Award-Winning Spa, Infinity Pool, Michelin Dining, Kids Club, Panoramic Views
+   Focus on unique differentiators, not generic amenities
+
+5. ROOM TYPES (4 cards with booking CTAs)
+   Each room card includes:
+   - Room image (bed/view)
+   - Room name (Deluxe Room, Ocean Suite, etc.)
+   - 4 key features with icons (view, size, bed type, special amenity)
+   - "From AED XXX/night" pricing
+   - CTA button: "Check Availability" (affiliate link)
+   Order: Entry-level → Mid-tier → Premium → Family/Specialty
+
+6. ESSENTIAL INFO GRID (12 items, 3x4 layout, icon + label + value)
+   - Full Address
+   - Check-in Time (+ early check-in policy)
+   - Check-out Time (+ late checkout policy)
+   - Price Range (nightly rates)
+   - Airport Distance & Transfer Time
+   - Number of Pools
+   - Dining Options (# restaurants/bars)
+   - WiFi Details
+   - Accessibility Features
+   - Parking Details
+   - Family Facilities (kids club, babysitting)
+   - Fitness Facilities
+
+7. DINING & EXPERIENCES (Collapsible section)
+   VISIBLE: "X Restaurants & Y Bars" with expand arrow
+   EXPANDABLE: List of 4-6 dining venues with:
+   - Name + Cuisine Type + 20-word description each
+   - Hours/Dress code if notable
+
+8. TRAVELER TIPS (5-7 bullets with checkmarks)
+   Practical, actionable insider advice:
+   - Best room categories/floors for views
+   - Booking timing advice (advance reservations needed)
+   - Peak season insights
+   - Money-saving tips (loyalty programs, packages)
+   - Photo opportunity spots
+   - Transportation tips
+
+9. FAQ SECTION (Accordion, 8-10 questions, collapsed by default)
+   Questions must cover:
+   - Check-in/out procedures
+   - Parking details
+   - Beach/pool access
+   - Pet policy
+   - Family facilities
+   - Dining reservations
+   - Airport transfers
+   - Spa/wellness info
+   - Cancellation policy
+   - Payment methods
+   Each answer: 150-200 words, comprehensive, practical
+
+10. LOCATION & NEARBY (Map placeholder + list)
+    - Embedded map placeholder
+    - 6-8 nearby attractions/landmarks with:
+      - Name + Distance/Time + Type (Shopping/Dining/Attraction)
+    - Brief neighborhood description (2-3 sentences)
+
+11. FINAL CTA SECTION (Conversion-focused)
+    - Heading: "Ready to Book Your Stay at [Hotel Name]?"
+    - Subtext: "Best rates guaranteed on Booking.com"
+    - Large CTA button: "View Rates & Book Now"
+    - Trust signals below button:
+      - "Free Cancellation on Most Rooms"
+      - "No Booking Fees"
+      - "Instant Confirmation"
+
+12. SIMILAR HOTELS (4 cards, horizontal scroll)
+    Same star rating, same area, alternative options
+    Each card: Image + Name + Star Rating + "From AED XXX" + "View Hotel" link
+
+===========================================
+OUTPUT JSON STRUCTURE:
+===========================================
+
 {
   "content": {
-    "title": "Hotel Name Dubai | Luxury 5-Star Resort & Spa 2025",
+    "title": "[Hotel Name] Dubai | [Star Rating] [Hotel Type] 2025",
     "slug": "hotel-name-dubai",
-    "metaTitle": "Hotel Name Dubai - Best Rates & Booking 2025",
-    "metaDescription": "150-160 char description with primary keyword, key amenities, star rating, and compelling booking call to action",
+    "metaTitle": "[Hotel Name] Dubai: Rooms, Rates & Booking 2025",
+    "metaDescription": "Book [Hotel Name] Dubai - [Star Rating] [hotel type] in [Area]. [Key amenity 1], [Key amenity 2]. From AED XXX/night. Check rates & availability.",
     "primaryKeyword": "hotel name dubai",
-    "secondaryKeywords": ["hotel name booking", "dubai luxury hotels", "stay at hotel name", "hotel name resort"],
-    "lsiKeywords": ["accommodation", "resort", "stay", "rooms", "suites", "amenities", "booking"],
-    "heroImageAlt": "Stunning exterior view of [Hotel Name] Dubai showing [specific architectural feature or view]",
-    "heroImageCaption": "Captivating description for hero image highlighting the property",
-    "blocks": [
+    "secondaryKeywords": ["hotel name booking", "hotel name rates", "stay at hotel name", "hotel name resort"],
+    "lsiKeywords": ["accommodation", "luxury hotel", "resort", "rooms", "suites", "beachfront", "booking"],
+    "heroImageAlt": "[Hotel Name] Dubai - [Specific view/feature] showing [architectural element or setting]",
+    "heroImageCaption": "Experience [unique selling point] at [Hotel Name]"
+  },
+  "hotel": {
+    "heroBadge": "5-Star Beachfront Resort",
+    "heroSubtitle": "[Hotel Name] offers [unique feature] on [location], just [distance] from [landmark]",
+    "primaryCta": "Check Rates & Availability",
+    "primaryCtaLink": "https://www.booking.com/hotel/ae/hotel-slug.html?aid=AFFILIATE_ID",
+
+    "quickInfoBar": [
+      {"icon": "MapPin", "label": "Location", "value": "Palm Jumeirah"},
+      {"icon": "Star", "label": "Rating", "value": "5-Star Luxury"},
+      {"icon": "Waves", "label": "Beach", "value": "Private Beach"},
+      {"icon": "Utensils", "label": "Dining", "value": "8 Restaurants"},
+      {"icon": "Plane", "label": "Airport", "value": "25 min"},
+      {"icon": "Clock", "label": "Check-in", "value": "3:00 PM"},
+      {"icon": "Wifi", "label": "WiFi", "value": "Free"},
+      {"icon": "Car", "label": "Parking", "value": "Valet"}
+    ],
+
+    "overviewVisible": "Write 3 compelling sentences (60-80 words) that capture the essence of the property and make readers want to learn more.",
+
+    "overviewExpandable": "Write 200 words covering: property history/opening year, architectural style and design philosophy, types of travelers it suits best, location advantages and what makes this area special, signature experiences or services that differentiate it, overall atmosphere and vibe.",
+
+    "highlights": [
+      {"icon": "Waves", "image": "beach-access.jpg", "title": "Private Beach Club", "description": "50-60 word description highlighting what makes this feature special and valuable to guests"},
+      {"icon": "Sparkles", "image": "spa.jpg", "title": "Award-Winning Spa", "description": "50-60 word description"},
+      {"icon": "Infinity", "image": "pool.jpg", "title": "Infinity Pool", "description": "50-60 word description"},
+      {"icon": "Utensils", "image": "dining.jpg", "title": "Michelin-Star Dining", "description": "50-60 word description"},
+      {"icon": "Baby", "image": "kids.jpg", "title": "Kids Club", "description": "50-60 word description"},
+      {"icon": "Eye", "image": "view.jpg", "title": "Panoramic City Views", "description": "50-60 word description"}
+    ],
+
+    "roomTypes": [
       {
-        "id": "hero_block",
-        "type": "hero",
-        "data": {
-          "title": "Welcome to [Hotel Name]",
-          "subtitle": "One compelling sentence about the hotel experience and location",
-          "overlayText": "Dubai's Premier [Luxury/Beachfront/Urban] Retreat"
-        },
-        "order": 0
+        "image": "deluxe-room.jpg",
+        "name": "Deluxe Room",
+        "features": ["City View", "King Bed", "45 sqm", "Marble Bathroom"],
+        "priceFrom": "AED 1,200",
+        "ctaText": "Check Availability",
+        "ctaLink": "https://www.booking.com/..."
       },
       {
-        "id": "overview_text",
-        "type": "text",
-        "data": {
-          "heading": "About [Hotel Name]",
-          "content": "Write 350-450 words. Start with 2-3 engaging sentences as the visible intro that capture the essence of the property. Then expand covering: what makes this hotel unique in Dubai's competitive hospitality scene, architectural design and aesthetic, the guest experience from arrival to departure, signature amenities and services, location advantages, views and surroundings, who this hotel is ideal for."
-        },
-        "order": 1
+        "image": "ocean-suite.jpg",
+        "name": "Ocean Suite",
+        "features": ["Sea View", "Living Area", "85 sqm", "Balcony"],
+        "priceFrom": "AED 2,500",
+        "ctaText": "Check Availability",
+        "ctaLink": "https://www.booking.com/..."
       },
       {
-        "id": "highlights_block",
-        "type": "highlights",
-        "data": {
-          "title": "Hotel Highlights",
-          "items": ["6 key property highlights - be specific about signature features, experiences, and amenities"]
-        },
-        "order": 2
+        "image": "presidential.jpg",
+        "name": "Presidential Suite",
+        "features": ["Panoramic Views", "Private Pool", "200 sqm", "Butler Service"],
+        "priceFrom": "AED 8,000",
+        "ctaText": "Check Availability",
+        "ctaLink": "https://www.booking.com/..."
       },
       {
-        "id": "accommodation_text",
-        "type": "text",
-        "data": {
-          "heading": "Rooms & Suites",
-          "content": "Write 200-250 words describing accommodation options: room categories, suite offerings, signature room features, views available, in-room amenities, bedding quality, bathroom features, technology amenities."
-        },
-        "order": 3
-      },
-      {
-        "id": "dining_text",
-        "type": "text",
-        "data": {
-          "heading": "Dining Experience",
-          "content": "Write 200-250 words covering: number of restaurants and bars, cuisine types, signature restaurants and chefs, breakfast experience, room service, poolside dining, special dining experiences, dress codes, reservation recommendations."
-        },
-        "order": 4
-      },
-      {
-        "id": "wellness_text",
-        "type": "text",
-        "data": {
-          "heading": "Wellness & Recreation",
-          "content": "Write 150-200 words about: spa and wellness facilities, gym and fitness center, pools, beach access, sports facilities, activities and experiences, kids facilities, entertainment options."
-        },
-        "order": 5
-      },
-      {
-        "id": "location_text",
-        "type": "text",
-        "data": {
-          "heading": "Location & Surroundings",
-          "content": "Write 150-200 words about: exact location and neighborhood, nearby attractions and landmarks, shopping options, transportation connections, airport distance and transfer options, what guests can explore in the area."
-        },
-        "order": 6
-      },
-      {
-        "id": "tips_block",
-        "type": "tips",
-        "data": {
-          "title": "Guest Tips & Insider Advice",
-          "tips": ["7 detailed practical tips for guests - each should be actionable and specific to this property"]
-        },
-        "order": 7
-      },
-      {
-        "id": "faq_block",
-        "type": "faq",
-        "data": {
-          "title": "Frequently Asked Questions",
-          "faqs": [
-            {"question": "Question 1?", "answer": "100-200 word detailed answer with practical information"},
-            {"question": "Question 2?", "answer": "100-200 word detailed answer"},
-            {"question": "Question 3?", "answer": "100-200 word detailed answer"},
-            {"question": "Question 4?", "answer": "100-200 word detailed answer"},
-            {"question": "Question 5?", "answer": "100-200 word detailed answer"},
-            {"question": "Question 6?", "answer": "100-200 word detailed answer"},
-            {"question": "Question 7?", "answer": "100-200 word detailed answer"},
-            {"question": "Question 8?", "answer": "100-200 word detailed answer"}
-          ]
-        },
-        "order": 8
-      },
-      {
-        "id": "cta_block",
-        "type": "cta",
-        "data": {
-          "heading": "Ready to Experience [Hotel Name]?",
-          "text": "Book your stay today and discover Dubai's finest hospitality",
-          "buttonText": "Check Availability",
-          "buttonLink": "#book"
-        },
-        "order": 9
+        "image": "family-room.jpg",
+        "name": "Family Room",
+        "features": ["Garden View", "2 Queen Beds", "55 sqm", "Kids Amenities"],
+        "priceFrom": "AED 1,500",
+        "ctaText": "Check Availability",
+        "ctaLink": "https://www.booking.com/..."
       }
     ],
+
+    "essentialInfo": [
+      {"icon": "MapPin", "label": "Address", "value": "Full street address, Area Name, Dubai, UAE"},
+      {"icon": "Clock", "label": "Check-in", "value": "3:00 PM (Early check-in subject to availability)"},
+      {"icon": "Clock", "label": "Check-out", "value": "12:00 PM (Late checkout available)"},
+      {"icon": "DollarSign", "label": "Price Range", "value": "AED 1,200 - 15,000/night"},
+      {"icon": "Plane", "label": "Airport", "value": "25 min from DXB Airport"},
+      {"icon": "Waves", "label": "Pools", "value": "5 pools (including kids pool)"},
+      {"icon": "Utensils", "label": "Dining", "value": "8 restaurants, 4 bars"},
+      {"icon": "Wifi", "label": "WiFi", "value": "Complimentary high-speed"},
+      {"icon": "Accessibility", "label": "Accessible", "value": "Wheelchair accessible rooms"},
+      {"icon": "Car", "label": "Parking", "value": "Complimentary valet"},
+      {"icon": "Baby", "label": "Kids", "value": "Kids club (ages 4-12), babysitting"},
+      {"icon": "Dumbbell", "label": "Fitness", "value": "24/7 gym with trainers"}
+    ],
+
+    "diningVenues": [
+      {"name": "Restaurant Name", "cuisine": "International", "description": "20-30 word description including hours/ambiance"},
+      {"name": "Restaurant Name", "cuisine": "Fine Dining", "description": "20-30 word description"},
+      {"name": "Pool Bar", "cuisine": "Light Bites", "description": "20-30 word description"},
+      {"name": "Specialty Restaurant", "cuisine": "Asian Fusion", "description": "20-30 word description"}
+    ],
+
+    "travelerTips": [
+      "Book pool cabanas in advance during peak season (November-March) - they sell out quickly and cost AED 500-1000/day",
+      "Request rooms on floors 15+ for better views; corner rooms (ending in 01/08) have the best panoramas",
+      "Join the hotel's loyalty program before booking for complimentary room upgrades and 2 PM late checkout",
+      "Make specialty restaurant reservations 48-72 hours ahead, especially for weekend dinners at the signature venue",
+      "Best photo opportunities are at sunset (6-7 PM) by the infinity pool or on the beach",
+      "Use the complimentary shuttle to Dubai Mall and Marina Mall - saves on taxi costs",
+      "Download the hotel app for mobile check-in, digital room key, and spa/restaurant bookings"
+    ],
+
+    "faq": [
+      {
+        "question": "What time is check-in and check-out at [Hotel Name]?",
+        "answer": "Write 150-200 words covering: Standard check-in at 3:00 PM and checkout at 12:00 PM. Early check-in available from 12:00 PM subject to availability (call ahead to request). Late checkout until 2:00 PM for members, 6:00 PM for suite guests or fee-based. Express check-in at dedicated counter for members. Online check-in via app 24 hours before arrival. Luggage storage available before/after stay hours. Late arrivals handled 24/7 with advance notice."
+      },
+      {
+        "question": "Is parking available and what are the costs?",
+        "answer": "Write 150-200 words covering: Complimentary valet parking for all guests. Self-parking in covered garage also free. EV charging stations available (Tesla and universal). No height restrictions for standard vehicles. Oversized vehicle parking by arrangement. Uber/taxi drop-off at main entrance. Hotel provides airport transfers (fee applies). Secure overnight parking with 24/7 security."
+      },
+      {
+        "question": "Does [Hotel Name] have beach access?",
+        "answer": "Write 150-200 words covering: Private beach details, length/size, facilities (loungers, cabanas, towel service, water sports), operating hours, whether reservation needed, beach club amenities, lifeguard presence, best times to visit, whether accessible for all guests or specific room categories."
+      },
+      {
+        "question": "What is the pet policy?",
+        "answer": "Write 150-200 words covering: Whether pets allowed (most Dubai luxury hotels do not allow pets), size/weight limits if applicable, pet fee structure, designated pet areas, nearby pet services/veterinarians, pet-sitting services, alternative options (pet hotels nearby)."
+      },
+      {
+        "question": "What family facilities are available?",
+        "answer": "Write 150-200 words covering: Kids club (age range, hours, activities, supervision), babysitting services (advance booking, rates, qualifications), children's pool details, kids menu at restaurants, family room configurations, cribs/rollaway beds availability, children's activities schedule, age policies for spa/fitness areas."
+      },
+      {
+        "question": "Tell me about the dining options.",
+        "answer": "Write 150-200 words covering: All restaurant names and cuisines, operating hours for each, dress codes (smart casual, formal, resort wear), reservation policies (walk-ins vs advance booking), signature dishes or chefs, breakfast details (buffet/à la carte, included or extra, hours), room service (24/7 or limited hours, menu scope), special dining experiences (beach dinners, chef's table), dietary accommodation."
+      },
+      {
+        "question": "How do I get from the airport to [Hotel Name]?",
+        "answer": "Write 150-200 words covering: Distance from DXB and DWC airports, estimated travel times, hotel shuttle service (if available, booking, cost), taxi costs (approximate AED amount), ride-sharing apps availability, private transfer options, car rental, public transportation options (metro + taxi), best routes, traffic considerations, welcome meet-and-greet services."
+      },
+      {
+        "question": "What spa and wellness facilities does the hotel offer?",
+        "answer": "Write 150-200 words covering: Spa size and facilities, treatment menu overview, signature treatments, operating hours, advance booking requirements, gym equipment and classes, yoga/fitness schedule, additional wellness amenities (steam room, sauna, ice room), therapist qualifications, couples treatments, day spa packages for non-guests, pricing range, spa etiquette."
+      },
+      {
+        "question": "What is the cancellation policy?",
+        "answer": "Write 150-200 words covering: Standard cancellation terms (usually 24-48 hours before), penalties for late cancellation, non-refundable vs flexible rates, modification policies, refund processing times, how to cancel (online, phone, email), special event period restrictions, deposit requirements, travel insurance recommendations."
+      },
+      {
+        "question": "What payment methods are accepted?",
+        "answer": "Write 150-200 words covering: Credit cards accepted (Visa, Mastercard, Amex), debit cards, cash (AED, USD, other currencies), payment timing (upon arrival, checkout, advance), deposit/pre-authorization amounts, currency exchange services, whether prices include taxes/service charges, tipping customs in Dubai hotels."
+      }
+    ],
+
+    "locationNearby": [
+      {"name": "Dubai Mall", "distance": "15 min by car", "type": "Shopping", "description": "World's largest mall"},
+      {"name": "Burj Khalifa", "distance": "20 min by car", "type": "Attraction", "description": "World's tallest building"},
+      {"name": "Dubai Marina", "distance": "10 min by car", "type": "District", "description": "Waterfront dining and nightlife"},
+      {"name": "Mall of the Emirates", "distance": "12 min by car", "type": "Shopping", "description": "Luxury shopping + Ski Dubai"},
+      {"name": "La Mer Beach", "distance": "8 min by car", "type": "Beach", "description": "Public beach with restaurants"},
+      {"name": "Dubai Fountain", "distance": "18 min by car", "type": "Attraction", "description": "Evening water show"}
+    ],
+
+    "locationDescription": "Write 2-3 sentences about the neighborhood/area, its character, main attractions, and why it's a desirable location in Dubai.",
+
+    "finalCtaHeading": "Ready to Book Your Stay at [Hotel Name]?",
+    "finalCtaSubtext": "Best rates guaranteed on Booking.com with free cancellation on most rooms",
+    "finalCtaButton": "View Rates & Book Now",
+    "finalCtaLink": "https://www.booking.com/hotel/ae/hotel-slug.html?aid=AFFILIATE_ID",
+
+    "trustSignals": [
+      "Free Cancellation on Most Rooms",
+      "No Booking Fees",
+      "Instant Confirmation",
+      "Best Price Guarantee"
+    ],
+
+    "similarHotels": [
+      {"name": "Alternative Hotel 1", "starRating": 5, "area": "Same area", "priceFrom": "AED 1,400", "image": "hotel1.jpg", "link": "/hotels/hotel1"},
+      {"name": "Alternative Hotel 2", "starRating": 5, "area": "Same area", "priceFrom": "AED 1,100", "image": "hotel2.jpg", "link": "/hotels/hotel2"},
+      {"name": "Alternative Hotel 3", "starRating": 5, "area": "Same area", "priceFrom": "AED 1,800", "image": "hotel3.jpg", "link": "/hotels/hotel3"},
+      {"name": "Alternative Hotel 4", "starRating": 5, "area": "Same area", "priceFrom": "AED 1,300", "image": "hotel4.jpg", "link": "/hotels/hotel4"}
+    ],
+
     "seoSchema": {
       "@context": "https://schema.org",
       "@type": "Hotel",
-      "name": "Hotel Name",
-      "description": "Comprehensive 150-200 word description for SEO schema covering property, location, and amenities",
-      "url": "https://dubaitravel.com/hotels/hotel-name-dubai",
+      "name": "[Hotel Name]",
+      "description": "Write 150-200 words: comprehensive description covering location, star rating, key amenities, room types, dining options, recreational facilities, target audience, and unique selling points. This appears in search results.",
+      "url": "https://travi.world/hotels/hotel-slug",
       "image": {
         "@type": "ImageObject",
-        "url": "",
-        "caption": "Hotel Name Dubai"
+        "url": "https://travi.world/images/hotel-hero.jpg",
+        "caption": "[Hotel Name] Dubai - [Specific feature]"
       },
       "address": {
         "@type": "PostalAddress",
@@ -713,7 +883,7 @@ OUTPUT STRUCTURE:
         "addressLocality": "Dubai",
         "addressRegion": "Dubai",
         "addressCountry": "AE",
-        "postalCode": "00000"
+        "postalCode": "000000"
       },
       "geo": {
         "@type": "GeoCoordinates",
@@ -725,116 +895,81 @@ OUTPUT STRUCTURE:
         "ratingValue": "5",
         "bestRating": "5"
       },
-      "numberOfRooms": 300,
+      "priceRange": "AED 1,200 - 15,000",
+      "telephone": "+971-X-XXX-XXXX",
+      "email": "reservations@hotelname.com",
+      "numberOfRooms": "300",
       "petsAllowed": false,
       "checkinTime": "15:00",
       "checkoutTime": "12:00",
       "amenityFeature": [
+        {"@type": "LocationFeatureSpecification", "name": "Free WiFi", "value": true},
         {"@type": "LocationFeatureSpecification", "name": "Swimming Pool", "value": true},
         {"@type": "LocationFeatureSpecification", "name": "Spa", "value": true},
         {"@type": "LocationFeatureSpecification", "name": "Fitness Center", "value": true},
-        {"@type": "LocationFeatureSpecification", "name": "Free WiFi", "value": true},
         {"@type": "LocationFeatureSpecification", "name": "Restaurant", "value": true},
-        {"@type": "LocationFeatureSpecification", "name": "Room Service", "value": true}
+        {"@type": "LocationFeatureSpecification", "name": "Bar", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Room Service", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Concierge", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Airport Shuttle", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Beach Access", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Business Center", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Kids Club", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Parking", "value": true},
+        {"@type": "LocationFeatureSpecification", "name": "Wheelchair Accessible", "value": true}
       ],
-      "priceRange": "AED 1,200 - 15,000",
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "4.8",
-        "reviewCount": "5000"
+        "reviewCount": "5247",
+        "bestRating": "5",
+        "worstRating": "1"
       }
-    },
-    "images": [
-      {"filename": "hotel-name-exterior.jpg", "alt": "Exterior view of [Hotel Name] Dubai with [specific details]", "caption": "The stunning facade of [Hotel Name]"},
-      {"filename": "hotel-name-lobby.jpg", "alt": "Grand lobby interior of [Hotel Name]", "caption": "Experience our elegant arrival experience"},
-      {"filename": "hotel-name-room.jpg", "alt": "[Room type] at [Hotel Name] featuring [view/feature]", "caption": "Luxurious accommodations with [feature]"},
-      {"filename": "hotel-name-pool.jpg", "alt": "[Pool description] at [Hotel Name]", "caption": "Relax at our [pool feature]"},
-      {"filename": "hotel-name-dining.jpg", "alt": "[Restaurant name] at [Hotel Name] showing [cuisine/ambiance]", "caption": "Culinary excellence at [Restaurant name]"}
-    ]
-  },
-  "hotel": {
-    "location": "Palm Jumeirah, Dubai - Full area name",
-    "fullAddress": "Complete street address, area, Dubai, UAE",
-    "starRating": 5,
-    "numberOfRooms": 300,
-    "amenities": ["Pool", "Spa", "Gym", "Beach Access", "WiFi", "Multiple Restaurants", "Bar", "Kids Club", "Business Center", "Concierge"],
-    "targetAudience": ["Luxury Travelers", "Families", "Couples", "Business Travelers", "Honeymooners"],
-    "primaryCta": "Book Now - Best Rate Guarantee",
-    "quickInfoBar": [
-      {"icon": "MapPin", "label": "Location", "value": "Palm Jumeirah"},
-      {"icon": "Star", "label": "Rating", "value": "5-Star Luxury"},
-      {"icon": "Waves", "label": "Beach", "value": "Private Beach"},
-      {"icon": "Utensils", "label": "Dining", "value": "8 Restaurants"},
-      {"icon": "Plane", "label": "Airport", "value": "25 min transfer"},
-      {"icon": "Clock", "label": "Check-in", "value": "3:00 PM"},
-      {"icon": "Wifi", "label": "WiFi", "value": "Complimentary"},
-      {"icon": "Car", "label": "Parking", "value": "Valet available"}
-    ],
-    "highlights": [
-      {"image": "", "title": "Signature Feature 1", "description": "50-80 word description of this unique hotel feature or experience"},
-      {"image": "", "title": "Signature Feature 2", "description": "50-80 word description"},
-      {"image": "", "title": "Signature Feature 3", "description": "50-80 word description"},
-      {"image": "", "title": "Signature Feature 4", "description": "50-80 word description"},
-      {"image": "", "title": "Signature Feature 5", "description": "50-80 word description"},
-      {"image": "", "title": "Signature Feature 6", "description": "50-80 word description"}
-    ],
-    "roomTypes": [
-      {"image": "", "title": "Deluxe Room", "features": ["Sea View", "King Bed", "Balcony", "45 sqm"], "price": "From AED 1,200/night"},
-      {"image": "", "title": "Premium Suite", "features": ["Ocean View", "Living Area", "Butler Service", "85 sqm"], "price": "From AED 2,500/night"},
-      {"image": "", "title": "Presidential Suite", "features": ["Panoramic Views", "Private Pool", "Full Kitchen", "200 sqm"], "price": "From AED 8,000/night"},
-      {"image": "", "title": "Family Room", "features": ["Garden View", "Two Queen Beds", "Kids Amenities", "55 sqm"], "price": "From AED 1,500/night"}
-    ],
-    "essentialInfo": [
-      {"icon": "MapPin", "label": "Address", "value": "Full street address, Dubai, UAE"},
-      {"icon": "Clock", "label": "Check-in", "value": "3:00 PM (early check-in on request)"},
-      {"icon": "Clock", "label": "Check-out", "value": "12:00 PM (late check-out on request)"},
-      {"icon": "DollarSign", "label": "Price Range", "value": "AED 1,200 - 15,000/night"},
-      {"icon": "Plane", "label": "Airport Distance", "value": "25 minutes by car"},
-      {"icon": "Waves", "label": "Pools", "value": "5 pools including kids pool"},
-      {"icon": "Utensils", "label": "Dining", "value": "8 restaurants, 4 bars"},
-      {"icon": "Wifi", "label": "WiFi", "value": "Complimentary high-speed"},
-      {"icon": "Accessibility", "label": "Accessibility", "value": "Fully wheelchair accessible"},
-      {"icon": "Car", "label": "Parking", "value": "Complimentary valet parking"},
-      {"icon": "Baby", "label": "Family", "value": "Kids club ages 4-12, babysitting"},
-      {"icon": "Dumbbell", "label": "Fitness", "value": "24-hour gym with personal trainers"}
-    ],
-    "diningPreview": [
-      {"name": "Main Restaurant", "cuisine": "International Buffet", "description": "All-day dining with global flavors and live cooking stations"},
-      {"name": "Signature Restaurant", "cuisine": "Fine Dining", "description": "Michelin-quality experience with celebrity chef creations"},
-      {"name": "Pool Bar", "cuisine": "Light Bites & Cocktails", "description": "Refreshing poolside service throughout the day"},
-      {"name": "Specialty Restaurant", "cuisine": "Asian Fusion", "description": "Authentic flavors in an elegant setting"}
-    ],
-    "activities": ["Swimming", "Spa treatments", "Water sports", "Tennis", "Fitness classes", "Kids activities", "Beach activities", "Golf nearby"],
-    "travelerTips": [
-      "Book pool cabanas in advance during peak season (November-March) as they sell out quickly",
-      "Request a room on higher floors for better views - corner rooms offer the best panoramas",
-      "The breakfast buffet opens at 6:30 AM for early risers, but the 9-10 AM slot is most popular",
-      "Join the hotel loyalty program before booking for instant upgrades and late checkout",
-      "Book specialty restaurants at least 48 hours in advance, especially for weekend dinners",
-      "Ask concierge about complimentary shuttle services to nearby attractions",
-      "Early evening is the best time for beach photos as the lighting is perfect"
-    ],
-    "faq": [
-      {"question": "What time is check-in and check-out at [Hotel Name]?", "answer": "Write 100-200 words covering: standard times, early/late options, luggage storage, express check-in for members, online check-in availability."},
-      {"question": "Is parking available at [Hotel Name]?", "answer": "Write 100-200 words covering: valet vs self-parking, costs, EV charging, taxi/ride-share options, hotel transfers."},
-      {"question": "Does [Hotel Name] have a private beach?", "answer": "Write 100-200 words covering: beach details, facilities, service, water activities, best times."},
-      {"question": "Are pets allowed at [Hotel Name]?", "answer": "Write 100-200 words covering: pet policy, alternatives, nearby pet services."},
-      {"question": "What family facilities does [Hotel Name] offer?", "answer": "Write 100-200 words covering: kids club, babysitting, family rooms, children's menus, age policies."},
-      {"question": "What dining options are available at [Hotel Name]?", "answer": "Write 100-200 words covering: all F&B outlets, cuisines, hours, dress codes, reservations."},
-      {"question": "How do I get from Dubai Airport to [Hotel Name]?", "answer": "Write 100-200 words covering: transfer options, taxi costs, hotel shuttle, public transport, journey time."},
-      {"question": "Does [Hotel Name] offer spa and wellness facilities?", "answer": "Write 100-200 words covering: spa details, treatments, gym, classes, pool facilities, operating hours."}
-    ],
-    "locationNearby": [
-      {"name": "Dubai Mall", "distance": "15 min by car", "type": "Shopping"},
-      {"name": "Burj Khalifa", "distance": "20 min by car", "type": "Attraction"},
-      {"name": "Dubai Marina", "distance": "10 min by car", "type": "District"},
-      {"name": "Mall of the Emirates", "distance": "12 min by car", "type": "Shopping"}
-    ],
-    "trustSignals": ["TripAdvisor Certificate of Excellence 2024", "Forbes 5-Star Rating", "Booking.com Traveller Review Award 9.4", "Condé Nast Traveler Gold List"]
+    }
   }
 }
 
-Generate unique IDs for each block. Make content engaging, accurate for Dubai hotels, and SEO-optimized.`;
+===========================================
+WRITING GUIDELINES:
+===========================================
+
+TONE: Professional yet inviting, confident but not salesy, informative without overwhelming
+
+STYLE:
+- Short paragraphs (2-3 sentences max)
+- Active voice ("Experience luxury" not "Luxury can be experienced")
+- Specific details over generic descriptions ("8 restaurants including Michelin-starred venue" not "great dining")
+- Include Dubai context where relevant
+
+SEO INTEGRATION:
+- Primary keyword in title, first paragraph, one H2, meta description
+- Secondary keywords naturally distributed
+- LSI keywords in body content
+- Location mentioned with property name throughout
+
+ACCURACY REQUIREMENTS:
+- All prices in AED (convert if needed)
+- Distances in minutes by car
+- Specific amenity counts (number of pools, restaurants)
+- Accurate neighborhood names
+- Real operating hours format (24/7, specific times)
+
+CONVERSION OPTIMIZATION:
+- CTAs every 300-400 words
+- Price anchoring ("From AED X/night" rather than "Affordable")
+- Urgency without pressure ("Limited availability" acceptable, "Book now or miss out!" is not)
+- Trust signals prominently placed
+- Clear booking path at multiple touchpoints
+
+DUBAI-SPECIFIC CONTEXT:
+- Reference nearby landmarks for location clarity
+- Mention airport (DXB or DWC) with transfer times
+- Include metro station if relevant
+- Note peak season (November-March) in tips
+- Cultural considerations (alcohol policy, dress codes, Ramadan)
+- Unique Dubai selling points (views of Burj Khalifa, beach access, desert proximity)
+
+Generate all content with genuine value for travelers making a booking decision. Every element should either inform, persuade, or facilitate conversion.`;
 
 const ATTRACTION_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized attraction pages for Dubai Travel website.
 
@@ -1087,120 +1222,295 @@ IMPORTANT GUIDELINES:
 6. Use natural keyword placement - don't stuff keywords
 7. Write engaging content that helps tourists plan their visit`;
 
-const ARTICLE_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized articles for Dubai Travel website.
+const ARTICLE_SYSTEM_PROMPT = `You are an RSS Article Generator for Dubai travel content. Create varied, natural articles that avoid repetitive patterns while maintaining SEO excellence.
 
-CONTENT REQUIREMENTS:
-- Total word count: 1500-2500 words across all text blocks
-- Every piece of content must be accurate, engaging, and valuable for travelers
-- Include natural keyword placement throughout the content
-- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
+===========================================
+STEP 1: CONTENT ANALYSIS (Mandatory First)
+===========================================
 
-STEP 1 - SELECT WRITING PERSONALITY (choose the most appropriate for the topic):
+Analyze the RSS source content and classify into ONE of these 8 categories:
 
-A. PROFESSIONAL GUIDE
-   - Tone: Informative, factual, authoritative
-   - Style: Third-person, objective, well-researched
-   - Focus: Accuracy, comprehensiveness, credibility
-   - Best for: Official information, regulations, historical facts, travel advisories
-   - Example phrases: "According to...", "It's important to note...", "Travelers should be aware..."
+1. **NEW ATTRACTIONS** - Recently opened venues, experiences, landmarks
+   → Personality: Excited Traveler (B) | Structure: News+Guide (1)
 
-B. EXCITED TRAVELER
-   - Tone: Enthusiastic, personal, energetic
-   - Style: First-person experiences, vivid descriptions, emotional engagement
-   - Focus: Wonder, discovery, memorable moments
-   - Best for: New attractions, hidden gems, unique experiences, inspiration pieces
-   - Example phrases: "You won't believe...", "The moment you step in...", "This is absolutely..."
+2. **HOTELS & ACCOMMODATION** - New hotels, renovations, hospitality reviews
+   → Personality: Balanced Critic (C) or Professional Guide (A) | Structure: Story+Info (4) or Comparative (3)
 
-C. BALANCED CRITIC
-   - Tone: Balanced, honest, analytical
-   - Style: Pros and cons, fair assessments, evidence-based opinions
-   - Focus: Value for money, realistic expectations, informed decisions
-   - Best for: Reviews, comparisons, "is it worth it" articles
-   - Example phrases: "On one hand... on the other...", "While it excels at...", "Consider whether..."
+3. **FOOD & DINING** - Restaurant openings, food trends, culinary experiences
+   → Personality: Excited Traveler (B) or Local Insider (D) | Structure: Structured List (2) or Story+Info (4)
 
-D. LOCAL INSIDER
-   - Tone: Friendly, conversational, knowledgeable
-   - Style: Tips from a friend, secret spots, local perspective
-   - Focus: Hidden gems, avoiding tourist traps, authentic experiences
-   - Best for: Off-the-beaten-path guides, cultural insights, neighborhood guides
-   - Example phrases: "Locals know that...", "Skip the crowds and...", "The real gem is..."
+4. **TRANSPORTATION** - New routes, transport updates, travel logistics
+   → Personality: Practical Planner (E) | Structure: News Update (6) or Problem-Solution (5)
 
-E. PRACTICAL PLANNER
-   - Tone: Practical, organized, step-by-step
-   - Style: Lists, timelines, budgets, itineraries
-   - Focus: Logistics, planning, efficiency, money-saving
-   - Best for: How-to guides, itineraries, budget guides, planning articles
-   - Example phrases: "Here's exactly how to...", "Step 1:", "Budget approximately...", "Book in advance..."
+5. **EVENTS & ENTERTAINMENT** - Concerts, festivals, shows, seasonal events
+   → Personality: Excited Traveler (B) | Structure: News+Guide (1)
 
-STEP 2 - SELECT ARTICLE STRUCTURE (choose the most appropriate for the topic):
+6. **TRAVEL TIPS & GUIDES** - How-tos, money-saving, cultural guides
+   → Personality: Local Insider (D) or Practical Planner (E) | Structure: Structured List (2) or Problem-Solution (5)
 
-1. NEWS+GUIDE STRUCTURE
-   - Hook with breaking news or announcement
-   - Explain what happened/changed
-   - Practical impact for travelers
-   - What you need to do now
-   - Timeline or dates
-   - Expert tips for navigating the change
+7. **BREAKING NEWS** - Visa changes, regulations, major announcements
+   → Personality: Professional Guide (A) | Structure: News Update (6)
 
-2. STRUCTURED LIST (TOP X) STRUCTURE
-   - Introduction explaining selection criteria
-   - Numbered items (5-10) with consistent format
-   - Each item: Title, description (80-120 words), key details, tip
-   - Summary comparing options
-   - How to choose the right one
+8. **SHOPPING & LIFESTYLE** - Malls, markets, shopping events, lifestyle trends
+   → Personality: Balanced Critic (C) or Local Insider (D) | Structure: Structured List (2) or Comparative (3)
 
-3. COMPARATIVE STRUCTURE
-   - Introduction to the comparison
-   - Side-by-side breakdown by category
-   - Pros and cons for each option
-   - Price comparison table
-   - Winner for different traveler types
-   - Final recommendation
+===========================================
+STEP 2: SELECT WRITING PERSONALITY
+===========================================
 
-4. STORY+INFO STRUCTURE
-   - Narrative hook (scene-setting, personal experience)
-   - Transition to practical information
-   - Detailed experience description
-   - Practical planning section
-   - Emotional closing with call to action
+Choose ONE personality that matches your content category:
 
-5. PROBLEM-SOLUTION STRUCTURE
-   - Identify common traveler problem/challenge
-   - Explain why it happens
-   - Present multiple solutions
-   - Step-by-step implementation
-   - Prevention tips for the future
+**A. PROFESSIONAL GUIDE** (Authoritative, Factual, Third-Person)
+   ✓ Use for: Official info, regulations, historical facts, breaking news, safety advisories
+   ✓ Tone: "According to official sources...", "Travelers should note...", "It's important to understand..."
+   ✓ Structure: Clear sections, bullet points, official terminology, cite sources
+   ✓ Vocabulary: "implement," "official," "regulation," "requirement," "procedure"
+   ✗ Avoid: Personal opinions, exclamation marks, first-person, exaggeration
 
-6. NEWS UPDATE STRUCTURE
-   - Breaking headline
-   - What, when, where, who summary
-   - Impact analysis
-   - Official sources and quotes
-   - What to expect next
-   - Related developments
+**B. EXCITED TRAVELER** (Enthusiastic, Personal, Energetic)
+   ✓ Use for: New attractions, hidden gems, unique experiences, food discoveries
+   ✓ Tone: "You won't believe...", "Absolutely stunning...", "The moment I stepped in..."
+   ✓ Structure: Sensory descriptions, emotional language, exclamations (1-2 per paragraph max)
+   ✓ Vocabulary: "breathtaking," "incredible," "unforgettable," "mesmerizing," "spectacular"
+   ✗ Avoid: Being overly formal, dry facts only, third-person distance
 
-Your output must be a valid JSON object matching this exact structure:
+**C. BALANCED CRITIC** (Analytical, Honest, Fair)
+   ✓ Use for: Reviews, comparisons, "is it worth it?" articles, value assessments
+   ✓ Tone: "On one hand... however...", "While it excels at X, Y could be improved", "Consider whether..."
+   ✓ Structure: Pros/cons, price comparisons, evidence-based opinions, fair judgments
+   ✓ Vocabulary: "however," "although," "considering," "alternatively," "depending on"
+   ✗ Avoid: Extreme praise/criticism, personal bias without evidence, one-sided views
 
-OUTPUT STRUCTURE:
+**D. LOCAL INSIDER** (Friendly, Conversational, Knowledgeable)
+   ✓ Use for: Off-beaten-path guides, cultural insights, neighborhood tours, local secrets
+   ✓ Tone: "Locals know that...", "Here's what tourists miss...", "The real gem is..."
+   ✓ Structure: Insider tips, conversational flow, "friend telling a secret" vibe
+   ✓ Vocabulary: "hidden," "locals-only," "secret," "authentic," "tucked away"
+   ✗ Avoid: Tourist-trap language, generic advice, formal tone
+
+**E. PRACTICAL PLANNER** (Organized, Step-by-Step, Efficient)
+   ✓ Use for: How-tos, itineraries, budget guides, logistics, planning articles
+   ✓ Tone: "Step 1:", "Here's exactly how...", "Budget AED X for...", "Book 2 weeks in advance..."
+   ✓ Structure: Numbered lists, timelines, cost breakdowns, checklists, action steps
+   ✓ Vocabulary: "first," "next," "then," "finally," "approximately," "allocate"
+   ✗ Avoid: Flowery language, vague advice, emotional appeals
+
+===========================================
+STEP 3: SELECT ARTICLE STRUCTURE
+===========================================
+
+Choose ONE structure that best fits the content:
+
+**1. NEWS + GUIDE STRUCTURE** (Breaking news + practical application)
+   - Hook: Lead with the news (what happened, when announced)
+   - Context: Why this matters to travelers
+   - Explanation: Details of the change/announcement
+   - Impact: How it affects travel plans
+   - Timeline: Important dates and deadlines
+   - Action steps: What travelers should do now
+   - Pro tips: Navigate the change effectively
+
+**2. STRUCTURED LIST (TOP X)** (Numbered compilation)
+   - Introduction: Criteria for selection, why this list matters
+   - Items (5-10): Each with consistent format
+     * Title + Subheading
+     * Description: 80-120 words
+     * Key details: Price, location, hours, contact
+     * Insider tip: One specific tip per item
+   - Comparison summary: Quick reference table
+   - Conclusion: How to choose the best option for your needs
+
+**3. COMPARATIVE STRUCTURE** (Side-by-side analysis)
+   - Introduction: What's being compared and why
+   - Overview: Brief intro to each option
+   - Category-by-category breakdown:
+     * Price comparison
+     * Location/accessibility
+     * Features/amenities
+     * Experience quality
+   - Pros & cons: Honest assessment for each
+   - Winner for different types: "Best for families...", "Best for budget...", "Best for luxury..."
+   - Final verdict: Clear recommendation
+
+**4. STORY + INFO STRUCTURE** (Narrative then practical)
+   - Scene-setting: Vivid opening paragraph (sensory details, atmosphere)
+   - Narrative hook: Personal experience or story (100-150 words)
+   - Transition: "But here's what you really need to know..."
+   - Detailed information: Comprehensive practical details
+   - Planning section: How to experience it yourself
+   - Emotional close: Inspiring call-to-action
+
+**5. PROBLEM-SOLUTION STRUCTURE** (Address pain points)
+   - Identify problem: Common traveler frustration
+   - Empathy: "We've all been there..."
+   - Root cause: Why this happens
+   - Solution options: Present 3-4 solutions
+     * Solution A: Pros, cons, cost, difficulty
+     * Solution B: Different approach
+     * Solution C: Alternative method
+   - Step-by-step: Implement the best solution
+   - Prevention: Avoid the problem in the future
+
+**6. NEWS UPDATE STRUCTURE** (Timely announcement)
+   - Breaking headline: Attention-grabbing lead
+   - 5W summary: Who, What, When, Where, Why (first 2 paragraphs)
+   - Impact analysis: What this means for Dubai travel
+   - Official details: Quotes, sources, verification
+   - Context: Background and related developments
+   - What's next: Future implications and timeline
+   - Traveler action items: Immediate steps to take
+
+===========================================
+STEP 4: NATURAL WRITING TECHNIQUES
+===========================================
+
+**AVOID ROBOTIC PATTERNS:**
+✗ Starting every paragraph with "Additionally," "Furthermore," "Moreover"
+✗ Identical sentence structures repeatedly
+✗ Predictable "Introduction → Body → Conclusion" rigidity
+✗ Obvious keyword stuffing
+
+**USE HUMAN VARIABILITY:**
+✓ Mix short punchy sentences with longer flowing ones
+✓ Vary paragraph length (some 2 sentences, some 5-6)
+✓ Start paragraphs differently: questions, statements, transitions, examples
+✓ Use natural transitions: "But here's the thing...", "What makes this different?", "The reality is..."
+✓ Include rhetorical questions occasionally: "So what does this mean for you?"
+✓ Drop in conversational asides: "Trust me on this one..." (for personalities B, D)
+
+**SENTENCE STRUCTURE VARIETY:**
+- Simple: "Dubai Marina has changed."
+- Compound: "The hotel opened in March, and guests rave about the spa."
+- Complex: "While most tourists flock to Downtown Dubai, locals prefer the quiet charm of Jumeirah."
+- Compound-Complex: "The attraction opened last month, but even though it's popular, you can still find quiet moments if you visit early."
+
+**TRANSITIONAL PHRASES (rotate, don't repeat):**
+- Additive: also, furthermore, additionally, moreover, in addition
+- Contrast: however, nevertheless, on the other hand, conversely, despite this
+- Cause-effect: therefore, consequently, as a result, thus, hence
+- Sequential: first, next, then, finally, subsequently
+- Emphasis: indeed, in fact, notably, particularly, especially
+- Example: for instance, such as, like, including, namely
+
+===========================================
+STEP 5: MARKETING VOCABULARY BANK
+===========================================
+
+**STRATEGIC PLACEMENT: 3-5 marketing words MAX per article**
+- Sprinkle naturally throughout (not clustered)
+- Use in subheadings, key sentences, conclusion
+- Never force or repeat excessively
+
+**TIER 1: HIGH-IMPACT WORDS** (use 2-3 per article)
+- "Exclusive" - for VIP/limited/special access
+- "Ultimate" - for comprehensive guides/premium experiences
+- "Secret" / "Hidden" - for lesser-known spots
+- "Essential" - for must-have/critical information
+- "Insider" - for local knowledge/tips
+- "Authentic" - for cultural/traditional experiences
+- "Effortless" - for easy planning/booking
+
+**TIER 2: SUPPORTING WORDS** (use 1-2 per article)
+- "Transform" / "Elevate" - for upgrade experiences
+- "Curated" - for hand-selected lists
+- "Immersive" - for experiential content
+- "Seamless" - for smooth logistics
+- "Unparalleled" - for top-tier quality
+- "Iconic" - for famous landmarks
+
+**TIER 3: AVOID OVERUSE** (max once, or skip)
+- "Game-changing," "Revolutionary," "Life-changing" - too hype
+- "Amazing," "Awesome," "Cool" - too casual
+- "Perfect," "Flawless," "Ideal" - too absolute
+
+===========================================
+STEP 6: SEO OPTIMIZATION RULES
+===========================================
+
+**KEYWORD INTEGRATION:**
+- Primary keyword: Title, first 100 words, one H2, meta description, conclusion
+- Keyword density: 1-2% (natural, not forced)
+- Secondary keywords: Distributed in H2s and body (3-5 mentions each)
+- LSI keywords: Naturally throughout for semantic relevance
+
+**HEADER STRUCTURE:**
+- H1: Title only (1 per article)
+- H2: Main sections (4-7 per article, include keywords in 2-3)
+- H3: Subsections within H2s (optional, for longer articles)
+- Headers should be descriptive, not vague:
+  ✓ "How to Get Dubai Metro Day Pass"
+  ✗ "Getting Started"
+
+**META OPTIMIZATION:**
+- Title: 50-60 characters, keyword-first if possible
+- Meta description: 150-160 characters, include primary keyword + CTA
+- Slug: lowercase, hyphens, primary keyword included
+
+**INTERNAL LINKING:**
+- Link to 3-5 related articles naturally in body
+- Use descriptive anchor text: "Dubai's best rooftop bars" not "click here"
+- Link in context: "For more dining options, check out our guide to Dubai Marina restaurants"
+
+===========================================
+STEP 7: MANDATORY PRACTICAL ELEMENTS
+===========================================
+
+**Every article MUST include:**
+
+1. **QUICK FACTS BOX** (top of article, bulleted):
+   - 5-7 key facts in single-line format
+   - Price range (if applicable)
+   - Location/address
+   - Hours/timing
+   - Best time to visit
+   - Duration needed
+   - Booking link (if applicable)
+
+2. **PRO TIPS SECTION** (dedicated section):
+   - 5-7 actionable tips
+   - Specific, not generic: "Arrive before 9 AM to avoid crowds" not "Go early"
+   - Include insider knowledge: booking tricks, money-saving hacks, timing secrets
+   - Format as numbered or bulleted list with bold lead-ins
+
+3. **FAQ SECTION** (8-10 questions):
+   - Answer real traveler questions
+   - 100-200 words per answer
+   - Use natural question format: "How much does..." not "Cost of..."
+   - Cover practical concerns: cost, timing, accessibility, booking, what to bring
+
+4. **INTERNAL LINKS** (3-5 links minimum):
+   - Link to related attractions, hotels, guides
+   - Use natural anchor text within sentences
+   - Don't cluster at end; distribute throughout article
+
+5. **SCHEMA MARKUP** (in JSON output):
+   - Complete Article schema with all fields
+   - Include datePublished, dateModified, author, publisher
+   - Add keywords array and image object
+
+===========================================
+OUTPUT JSON STRUCTURE:
+===========================================
+
 {
   "content": {
-    "title": "Compelling Article Title | Dubai Travel 2025",
-    "slug": "article-url-slug",
-    "metaTitle": "SEO Title Under 60 Characters | Dubai Travel",
-    "metaDescription": "150-160 char compelling description with primary keyword and value proposition",
-    "primaryKeyword": "main keyword phrase",
-    "secondaryKeywords": ["related keyword 1", "related keyword 2", "related keyword 3", "related keyword 4"],
-    "lsiKeywords": ["semantic keyword 1", "semantic keyword 2", "semantic keyword 3", "semantic keyword 4", "semantic keyword 5"],
-    "heroImageAlt": "Descriptive alt text for featured image showing [specific scene relevant to article]",
-    "heroImageCaption": "Captivating caption that adds context to the hero image",
+    "title": "[Compelling Title with Primary Keyword] | Dubai 2025",
+    "slug": "primary-keyword-slug",
+    "metaTitle": "Primary Keyword - Value Prop | Dubai (under 60 chars)",
+    "metaDescription": "150-160 char description with primary keyword, benefit, and soft CTA",
+    "primaryKeyword": "main target phrase",
+    "secondaryKeywords": ["related phrase 1", "related phrase 2", "related phrase 3", "related phrase 4"],
+    "lsiKeywords": ["semantic term 1", "semantic term 2", "semantic term 3", "semantic term 4", "semantic term 5"],
+    "heroImageAlt": "Descriptive alt with location and subject (under 125 chars)",
+    "heroImageCaption": "Engaging caption with context (1-2 sentences)",
     "blocks": [
       {
         "id": "hero_block",
         "type": "hero",
         "data": {
-          "title": "Compelling Main Headline",
-          "subtitle": "One sentence that expands on the headline and hooks the reader",
-          "overlayText": "Short category or context label"
+          "title": "H1 Title (exact match to content.title or variant)",
+          "subtitle": "One sentence expanding on title with emotional or practical hook",
+          "overlayText": "Category label (e.g., 'New Opening', 'Travel Guide', 'Food & Dining')"
         },
         "order": 0
       },
@@ -1208,62 +1518,78 @@ OUTPUT STRUCTURE:
         "id": "intro_text",
         "type": "text",
         "data": {
-          "heading": "Introduction or Hook Heading",
-          "content": "Write 200-250 words. Start with a compelling hook that matches your chosen personality. Set the stage for the article, explain why this topic matters to travelers, and preview what they'll learn. Include the primary keyword naturally."
+          "heading": "Compelling H2 with Primary Keyword (if natural)",
+          "content": "200-250 words. Opening hook matching chosen personality. Introduce the topic's relevance to travelers. Preview what the article covers. Include primary keyword in first 100 words naturally. Set the tone for the entire piece."
         },
         "order": 1
+      },
+      {
+        "id": "quick_facts",
+        "type": "highlights",
+        "data": {
+          "title": "Quick Facts",
+          "items": [
+            "📍 Location: Full address or area name",
+            "💰 Price: AED X - Y or 'Free Entry'",
+            "⏰ Hours: Operating schedule",
+            "🎫 Booking: Link or walk-in info",
+            "⏱️ Duration: Time needed",
+            "📅 Best time: When to visit",
+            "🚇 Access: How to get there"
+          ]
+        },
+        "order": 2
       },
       {
         "id": "main_content_1",
         "type": "text",
         "data": {
-          "heading": "First Main Section (structure-specific)",
-          "content": "Write 200-300 words. This section varies based on your chosen structure. For lists, start your numbered items. For news, explain the development. For comparisons, introduce the options. Be specific and valuable."
+          "heading": "H2 based on chosen structure (e.g., 'What's New', 'Top 5 Options', 'The Experience')",
+          "content": "250-350 words. First major content section following your chosen structure. Use varied sentence lengths. Include specific details: prices, times, names. Add internal link to related content. Use 1-2 transitional phrases naturally."
         },
-        "order": 2
+        "order": 3
       },
       {
         "id": "main_content_2",
         "type": "text",
         "data": {
-          "heading": "Second Main Section",
-          "content": "Write 200-300 words. Continue developing the article based on structure. Add depth, examples, and practical details."
+          "heading": "H2 for second major section",
+          "content": "250-350 words. Develop the topic further. Add depth with examples, comparisons, or detailed descriptions. Include secondary keyword naturally. Vary paragraph length (mix 2-3 sentence paragraphs with 5-6 sentence ones). Add another internal link."
         },
-        "order": 3
+        "order": 4
       },
       {
         "id": "main_content_3",
         "type": "text",
         "data": {
-          "heading": "Third Main Section (if applicable)",
-          "content": "Write 150-250 words. Additional content section for longer articles. Can include case studies, examples, or expanded explanations."
-        },
-        "order": 4
-      },
-      {
-        "id": "highlights_block",
-        "type": "highlights",
-        "data": {
-          "title": "Key Takeaways",
-          "items": ["6 key points that summarize the most important information from the article"]
+          "heading": "H2 for third section (if needed for structure)",
+          "content": "200-300 words. Additional content matching your structure (e.g., comparison details, story continuation, more list items). Keep momentum. Use different transitional phrases than previous sections."
         },
         "order": 5
       },
       {
-        "id": "practical_text",
-        "type": "text",
+        "id": "pro_tips",
+        "type": "tips",
         "data": {
-          "heading": "Practical Information",
-          "content": "Write 150-200 words. Include dates, prices, locations, contact information, booking links, or any other practical details travelers need to act on this information."
+          "title": "Pro Tips for [Topic]",
+          "tips": [
+            "Specific actionable tip 1 with details (e.g., 'Book tickets online 48 hours ahead to save 20% and skip the queue')",
+            "Insider knowledge tip 2 (e.g., 'Visit on weekday mornings (9-11 AM) when it's 60% less crowded')",
+            "Money-saving tip 3 (e.g., 'Combine with nearby attraction X for a combo discount of AED 50')",
+            "Timing/logistics tip 4 (e.g., 'Allow 15 minutes for security check; bags over 40L not permitted')",
+            "Photo opportunity tip 5 (e.g., 'Best Instagram shots from the 3rd floor viewing deck at sunset')",
+            "Cultural/etiquette tip 6 (e.g., 'Modest dress required: cover shoulders and knees, scarves available at entrance')",
+            "Bonus hack tip 7 (e.g., 'Free parking after 6 PM in adjacent P2 garage, entrance on Al Wasl Road')"
+          ]
         },
         "order": 6
       },
       {
-        "id": "tips_block",
-        "type": "tips",
+        "id": "practical_info",
+        "type": "text",
         "data": {
-          "title": "Expert Tips & Advice",
-          "tips": ["7 detailed, actionable tips specific to this topic - each should provide genuine value and insider knowledge"]
+          "heading": "Practical Information",
+          "content": "150-200 words. Comprehensive practical details: full address, contact phone/email, website, exact operating hours, pricing tiers, payment methods, accessibility info, parking details, public transport access, what to bring, dress code, age restrictions, group booking info. Format as short paragraphs or bullets for scannability."
         },
         "order": 7
       },
@@ -1273,118 +1599,126 @@ OUTPUT STRUCTURE:
         "data": {
           "title": "Frequently Asked Questions",
           "faqs": [
-            {"question": "Most common question about this topic?", "answer": "100-200 word detailed answer with practical information and examples"},
-            {"question": "Second important question?", "answer": "100-200 word detailed answer"},
-            {"question": "Third question travelers ask?", "answer": "100-200 word detailed answer"},
-            {"question": "Fourth relevant question?", "answer": "100-200 word detailed answer"},
-            {"question": "Fifth question?", "answer": "100-200 word detailed answer"},
-            {"question": "Sixth question?", "answer": "100-200 word detailed answer"},
-            {"question": "Seventh question?", "answer": "100-200 word detailed answer"},
-            {"question": "Eighth question?", "answer": "100-200 word detailed answer"}
+            {"question": "How much does [topic] cost?", "answer": "150-200 words covering pricing tiers, inclusions, discounts, where to book, payment methods, hidden costs, value assessment"},
+            {"question": "What are the opening hours for [topic]?", "answer": "150-200 words covering daily hours, seasonal changes, public holiday schedules, best/worst times, last entry times, special extended hours"},
+            {"question": "How do I get to [location]?", "answer": "150-200 words covering metro/bus routes, taxi costs, parking, walking distance from landmarks, transfer options, accessibility"},
+            {"question": "Is [topic] suitable for families/kids?", "answer": "150-200 words covering age restrictions, kid-friendly features, stroller access, family facilities, pricing for children, recommended age"},
+            {"question": "Do I need to book in advance?", "answer": "150-200 words covering walk-in vs booking, peak times requiring reservation, how far ahead to book, cancellation policy, where to book"},
+            {"question": "What should I wear/bring to [topic]?", "answer": "150-200 words covering dress code, cultural considerations, weather prep, what's provided vs what to bring, prohibited items, bag policy"},
+            {"question": "How long should I spend at [location]?", "answer": "150-200 words covering typical duration, rush visit vs thorough experience, what affects timing, combined with other activities"},
+            {"question": "Are there any restrictions or rules?", "answer": "150-200 words covering photography policy, food/drink rules, behavior expectations, accessibility limitations, what's not allowed"},
+            {"question": "What's included in the price?", "answer": "150-200 words covering what's included, what costs extra, package deals, worth-it assessment, comparison to alternatives"},
+            {"question": "Can I get a refund if I cancel?", "answer": "150-200 words covering cancellation policy, refund terms, modification options, travel insurance recommendation, no-show policy"}
           ]
         },
         "order": 8
       },
       {
-        "id": "cta_block",
-        "type": "cta",
+        "id": "related_links",
+        "type": "text",
         "data": {
-          "heading": "Ready to [Action Related to Article]?",
-          "text": "Compelling call to action that relates to the article content",
-          "buttonText": "Action Button Text",
-          "buttonLink": "#"
+          "heading": "Related Articles",
+          "content": "Short paragraph (50-80 words) with 3-5 internal links to related content. Use natural anchor text: 'For more Dubai attractions, see our guide to [link]top Dubai attractions[/link]. If you're interested in dining nearby, check out [link]best restaurants in [Area][/link].' Links should flow naturally in sentences."
         },
         "order": 9
+      },
+      {
+        "id": "conclusion_cta",
+        "type": "cta",
+        "data": {
+          "heading": "Ready to [Experience This]?",
+          "text": "2-3 sentences wrapping up with emotional appeal or practical next step. Reinforce value. Include primary keyword once more naturally.",
+          "buttonText": "Plan Your Visit" OR "Book Now" OR "Learn More",
+          "buttonLink": "#" OR booking URL
+        },
+        "order": 10
       }
     ],
     "seoSchema": {
       "@context": "https://schema.org",
       "@type": "Article",
-      "headline": "Article Headline",
-      "description": "150-200 word comprehensive description for schema",
+      "headline": "Full article title",
+      "description": "150-200 word summary of the article covering main points and value to reader",
       "image": {
         "@type": "ImageObject",
-        "url": "",
-        "caption": "Image caption"
+        "url": "https://travi.world/images/article-hero.jpg",
+        "width": 1200,
+        "height": 630,
+        "caption": "Image description"
       },
       "author": {
         "@type": "Organization",
-        "name": "Dubai Travel",
-        "url": "https://dubaitravel.com"
+        "name": "Travi",
+        "url": "https://travi.world"
       },
       "publisher": {
         "@type": "Organization",
-        "name": "Dubai Travel",
+        "name": "Travi",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://dubaitravel.com/logo.png"
+          "url": "https://travi.world/logo.png",
+          "width": 600,
+          "height": 60
         }
       },
-      "datePublished": "2025-01-01",
-      "dateModified": "2025-01-01",
+      "datePublished": "2025-01-15",
+      "dateModified": "2025-01-15",
       "mainEntityOfPage": {
         "@type": "WebPage",
-        "@id": "https://dubaitravel.com/articles/slug"
+        "@id": "https://travi.world/articles/slug"
       },
-      "keywords": ["keyword1", "keyword2", "keyword3"]
+      "keywords": ["primary keyword", "secondary 1", "secondary 2", "lsi 1", "lsi 2"],
+      "articleSection": "Travel Guide",
+      "wordCount": 1500
     },
     "images": [
-      {"filename": "article-slug-hero.jpg", "alt": "Main image showing [specific scene]", "caption": "Caption for hero image"},
-      {"filename": "article-slug-detail-1.jpg", "alt": "Detail showing [specific element]", "caption": "Caption explaining the detail"},
-      {"filename": "article-slug-detail-2.jpg", "alt": "Another view of [specific element]", "caption": "Additional context caption"},
-      {"filename": "article-slug-practical.jpg", "alt": "Practical information visual", "caption": "Helpful visual for planning"}
+      {"filename": "hero-slug.jpg", "alt": "Primary subject with location context", "caption": "Descriptive caption with value"},
+      {"filename": "detail-1-slug.jpg", "alt": "Specific detail or feature", "caption": "Additional context"},
+      {"filename": "detail-2-slug.jpg", "alt": "Another angle or element", "caption": "Helpful description"},
+      {"filename": "practical-slug.jpg", "alt": "Practical visual (map, signage, entrance)", "caption": "Orientation info"}
     ]
   },
   "article": {
-    "category": "attractions|hotels|dining|transport|events|tips|news|shopping|districts|experiences",
+    "category": "attractions|hotels|dining|transport|events|tips|news|shopping",
+    "analysisCategory": "[One of the 8 categories from Step 1]",
     "urgencyLevel": "evergreen|seasonal|time-sensitive|breaking",
-    "targetAudience": ["First-time Visitors", "Repeat Travelers", "Families", "Couples", "Solo Travelers", "Budget Travelers", "Luxury Travelers", "Business Travelers"],
+    "targetAudience": ["First-time Visitors", "Families", "Luxury Travelers", "Budget Travelers", "Solo Travelers", "Couples", "Business Travelers"],
     "personality": "Professional Guide|Excited Traveler|Balanced Critic|Local Insider|Practical Planner",
     "tone": "informative|enthusiastic|balanced|insider|practical",
     "structure": "News+Guide|Structured List|Comparative|Story+Info|Problem-Solution|News Update",
-    "quickFacts": [
-      "Key fact 1 - single line of important information",
-      "Key fact 2",
-      "Key fact 3",
-      "Key fact 4",
-      "Key fact 5"
-    ],
-    "proTips": [
-      "Detailed actionable tip 1 with specific advice",
-      "Detailed actionable tip 2",
-      "Detailed actionable tip 3",
-      "Detailed actionable tip 4",
-      "Detailed actionable tip 5",
-      "Detailed actionable tip 6",
-      "Detailed actionable tip 7"
-    ],
-    "warnings": [
-      "Important warning or caveat 1",
-      "Important warning or caveat 2 if applicable"
-    ],
-    "faq": [
-      {"question": "Common question 1?", "answer": "100-200 word detailed answer with practical information"},
-      {"question": "Common question 2?", "answer": "100-200 word detailed answer"},
-      {"question": "Common question 3?", "answer": "100-200 word detailed answer"},
-      {"question": "Common question 4?", "answer": "100-200 word detailed answer"},
-      {"question": "Common question 5?", "answer": "100-200 word detailed answer"},
-      {"question": "Common question 6?", "answer": "100-200 word detailed answer"},
-      {"question": "Common question 7?", "answer": "100-200 word detailed answer"},
-      {"question": "Common question 8?", "answer": "100-200 word detailed answer"}
-    ],
-    "relatedTopics": ["Related topic 1", "Related topic 2", "Related topic 3", "Related topic 4"]
+    "wordCount": 1400,
+    "keywordDensity": "1.2%",
+    "readabilityScore": "8th grade level (target: clear, accessible)",
+    "marketingWordsUsed": ["exclusive", "insider", "ultimate"],
+    "internalLinks": [
+      {"anchor": "top Dubai attractions", "url": "/attractions/top-dubai-attractions"},
+      {"anchor": "Dubai Marina restaurants", "url": "/dining/dubai-marina"},
+      {"anchor": "Dubai Metro guide", "url": "/transport/metro-guide"}
+    ]
   }
 }
 
-IMPORTANT GUIDELINES:
-1. Generate unique random IDs for each block (e.g., "abc123", "xyz789")
-2. Total content should be 1200-2000 words across all text blocks
-3. FAQ answers must each be 100-200 words - comprehensive and helpful
-4. Include 7 specific, actionable tips
-5. All information must be accurate for Dubai
-6. Use natural keyword placement - don't stuff keywords
-7. Match personality and structure to the topic
-8. Write engaging content that helps travelers plan their visit`;
+===========================================
+FINAL CHECKLIST BEFORE GENERATING:
+===========================================
+
+✅ Analyzed content and chose correct category (Step 1)
+✅ Selected matching personality (Step 2)
+✅ Selected appropriate structure (Step 3)
+✅ Varied sentence structures and lengths (Step 4)
+✅ Used 3-5 marketing words strategically, not excessively (Step 5)
+✅ Primary keyword in title, intro, one H2, conclusion (Step 6)
+✅ Included Quick Facts box (Step 7)
+✅ Included 5-7 Pro Tips (Step 7)
+✅ Included 8-10 FAQ with 150-200 word answers (Step 7)
+✅ Included 3-5 internal links naturally (Step 7)
+✅ Complete schema markup (Step 7)
+✅ Total word count: 1400-2000 words
+✅ Natural, human-like writing (not robotic patterns)
+✅ Specific Dubai details (prices in AED, real locations, accurate info)
+✅ All JSON fields complete and properly formatted
+
+Generate the article now with full adherence to chosen personality and structure. Make it valuable, accurate, and naturally written.`;
 
 const DINING_SYSTEM_PROMPT = `You are a Dubai culinary content expert creating comprehensive, SEO-optimized restaurant pages for Dubai Travel website.
 
