@@ -1,81 +1,40 @@
-import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import {
-  Plus,
-  Trash2,
-  GripVertical,
-  MapPin,
-  Clock,
-  DollarSign,
-  Users,
-  Star,
-  Image as ImageIcon,
-  Link as LinkIcon,
-  CheckCircle,
-  Info,
-  Building,
-  Utensils,
-} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, Trash2, MapPin, Building } from "lucide-react";
 import type {
   QuickInfoItem,
+  HighlightItem,
+  ThingsToDoItem,
+  DistrictAttractionItem,
+  DiningHighlightItem,
+  EssentialInfoItem,
   RelatedItem,
+  GalleryImage,
+  FaqItem,
 } from "@shared/schema";
-
-interface TopHotelItem {
-  name: string;
-  type: string;
-  location: string;
-  priceFrom: string;
-  rating?: string;
-  image?: string;
-  link: string;
-  ctaText?: string;
-}
-
-interface TopRestaurantItem {
-  name: string;
-  cuisine: string;
-  location: string;
-  priceRange: string;
-  description: string;
-  image?: string;
-  link: string;
-}
-
-interface ThingToDoItem {
-  name: string;
-  type: string;
-  description: string;
-  image?: string;
-  icon?: string;
-  ctaText?: string;
-  ctaLink?: string;
-}
-
-interface NearbyDistrictItem {
-  name: string;
-  distance: string;
-  type: string;
-  link: string;
-}
 
 interface DistrictSeoEditorProps {
   data: {
+    location?: string;
+    neighborhood?: string;
+    subcategory?: string;
+    targetAudience?: string[];
+    primaryCta?: string;
     introText?: string;
     expandedIntroText?: string;
     quickInfoBar?: QuickInfoItem[];
-    topHotels?: TopHotelItem[];
-    topRestaurants?: TopRestaurantItem[];
-    thingsToDo?: ThingToDoItem[];
-    visitorTips?: string[];
-    nearbyDistricts?: NearbyDistrictItem[];
+    highlights?: HighlightItem[];
+    thingsToDo?: ThingsToDoItem[];
+    attractionsGrid?: DistrictAttractionItem[];
+    diningHighlights?: DiningHighlightItem[];
+    essentialInfo?: EssentialInfoItem[];
+    localTips?: string[];
+    faq?: FaqItem[];
     relatedDistricts?: RelatedItem[];
+    photoGallery?: GalleryImage[];
     trustSignals?: string[];
   };
   onChange: (data: any) => void;
@@ -86,198 +45,89 @@ export function DistrictSeoEditor({ data, onChange }: DistrictSeoEditorProps) {
     onChange({ ...data, [field]: value });
   };
 
-  const addQuickInfoItem = () => {
-    const newItem: QuickInfoItem = { icon: "MapPin", label: "", value: "" };
-    updateField("quickInfoBar", [...(data.quickInfoBar || []), newItem]);
+  const addToArray = (field: string, item: any) => {
+    const current = (data[field as keyof typeof data] as any[]) || [];
+    updateField(field, [...current, item]);
   };
 
-  const updateQuickInfoItem = (index: number, field: keyof QuickInfoItem, value: string) => {
-    const updated = [...(data.quickInfoBar || [])];
-    updated[index] = { ...updated[index], [field]: value };
-    updateField("quickInfoBar", updated);
+  const removeFromArray = (field: string, index: number) => {
+    const current = (data[field as keyof typeof data] as any[]) || [];
+    updateField(field, current.filter((_, i) => i !== index));
   };
 
-  const removeQuickInfoItem = (index: number) => {
-    updateField("quickInfoBar", (data.quickInfoBar || []).filter((_, i) => i !== index));
+  const updateArrayItem = (field: string, index: number, updates: any) => {
+    const current = (data[field as keyof typeof data] as any[]) || [];
+    const updated = [...current];
+    updated[index] = { ...updated[index], ...updates };
+    updateField(field, updated);
   };
-
-  const addTopHotel = () => {
-    const newItem: TopHotelItem = {
-      name: "",
-      type: "",
-      location: "",
-      priceFrom: "",
-      link: "",
-      ctaText: "View Hotel"
-    };
-    updateField("topHotels", [...(data.topHotels || []), newItem]);
-  };
-
-  const updateTopHotel = (index: number, field: keyof TopHotelItem, value: string) => {
-    const updated = [...(data.topHotels || [])];
-    updated[index] = { ...updated[index], [field]: value };
-    updateField("topHotels", updated);
-  };
-
-  const removeTopHotel = (index: number) => {
-    updateField("topHotels", (data.topHotels || []).filter((_, i) => i !== index));
-  };
-
-  const addTopRestaurant = () => {
-    const newItem: TopRestaurantItem = {
-      name: "",
-      cuisine: "",
-      location: "",
-      priceRange: "",
-      description: "",
-      link: ""
-    };
-    updateField("topRestaurants", [...(data.topRestaurants || []), newItem]);
-  };
-
-  const updateTopRestaurant = (index: number, field: keyof TopRestaurantItem, value: string) => {
-    const updated = [...(data.topRestaurants || [])];
-    updated[index] = { ...updated[index], [field]: value };
-    updateField("topRestaurants", updated);
-  };
-
-  const removeTopRestaurant = (index: number) => {
-    updateField("topRestaurants", (data.topRestaurants || []).filter((_, i) => i !== index));
-  };
-
-  const addThingToDo = () => {
-    const newItem: ThingToDoItem = {
-      name: "",
-      type: "",
-      description: "",
-      ctaText: "Learn More"
-    };
-    updateField("thingsToDo", [...(data.thingsToDo || []), newItem]);
-  };
-
-  const updateThingToDo = (index: number, field: keyof ThingToDoItem, value: string) => {
-    const updated = [...(data.thingsToDo || [])];
-    updated[index] = { ...updated[index], [field]: value };
-    updateField("thingsToDo", updated);
-  };
-
-  const removeThingToDo = (index: number) => {
-    updateField("thingsToDo", (data.thingsToDo || []).filter((_, i) => i !== index));
-  };
-
-  const addVisitorTip = () => {
-    updateField("visitorTips", [...(data.visitorTips || []), ""]);
-  };
-
-  const updateVisitorTip = (index: number, value: string) => {
-    const updated = [...(data.visitorTips || [])];
-    updated[index] = value;
-    updateField("visitorTips", updated);
-  };
-
-  const removeVisitorTip = (index: number) => {
-    updateField("visitorTips", (data.visitorTips || []).filter((_, i) => i !== index));
-  };
-
-  const addNearbyDistrict = () => {
-    const newItem: NearbyDistrictItem = {
-      name: "",
-      distance: "",
-      type: "",
-      link: ""
-    };
-    updateField("nearbyDistricts", [...(data.nearbyDistricts || []), newItem]);
-  };
-
-  const updateNearbyDistrict = (index: number, field: keyof NearbyDistrictItem, value: string) => {
-    const updated = [...(data.nearbyDistricts || [])];
-    updated[index] = { ...updated[index], [field]: value };
-    updateField("nearbyDistricts", updated);
-  };
-
-  const removeNearbyDistrict = (index: number) => {
-    updateField("nearbyDistricts", (data.nearbyDistricts || []).filter((_, i) => i !== index));
-  };
-
-  const addRelatedDistrict = () => {
-    const newItem: RelatedItem = { name: "", link: "", image: "" };
-    updateField("relatedDistricts", [...(data.relatedDistricts || []), newItem]);
-  };
-
-  const updateRelatedDistrict = (index: number, field: keyof RelatedItem, value: string) => {
-    const updated = [...(data.relatedDistricts || [])];
-    updated[index] = { ...updated[index], [field]: value };
-    updateField("relatedDistricts", updated);
-  };
-
-  const removeRelatedDistrict = (index: number) => {
-    updateField("relatedDistricts", (data.relatedDistricts || []).filter((_, i) => i !== index));
-  };
-
-  const addTrustSignal = () => {
-    updateField("trustSignals", [...(data.trustSignals || []), ""]);
-  };
-
-  const updateTrustSignal = (index: number, value: string) => {
-    const updated = [...(data.trustSignals || [])];
-    updated[index] = value;
-    updateField("trustSignals", updated);
-  };
-
-  const removeTrustSignal = (index: number) => {
-    updateField("trustSignals", (data.trustSignals || []).filter((_, i) => i !== index));
-  };
-
-  const iconOptions = [
-    { value: "MapPin", label: "Location" },
-    { value: "Clock", label: "Time" },
-    { value: "DollarSign", label: "Price" },
-    { value: "Users", label: "People" },
-    { value: "Star", label: "Rating" },
-    { value: "Info", label: "Info" },
-    { value: "Building", label: "Building" },
-    { value: "Utensils", label: "Dining" },
-  ];
 
   return (
     <div className="space-y-6">
-      {/* Intro Texts */}
+      {/* Basic Info */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Introduction</CardTitle>
-          <CardDescription>
-            Brief intro (visible) + Expanded intro (collapsed by default)
-          </CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Basic Information
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="introText">Brief Intro (2-3 sentences)</Label>
-            <Textarea
-              id="introText"
-              value={data.introText || ""}
-              onChange={(e) => updateField("introText", e.target.value)}
-              placeholder="Capture the district's essence..."
-              rows={3}
-              className="mt-2"
+            <Label>Location</Label>
+            <Input
+              value={data.location || ""}
+              onChange={(e) => updateField("location", e.target.value)}
+              placeholder="e.g., Dubai Marina"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              {(data.introText || "").split(" ").filter(Boolean).length} words
-            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Neighborhood</Label>
+              <Input
+                value={data.neighborhood || ""}
+                onChange={(e) => updateField("neighborhood", e.target.value)}
+                placeholder="e.g., Marina"
+              />
+            </div>
+            <div>
+              <Label>Subcategory</Label>
+              <Input
+                value={data.subcategory || ""}
+                onChange={(e) => updateField("subcategory", e.target.value)}
+                placeholder="e.g., Waterfront District"
+              />
+            </div>
           </div>
 
           <div>
-            <Label htmlFor="expandedIntroText">Expanded Intro (~150 words)</Label>
+            <Label>Primary CTA</Label>
+            <Input
+              value={data.primaryCta || ""}
+              onChange={(e) => updateField("primaryCta", e.target.value)}
+              placeholder="Explore Dubai Marina"
+            />
+          </div>
+
+          <div>
+            <Label>Intro Text (Visible)</Label>
             <Textarea
-              id="expandedIntroText"
+              value={data.introText || ""}
+              onChange={(e) => updateField("introText", e.target.value)}
+              placeholder="3 compelling sentences (60-80 words)"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <Label>Expanded Intro Text (Hidden/Expandable)</Label>
+            <Textarea
               value={data.expandedIntroText || ""}
               onChange={(e) => updateField("expandedIntroText", e.target.value)}
-              placeholder="Cover history, atmosphere, who it attracts, what it's known for..."
+              placeholder="150-200 words detailed description"
               rows={6}
-              className="mt-2"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              {(data.expandedIntroText || "").split(" ").filter(Boolean).length} words
-            </p>
           </div>
         </CardContent>
       </Card>
@@ -285,248 +135,95 @@ export function DistrictSeoEditor({ data, onChange }: DistrictSeoEditorProps) {
       {/* Quick Info Bar */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Quick Info Bar</CardTitle>
-          <CardDescription>
-            6 key facts about the district
-          </CardDescription>
+          <CardTitle>Quick Info Bar</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {(data.quickInfoBar || []).map((item, index) => (
-            <div key={index} className="flex gap-2 items-start p-3 border rounded-lg">
-              <GripVertical className="h-5 w-5 text-muted-foreground mt-2 flex-shrink-0" />
-              <div className="flex-1 grid grid-cols-3 gap-2">
-                <select
-                  value={item.icon}
-                  onChange={(e) => updateQuickInfoItem(index, "icon", e.target.value)}
-                  className="px-3 py-2 border rounded-md"
-                >
-                  {iconOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+            <div key={index} className="flex gap-2 p-3 border rounded-lg">
+              <div className="flex-1 grid grid-cols-2 gap-2">
                 <Input
-                  value={item.label}
-                  onChange={(e) => updateQuickInfoItem(index, "label", e.target.value)}
                   placeholder="Label"
+                  value={item.label || ""}
+                  onChange={(e) =>
+                    updateArrayItem("quickInfoBar", index, { label: e.target.value })
+                  }
                 />
                 <Input
-                  value={item.value}
-                  onChange={(e) => updateQuickInfoItem(index, "value", e.target.value)}
                   placeholder="Value"
+                  value={item.value || ""}
+                  onChange={(e) =>
+                    updateArrayItem("quickInfoBar", index, { value: e.target.value })
+                  }
                 />
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => removeQuickInfoItem(index)}
-                className="flex-shrink-0"
+                onClick={() => removeFromArray("quickInfoBar", index)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           ))}
-          <Button onClick={addQuickInfoItem} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" /> Add Info Item
+          <Button
+            onClick={() => addToArray("quickInfoBar", { label: "", value: "", icon: "" })}
+            variant="outline"
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-2" /> Add Quick Info Item
           </Button>
         </CardContent>
       </Card>
 
-      {/* Top Hotels */}
+      {/* Highlights */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Top Hotels (6)</CardTitle>
-          <CardDescription>Best hotels in the district</CardDescription>
+          <CardTitle>District Highlights</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {(data.topHotels || []).map((hotel, index) => (
-            <div key={index} className="p-4 border rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">Hotel {index + 1}</Badge>
+          {(data.highlights || []).map((item, index) => (
+            <div key={index} className="p-3 border rounded-lg space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Title"
+                  value={item.title || ""}
+                  onChange={(e) =>
+                    updateArrayItem("highlights", index, { title: e.target.value })
+                  }
+                />
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => removeTopHotel(index)}
+                  onClick={() => removeFromArray("highlights", index)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Hotel Name</Label>
-                  <Input
-                    value={hotel.name}
-                    onChange={(e) => updateTopHotel(index, "name", e.target.value)}
-                    placeholder="Atlantis The Palm"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Type</Label>
-                  <Input
-                    value={hotel.type}
-                    onChange={(e) => updateTopHotel(index, "type", e.target.value)}
-                    placeholder="5-Star Resort"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Location</Label>
-                  <Input
-                    value={hotel.location}
-                    onChange={(e) => updateTopHotel(index, "location", e.target.value)}
-                    placeholder="Palm Jumeirah"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Price From</Label>
-                  <Input
-                    value={hotel.priceFrom}
-                    onChange={(e) => updateTopHotel(index, "priceFrom", e.target.value)}
-                    placeholder="AED 800/night"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Rating (optional)</Label>
-                  <Input
-                    value={hotel.rating || ""}
-                    onChange={(e) => updateTopHotel(index, "rating", e.target.value)}
-                    placeholder="4.8/5"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>CTA Text</Label>
-                  <Input
-                    value={hotel.ctaText || ""}
-                    onChange={(e) => updateTopHotel(index, "ctaText", e.target.value)}
-                    placeholder="View Hotel"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Link</Label>
-                <Input
-                  value={hotel.link}
-                  onChange={(e) => updateTopHotel(index, "link", e.target.value)}
-                  placeholder="/hotel/atlantis-the-palm-dubai"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Image URL (optional)</Label>
-                <Input
-                  value={hotel.image || ""}
-                  onChange={(e) => updateTopHotel(index, "image", e.target.value)}
-                  placeholder="/images/hotel-thumb.jpg"
-                  className="mt-1"
-                />
-              </div>
+              <Textarea
+                placeholder="Description"
+                value={item.description || ""}
+                onChange={(e) =>
+                  updateArrayItem("highlights", index, { description: e.target.value })
+                }
+                rows={2}
+              />
+              <Input
+                placeholder="Image URL"
+                value={item.image || ""}
+                onChange={(e) =>
+                  updateArrayItem("highlights", index, { image: e.target.value })
+                }
+              />
             </div>
           ))}
-          <Button onClick={addTopHotel} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" /> Add Hotel
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Top Restaurants */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Top Restaurants (8)</CardTitle>
-          <CardDescription>Best dining options in the district</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(data.topRestaurants || []).map((restaurant, index) => (
-            <div key={index} className="p-4 border rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">Restaurant {index + 1}</Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeTopRestaurant(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Name</Label>
-                  <Input
-                    value={restaurant.name}
-                    onChange={(e) => updateTopRestaurant(index, "name", e.target.value)}
-                    placeholder="Restaurant Name"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Cuisine</Label>
-                  <Input
-                    value={restaurant.cuisine}
-                    onChange={(e) => updateTopRestaurant(index, "cuisine", e.target.value)}
-                    placeholder="Italian, French..."
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Location</Label>
-                  <Input
-                    value={restaurant.location}
-                    onChange={(e) => updateTopRestaurant(index, "location", e.target.value)}
-                    placeholder="Marina Walk"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Price Range</Label>
-                  <Input
-                    value={restaurant.priceRange}
-                    onChange={(e) => updateTopRestaurant(index, "priceRange", e.target.value)}
-                    placeholder="AED 150-300"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Description</Label>
-                <Textarea
-                  value={restaurant.description}
-                  onChange={(e) => updateTopRestaurant(index, "description", e.target.value)}
-                  placeholder="Brief description of the restaurant..."
-                  rows={2}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Link</Label>
-                <Input
-                  value={restaurant.link}
-                  onChange={(e) => updateTopRestaurant(index, "link", e.target.value)}
-                  placeholder="/dining/restaurant-name-dubai"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Image URL (optional)</Label>
-                <Input
-                  value={restaurant.image || ""}
-                  onChange={(e) => updateTopRestaurant(index, "image", e.target.value)}
-                  placeholder="/images/restaurant-thumb.jpg"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          ))}
-          <Button onClick={addTopRestaurant} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" /> Add Restaurant
+          <Button
+            onClick={() =>
+              addToArray("highlights", { title: "", description: "", image: "", icon: "" })
+            }
+            variant="outline"
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-2" /> Add Highlight
           </Button>
         </CardContent>
       </Card>
@@ -534,190 +231,159 @@ export function DistrictSeoEditor({ data, onChange }: DistrictSeoEditorProps) {
       {/* Things to Do */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Things to Do (4)</CardTitle>
-          <CardDescription>Top activities and attractions in the district</CardDescription>
+          <CardTitle>Things to Do</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {(data.thingsToDo || []).map((activity, index) => (
-            <div key={index} className="p-4 border rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">Activity {index + 1}</Badge>
+          {(data.thingsToDo || []).map((item, index) => (
+            <div key={index} className="p-3 border rounded-lg space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Activity Name"
+                  value={item.name || ""}
+                  onChange={(e) =>
+                    updateArrayItem("thingsToDo", index, { name: e.target.value })
+                  }
+                />
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => removeThingToDo(index)}
+                  onClick={() => removeFromArray("thingsToDo", index)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Name</Label>
-                  <Input
-                    value={activity.name}
-                    onChange={(e) => updateThingToDo(index, "name", e.target.value)}
-                    placeholder="Activity Name"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Type</Label>
-                  <Input
-                    value={activity.type}
-                    onChange={(e) => updateThingToDo(index, "type", e.target.value)}
-                    placeholder="Shopping, Entertainment..."
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Description</Label>
-                <Textarea
-                  value={activity.description}
-                  onChange={(e) => updateThingToDo(index, "description", e.target.value)}
-                  placeholder="Brief description of the activity..."
-                  rows={2}
-                  className="mt-1"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Icon (optional)</Label>
-                  <Input
-                    value={activity.icon || ""}
-                    onChange={(e) => updateThingToDo(index, "icon", e.target.value)}
-                    placeholder="Shopping, Camera, Music..."
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>CTA Text</Label>
-                  <Input
-                    value={activity.ctaText || ""}
-                    onChange={(e) => updateThingToDo(index, "ctaText", e.target.value)}
-                    placeholder="Learn More"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>CTA Link (optional)</Label>
-                <Input
-                  value={activity.ctaLink || ""}
-                  onChange={(e) => updateThingToDo(index, "ctaLink", e.target.value)}
-                  placeholder="/attraction/activity-name"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Image URL (optional)</Label>
-                <Input
-                  value={activity.image || ""}
-                  onChange={(e) => updateThingToDo(index, "image", e.target.value)}
-                  placeholder="/images/activity-thumb.jpg"
-                  className="mt-1"
-                />
-              </div>
+              <Textarea
+                placeholder="Description"
+                value={item.description || ""}
+                onChange={(e) =>
+                  updateArrayItem("thingsToDo", index, { description: e.target.value })
+                }
+                rows={2}
+              />
+              <Input
+                placeholder="Type (e.g., Shopping, Dining, Beach)"
+                value={item.type || ""}
+                onChange={(e) =>
+                  updateArrayItem("thingsToDo", index, { type: e.target.value })
+                }
+              />
             </div>
           ))}
-          <Button onClick={addThingToDo} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" /> Add Thing to Do
+          <Button
+            onClick={() =>
+              addToArray("thingsToDo", { name: "", description: "", type: "" })
+            }
+            variant="outline"
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-2" /> Add Activity
           </Button>
         </CardContent>
       </Card>
 
-      {/* Visitor Tips */}
+      {/* Dining Highlights */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Visitor Tips (5 practical tips)</CardTitle>
-          <CardDescription>Practical advice for exploring the district</CardDescription>
+          <CardTitle>Dining Highlights</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {(data.visitorTips || []).map((tip, index) => (
-            <div key={index} className="flex gap-2 items-center">
-              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-              <Input
+        <CardContent className="space-y-4">
+          {(data.diningHighlights || []).map((item, index) => (
+            <div key={index} className="p-3 border rounded-lg space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Restaurant Name"
+                  value={item.name || ""}
+                  onChange={(e) =>
+                    updateArrayItem("diningHighlights", index, { name: e.target.value })
+                  }
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeFromArray("diningHighlights", index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              <Textarea
+                placeholder="Description"
+                value={item.description || ""}
+                onChange={(e) =>
+                  updateArrayItem("diningHighlights", index, { description: e.target.value })
+                }
+                rows={2}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Cuisine Type"
+                  value={item.cuisine || ""}
+                  onChange={(e) =>
+                    updateArrayItem("diningHighlights", index, { cuisine: e.target.value })
+                  }
+                />
+                <Input
+                  placeholder="Price Range"
+                  value={item.priceRange || ""}
+                  onChange={(e) =>
+                    updateArrayItem("diningHighlights", index, {
+                      priceRange: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          ))}
+          <Button
+            onClick={() =>
+              addToArray("diningHighlights", {
+                name: "",
+                description: "",
+                cuisine: "",
+                priceRange: "",
+                image: "",
+              })
+            }
+            variant="outline"
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-2" /> Add Restaurant
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Local Tips */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Local Tips</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(data.localTips || []).map((tip, index) => (
+            <div key={index} className="flex gap-2">
+              <Textarea
                 value={tip}
-                onChange={(e) => updateVisitorTip(index, e.target.value)}
-                placeholder="Best explored on foot..."
-                className="flex-1"
+                onChange={(e) => {
+                  const updated = [...(data.localTips || [])];
+                  updated[index] = e.target.value;
+                  updateField("localTips", updated);
+                }}
+                placeholder="Local tip"
+                rows={2}
               />
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => removeVisitorTip(index)}
+                onClick={() => removeFromArray("localTips", index)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           ))}
-          <Button onClick={addVisitorTip} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" /> Add Visitor Tip
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Nearby Districts */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Nearby Districts (5)</CardTitle>
-          <CardDescription>Adjacent neighborhoods to explore</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {(data.nearbyDistricts || []).map((district, index) => (
-            <div key={index} className="p-4 border rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">District {index + 1}</Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeNearbyDistrict(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label>Name</Label>
-                  <Input
-                    value={district.name}
-                    onChange={(e) => updateNearbyDistrict(index, "name", e.target.value)}
-                    placeholder="Downtown Dubai"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Distance</Label>
-                  <Input
-                    value={district.distance}
-                    onChange={(e) => updateNearbyDistrict(index, "distance", e.target.value)}
-                    placeholder="10 min drive"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Type</Label>
-                  <Input
-                    value={district.type}
-                    onChange={(e) => updateNearbyDistrict(index, "type", e.target.value)}
-                    placeholder="Urban, Beachfront..."
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Link</Label>
-                <Input
-                  value={district.link}
-                  onChange={(e) => updateNearbyDistrict(index, "link", e.target.value)}
-                  placeholder="/district/downtown-dubai"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          ))}
-          <Button onClick={addNearbyDistrict} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" /> Add Nearby District
+          <Button
+            onClick={() => addToArray("localTips", "")}
+            variant="outline"
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-2" /> Add Local Tip
           </Button>
         </CardContent>
       </Card>
@@ -725,52 +391,43 @@ export function DistrictSeoEditor({ data, onChange }: DistrictSeoEditorProps) {
       {/* Related Districts */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Related Districts (4)</CardTitle>
-          <CardDescription>Similar districts to suggest</CardDescription>
+          <CardTitle>Related Districts</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {(data.relatedDistricts || []).map((district, index) => (
-            <div key={index} className="p-4 border rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">District {index + 1}</Badge>
+            <div key={index} className="p-3 border rounded-lg space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="District Name"
+                  value={district.name || ""}
+                  onChange={(e) =>
+                    updateArrayItem("relatedDistricts", index, { name: e.target.value })
+                  }
+                />
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => removeRelatedDistrict(index)}
+                  onClick={() => removeFromArray("relatedDistricts", index)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <div>
-                <Label>Name</Label>
-                <Input
-                  value={district.name}
-                  onChange={(e) => updateRelatedDistrict(index, "name", e.target.value)}
-                  placeholder="District Name"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Link</Label>
-                <Input
-                  value={district.link}
-                  onChange={(e) => updateRelatedDistrict(index, "link", e.target.value)}
-                  placeholder="/district/district-name"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Image URL (optional)</Label>
-                <Input
-                  value={district.image || ""}
-                  onChange={(e) => updateRelatedDistrict(index, "image", e.target.value)}
-                  placeholder="/images/district-thumb.jpg"
-                  className="mt-1"
-                />
-              </div>
+              <Input
+                placeholder="Link (e.g., /districts/district-slug)"
+                value={district.link || ""}
+                onChange={(e) =>
+                  updateArrayItem("relatedDistricts", index, { link: e.target.value })
+                }
+              />
             </div>
           ))}
-          <Button onClick={addRelatedDistrict} variant="outline" className="w-full">
+          <Button
+            onClick={() =>
+              addToArray("relatedDistricts", { name: "", link: "", image: "" })
+            }
+            variant="outline"
+            className="w-full"
+          >
             <Plus className="h-4 w-4 mr-2" /> Add Related District
           </Button>
         </CardContent>
@@ -779,29 +436,34 @@ export function DistrictSeoEditor({ data, onChange }: DistrictSeoEditorProps) {
       {/* Trust Signals */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Trust Signals</CardTitle>
-          <CardDescription>Credibility indicators for the district</CardDescription>
+          <CardTitle>Trust Signals</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {(data.trustSignals || []).map((signal, index) => (
-            <div key={index} className="flex gap-2 items-center">
-              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+            <div key={index} className="flex gap-2">
               <Input
                 value={signal}
-                onChange={(e) => updateTrustSignal(index, e.target.value)}
-                placeholder="Award-winning neighborhood"
-                className="flex-1"
+                onChange={(e) => {
+                  const updated = [...(data.trustSignals || [])];
+                  updated[index] = e.target.value;
+                  updateField("trustSignals", updated);
+                }}
+                placeholder="Trust signal"
               />
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => removeTrustSignal(index)}
+                onClick={() => removeFromArray("trustSignals", index)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           ))}
-          <Button onClick={addTrustSignal} variant="outline" className="w-full">
+          <Button
+            onClick={() => addToArray("trustSignals", "")}
+            variant="outline"
+            className="w-full"
+          >
             <Plus className="h-4 w-4 mr-2" /> Add Trust Signal
           </Button>
         </CardContent>
