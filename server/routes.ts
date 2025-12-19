@@ -1150,8 +1150,8 @@ export async function registerRoutes(
         typeData = content.article;
       } else if (content.type === "event" && content.event) {
         typeData = content.event;
-      } else if (content.type === "dining" && content.dining) {
-        typeData = content.dining;
+      } else if (content.type === "dining" && content.diningData) {
+        typeData = content.diningData;
       } else if (content.type === "district" && content.district) {
         typeData = content.district;
       } else if (content.type === "transport" && content.transport) {

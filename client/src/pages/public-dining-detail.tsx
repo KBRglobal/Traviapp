@@ -263,7 +263,7 @@ export default function PublicDiningDetail() {
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {highlights.map((highlight, i) => (
+                {highlights.map((highlight: HighlightItem, i: number) => (
                   <Card key={i} className="bg-background">
                     <HighlightCard highlight={highlight} />
                   </Card>
@@ -284,7 +284,7 @@ export default function PublicDiningDetail() {
               </div>
               
               <div className="space-y-3">
-                {menuHighlights.map((item, i) => (
+                {menuHighlights.map((item: MenuHighlightItem, i: number) => (
                   <MenuCard key={i} item={item} />
                 ))}
               </div>
@@ -301,7 +301,7 @@ export default function PublicDiningDetail() {
               </div>
               
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {essentialInfo.map((info, i) => (
+                {essentialInfo.map((info: EssentialInfoItem, i: number) => (
                   <EssentialInfoCard key={i} info={info} />
                 ))}
               </div>
@@ -319,7 +319,7 @@ export default function PublicDiningDetail() {
                   Insider Tips
                 </h3>
                 <ul className="space-y-3">
-                  {diningTips.map((tip, i) => (
+                  {diningTips.map((tip: string, i: number) => (
                     <li key={i} className="flex items-start gap-3">
                       <Check className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
                       <span className="text-sm text-muted-foreground">{tip}</span>
@@ -341,9 +341,9 @@ export default function PublicDiningDetail() {
               </div>
               
               <Accordion type="single" collapsible className="space-y-2">
-                {faqItems.map((faq, i) => (
-                  <AccordionItem 
-                    key={i} 
+                {faqItems.map((faq: FaqItem, i: number) => (
+                  <AccordionItem
+                    key={i}
                     value={`faq-${i}`}
                     className="bg-background rounded-lg px-4 border"
                   >
