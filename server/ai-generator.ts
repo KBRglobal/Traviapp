@@ -971,14 +971,18 @@ DUBAI-SPECIFIC CONTEXT:
 
 Generate all content with genuine value for travelers making a booking decision. Every element should either inform, persuade, or facilitate conversion.`;
 
-const ATTRACTION_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized attraction pages for Dubai Travel website.
+const ATTRACTION_SYSTEM_PROMPT = `You are creating CONVERSION-FOCUSED attraction landing pages for Dubai. These pages are designed for:
+1. SEO: Rank for "[Attraction Name] Dubai" searches
+2. CONVERSION: Drive clicks to affiliate booking/ticket links
+3. MINIMALIST DESIGN: Clean, fast-loading, scannable, mobile-first
 
-CONTENT REQUIREMENTS:
-- Total word count: 1500-2500 words across all text blocks
-- Every piece of content must be accurate, engaging, and valuable for tourists
-- Include natural keyword placement throughout the content
-- Write in an informative yet engaging tone
-- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
+USER JOURNEY: User searches "Museum of the Future Dubai" → lands on page → scans info → clicks "Book Tickets" CTA
+
+TARGET FORMAT: NOT a detailed blog post. YES: Essential info + compelling visuals + strong booking CTAs.
+
+===========================================
+PAGE STRUCTURE (Mandatory):
+===========================================
 
 Your output must be a valid JSON object matching this exact structure:
 
@@ -1142,9 +1146,16 @@ OUTPUT STRUCTURE:
     "location": "Downtown Dubai / Palm Jumeirah / etc - Full area name",
     "fullAddress": "Complete street address, area, Dubai, UAE",
     "duration": "2-3 hours",
+    "priceFrom": "AED 149",
+    "category": "Museum / Theme Park / Observation Deck / Entertainment",
     "bestTimeToVisit": "Early morning or late afternoon for fewer crowds",
     "targetAudience": ["Families with children", "Couples", "Solo Travelers", "Photography Enthusiasts", "First-time Dubai Visitors"],
-    "primaryCta": "Book Tickets - Skip the Line",
+    "primaryCta": "Book Tickets Online",
+
+    "introText": "Write 3 compelling sentences (60-80 words) that capture the essence of the attraction. This is what users see FIRST - make it hook them immediately. Include primary keyword naturally.",
+
+    "expandedIntroText": "Write 200 words that expand on the intro. Cover: What makes this attraction special and unique to Dubai, the complete visitor experience from arrival to departure, architectural or design significance, historical context if relevant, atmosphere and ambiance, best times to visit for optimal experience. End with a soft CTA to book.",
+
     "quickInfoBar": [
       {"icon": "MapPin", "label": "Location", "value": "Downtown Dubai"},
       {"icon": "Clock", "label": "Hours", "value": "10 AM - 10 PM Daily"},
@@ -1164,10 +1175,38 @@ OUTPUT STRUCTURE:
       {"image": "", "title": "Hidden Gem", "description": "50-80 word description of lesser-known feature"}
     ],
     "ticketInfo": [
-      {"type": "Standard Entry", "description": "General admission with access to all main attractions. Includes entry to all zones and exhibits.", "price": "AED 150", "includes": ["All main areas", "Standard photo spots"]},
-      {"type": "Premium Experience", "description": "Skip-the-line access plus exclusive areas and priority seating for shows.", "price": "AED 300", "includes": ["Fast-track entry", "VIP areas", "Guided tour"]},
-      {"type": "Family Package", "description": "2 adults + 2 children (ages 3-12). Best value for families.", "price": "AED 450", "includes": ["All standard access", "Kids activity pack"]},
-      {"type": "Combo Package", "description": "Combined ticket with nearby attraction for a full day experience.", "price": "AED 400", "includes": ["Two attractions", "Valid for 7 days"]}
+      {
+        "type": "Standard Entry",
+        "description": "General admission with access to all main attractions. Includes entry to all zones and exhibits.",
+        "price": "From AED 149",
+        "includes": ["All main areas", "Standard photo spots", "Audio guide access"],
+        "bookingUrl": "https://booking-affiliate.com/standard",
+        "ctaText": "Book Standard Tickets"
+      },
+      {
+        "type": "Skip-the-Line",
+        "description": "Fast-track entry plus priority access to all exhibits and experiences. Save 1-2 hours of waiting.",
+        "price": "From AED 249",
+        "includes": ["Priority entry", "All standard access", "VIP lounge access"],
+        "bookingUrl": "https://booking-affiliate.com/express",
+        "ctaText": "Book Express Entry"
+      },
+      {
+        "type": "Family Package",
+        "description": "2 adults + 2 children (ages 3-12). Best value for families visiting together.",
+        "price": "From AED 499",
+        "includes": ["All standard access", "Kids activity pack", "Family photo opportunity"],
+        "bookingUrl": "https://booking-affiliate.com/family",
+        "ctaText": "Book Family Package"
+      },
+      {
+        "type": "Combo Deal",
+        "description": "Combined ticket with nearby attraction for a complete Dubai experience. Valid for 7 days.",
+        "price": "From AED 399",
+        "includes": ["Two major attractions", "Valid 7 days", "15% savings"],
+        "bookingUrl": "https://booking-affiliate.com/combo",
+        "ctaText": "Book Combo Tickets"
+      }
     ],
     "essentialInfo": [
       {"icon": "MapPin", "label": "Address", "value": "Full street address, area, Dubai"},
@@ -1202,25 +1241,98 @@ OUTPUT STRUCTURE:
       {"question": "Is photography allowed at [Attraction Name]?", "answer": "Write 100-200 words covering: general photo policy, restricted areas, professional equipment rules, best photo spots, tips for great shots."},
       {"question": "Are there any discounts or special offers available?", "answer": "Write 100-200 words covering: current promotions, student/resident discounts, group rates, seasonal deals, credit card offers."}
     ],
-    "nearbyAttractions": [
-      {"name": "Nearby Attraction 1", "distance": "5 min walk", "type": "Attraction"},
-      {"name": "Popular Restaurant", "distance": "2 min walk", "type": "Dining"},
-      {"name": "Shopping Mall", "distance": "10 min walk", "type": "Shopping"},
-      {"name": "Another Landmark", "distance": "15 min drive", "type": "Attraction"}
+    "relatedAttractions": [
+      {
+        "name": "Related Attraction 1",
+        "description": "Brief 20-word description of why visitors to main attraction would enjoy this",
+        "distance": "2.5 km",
+        "priceFrom": "AED 149",
+        "image": "related-attraction-1.jpg",
+        "link": "/attractions/related-attraction-1-dubai"
+      },
+      {
+        "name": "Related Attraction 2",
+        "description": "Brief description connecting to main attraction theme",
+        "distance": "5 min walk",
+        "priceFrom": "AED 99",
+        "image": "related-attraction-2.jpg",
+        "link": "/attractions/related-attraction-2-dubai"
+      },
+      {
+        "name": "Related Attraction 3",
+        "description": "Complementary experience for the same type of visitor",
+        "distance": "3.8 km",
+        "priceFrom": "AED 199",
+        "image": "related-attraction-3.jpg",
+        "link": "/attractions/related-attraction-3-dubai"
+      },
+      {
+        "name": "Related Attraction 4",
+        "description": "Popular combo option for full-day itinerary",
+        "distance": "10 min drive",
+        "priceFrom": "AED 119",
+        "image": "related-attraction-4.jpg",
+        "link": "/attractions/related-attraction-4-dubai"
+      }
     ],
-    "trustSignals": ["TripAdvisor Travelers' Choice 2024", "Over 1 Million Annual Visitors", "Google 4.8 Star Rating", "Dubai Tourism Award Winner"],
-    "relatedKeywords": ["attractions", "tourism", "sightseeing", "landmarks", "experiences"]
+
+    "trustSignals": [
+      "TripAdvisor Travelers' Choice 2024",
+      "Over 1 Million Annual Visitors",
+      "Google 4.8 Star Rating (12,000+ reviews)",
+      "Dubai Tourism Board Certified",
+      "Viator Excellence Award"
+    ]
   }
 }
 
 IMPORTANT GUIDELINES:
-1. Generate unique random IDs for each block (e.g., "abc123", "xyz789")
-2. Total content should be 1200-2000 words across all text blocks
-3. FAQ answers must each be 100-200 words - comprehensive and helpful
-4. Include 7 specific, actionable visitor tips
-5. All information must be accurate for Dubai attractions
-6. Use natural keyword placement - don't stuff keywords
-7. Write engaging content that helps tourists plan their visit`;
+
+1. **Conversion Focus:**
+   - Multiple clear CTAs: Hero section, ticket info section, final CTA
+   - Every ticket type includes bookingUrl and ctaText
+   - Trust signals prominently placed near booking CTAs
+   - Use urgency without pressure: "Book 24 hours ahead" not "Buy now or miss out!"
+
+2. **Content Structure:**
+   - introText: 3 sentences, 60-80 words (visible immediately)
+   - expandedIntroText: 200 words (hidden, expandable)
+   - Total content: 1500-2000 words across all sections
+   - FAQ answers: 150-200 words each (8-10 questions)
+   - Visitor tips: 7 specific, actionable tips
+
+3. **SEO Optimization:**
+   - Primary keyword in title, introText, one H2, meta description
+   - Secondary keywords naturally distributed
+   - LSI keywords for semantic relevance
+   - Internal links to 4 related attractions
+   - Complete TouristAttraction + FAQPage schema markup
+
+4. **Ticket Information:**
+   - Minimum 3-4 ticket types with clear pricing
+   - Each includes: type, description, price, includes array, bookingUrl, ctaText
+   - Price format: "From AED XXX" for flexibility
+   - Highlight value and time-saving benefits
+
+5. **Practical Information:**
+   - quickInfoBar: 8 essential data points with icons
+   - essentialInfo: 12 detailed items covering all visitor needs
+   - visitorTips: 7 actionable tips (booking, timing, logistics, money-saving)
+   - relatedAttractions: 4 similar experiences with pricing
+
+6. **Dubai-Specific Accuracy:**
+   - All prices in AED
+   - Distances in km or walking minutes
+   - Metro station names and lines
+   - Accurate opening hours (24-hour format)
+   - Cultural considerations (dress codes, Ramadan, photography)
+
+7. **Trust & Social Proof:**
+   - 5 trust signals (awards, ratings, visitor counts, certifications)
+   - Include review counts and specific ratings
+   - Mention TripAdvisor, Google, Viator recognitions
+
+Generate unique IDs for each block. Make content valuable, accurate, and conversion-focused.`;
 
 const ARTICLE_SYSTEM_PROMPT = `You are an RSS Article Generator for Dubai travel content. Create varied, natural articles that avoid repetitive patterns while maintaining SEO excellence.
 
