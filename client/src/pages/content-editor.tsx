@@ -1648,18 +1648,50 @@ function HeroBlockCanvas({
   isGeneratingImage: boolean;
   isSelected: boolean;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const hasImage = !!block.data?.image;
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) throw new Error("Upload failed");
+      const result = await response.json();
+      onUpdate({ image: result.url, alt: file.name });
+    } catch (error) {
+      console.error("Upload error:", error);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="relative aspect-[21/9] bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
       {hasImage ? (
         <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full h-full object-cover" />
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
           <ImagePlus className="h-12 w-12 text-muted-foreground/50" />
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); }} data-testid={`hero-upload-${block.id}`}>
-              <Upload className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-upload-${block.id}`}>
+              {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
               Upload
             </Button>
             <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`hero-generate-${block.id}`}>
@@ -1727,10 +1759,42 @@ function ImageBlockCanvas({
   isGeneratingImage: boolean;
   isSelected: boolean;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const hasImage = !!block.data?.image;
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) throw new Error("Upload failed");
+      const result = await response.json();
+      onUpdate({ image: result.url, alt: file.name });
+    } catch (error) {
+      console.error("Upload error:", error);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="p-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
       {hasImage ? (
         <div className="relative aspect-video rounded-lg overflow-hidden">
           <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full h-full object-cover" />
@@ -1739,8 +1803,8 @@ function ImageBlockCanvas({
         <div className="aspect-video rounded-lg bg-muted flex flex-col items-center justify-center gap-4">
           <ImagePlus className="h-10 w-10 text-muted-foreground/50" />
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()} data-testid={`image-upload-${block.id}`}>
-              <Upload className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-upload-${block.id}`}>
+              {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
               Upload
             </Button>
             <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`image-generate-${block.id}`}>
