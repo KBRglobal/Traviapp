@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Menu, X, Search } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher, LanguageSelectorMobile } from "./language-switcher";
 
 interface PublicNavProps {
   className?: string;
@@ -66,8 +67,17 @@ export function PublicNav({ className = "", variant = "default" }: PublicNavProp
             </div>
 
             <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
+              {/* Language Switcher - Desktop */}
+              <div className="hidden md:block">
+                <LanguageSwitcher
+                  variant="compact"
+                  tierFilter={[1, 2, 3, 4, 5]}
+                  className={isTransparent ? "border-white/30 text-white hover:bg-white/10" : ""}
+                />
+              </div>
+
+              <Button
+                variant="ghost"
                 size="icon"
                 className={isTransparent ? "text-white hover:bg-white/10" : ""}
                 data-testid="button-search"
@@ -102,20 +112,28 @@ export function PublicNav({ className = "", variant = "default" }: PublicNavProp
           >
             <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-1">
               {navLinks.map((link) => (
-                <Link 
+                <Link
                   key={link.href}
-                  href={link.href} 
+                  href={link.href}
                   className={`py-3 px-4 rounded-lg text-sm font-medium uppercase tracking-wide transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
                     isActive(link.href)
                       ? "bg-primary/10 text-primary"
                       : "text-foreground/70 hover:bg-muted hover:text-foreground"
                   }`}
-                  data-testid={`${link.testId}-mobile`} 
+                  data-testid={`${link.testId}-mobile`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.label}
                 </Link>
               ))}
+
+              {/* Language Switcher - Mobile */}
+              <div className="mt-4 pt-4 border-t border-border/40">
+                <span className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wide">Language</span>
+                <div className="px-4 mt-2">
+                  <LanguageSelectorMobile className="w-full" />
+                </div>
+              </div>
             </div>
           </nav>
         )}

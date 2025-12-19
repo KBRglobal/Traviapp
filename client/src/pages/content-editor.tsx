@@ -64,6 +64,7 @@ import { AttractionSeoEditor } from "@/components/attraction-seo-editor";
 import { HotelSeoEditor } from "@/components/hotel-seo-editor";
 import { DiningSeoEditor } from "@/components/dining-seo-editor";
 import { DistrictSeoEditor } from "@/components/district-seo-editor";
+import { TranslationManager } from "@/components/translation-manager";
 
 type ContentType = "attraction" | "hotel" | "article" | "dining" | "district";
 // TEMPORARILY DISABLED: "transport" | "event" | "itinerary" - Will be enabled later
@@ -1129,6 +1130,10 @@ export default function ContentEditor() {
               <History className="h-4 w-4 mr-2" />
               History
             </Button>
+          )}
+          {/* Translation Manager - Translate to 50 languages */}
+          {contentId && title && (
+            <TranslationManager contentId={contentId} contentTitle={title} />
           )}
           <Button variant="outline" size="sm" onClick={handleSave} disabled={saveMutation.isPending} data-testid="button-save-draft">
             {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}

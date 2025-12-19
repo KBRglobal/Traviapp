@@ -5,10 +5,12 @@ import { SUPPORTED_LOCALES, RTL_LOCALES, type Locale } from '@shared/schema';
 
 // Import all locale files
 import enCommon from '../../locales/en/common.json';
+import heCommon from '../../locales/he/common.json';
 
 // Resources object - will be populated with all translations
 const resources: Record<string, { common: typeof enCommon }> = {
   en: { common: enCommon },
+  he: { common: heCommon },
 };
 
 // Initialize i18next
