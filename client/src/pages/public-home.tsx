@@ -201,10 +201,10 @@ export default function PublicHome() {
             <form 
               onSubmit={(e) => { e.preventDefault(); handleSearch(); }} 
               role="search" 
-              className="max-w-2xl mx-auto"
+              className="max-w-2xl mx-auto px-2 sm:px-4"
             >
-              <div className="bg-white rounded-full shadow-xl p-2 flex items-center gap-2">
-                <div className="flex-1 flex items-center gap-3 px-5">
+              <div className="bg-white rounded-2xl md:rounded-full shadow-xl p-3 md:p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex-1 flex items-center gap-3 px-4 md:px-5">
                   <Search className="w-5 h-5 text-[#6C5CE7] shrink-0" aria-hidden="true" />
                   <label htmlFor="hero-search" className="sr-only">Search Dubai experiences</label>
                   <input
@@ -214,13 +214,13 @@ export default function PublicHome() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
-                    className="flex-1 text-[#1E1B4B] placeholder:text-[#94A3B8] bg-transparent outline-none py-4 text-lg"
+                    className="flex-1 min-w-0 text-[#1E1B4B] placeholder:text-[#94A3B8] bg-transparent outline-none py-3 md:py-4 text-base md:text-lg"
                     data-testid="input-search"
                   />
                 </div>
                 <Button 
                   type="submit"
-                  className="btn-gold rounded-full px-8 py-6 text-lg" 
+                  className="btn-gold rounded-full px-6 md:px-8 py-3 md:py-6 text-base md:text-lg shrink-0" 
                   data-testid="button-search"
                 >
                   Explore
