@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 // Stats bar with key off-plan metrics
 export function OffPlanStatsBar() {
   const stats = [
-    { label: "Active Projects", value: "8,548+", icon: Building2 },
-    { label: "Entry Price", value: "AED 450K", icon: DollarSign },
+    { label: "Active Projects", value: "1,577+", icon: Building2 },
+    { label: "Entry Price", value: "AED 420K", icon: DollarSign },
     { label: "Avg ROI", value: "15-30%", icon: TrendingUp },
     { label: "Crypto Accepted", value: "BTC/USDT/ETH", icon: Bitcoin },
   ];

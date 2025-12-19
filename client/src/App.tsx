@@ -45,6 +45,11 @@ const OffPlanGoldenVisa = lazy(() => import("@/pages/off-plan-golden-visa"));
 const OffPlanPostHandover = lazy(() => import("@/pages/off-plan-post-handover"));
 const OffPlanEscrow = lazy(() => import("@/pages/off-plan-escrow"));
 const OffPlanVsReady = lazy(() => import("@/pages/off-plan-vs-ready"));
+const CompareOffPlanVsReady = lazy(() => import("@/pages/compare-off-plan-vs-ready"));
+const CompareJVCvsDubaiSouth = lazy(() => import("@/pages/compare-jvc-vs-dubai-south"));
+const CompareEmaarVsDamac = lazy(() => import("@/pages/compare-emaar-vs-damac"));
+const ToolsROICalculator = lazy(() => import("@/pages/tools-roi-calculator"));
+const GlossaryHub = lazy(() => import("@/pages/glossary-hub"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -257,6 +262,11 @@ function App() {
               <Route path="/off-plan-post-handover" component={OffPlanPostHandover} />
               <Route path="/off-plan-escrow" component={OffPlanEscrow} />
               <Route path="/off-plan-vs-ready" component={OffPlanVsReady} />
+              <Route path="/compare-off-plan-vs-ready" component={CompareOffPlanVsReady} />
+              <Route path="/compare-jvc-vs-dubai-south" component={CompareJVCvsDubaiSouth} />
+              <Route path="/compare-emaar-vs-damac" component={CompareEmaarVsDamac} />
+              <Route path="/tools-roi-calculator" component={ToolsROICalculator} />
+              <Route path="/glossary" component={GlossaryHub} />
               <Route path="/" component={PublicHome} />
               <Route component={NotFound} />
             </Switch>
