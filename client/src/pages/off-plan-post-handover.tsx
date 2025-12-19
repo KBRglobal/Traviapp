@@ -302,7 +302,7 @@ export default function OffPlanPostHandover() {
           title="Find Post-Handover Payment Plans"
           subtitle="Connect with consultants who specialize in post-handover financing. Find properties where rental income covers your payments."
           ctaText="Explore Options"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

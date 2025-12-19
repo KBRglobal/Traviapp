@@ -343,7 +343,7 @@ export default function CompareEmaarVsDamac() {
           title="Get Developer-Specific Guidance"
           subtitle="Connect with consultants specializing in Emaar and DAMAC properties. Expert advice on the best projects for your investment goals."
           ctaText="Get Expert Advice"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

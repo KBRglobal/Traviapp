@@ -260,7 +260,7 @@ export default function CompareVillaVsApartment() {
           title="Find Your Property Type"
           subtitle="Connect with consultants who can match properties to your investment goals."
           ctaText="Get Property Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

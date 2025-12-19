@@ -377,7 +377,7 @@ export default function ToolsMortgageCalculator() {
           title="Get Pre-Approved for a Mortgage"
           subtitle="Connect with mortgage advisors who can help you secure the best rates for your Dubai property purchase."
           ctaText="Get Mortgage Guidance"
-          onCtaClick={() => window.open('https://thrivestate.io', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

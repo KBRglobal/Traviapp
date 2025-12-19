@@ -260,7 +260,7 @@ export default function CompareBusinessBayVsJLT() {
           title="Explore Both Locations"
           subtitle="Connect with advisors who can help you choose the right business district for your investment strategy."
           ctaText="Get Location Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

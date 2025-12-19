@@ -269,7 +269,7 @@ export default function ToolsStampDutyCalculator() {
           title="Understand All Costs"
           subtitle="Connect with consultants who can provide detailed cost breakdowns and identify fee-saving opportunities."
           ctaText="Get Cost Analysis"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

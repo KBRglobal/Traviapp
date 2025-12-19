@@ -230,7 +230,7 @@ export default function OffPlanEmaar() {
           title="Invest in Emaar Properties"
           subtitle="Access exclusive Emaar off-plan projects with flexible payment plans and crypto payment options (BTC, USDT, ETH)."
           ctaText="Get Expert Consultation"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

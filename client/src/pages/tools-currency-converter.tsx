@@ -257,7 +257,7 @@ export default function ToolsCurrencyConverter() {
           title="Ready to Invest?"
           subtitle="Connect with consultants who can guide you through payment options in your preferred currency."
           ctaText="Get Investment Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

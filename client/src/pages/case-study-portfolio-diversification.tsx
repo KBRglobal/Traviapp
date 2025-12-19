@@ -254,7 +254,7 @@ export default function CaseStudyPortfolioDiversification() {
           title="Build Your Diversified Portfolio"
           subtitle="Connect with advisors who can help you create a balanced property portfolio matching your investment goals."
           ctaText="Get Portfolio Advice"
-          onCtaClick={() => window.open('https://thrivestate.io', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

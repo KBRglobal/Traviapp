@@ -283,7 +283,7 @@ export default function OffPlanGoldenVisa() {
           title="Get Your Golden Visa Through Property"
           subtitle="Connect with consultants who specialize in Golden Visa-eligible off-plan properties. Expert guidance from purchase to visa approval."
           ctaText="Start Visa Journey"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

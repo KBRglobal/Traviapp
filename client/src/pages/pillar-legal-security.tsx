@@ -285,7 +285,7 @@ export default function PillarLegalSecurity() {
           title="Invest with Confidence"
           subtitle="Connect with licensed consultants who can guide you through due diligence and ensure a secure purchase."
           ctaText="Get Legal Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

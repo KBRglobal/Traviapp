@@ -260,7 +260,7 @@ export default function CompareNewVsResale() {
           title="Find Your Ideal Property"
           subtitle="Connect with advisors who can source both new builds and resale opportunities matching your criteria."
           ctaText="Get Property Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

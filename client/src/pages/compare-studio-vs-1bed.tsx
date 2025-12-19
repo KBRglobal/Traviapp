@@ -322,7 +322,7 @@ export default function CompareStudioVs1Bed() {
           title="Find the Right Property Type for Your Goals"
           subtitle="Connect with advisors who can match you with studio or 1-bed investments based on your budget and objectives."
           ctaText="Get Property Recommendations"
-          onCtaClick={() => window.open('https://thrivestate.io', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

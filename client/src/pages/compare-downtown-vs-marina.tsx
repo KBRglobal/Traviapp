@@ -276,7 +276,7 @@ export default function CompareDowntownVsMarina() {
           title="Get Expert Location Advice"
           subtitle="Connect with consultants who specialize in premium Dubai locations. Find the perfect investment for your lifestyle and goals."
           ctaText="Get Expert Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

@@ -232,7 +232,7 @@ export default function OffPlanDamac() {
           title="Invest in DAMAC Luxury Properties"
           subtitle="Access exclusive DAMAC branded residences with flexible payment plans and crypto payment options (BTC, USDT, ETH)."
           ctaText="Get Expert Consultation"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

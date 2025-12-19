@@ -244,7 +244,7 @@ export default function CaseStudyInvestorJVC() {
                   Connect with consultants who can help you find investment 
                   opportunities like Sarah's.
                 </p>
-                <Link href="https://thrivestate.ae">
+                <Link href="/off-plan-jvc">
                   <Button className="w-full" data-testid="button-get-started">
                     Get Expert Guidance
                     <ChevronRight className="ml-2 h-4 w-4" />
@@ -259,7 +259,7 @@ export default function CaseStudyInvestorJVC() {
           title="Start Your Investment Journey"
           subtitle="Discover off-plan opportunities in JVC and other high-yield areas with flexible payment plans."
           ctaText="Explore JVC Properties"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

@@ -272,7 +272,7 @@ export default function CompareCryptoVsBankTransfer() {
           title="Get Payment Method Guidance"
           subtitle="Connect with consultants who can advise on the best payment approach for your situation and find crypto-friendly developers."
           ctaText="Get Expert Advice"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

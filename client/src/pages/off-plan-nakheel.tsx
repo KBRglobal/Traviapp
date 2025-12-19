@@ -231,7 +231,7 @@ export default function OffPlanNakheel() {
           title="Invest in Nakheel Waterfront Properties"
           subtitle="Access exclusive Nakheel off-plan projects with flexible payment plans and crypto payment options (BTC, USDT, ETH)."
           ctaText="Get Expert Consultation"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

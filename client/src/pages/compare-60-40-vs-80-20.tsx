@@ -264,7 +264,7 @@ export default function Compare6040vs8020() {
           title="Calculate Your Payment Options"
           subtitle="Use our free calculator or connect with consultants to find projects with your ideal payment structure."
           ctaText="Get Payment Plan Help"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

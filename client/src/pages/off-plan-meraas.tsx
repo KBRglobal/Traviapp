@@ -232,7 +232,7 @@ export default function OffPlanMeraas() {
           title="Invest in Meraas Lifestyle Properties"
           subtitle="Access exclusive Meraas off-plan projects with flexible payment plans and crypto payment options (BTC, USDT, ETH)."
           ctaText="Get Expert Consultation"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

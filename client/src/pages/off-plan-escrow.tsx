@@ -254,7 +254,7 @@ export default function OffPlanEscrow() {
           title="Buy with Confidence"
           subtitle="Work with verified consultants who guide you through escrow-protected purchases. Full transparency on fund protection and buyer rights."
           ctaText="Get Expert Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

@@ -260,7 +260,7 @@ export default function CompareNakheelVsAzizi() {
           title="Explore Developer Projects"
           subtitle="Connect with consultants who can guide you through Nakheel and Azizi project portfolios."
           ctaText="Get Developer Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

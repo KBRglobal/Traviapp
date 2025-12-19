@@ -279,7 +279,7 @@ export default function PillarROIRentalYields() {
           title="Calculate Your Expected Returns"
           subtitle="Use our free ROI calculator or connect with investment consultants for personalized return projections."
           ctaText="Get ROI Analysis"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

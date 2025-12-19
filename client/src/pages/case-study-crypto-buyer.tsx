@@ -243,7 +243,7 @@ export default function CaseStudyCryptoBuyer() {
                   Connect with brokers specializing in crypto property 
                   purchases in Dubai.
                 </p>
-                <Link href="https://thrivestate.ae">
+                <Link href="/off-plan-crypto-payments">
                   <Button className="w-full" data-testid="button-crypto-consultation">
                     <Bitcoin className="mr-2 h-4 w-4" />
                     Crypto Consultation
@@ -258,7 +258,7 @@ export default function CaseStudyCryptoBuyer() {
           title="Buy Dubai Property with Crypto"
           subtitle="Discover crypto-friendly developers and projects accepting BTC, ETH, and USDT payments."
           ctaText="Explore Crypto Options"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

@@ -260,7 +260,7 @@ export default function OffPlanCryptoPayments() {
           title="Start Your Crypto Property Purchase"
           subtitle="Connect with certified consultants who specialize in cryptocurrency property transactions. VARA-compliant processing for BTC, ETH, and USDT."
           ctaText="Get Crypto Consultation"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

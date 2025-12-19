@@ -276,7 +276,7 @@ export default function CompareSobhaVsMeraas() {
           title="Explore Luxury Developer Projects"
           subtitle="Connect with luxury property specialists who can guide you through Sobha and Meraas portfolios."
           ctaText="Get Expert Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

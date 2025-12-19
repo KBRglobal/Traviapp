@@ -378,7 +378,7 @@ export default function ToolsROICalculator() {
           title="Get Personalized ROI Analysis"
           subtitle="Connect with investment consultants who can provide detailed ROI projections based on specific projects and your investment goals."
           ctaText="Get Expert Analysis"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

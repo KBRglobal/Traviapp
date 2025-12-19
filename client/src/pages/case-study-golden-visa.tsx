@@ -246,7 +246,7 @@ export default function CaseStudyGoldenVisa() {
                   Learn how a property investment of AED 2M+ can secure your 
                   family's future in Dubai.
                 </p>
-                <Link href="https://thrivestate.ae">
+                <Link href="/off-plan-golden-visa">
                   <Button className="w-full" data-testid="button-golden-visa-consultation">
                     <Award className="mr-2 h-4 w-4" />
                     Get Visa Guidance
@@ -261,7 +261,7 @@ export default function CaseStudyGoldenVisa() {
           title="Secure Your Golden Visa"
           subtitle="Discover Golden Visa-qualifying properties and get expert guidance on the application process."
           ctaText="Explore AED 2M+ Properties"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

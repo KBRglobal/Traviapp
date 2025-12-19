@@ -243,7 +243,7 @@ export default function CaseStudyInvestorFlip() {
                   Get expert guidance on identifying flip opportunities in Dubai's 
                   off-plan market.
                 </p>
-                <Link href="https://thrivestate.ae">
+                <Link href="/dubai-off-plan-investment-guide">
                   <Button className="w-full" data-testid="button-flip-consultation">
                     <BarChart className="mr-2 h-4 w-4" />
                     Get Investment Advice
@@ -258,7 +258,7 @@ export default function CaseStudyInvestorFlip() {
           title="Explore Flip Opportunities"
           subtitle="Connect with advisors who can identify launch-phase projects with high appreciation potential."
           ctaText="Get Flip Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

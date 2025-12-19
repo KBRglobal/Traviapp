@@ -256,7 +256,7 @@ export default function OffPlanSobha() {
           title="Invest in Sobha Premium Properties"
           subtitle="Access exclusive Sobha off-plan projects with flexible payment plans and crypto payment options (BTC, USDT, ETH)."
           ctaText="Get Expert Consultation"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

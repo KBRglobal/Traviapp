@@ -234,7 +234,7 @@ export default function CaseStudyExpatFamily() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Explore Dubai communities with top schools and family amenities.
                 </p>
-                <Link href="https://thrivestate.ae">
+                <Link href="/dubai-off-plan-investment-guide">
                   <Button className="w-full" data-testid="button-family-consultation">
                     <Home className="mr-2 h-4 w-4" />
                     Get Family Guidance
@@ -249,7 +249,7 @@ export default function CaseStudyExpatFamily() {
           title="Plan Your Family's Dubai Move"
           subtitle="Connect with consultants who understand school proximity, family communities, and expat lifestyle needs."
           ctaText="Start Family Consultation"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

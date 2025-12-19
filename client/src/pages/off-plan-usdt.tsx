@@ -261,7 +261,7 @@ export default function OffPlanUSDT() {
           title="Pay for Dubai Property with USDT"
           subtitle="Connect with consultants specializing in USDT property transactions. Same-day processing with VARA-compliant conversion."
           ctaText="Start USDT Purchase"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

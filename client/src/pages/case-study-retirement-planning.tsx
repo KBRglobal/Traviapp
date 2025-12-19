@@ -271,7 +271,7 @@ export default function CaseStudyRetirementPlanning() {
           title="Plan Your Retirement Income"
           subtitle="Connect with advisors who specialize in building retirement income strategies through Dubai property investment."
           ctaText="Get Retirement Planning Advice"
-          onCtaClick={() => window.open('https://thrivestate.io', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

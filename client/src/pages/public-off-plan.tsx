@@ -69,7 +69,7 @@ const OFF_PLAN_ADVANTAGES = [
     icon: Sparkles,
     title: "Choose Best Units First",
     description: "Pre-launch access = premium views, high floors, corner units. These sell out in 24-48 hours during public launch.",
-    source: "Thrivestate clients get 2-4 week head start",
+    source: "Our clients get 2-4 week head start",
   },
   {
     icon: Building2,
@@ -268,7 +268,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "Can I really buy Dubai property with cryptocurrency?",
-    answer: "Yes! Thrivestate facilitates cryptocurrency payments including Bitcoin (BTC), USDT (Tether), and Ethereum (ETH) through VARA-licensed gateways. Crypto converts instantly to AED at locked rates (24-48hr protection) and deposits directly into DLD-regulated escrow accounts. 22% of international off-plan purchases in 2024 used cryptocurrency, with USDT being most popular (64% of crypto transactions) due to price stability.",
+    answer: "Yes! We facilitate cryptocurrency payments including Bitcoin (BTC), USDT (Tether), and Ethereum (ETH) through VARA-licensed gateways. Crypto converts instantly to AED at locked rates (24-48hr protection) and deposits directly into DLD-regulated escrow accounts. 22% of international off-plan purchases in 2024 used cryptocurrency, with USDT being most popular (64% of crypto transactions) due to price stability.",
   },
   {
     question: "How much do I need to buy off-plan property in Dubai 2025?",
@@ -288,7 +288,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "How long until handover?",
-    answer: "Typical off-plan projects take 24-36 months from purchase to handover. Some late-stage projects offer 12-18 month timelines. Thrivestate provides projects at various construction stages to match your investment timeline. Historical data shows off-plan investments deliver average 22% capital appreciation from purchase to handover.",
+    answer: "Typical off-plan projects take 24-36 months from purchase to handover. Some late-stage projects offer 12-18 month timelines. We provide projects at various construction stages to match your investment timeline. Historical data shows off-plan investments deliver average 22% capital appreciation from purchase to handover.",
   },
   {
     question: "What additional costs are there beyond property price?",
@@ -308,7 +308,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "How does the crypto payment process work step by step?",
-    answer: "1) Select property and confirm price with Thrivestate. 2) Receive secure VARA-licensed gateway link with locked exchange rate (24-48hr protection). 3) Transfer BTC/USDT/ETH from your wallet to provided address. 4) Gateway instantly converts to AED. 5) AED deposits into DLD-regulated escrow. 6) Receive blockchain hash + gateway receipt + developer confirmation. Total process: 24-48 hours vs 5-7 days for international wire.",
+    answer: "1) Select property and confirm price with our team. 2) Receive secure VARA-licensed gateway link with locked exchange rate (24-48hr protection). 3) Transfer BTC/USDT/ETH from your wallet to provided address. 4) Gateway instantly converts to AED. 5) AED deposits into DLD-regulated escrow. 6) Receive blockchain hash + gateway receipt + developer confirmation. Total process: 24-48 hours vs 5-7 days for international wire.",
   },
   {
     question: "Can I get a mortgage on off-plan property?",
@@ -358,9 +358,44 @@ function LeadWizard({
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async () => {
     if (!formData.consentPrivacy) return;
-    setSubmitted(true);
+    if (!formData.email || !formData.name) {
+      toast({ title: "Error", description: "Please fill in your name and email.", variant: "destructive" });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/leads/property", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          name: formData.name,
+          phone: formData.phone,
+          propertyType: formData.propertyType,
+          budget: formData.budget,
+          paymentMethod: formData.paymentMethod,
+          preferredAreas: formData.likedProjects,
+          consent: formData.consentPrivacy,
+        }),
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit");
+      }
+      
+      setSubmitted(true);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to submit. Please try again.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleProjectSwipe = (liked: boolean) => {
@@ -414,7 +449,7 @@ function LeadWizard({
             </div>
             <h3 className="text-2xl font-bold mb-3">Thank You!</h3>
             <p className="text-muted-foreground mb-2">
-              A Thrivestate off-plan specialist will contact you within 24 hours.
+              An off-plan specialist will contact you within 24 hours.
             </p>
             {formData.likedProjects.length > 0 && (
               <p className="text-sm text-muted-foreground">
@@ -762,7 +797,7 @@ function LeadWizard({
                             data-testid="checkbox-wizard-privacy"
                           />
                           <span className="text-xs text-muted-foreground">
-                            I agree to the processing of my personal data by Thrivestate. *
+                            I agree to the processing of my personal data. *
                           </span>
                         </label>
                         
@@ -788,10 +823,10 @@ function LeadWizard({
                       <Button 
                         className="flex-1" 
                         onClick={handleSubmit}
-                        disabled={!formData.name || !formData.email || !formData.consentPrivacy}
+                        disabled={!formData.name || !formData.email || !formData.consentPrivacy || isSubmitting}
                         data-testid="button-wizard-submit"
                       >
-                        Get My Recommendations
+                        {isSubmitting ? "Submitting..." : "Get My Recommendations"}
                       </Button>
                     </div>
                   </motion.div>
@@ -811,7 +846,7 @@ export default function PublicOffPlan() {
 
   useDocumentMeta({
     title: "Buy Off-Plan Dubai: Crypto & Cash Payment Plans 2025",
-    description: "Dubai off-plan properties from AED 450K. Pay with crypto (BTC, USDT, ETH) or cash. Flexible 3-5 year plans, 15-30% capital gains. Thrivestate experts.",
+    description: "Dubai off-plan properties from AED 450K. Pay with crypto (BTC, USDT, ETH) or cash. Flexible 3-5 year plans, 15-30% capital gains. Expert guidance.",
   });
 
   return (
@@ -832,7 +867,7 @@ export default function PublicOffPlan() {
         
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-20">
           <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm mb-6 text-sm px-4 py-1.5">
-            Powered by Thrivestate Off-Plan Specialists
+            Powered by Off-Plan Specialists
           </Badge>
           
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-4 tracking-tight">
@@ -1010,7 +1045,7 @@ export default function PublicOffPlan() {
         <section className="py-16 md:py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <p className="text-lg md:text-xl text-foreground/90 leading-relaxed">
-              Off-plan properties in Dubai offer investors the opportunity to purchase under-construction developments at 15-25% below completed market value, with flexible payment plans spreading costs over 3-5 years tied to construction milestones. Thrivestate specializes in securing pre-launch allocations from top developers including Emaar, Damac, Meraas, Nakheel, and Sobha, with cryptocurrency and cash payment options accepted.
+              Off-plan properties in Dubai offer investors the opportunity to purchase under-construction developments at 15-25% below completed market value, with flexible payment plans spreading costs over 3-5 years tied to construction milestones. Our specialists secure pre-launch allocations from top developers including Emaar, Damac, Meraas, Nakheel, and Sobha, with cryptocurrency and cash payment options accepted.
             </p>
             
             {showFullIntro && (
@@ -1439,7 +1474,7 @@ export default function PublicOffPlan() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Invest in Dubai Off-Plan?</h2>
             <p className="text-lg text-primary-foreground/80 mb-8">
-              Get personalized recommendations from Thrivestate off-plan specialists. Pay with crypto or cash.
+              Get personalized recommendations from our off-plan specialists. Pay with crypto or cash.
             </p>
             <Button 
               size="lg" 

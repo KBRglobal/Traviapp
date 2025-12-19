@@ -271,7 +271,7 @@ export default function ToolsRentalYieldCalculator() {
           title="Find High-Yield Properties"
           subtitle="Connect with consultants who can identify properties matching your yield targets."
           ctaText="Get Yield Analysis"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

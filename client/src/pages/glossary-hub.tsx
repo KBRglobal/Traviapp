@@ -229,7 +229,7 @@ export default function GlossaryHub() {
           title="Have Questions About Any Term?"
           subtitle="Our consultants can explain any real estate concept and guide you through the Dubai property buying process."
           ctaText="Get Expert Help"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

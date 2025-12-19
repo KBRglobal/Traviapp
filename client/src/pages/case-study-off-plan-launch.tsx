@@ -236,7 +236,7 @@ export default function CaseStudyOffPlanLaunch() {
           title="Get Priority Access to Launches"
           subtitle="Connect with advisors who provide early access to upcoming project launches from top developers."
           ctaText="Get Launch Access"
-          onCtaClick={() => window.open('https://thrivestate.io', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

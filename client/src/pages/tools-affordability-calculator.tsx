@@ -310,7 +310,7 @@ export default function ToolsAffordabilityCalculator() {
           title="Find Properties in Your Budget"
           subtitle="Connect with consultants who can show you projects that match your financial situation with the best payment plans."
           ctaText="Get Personalized Options"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

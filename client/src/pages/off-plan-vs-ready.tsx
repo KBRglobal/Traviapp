@@ -396,7 +396,7 @@ export default function OffPlanVsReady() {
           title="Get Personalized Investment Advice"
           subtitle="Connect with consultants who can analyze your situation and recommend the best investment approach - off-plan, ready, or a mix of both."
           ctaText="Get Expert Advice"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

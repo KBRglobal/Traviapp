@@ -314,7 +314,7 @@ export default function ToolsPaymentCalculator() {
           title="Find Projects With Your Ideal Payment Plan"
           subtitle="Connect with consultants who can match you with off-plan projects offering the payment flexibility you need."
           ctaText="Get Payment Plan Options"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks

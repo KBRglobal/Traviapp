@@ -3735,6 +3735,51 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // Property Lead submission (public) - for off-plan property inquiries
+  app.post("/api/leads/property", rateLimiters.newsletter, async (req, res) => {
+    try {
+      const { email, name, phone, propertyType, budget, paymentMethod, preferredAreas, timeline, message, consent } = req.body;
+      
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        return res.status(400).json({ error: "Valid email required" });
+      }
+      if (!name || typeof name !== "string" || name.trim().length < 2) {
+        return res.status(400).json({ error: "Name required" });
+      }
+      if (!consent) {
+        return res.status(400).json({ error: "Consent required" });
+      }
+      
+      // Get IP address and user agent
+      const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
+      const userAgent = req.headers["user-agent"] || "";
+      
+      // Save lead to database
+      const lead = await storage.createPropertyLead({
+        email: email.trim().toLowerCase(),
+        name: name.trim(),
+        phone: phone || null,
+        propertyType: propertyType || null,
+        budget: budget || null,
+        paymentMethod: paymentMethod || null,
+        preferredAreas: preferredAreas || null,
+        timeline: timeline || null,
+        message: message || null,
+        source: "off-plan-form",
+        status: "new",
+        ipAddress,
+        userAgent,
+        consentGiven: true,
+      });
+      
+      console.log("[Property Lead] New lead saved:", lead.id, email);
+      res.json({ success: true, message: "Thank you! Our team will contact you within 24 hours.", leadId: lead.id });
+    } catch (error) {
+      console.error("Error saving property lead:", error);
+      res.status(500).json({ error: "Failed to submit. Please try again." });
+    }
+  });
+
   // Newsletter subscription (public) - Double Opt-In flow with rate limiting
   app.post("/api/newsletter/subscribe", rateLimiters.newsletter, async (req, res) => {
     try {

@@ -580,6 +580,47 @@ export type InsertNewsletterSubscriber = z.infer<typeof insertNewsletterSubscrib
 export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
 export type SubscriberStatus = "pending_confirmation" | "subscribed" | "unsubscribed" | "bounced" | "complained";
 
+// Lead status enum for property inquiries
+export const leadStatusEnum = pgEnum("lead_status", [
+  "new",
+  "contacted",
+  "qualified",
+  "negotiating",
+  "won",
+  "lost"
+]);
+
+// Property Leads table - for off-plan property inquiries
+export const propertyLeads = pgTable("property_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull(),
+  name: varchar("name").notNull(),
+  phone: varchar("phone"),
+  propertyType: varchar("property_type"),
+  budget: varchar("budget"),
+  paymentMethod: varchar("payment_method"),
+  preferredAreas: text("preferred_areas").array(),
+  timeline: varchar("timeline"),
+  message: text("message"),
+  source: varchar("source").default("off-plan-form"),
+  status: leadStatusEnum("status").notNull().default("new"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  consentGiven: boolean("consent_given").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  notes: text("notes"),
+});
+
+export const insertPropertyLeadSchema = createInsertSchema(propertyLeads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPropertyLead = z.infer<typeof insertPropertyLeadSchema>;
+export type PropertyLead = typeof propertyLeads.$inferSelect;
+
 // Campaign status enum
 export const campaignStatusEnum = pgEnum("campaign_status", [
   "draft",

@@ -315,7 +315,7 @@ export default function CompareJVCvsDubaiSouth() {
           title="Get Expert Location Advice"
           subtitle="Connect with consultants who can help you choose between JVC and Dubai South based on your investment goals and budget."
           ctaText="Get Location Guidance"
-          onCtaClick={() => window.open('https://thrivestate.ae', '_blank')}
+          onCtaClick={() => {}}
         />
 
         <RelatedLinks
