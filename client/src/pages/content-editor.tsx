@@ -62,7 +62,7 @@ import { SeoScore } from "@/components/seo-score";
 import { SchemaPreview } from "@/components/schema-preview";
 import { AttractionSeoEditor } from "@/components/attraction-seo-editor";
 
-type ContentType = "attraction" | "hotel" | "article" | "event" | "itinerary";
+type ContentType = "attraction" | "hotel" | "article" | "dining" | "district" | "transport" | "event" | "itinerary";
 
 interface BlockTypeConfig {
   type: ContentBlock["type"];
@@ -131,6 +131,9 @@ export default function ContentEditor() {
   const getContentType = (): ContentType => {
     if (attractionMatch || attractionNewMatch) return "attraction";
     if (hotelMatch || hotelNewMatch) return "hotel";
+    if (diningMatch || diningNewMatch) return "dining";
+    if (districtMatch || districtNewMatch) return "district";
+    if (transportMatch || transportNewMatch) return "transport";
     if (eventMatch || eventNewMatch) return "event";
     if (itineraryMatch || itineraryNewMatch) return "itinerary";
     return "article";
@@ -627,12 +630,21 @@ export default function ContentEditor() {
 
   const aiGenerateMutation = useMutation({
     mutationFn: async (input: string) => {
-      const endpoint = contentType === "hotel" 
-        ? "/api/ai/generate-hotel" 
-        : contentType === "attraction" 
-        ? "/api/ai/generate-attraction" 
-        : "/api/ai/generate-article";
-      const body = contentType === "article" ? { topic: input } : { name: input };
+      const endpoint =
+        contentType === "hotel" ? "/api/ai/generate-hotel" :
+        contentType === "attraction" ? "/api/ai/generate-attraction" :
+        contentType === "dining" ? "/api/ai/generate-dining" :
+        contentType === "district" ? "/api/ai/generate-district" :
+        contentType === "transport" ? "/api/ai/generate-transport" :
+        contentType === "event" ? "/api/ai/generate-event" :
+        contentType === "itinerary" ? "/api/ai/generate-itinerary" :
+        "/api/ai/generate-article";
+
+      const body =
+        contentType === "article" ? { topic: input } :
+        contentType === "itinerary" ? { duration: input } :
+        { name: input };
+
       const res = await apiRequest("POST", endpoint, body);
       return res.json();
     },

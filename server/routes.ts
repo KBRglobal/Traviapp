@@ -52,10 +52,15 @@ import {
 } from "./security";
 import * as fs from "fs";
 import * as path from "path";
-import { 
-  generateHotelContent, 
-  generateAttractionContent, 
+import {
+  generateHotelContent,
+  generateAttractionContent,
   generateArticleContent,
+  generateDiningContent,
+  generateDistrictContent,
+  generateTransportContent,
+  generateEventContent,
+  generateItineraryContent,
   generateContentImages,
   generateImagePrompt,
   generateImage,
@@ -2478,6 +2483,121 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     } catch (error) {
       console.error("Error generating attraction content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate attraction content";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  app.post("/api/ai/generate-dining", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ error: "Restaurant name is required" });
+      }
+
+      const result = await generateDiningContent(name.trim());
+      if (!result) {
+        return res.status(500).json({ error: "Failed to generate dining content" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating dining content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate dining content";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  app.post("/api/ai/generate-district", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ error: "District name is required" });
+      }
+
+      const result = await generateDistrictContent(name.trim());
+      if (!result) {
+        return res.status(500).json({ error: "Failed to generate district content" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating district content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate district content";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  app.post("/api/ai/generate-transport", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ error: "Transport type is required" });
+      }
+
+      const result = await generateTransportContent(name.trim());
+      if (!result) {
+        return res.status(500).json({ error: "Failed to generate transport content" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating transport content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate transport content";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  app.post("/api/ai/generate-event", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ error: "Event name is required" });
+      }
+
+      const result = await generateEventContent(name.trim());
+      if (!result) {
+        return res.status(500).json({ error: "Failed to generate event content" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating event content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate event content";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  app.post("/api/ai/generate-itinerary", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+    try {
+      const { duration, tripType } = req.body;
+      if (!duration || typeof duration !== "string" || duration.trim().length === 0) {
+        return res.status(400).json({ error: "Duration is required (e.g., '3 days', '1 week')" });
+      }
+
+      const result = await generateItineraryContent(duration.trim(), tripType);
+      if (!result) {
+        return res.status(500).json({ error: "Failed to generate itinerary content" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating itinerary content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate itinerary content";
       res.status(500).json({ error: message });
     }
   });
