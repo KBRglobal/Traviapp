@@ -22,7 +22,7 @@ const PublicDistricts = lazy(() => import("@/pages/public-districts"));
 const PublicArticles = lazy(() => import("@/pages/public-articles"));
 const PublicEvents = lazy(() => import("@/pages/public-events"));
 const PublicSearch = lazy(() => import("@/pages/public-search"));
-const PublicRealEstate = lazy(() => import("@/pages/public-real-estate"));
+const PublicOffPlan = lazy(() => import("@/pages/public-off-plan"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -211,7 +211,8 @@ function App() {
               <Route path="/events" component={PublicEvents} />
               <Route path="/events/:slug" component={PublicContentViewer} />
               <Route path="/itineraries/:slug" component={PublicContentViewer} />
-              <Route path="/dubai-real-estate" component={PublicRealEstate} />
+              <Route path="/dubai-real-estate" component={PublicOffPlan} />
+              <Route path="/dubai-off-plan-properties" component={PublicOffPlan} />
               <Route path="/" component={PublicHome} />
               <Route component={NotFound} />
             </Switch>

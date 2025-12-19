@@ -19,7 +19,7 @@ export function PublicNav({ className = "", variant = "default" }: PublicNavProp
     { href: "/articles", label: "News", testId: "link-news" },
     { href: "/districts", label: "Districts", testId: "link-districts" },
     { href: "/dining", label: "Dining", testId: "link-dining" },
-    { href: "/dubai-real-estate", label: "Real Estate", testId: "link-real-estate" },
+    { href: "/dubai-off-plan-properties", label: "Off-Plan", testId: "link-off-plan" },
   ];
 
   const isTransparent = variant === "transparent";
