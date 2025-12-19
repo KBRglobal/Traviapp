@@ -15,6 +15,13 @@ import { Loader2 } from "lucide-react";
 // Lazy load all pages for better performance
 const ComingSoon = lazy(() => import("@/pages/coming-soon"));
 const PublicHome = lazy(() => import("@/pages/public-home"));
+const PublicAttractions = lazy(() => import("@/pages/public-attractions"));
+const PublicHotels = lazy(() => import("@/pages/public-hotels"));
+const PublicDining = lazy(() => import("@/pages/public-dining"));
+const PublicDistricts = lazy(() => import("@/pages/public-districts"));
+const PublicArticles = lazy(() => import("@/pages/public-articles"));
+const PublicEvents = lazy(() => import("@/pages/public-events"));
+const PublicSearch = lazy(() => import("@/pages/public-search"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -187,12 +194,19 @@ function App() {
             <Switch>
               <Route path="/login" component={Login} />
               <Route path="/access-denied" component={AccessDenied} />
+              <Route path="/search" component={PublicSearch} />
+              <Route path="/attractions" component={PublicAttractions} />
               <Route path="/attractions/:slug" component={PublicContentViewer} />
+              <Route path="/hotels" component={PublicHotels} />
               <Route path="/hotels/:slug" component={PublicContentViewer} />
+              <Route path="/dining" component={PublicDining} />
               <Route path="/dining/:slug" component={PublicContentViewer} />
+              <Route path="/districts" component={PublicDistricts} />
               <Route path="/districts/:slug" component={PublicContentViewer} />
               <Route path="/transport/:slug" component={PublicContentViewer} />
+              <Route path="/articles" component={PublicArticles} />
               <Route path="/articles/:slug" component={PublicContentViewer} />
+              <Route path="/events" component={PublicEvents} />
               <Route path="/events/:slug" component={PublicContentViewer} />
               <Route path="/itineraries/:slug" component={PublicContentViewer} />
               <Route path="/" component={PublicHome} />
