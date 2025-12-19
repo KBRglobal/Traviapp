@@ -70,6 +70,10 @@ const CompareNakheelVsAzizi = lazy(() => import("@/pages/compare-nakheel-vs-aziz
 const CompareVillaVsApartment = lazy(() => import("@/pages/compare-villa-vs-apartment"));
 const ToolsRentalYieldCalculator = lazy(() => import("@/pages/tools-rental-yield-calculator"));
 const ToolsMortgageCalculator = lazy(() => import("@/pages/tools-mortgage-calculator"));
+const CompareStudioVs1Bed = lazy(() => import("@/pages/compare-studio-vs-1bed"));
+const CaseStudyPortfolioDiversification = lazy(() => import("@/pages/case-study-portfolio-diversification"));
+const CaseStudyOffPlanLaunch = lazy(() => import("@/pages/case-study-off-plan-launch"));
+const CaseStudyRetirementPlanning = lazy(() => import("@/pages/case-study-retirement-planning"));
 const GlossaryHub = lazy(() => import("@/pages/glossary-hub"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
@@ -308,6 +312,10 @@ function App() {
               <Route path="/compare-villa-vs-apartment" component={CompareVillaVsApartment} />
               <Route path="/tools-rental-yield-calculator" component={ToolsRentalYieldCalculator} />
               <Route path="/tools-mortgage-calculator" component={ToolsMortgageCalculator} />
+              <Route path="/compare-studio-vs-1bed" component={CompareStudioVs1Bed} />
+              <Route path="/case-study-portfolio-diversification" component={CaseStudyPortfolioDiversification} />
+              <Route path="/case-study-off-plan-launch" component={CaseStudyOffPlanLaunch} />
+              <Route path="/case-study-retirement-planning" component={CaseStudyRetirementPlanning} />
               <Route path="/glossary" component={GlossaryHub} />
               <Route path="/" component={PublicHome} />
               <Route component={NotFound} />
