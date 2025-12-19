@@ -82,6 +82,10 @@ const DistrictJBR = lazy(() => import("@/pages/district-jbr"));
 const DistrictPalmJumeirah = lazy(() => import("@/pages/district-palm-jumeirah"));
 const DistrictJumeirah = lazy(() => import("@/pages/district-jumeirah"));
 const DistrictBusinessBay = lazy(() => import("@/pages/district-business-bay"));
+const DistrictOldDubai = lazy(() => import("@/pages/district-old-dubai"));
+const DistrictDubaiCreekHarbour = lazy(() => import("@/pages/district-dubai-creek-harbour"));
+const DistrictDubaiSouth = lazy(() => import("@/pages/district-dubai-south"));
+const DistrictAlBarsha = lazy(() => import("@/pages/district-al-barsha"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -271,6 +275,10 @@ function App() {
               <Route path="/dubai/districts/palm-jumeirah" component={DistrictPalmJumeirah} />
               <Route path="/dubai/districts/jumeirah" component={DistrictJumeirah} />
               <Route path="/dubai/districts/business-bay" component={DistrictBusinessBay} />
+              <Route path="/dubai/districts/old-dubai" component={DistrictOldDubai} />
+              <Route path="/dubai/districts/dubai-creek-harbour" component={DistrictDubaiCreekHarbour} />
+              <Route path="/dubai/districts/dubai-south" component={DistrictDubaiSouth} />
+              <Route path="/dubai/districts/al-barsha" component={DistrictAlBarsha} />
               <Route path="/transport/:slug" component={PublicContentViewer} />
               <Route path="/articles" component={PublicArticles} />
               <Route path="/articles/:slug" component={PublicContentViewer} />
