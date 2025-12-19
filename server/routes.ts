@@ -1500,6 +1500,117 @@ export async function registerRoutes(
     }
   });
 
+  // Auto-translate content to all languages
+  app.post("/api/contents/:id/translate-all", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const content = await storage.getContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      const { tiers } = req.body; // Optional: only translate to specific tiers (1-7)
+      const { translateToAllLanguages } = await import("./services/translation-service");
+
+      // Start translation in background
+      const translationPromise = translateToAllLanguages(
+        {
+          title: content.title,
+          metaTitle: content.metaTitle || undefined,
+          metaDescription: content.metaDescription || undefined,
+          blocks: content.blocks || [],
+        },
+        "en", // source locale
+        tiers // optional tier filter
+      );
+
+      // Return immediately with job ID
+      const jobId = `translate-${content.id}-${Date.now()}`;
+
+      // Process translations and save to database
+      translationPromise.then(async (results) => {
+        for (const [locale, translation] of results) {
+          try {
+            // Check if translation already exists
+            const existingTranslations = await storage.getTranslationsByContentId(content.id);
+            const existing = existingTranslations.find(t => t.locale === locale);
+
+            if (existing) {
+              // Update existing translation
+              await storage.updateTranslation(existing.id, {
+                title: translation.title,
+                metaTitle: translation.metaTitle,
+                metaDescription: translation.metaDescription,
+                blocks: translation.blocks,
+                status: "completed",
+              });
+            } else {
+              // Create new translation
+              await storage.createTranslation({
+                contentId: content.id,
+                locale,
+                title: translation.title,
+                metaTitle: translation.metaTitle,
+                metaDescription: translation.metaDescription,
+                blocks: translation.blocks,
+                status: "completed",
+              });
+            }
+          } catch (err) {
+            console.error(`Error saving translation for ${locale}:`, err);
+          }
+        }
+        console.log(`Translation job ${jobId} completed for content ${content.id}`);
+      }).catch(err => {
+        console.error(`Translation job ${jobId} failed:`, err);
+      });
+
+      res.json({
+        message: "Translation started",
+        jobId,
+        contentId: content.id,
+        targetLanguages: tiers ? SUPPORTED_LOCALES.filter(l => tiers.includes(l.tier)).length : SUPPORTED_LOCALES.length - 1
+      });
+    } catch (error) {
+      console.error("Error starting translation:", error);
+      res.status(500).json({ error: "Failed to start translation" });
+    }
+  });
+
+  // Get translation status for content
+  app.get("/api/contents/:id/translation-status", async (req, res) => {
+    try {
+      const content = await storage.getContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      const translations = await storage.getTranslationsByContentId(req.params.id);
+      const completedLocales = translations.filter(t => t.status === "completed").map(t => t.locale);
+      const pendingLocales = translations.filter(t => t.status === "pending" || t.status === "in_progress").map(t => t.locale);
+
+      const totalLocales = SUPPORTED_LOCALES.length;
+      const completedCount = completedLocales.length;
+
+      res.json({
+        contentId: req.params.id,
+        totalLocales,
+        completedCount,
+        pendingCount: pendingLocales.length,
+        percentage: Math.round((completedCount / totalLocales) * 100),
+        completedLocales,
+        pendingLocales,
+        translations: translations.map(t => ({
+          locale: t.locale,
+          status: t.status,
+          updatedAt: t.updatedAt
+        }))
+      });
+    } catch (error) {
+      console.error("Error fetching translation status:", error);
+      res.status(500).json({ error: "Failed to fetch translation status" });
+    }
+  });
+
   // Content deletion - requires authentication and permission
   app.delete("/api/contents/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {
@@ -5234,45 +5345,52 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // ============================================================================
-  // SITEMAP - Only published content (Security requirement)
+  // SITEMAPS - Multilingual SEO Support (50 languages)
   // ============================================================================
+
+  // Main sitemap index - lists all language-specific sitemaps
   app.get("/sitemap.xml", async (req, res) => {
     try {
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : 'https://dubaitravel.com';
-      
-      // Only fetch published content
-      const contents = await storage.getContentsWithRelations({ status: "published" });
-      
-      const urls = contents
-        .filter(c => c.status === "published") // Double-check published status
-        .map(content => {
-          const lastmod = content.updatedAt || content.createdAt || new Date();
-          const priority = content.type === "attraction" ? "0.9" : content.type === "hotel" ? "0.9" : "0.7";
-          return `
-    <url>
-      <loc>${baseUrl}/${content.type}/${content.slug}</loc>
-      <lastmod>${new Date(lastmod).toISOString().split('T')[0]}</lastmod>
-      <changefreq>weekly</changefreq>
-      <priority>${priority}</priority>
-    </url>`;
-        }).join("");
-      
-      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    <url>
-      <loc>${baseUrl}/</loc>
-      <changefreq>daily</changefreq>
-      <priority>1.0</priority>
-    </url>${urls}
-</urlset>`;
-      
+      const { generateSitemapIndex } = await import("./services/sitemap-service");
+      const sitemapIndex = await generateSitemapIndex();
+      res.set("Content-Type", "application/xml");
+      res.send(sitemapIndex);
+    } catch (error) {
+      console.error("Error generating sitemap index:", error);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  // Language-specific sitemaps (e.g., /sitemap-en.xml, /sitemap-ar.xml)
+  app.get("/sitemap-:locale.xml", async (req, res) => {
+    try {
+      const locale = req.params.locale as any;
+
+      // Validate locale
+      if (!SUPPORTED_LOCALES.some(l => l.code === locale)) {
+        return res.status(404).send("Sitemap not found");
+      }
+
+      const { generateLocaleSitemap } = await import("./services/sitemap-service");
+      const sitemap = await generateLocaleSitemap(locale);
       res.set("Content-Type", "application/xml");
       res.send(sitemap);
     } catch (error) {
-      console.error("Error generating sitemap:", error);
+      console.error("Error generating locale sitemap:", error);
       res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  // Robots.txt with sitemap references
+  app.get("/robots.txt", async (req, res) => {
+    try {
+      const { generateRobotsTxt } = await import("./services/sitemap-service");
+      const robotsTxt = generateRobotsTxt();
+      res.set("Content-Type", "text/plain");
+      res.send(robotsTxt);
+    } catch (error) {
+      console.error("Error generating robots.txt:", error);
+      res.status(500).send("Error generating robots.txt");
     }
   });
 
