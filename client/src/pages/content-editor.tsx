@@ -61,6 +61,9 @@ import type {
 import { SeoScore } from "@/components/seo-score";
 import { SchemaPreview } from "@/components/schema-preview";
 import { AttractionSeoEditor } from "@/components/attraction-seo-editor";
+import { HotelSeoEditor } from "@/components/hotel-seo-editor";
+import { DiningSeoEditor } from "@/components/dining-seo-editor";
+import { DistrictSeoEditor } from "@/components/district-seo-editor";
 
 type ContentType = "attraction" | "hotel" | "article" | "dining" | "district";
 // TEMPORARILY DISABLED: "transport" | "event" | "itinerary" - Will be enabled later
@@ -184,6 +187,62 @@ export default function ContentEditor() {
     duration: "",
   });
 
+  // Hotel-specific SEO data
+  const [hotelSeoData, setHotelSeoData] = useState({
+    introText: "",
+    expandedIntroText: "",
+    quickInfoBar: [] as QuickInfoItem[],
+    roomTypes: [] as any[],
+    hotelAmenities: [] as any[],
+    locationHighlights: [] as any[],
+    checkInOut: { checkIn: "", checkOut: "" },
+    bookingInfo: { bookingUrl: "", ctaText: "", phone: "" },
+    highlights: [] as HighlightItem[],
+    essentialInfo: [] as EssentialInfoItem[],
+    relatedHotels: [] as RelatedItem[],
+    trustSignals: [] as string[],
+    primaryCta: "",
+    starRating: "",
+    location: "",
+    numberOfRooms: "",
+  });
+
+  // Dining-specific SEO data
+  const [diningSeoData, setDiningSeoData] = useState({
+    introText: "",
+    expandedIntroText: "",
+    quickInfoBar: [] as QuickInfoItem[],
+    menuHighlights: [] as any[],
+    reservationInfo: { bookingAdvance: "", bookingUrl: "", phone: "", ctaText: "" },
+    deliveryInfo: { available: false, platforms: [] as string[], deliveryUrl: "", areas: [] as string[], ctaText: "" },
+    diningHighlights: [] as any[],
+    essentialInfo: [] as EssentialInfoItem[],
+    relatedRestaurants: [] as RelatedItem[],
+    trustSignals: [] as string[],
+    primaryCta: "",
+    secondaryCta: "",
+    cuisineType: "",
+    location: "",
+    priceRange: "",
+  });
+
+  // District-specific SEO data
+  const [districtSeoData, setDistrictSeoData] = useState({
+    introText: "",
+    expandedIntroText: "",
+    quickInfoBar: [] as QuickInfoItem[],
+    topHotels: [] as any[],
+    topRestaurants: [] as any[],
+    thingsToDo: [] as any[],
+    districtHighlights: [] as any[],
+    nearbyDistricts: [] as any[],
+    relatedDistricts: [] as any[],
+    essentialInfo: [] as EssentialInfoItem[],
+    trustSignals: [] as string[],
+    targetAudience: [] as string[],
+    location: "",
+  });
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const hasChangedRef = useRef(false);
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -221,6 +280,68 @@ export default function ContentEditor() {
           location: content.attraction.location || "",
           priceFrom: content.attraction.priceFrom || "",
           duration: content.attraction.duration || "",
+        });
+      }
+
+      // Load hotel-specific SEO data if it exists
+      if (content.hotel) {
+        setHotelSeoData({
+          introText: "",
+          expandedIntroText: "",
+          quickInfoBar: content.hotel.quickInfoBar || [],
+          roomTypes: content.hotel.roomTypes || [],
+          hotelAmenities: [],
+          locationHighlights: [],
+          checkInOut: { checkIn: "", checkOut: "" },
+          bookingInfo: { bookingUrl: "", ctaText: "", phone: "" },
+          highlights: content.hotel.highlights || [],
+          essentialInfo: content.hotel.essentialInfo || [],
+          relatedHotels: content.hotel.relatedHotels || [],
+          trustSignals: content.hotel.trustSignals || [],
+          primaryCta: content.hotel.primaryCta || "",
+          starRating: content.hotel.starRating?.toString() || "",
+          location: content.hotel.location || "",
+          numberOfRooms: content.hotel.numberOfRooms?.toString() || "",
+        });
+      }
+
+      // Load dining-specific SEO data if it exists
+      if (content.dining) {
+        setDiningSeoData({
+          introText: "",
+          expandedIntroText: "",
+          quickInfoBar: content.dining.quickInfoBar || [],
+          menuHighlights: content.dining.menuHighlights || [],
+          reservationInfo: { bookingAdvance: "", bookingUrl: "", phone: "", ctaText: "" },
+          deliveryInfo: { available: false, platforms: [], deliveryUrl: "", areas: [], ctaText: "" },
+          diningHighlights: content.dining.highlights || [],
+          essentialInfo: content.dining.essentialInfo || [],
+          relatedRestaurants: content.dining.relatedDining || [],
+          trustSignals: content.dining.trustSignals || [],
+          primaryCta: content.dining.primaryCta || "",
+          secondaryCta: "",
+          cuisineType: content.dining.cuisineType || "",
+          location: content.dining.location || "",
+          priceRange: content.dining.priceRange || "",
+        });
+      }
+
+      // Load district-specific SEO data if it exists
+      if (content.district) {
+        setDistrictSeoData({
+          introText: content.district.introText || "",
+          expandedIntroText: content.district.expandedIntroText || "",
+          quickInfoBar: content.district.quickInfoBar || [],
+          topHotels: [],
+          topRestaurants: [],
+          thingsToDo: content.district.thingsToDo || [],
+          districtHighlights: content.district.highlights || [],
+          nearbyDistricts: [],
+          relatedDistricts: content.district.relatedDistricts || [],
+          essentialInfo: content.district.essentialInfo || [],
+          trustSignals: content.district.trustSignals || [],
+          targetAudience: content.district.targetAudience || [],
+          location: content.district.location || "",
         });
       }
 
@@ -776,9 +897,15 @@ export default function ContentEditor() {
       status,
     };
 
-    // Include attraction-specific SEO data if this is an attraction
+    // Include content-type-specific SEO data
     if (contentType === "attraction") {
       saveData.attractionData = attractionSeoData;
+    } else if (contentType === "hotel") {
+      saveData.hotelData = hotelSeoData;
+    } else if (contentType === "dining") {
+      saveData.diningData = diningSeoData;
+    } else if (contentType === "district") {
+      saveData.districtData = districtSeoData;
     }
 
     saveMutation.mutate(saveData);
@@ -799,9 +926,15 @@ export default function ContentEditor() {
       publishedAt: new Date().toISOString(),
     };
 
-    // Include attraction-specific SEO data if this is an attraction
+    // Include content-type-specific SEO data
     if (contentType === "attraction") {
       publishData.attractionData = attractionSeoData;
+    } else if (contentType === "hotel") {
+      publishData.hotelData = hotelSeoData;
+    } else if (contentType === "dining") {
+      publishData.diningData = diningSeoData;
+    } else if (contentType === "district") {
+      publishData.districtData = districtSeoData;
     }
 
     publishMutation.mutate(publishData);
@@ -1099,7 +1232,7 @@ export default function ContentEditor() {
                   onGenerateImage={() => handleGenerateImage(selectedBlock.id, selectedBlock.type === "hero" ? "hero" : "image")}
                   isGeneratingImage={imageGeneratingBlock === selectedBlock.id}
                 />
-              ) : contentType === "attraction" ? (
+              ) : (contentType === "attraction" || contentType === "hotel" || contentType === "dining" || contentType === "district") ? (
                 <Tabs defaultValue="basic" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="basic">Basic</TabsTrigger>
@@ -1133,10 +1266,30 @@ export default function ContentEditor() {
                     />
                   </TabsContent>
                   <TabsContent value="seo" className="mt-4">
-                    <AttractionSeoEditor
-                      data={attractionSeoData}
-                      onChange={setAttractionSeoData}
-                    />
+                    {contentType === "attraction" && (
+                      <AttractionSeoEditor
+                        data={attractionSeoData}
+                        onChange={setAttractionSeoData}
+                      />
+                    )}
+                    {contentType === "hotel" && (
+                      <HotelSeoEditor
+                        data={hotelSeoData}
+                        onChange={setHotelSeoData}
+                      />
+                    )}
+                    {contentType === "dining" && (
+                      <DiningSeoEditor
+                        data={diningSeoData}
+                        onChange={setDiningSeoData}
+                      />
+                    )}
+                    {contentType === "district" && (
+                      <DistrictSeoEditor
+                        data={districtSeoData}
+                        onChange={setDistrictSeoData}
+                      />
+                    )}
                   </TabsContent>
                 </Tabs>
               ) : (

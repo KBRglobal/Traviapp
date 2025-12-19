@@ -1252,7 +1252,7 @@ export type ContentWithRelations = Content & {
   attraction?: Attraction;
   hotel?: Hotel;
   article?: Article;
-  diningData?: Dining;
+  dining?: Dining;
   district?: District;
   transport?: Transport;
   event?: Event;
