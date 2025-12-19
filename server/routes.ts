@@ -3785,19 +3785,110 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
               to: notificationEmail,
               subject: `New Property Lead: ${name.trim()}`,
               html: `
-                <h2>New Property Lead Received</h2>
-                <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
-                  <tr style="background: #f5f5f5;"><td style="padding: 10px; font-weight: bold;">Name</td><td style="padding: 10px;">${name.trim()}</td></tr>
-                  <tr><td style="padding: 10px; font-weight: bold;">Email</td><td style="padding: 10px;"><a href="mailto:${email.trim()}">${email.trim()}</a></td></tr>
-                  ${phone ? `<tr style="background: #f5f5f5;"><td style="padding: 10px; font-weight: bold;">Phone</td><td style="padding: 10px;"><a href="tel:${phone}">${phone}</a></td></tr>` : ''}
-                  ${propertyType ? `<tr><td style="padding: 10px; font-weight: bold;">Property Type</td><td style="padding: 10px;">${propertyType}</td></tr>` : ''}
-                  ${budget ? `<tr style="background: #f5f5f5;"><td style="padding: 10px; font-weight: bold;">Budget</td><td style="padding: 10px;">${budget}</td></tr>` : ''}
-                  ${paymentMethod ? `<tr><td style="padding: 10px; font-weight: bold;">Payment Method</td><td style="padding: 10px;">${paymentMethod}</td></tr>` : ''}
-                  ${preferredAreas?.length ? `<tr style="background: #f5f5f5;"><td style="padding: 10px; font-weight: bold;">Preferred Areas</td><td style="padding: 10px;">${preferredAreas.join(', ')}</td></tr>` : ''}
-                  ${timeline ? `<tr><td style="padding: 10px; font-weight: bold;">Timeline</td><td style="padding: 10px;">${timeline}</td></tr>` : ''}
-                  ${message ? `<tr style="background: #f5f5f5;"><td style="padding: 10px; font-weight: bold;">Message</td><td style="padding: 10px;">${message}</td></tr>` : ''}
-                </table>
-                <p style="margin-top: 20px; color: #666; font-size: 12px;">Lead ID: ${lead.id} | Submitted: ${new Date().toLocaleString()}</p>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8f5fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f5fc; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(100,67,244,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #6443F4 0%, #F94498 100%); padding: 30px 40px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">New Property Lead</h1>
+              <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Dubai Off-Plan Investment Inquiry</p>
+            </td>
+          </tr>
+          
+          <!-- Lead Name Banner -->
+          <tr>
+            <td style="background-color: #FEECF4; padding: 20px 40px; border-bottom: 1px solid #FDA9E5;">
+              <p style="margin: 0; color: #504065; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Lead Name</p>
+              <h2 style="margin: 5px 0 0 0; color: #24103E; font-size: 22px; font-weight: 600;">${name.trim()}</h2>
+            </td>
+          </tr>
+          
+          <!-- Contact Details -->
+          <tr>
+            <td style="padding: 30px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #D3CFD8;">
+                    <span style="color: #A79FB2; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Email</span><br>
+                    <a href="mailto:${email.trim()}" style="color: #6443F4; font-size: 16px; text-decoration: none; font-weight: 500;">${email.trim()}</a>
+                  </td>
+                </tr>
+                ${phone ? `
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #D3CFD8;">
+                    <span style="color: #A79FB2; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Phone</span><br>
+                    <a href="tel:${phone}" style="color: #6443F4; font-size: 16px; text-decoration: none; font-weight: 500;">${phone}</a>
+                  </td>
+                </tr>` : ''}
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Property Preferences -->
+          <tr>
+            <td style="padding: 0 40px 30px 40px;">
+              <h3 style="margin: 0 0 15px 0; color: #24103E; font-size: 16px; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #F94498;">Property Preferences</h3>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                ${propertyType ? `
+                <tr>
+                  <td width="40%" style="padding: 10px 0; color: #504065; font-size: 14px;">Property Type</td>
+                  <td style="padding: 10px 0; color: #24103E; font-size: 14px; font-weight: 500;">${propertyType}</td>
+                </tr>` : ''}
+                ${budget ? `
+                <tr>
+                  <td width="40%" style="padding: 10px 0; color: #504065; font-size: 14px;">Budget</td>
+                  <td style="padding: 10px 0;"><span style="background: linear-gradient(135deg, #FF9327, #FFD112); color: #24103E; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">${budget}</span></td>
+                </tr>` : ''}
+                ${paymentMethod ? `
+                <tr>
+                  <td width="40%" style="padding: 10px 0; color: #504065; font-size: 14px;">Payment Method</td>
+                  <td style="padding: 10px 0;"><span style="background: #6443F4; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;">${paymentMethod}</span></td>
+                </tr>` : ''}
+                ${preferredAreas?.length ? `
+                <tr>
+                  <td width="40%" style="padding: 10px 0; color: #504065; font-size: 14px; vertical-align: top;">Preferred Areas</td>
+                  <td style="padding: 10px 0;">${preferredAreas.map((area: string) => `<span style="display: inline-block; background: #FEECF4; color: #F94498; padding: 4px 10px; border-radius: 20px; font-size: 12px; margin: 2px 4px 2px 0;">${area}</span>`).join('')}</td>
+                </tr>` : ''}
+                ${timeline ? `
+                <tr>
+                  <td width="40%" style="padding: 10px 0; color: #504065; font-size: 14px;">Timeline</td>
+                  <td style="padding: 10px 0; color: #24103E; font-size: 14px; font-weight: 500;">${timeline}</td>
+                </tr>` : ''}
+              </table>
+            </td>
+          </tr>
+          
+          ${message ? `
+          <!-- Message -->
+          <tr>
+            <td style="padding: 0 40px 30px 40px;">
+              <h3 style="margin: 0 0 10px 0; color: #24103E; font-size: 16px; font-weight: 600;">Message</h3>
+              <p style="margin: 0; padding: 15px; background: #f8f5fc; border-radius: 8px; color: #504065; font-size: 14px; line-height: 1.6;">${message}</p>
+            </td>
+          </tr>` : ''}
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background: #24103E; padding: 25px 40px; text-align: center;">
+              <p style="margin: 0 0 5px 0; color: #A79FB2; font-size: 11px;">Lead ID: ${lead.id}</p>
+              <p style="margin: 0; color: #A79FB2; font-size: 11px;">Submitted: ${new Date().toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
               `,
             });
             console.log("[Property Lead] Email notification sent to:", notificationEmail);
