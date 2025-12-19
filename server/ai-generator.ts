@@ -55,27 +55,94 @@ export interface ImageGenerationOptions {
   contentImageCount?: number;
 }
 
-// Master prompt for Dubai travel image generation
-const IMAGE_MASTER_PROMPT = `You are an expert at creating prompts for DALL-E image generation for Dubai travel content.
+// Comprehensive Dubai travel image strategy prompt
+const IMAGE_MASTER_PROMPT = `You are an Image Content Strategist for Dubai travel articles. Analyze articles and recommend strategically chosen images with complete SEO optimization.
 
-STYLE GUIDELINES:
-- Create photorealistic, high-quality travel photography style images
-- Use warm, golden hour lighting when appropriate
-- Capture the luxury and modern architecture of Dubai
-- Include authentic cultural elements where relevant
-- Images should be visually stunning and suitable for professional travel websites
-- Avoid text, watermarks, or logos in images
-- Use 16:9 landscape orientation for hero images
-- Focus on creating aspirational, inviting scenes
+ARTICLE ANALYSIS (Mandatory):
+1. Identify content type: New attraction, Hotel, Restaurant, Activity, Event, Practical guide, Comparison, Transportation, Shopping
+2. Target audience: Families, Couples, Backpackers, Luxury, Business travelers
+3. Article tone: Exciting, Luxurious, Practical, Romantic, Professional
+4. Keywords: Extract primary, secondary, and LSI keywords from content
 
-DUBAI-SPECIFIC ELEMENTS TO INCORPORATE:
-- Iconic skyline and modern architecture (Burj Khalifa, Dubai Frame, etc.)
-- Luxury hotels and resorts
-- Desert landscapes and dunes
-- Crystal-clear waters and beaches
-- Traditional souks and cultural heritage
-- Culinary experiences
-- Vibrant nightlife and city scenes`;
+IMAGE STRATEGY BY CONTENT TYPE:
+- New Attraction: Iconic exterior → Main interior → Activity in progress → Practical element → Unique feature
+- Hotel: Exterior/pool → Guest room → Bathroom/amenity → Dining/social → Location context
+- Restaurant: Exterior/interior → Signature dish → Dining atmosphere → Design feature → Second dish/chef
+- Activity: Action shot → Equipment/setup → Participants enjoying → Results/view → Logistics
+- Event: Main scene at peak → Performance → Venue overview → Details/exhibits → Practical info
+- Guide: Overview → Infographic/map → Step-by-step → Example/comparison → Practical detail
+
+IMAGE SELECTION CRITERIA:
+✅ CHOOSE images that:
+- Show what words cannot describe (scale, design, atmosphere)
+- Answer visual questions (crowding, space, dress code)
+- Match article tone perfectly
+- Support SEO (recognizable subjects, Dubai landmarks)
+- Drive engagement (inspiring, practical, shareable)
+- Provide value (scale indicators, accessibility, helpful signage)
+
+❌ AVOID images that:
+- Are generic or stock-looking
+- Confuse or mislead readers
+- Have technical quality issues
+- Raise legal/ethical concerns
+- Are culturally inappropriate
+- Undermine article goals
+
+SEO OPTIMIZATION REQUIREMENTS:
+Filename: [primary-keyword]-[descriptor]-dubai-[detail].jpg (under 60 chars, keyword first)
+ALT Text: 125-150 chars, descriptive with location, keyword naturally integrated
+Title Tag: [Keyword] - [Location] - [Detail] (under 60 chars)
+Caption: 1-2 sentences, informative + useful context
+Schema: Complete ImageObject with contentUrl, width, height, caption, description
+
+TECHNICAL SPECIFICATIONS:
+- Hero Image: 1200x630px or 1920x800px, under 200KB, JPG/WebP
+- Content Images: 1024x768px or 800x600px, under 150KB
+- Quality: High resolution, sharp focus, proper exposure, natural colors
+- Format: JPG for photos, never PNG
+
+OUTPUT FORMAT for each image:
+{
+  "title": "Descriptive internal name",
+  "purpose": "Strategic purpose",
+  "placement": "After H2 section or paragraph number",
+  "priority": "Critical/High/Medium",
+  "description": "4-6 sentences: composition, elements, lighting, perspective",
+  "why": "Why this specific image works",
+  "visualRequirements": {
+    "composition": "Wide/Medium/Close-up | Horizontal/Vertical",
+    "timeOfDay": "Golden hour/Blue hour/Day/Night",
+    "weather": "Clear/Sunset/Dramatic",
+    "angle": "Eye level/Low/High/Aerial",
+    "depthOfField": "Deep/Shallow/Medium",
+    "position": "Center/Rule of thirds"
+  },
+  "mustInclude": ["element 1", "element 2", "element 3"],
+  "mustAvoid": ["what not to show"],
+  "mood": ["3-5 descriptive words"],
+  "seo": {
+    "filename": "keyword-rich-name.jpg",
+    "alt": "125-150 char description",
+    "title": "Title tag",
+    "caption": "1-2 sentence caption"
+  },
+  "technical": {
+    "dimensions": "1200x630px",
+    "format": "JPG",
+    "targetSize": "under 200KB"
+  }
+}
+
+DUBAI-SPECIFIC ELEMENTS:
+- Iconic landmarks: Burj Khalifa, Palm Jumeirah, Dubai Frame, Museum of Future
+- Locations: Downtown Dubai, Dubai Marina, JBR, Old Dubai, Dubai Creek
+- Cultural: Traditional souks, heritage sites, mosques, cultural shows
+- Modern: Luxury malls, skyscrapers, metro, modern architecture
+- Nature: Desert dunes, beaches, waterparks, parks
+- Hospitality: 5-star hotels, fine dining, spas, rooftop venues
+
+Always recommend 3-5 images total, balanced between inspiration and practical value.`;
 
 // Generate image prompt based on content
 export async function generateImagePrompt(
@@ -501,16 +568,17 @@ export interface GeneratedItineraryContent {
   };
 }
 
-const HOTEL_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized hotel pages for Dubai Travel website.
+const HOTEL_SYSTEM_PROMPT = `You are creating CONVERSION-FOCUSED hotel landing pages for Dubai. Pages must be:
+1. SEO optimized (rank for "[Hotel Name] Dubai")
+2. Conversion optimized (drive clicks to booking.com/affiliate links)
+3. Minimalist design (clean, fast, scannable, visual)
 
-CONTENT REQUIREMENTS:
-- Total word count: 1500-2500 words across all text blocks
-- Every piece of content must be accurate, engaging, and valuable for travelers
-- Include natural keyword placement throughout the content
-- Write in a professional yet inviting hospitality tone
-- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
+PURPOSE: User searches hotel name → lands on page → reads key info → clicks "Check Rates" CTA.
 
-Your output must be a valid JSON object matching this exact structure:
+NOT: Detailed review or blog post
+YES: Essential info + visuals + strong booking CTAs
+
+PAGE STRUCTURE REQUIREMENTS:
 
 OUTPUT STRUCTURE:
 {
