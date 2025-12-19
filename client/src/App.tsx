@@ -34,6 +34,17 @@ const OffPlanPalmJumeirah = lazy(() => import("@/pages/off-plan-palm-jumeirah"))
 const OffPlanCreekHarbour = lazy(() => import("@/pages/off-plan-creek-harbour"));
 const OffPlanAlFurjan = lazy(() => import("@/pages/off-plan-al-furjan"));
 const OffPlanVillas = lazy(() => import("@/pages/off-plan-villas"));
+const OffPlanEmaar = lazy(() => import("@/pages/off-plan-emaar"));
+const OffPlanDamac = lazy(() => import("@/pages/off-plan-damac"));
+const OffPlanNakheel = lazy(() => import("@/pages/off-plan-nakheel"));
+const OffPlanMeraas = lazy(() => import("@/pages/off-plan-meraas"));
+const OffPlanSobha = lazy(() => import("@/pages/off-plan-sobha"));
+const OffPlanCryptoPayments = lazy(() => import("@/pages/off-plan-crypto-payments"));
+const OffPlanUSDT = lazy(() => import("@/pages/off-plan-usdt"));
+const OffPlanGoldenVisa = lazy(() => import("@/pages/off-plan-golden-visa"));
+const OffPlanPostHandover = lazy(() => import("@/pages/off-plan-post-handover"));
+const OffPlanEscrow = lazy(() => import("@/pages/off-plan-escrow"));
+const OffPlanVsReady = lazy(() => import("@/pages/off-plan-vs-ready"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -235,6 +246,17 @@ function App() {
               <Route path="/dubai-off-plan-creek-harbour" component={OffPlanCreekHarbour} />
               <Route path="/dubai-off-plan-al-furjan" component={OffPlanAlFurjan} />
               <Route path="/dubai-off-plan-villas" component={OffPlanVillas} />
+              <Route path="/off-plan-emaar" component={OffPlanEmaar} />
+              <Route path="/off-plan-damac" component={OffPlanDamac} />
+              <Route path="/off-plan-nakheel" component={OffPlanNakheel} />
+              <Route path="/off-plan-meraas" component={OffPlanMeraas} />
+              <Route path="/off-plan-sobha" component={OffPlanSobha} />
+              <Route path="/off-plan-crypto-payments" component={OffPlanCryptoPayments} />
+              <Route path="/off-plan-usdt" component={OffPlanUSDT} />
+              <Route path="/off-plan-golden-visa" component={OffPlanGoldenVisa} />
+              <Route path="/off-plan-post-handover" component={OffPlanPostHandover} />
+              <Route path="/off-plan-escrow" component={OffPlanEscrow} />
+              <Route path="/off-plan-vs-ready" component={OffPlanVsReady} />
               <Route path="/" component={PublicHome} />
               <Route component={NotFound} />
             </Switch>
