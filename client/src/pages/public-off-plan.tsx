@@ -907,6 +907,104 @@ export default function PublicOffPlan() {
         </div>
       </section>
 
+      {/* Sub-Navigation Menu */}
+      <section className="bg-muted/50 border-b sticky top-36 z-30">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="py-2 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1 min-w-max">
+              {/* Main Sections */}
+              <Link href="/dubai-off-plan-investment-guide">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-investment-guide">
+                  Investment Guide
+                </Button>
+              </Link>
+              <Link href="/how-to-buy-dubai-off-plan">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-how-to-buy">
+                  How to Buy
+                </Button>
+              </Link>
+              <Link href="/dubai-off-plan-payment-plans">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-payment-plans">
+                  Payment Plans
+                </Button>
+              </Link>
+              <Link href="/best-off-plan-projects-dubai-2025">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-best-2025">
+                  Best 2025
+                </Button>
+              </Link>
+              
+              <div className="w-px h-5 bg-border mx-1" />
+              
+              {/* Calculators */}
+              <Link href="/tools-roi-calculator">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-roi-calc">
+                  ROI Calculator
+                </Button>
+              </Link>
+              <Link href="/tools-payment-calculator">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-payment-calc">
+                  Payment Calc
+                </Button>
+              </Link>
+              <Link href="/tools-affordability-calculator">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-afford-calc">
+                  Affordability
+                </Button>
+              </Link>
+              <Link href="/tools-mortgage-calculator">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-mortgage-calc">
+                  Mortgage
+                </Button>
+              </Link>
+              
+              <div className="w-px h-5 bg-border mx-1" />
+              
+              {/* Comparisons */}
+              <Link href="/compare-off-plan-vs-ready">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-compare-offplan-ready">
+                  Off-Plan vs Ready
+                </Button>
+              </Link>
+              <Link href="/compare-emaar-vs-damac">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-compare-emaar-damac">
+                  Emaar vs DAMAC
+                </Button>
+              </Link>
+              <Link href="/compare-crypto-vs-bank-transfer">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-compare-crypto-bank">
+                  Crypto vs Bank
+                </Button>
+              </Link>
+              
+              <div className="w-px h-5 bg-border mx-1" />
+              
+              {/* Case Studies & Glossary */}
+              <Link href="/case-study-jvc-investor">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-case-jvc">
+                  Case Studies
+                </Button>
+              </Link>
+              <Link href="/glossary">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-glossary">
+                  Glossary
+                </Button>
+              </Link>
+              <Link href="/dubai-roi-rental-yields">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-roi-yields">
+                  ROI Guide
+                </Button>
+              </Link>
+              <Link href="/dubai-legal-security-guide">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-legal">
+                  Legal Guide
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <main className="flex-1">
         {/* Brief Intro */}
         <section className="py-16 md:py-20">
