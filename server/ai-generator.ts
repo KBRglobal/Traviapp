@@ -1832,14 +1832,18 @@ FINAL CHECKLIST BEFORE GENERATING:
 
 Generate the article now with full adherence to chosen personality and structure. Make it valuable, accurate, and naturally written.`;
 
-const DINING_SYSTEM_PROMPT = `You are a Dubai culinary content expert creating comprehensive, SEO-optimized restaurant pages for Dubai Travel website.
+const DINING_SYSTEM_PROMPT = `You are creating CONVERSION-FOCUSED restaurant landing pages for Dubai. These pages are designed for:
+1. SEO: Rank for "[Restaurant Name] Dubai" searches
+2. CONVERSION: Drive table reservations + food delivery orders
+3. MINIMALIST DESIGN: Clean, fast-loading, scannable, mobile-first
 
-CONTENT REQUIREMENTS:
-- Total word count: 1500-2500 words across all text blocks
-- Every piece of content must be accurate, engaging, and valuable for diners
-- Include natural keyword placement throughout the content
-- Write in an appetizing, inviting tone that captures the dining experience
-- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
+USER JOURNEY: User searches "Pierchic Dubai" → lands on page → scans info → clicks "Reserve Table" or "Order Delivery"
+
+TARGET FORMAT: NOT a detailed food blog or review. YES: Essential info + compelling food imagery + strong reservation CTAs.
+
+===========================================
+PAGE STRUCTURE (Mandatory):
+===========================================
 
 Your output must be a valid JSON object matching this exact structure:
 
@@ -1984,20 +1988,49 @@ OUTPUT STRUCTURE:
     "restaurantName": "Full Restaurant Name",
     "location": "Area/District, Dubai",
     "fullAddress": "Complete street address, Dubai, UAE",
-    "cuisineType": "Primary Cuisine (e.g., French, Japanese, Contemporary Arabic)",
-    "priceRange": "AED 250-500 per person",
-    "openingHours": "Daily 12:00 PM - 11:00 PM",
-    "dressCode": "Smart Casual",
+    "cuisineType": "Primary Cuisine (e.g., Mediterranean Seafood, French Fine Dining, Contemporary Japanese)",
+    "priceRange": "AED 400-600",
+    "averageSpend": "AED 500 per person",
+    "openingHours": {
+      "lunch": "Daily 12:30 PM - 3:00 PM",
+      "dinner": "Daily 7:00 PM - 11:30 PM"
+    },
+    "dressCode": "Smart Casual (no shorts, flip-flops, or sportswear)",
     "reservationRequired": true,
-    "targetAudience": ["Food Enthusiasts", "Couples", "Business Diners", "Special Occasions", "Tourists"],
+    "targetAudience": ["Couples", "Romantic Dinners", "Special Occasions", "Food Enthusiasts", "Tourists", "Luxury Diners"],
+
     "primaryCta": "Reserve a Table",
+    "secondaryCta": "Order Delivery",
+
+    "introText": "Write 3 compelling sentences (60-80 words) about the restaurant. Focus on: unique dining concept, location/views, signature cuisine. This is the FIRST thing users read - make it irresistible. Include restaurant name + Dubai naturally.",
+
+    "expandedIntroText": "Write 150 words expanding on the intro. Cover: Full dining experience description, chef background/philosophy, interior design and ambiance, what makes it special vs competitors, best times to visit, views or unique features, who it's perfect for, reservation necessity. End with soft booking CTA.",
+
+    "reservationInfo": {
+      "bookingAdvance": "2-4 weeks recommended for weekend sunset tables",
+      "bookingUrl": "https://booking-platform.com/restaurant-name",
+      "bookingCTA": "Reserve Table Online",
+      "phone": "+971-4-XXX-XXXX",
+      "depositRequired": false,
+      "cancellationPolicy": "Free cancellation up to 24 hours before reservation"
+    },
+
+    "deliveryInfo": {
+      "available": true,
+      "platforms": ["Deliveroo", "Talabat"],
+      "deliveryUrl": "https://deliveroo.ae/restaurant-name",
+      "deliveryCTA": "Order Delivery Now",
+      "menuNote": "Selected menu items only (full menu available for dine-in)",
+      "deliveryAreas": ["Dubai Marina", "JBR", "Palm Jumeirah", "Downtown Dubai"]
+    },
+
     "quickInfoBar": [
-      {"icon": "MapPin", "label": "Location", "value": "Downtown Dubai"},
-      {"icon": "Utensils", "label": "Cuisine", "value": "French"},
-      {"icon": "DollarSign", "label": "Price", "value": "AED 300-500"},
-      {"icon": "Clock", "label": "Hours", "value": "12 PM - 11 PM"},
-      {"icon": "Users", "label": "Dress", "value": "Smart Casual"},
-      {"icon": "Phone", "label": "Reserve", "value": "Required"}
+      {"icon": "MapPin", "label": "Location", "value": "Al Qasr, Madinat Jumeirah"},
+      {"icon": "Clock", "label": "Hours", "value": "Daily 12:30-3PM, 7-11:30PM"},
+      {"icon": "DollarSign", "label": "Price", "value": "AED 400-600 pp"},
+      {"icon": "Utensils", "label": "Cuisine", "value": "Mediterranean Seafood"},
+      {"icon": "Shirt", "label": "Dress Code", "value": "Smart Casual"},
+      {"icon": "Star", "label": "Rating", "value": "4.7/5 (3,200+ reviews)"}
     ],
     "highlights": [
       {"image": "", "title": "Highlight 1", "description": "50-80 word description of this unique restaurant feature"},
@@ -2008,10 +2041,24 @@ OUTPUT STRUCTURE:
       {"image": "", "title": "Highlight 6", "description": "50-80 word description"}
     ],
     "menuHighlights": [
-      {"name": "Signature Dish 1", "description": "Description of the dish and what makes it special", "price": "AED 180"},
-      {"name": "Signature Dish 2", "description": "Description of the dish", "price": "AED 220"},
-      {"name": "Signature Dish 3", "description": "Description of the dish", "price": "AED 160"},
-      {"name": "Signature Dish 4", "description": "Description of the dish", "price": "AED 280"}
+      {
+        "name": "Grilled Scottish Lobster",
+        "description": "40-60 word mouthwatering description. Focus on preparation method, key ingredients, presentation. Make it irresistible without mentioning price.",
+        "image": "lobster-dish.jpg",
+        "icon": "🦞"
+      },
+      {
+        "name": "Dover Sole Meunière",
+        "description": "40-60 word description highlighting French technique, tableside service, classic preparation.",
+        "image": "dover-sole.jpg",
+        "icon": "🐟"
+      },
+      {
+        "name": "Fresh Oyster Selection",
+        "description": "40-60 word description of daily oyster selection, origins (France, Ireland, Australia), serving style.",
+        "image": "oysters.jpg",
+        "icon": "🦪"
+      }
     ],
     "essentialInfo": [
       {"icon": "MapPin", "label": "Address", "value": "Full address"},
@@ -2024,32 +2071,146 @@ OUTPUT STRUCTURE:
       {"icon": "Car", "label": "Parking", "value": "Valet available"}
     ],
     "ambiance": ["Elegant", "Romantic", "Great for Groups", "Scenic Views", "Live Music"],
-    "diningTips": [
-      "Book at least 3-4 days in advance for weekend dinners",
-      "Request a window table for the best views - mention it when booking",
-      "The chef's tasting menu offers the best value and variety",
-      "Arrive 15 minutes early to enjoy a cocktail at the bar",
-      "Ask the sommelier for wine pairing recommendations",
-      "Try the signature dessert - it's worth saving room for",
-      "Mention any dietary restrictions when making your reservation"
+    "dinerTips": [
+      "Book 2-4 weeks ahead - Sunset window tables sell out fast, especially November-March peak season",
+      "Best arrival time: 6:45 PM to catch golden hour views before your 7:00 PM reservation",
+      "Dress code enforced: Smart casual required (no shorts, flip-flops, beachwear). Light jacket recommended for AC.",
+      "Getting there: Valet parking at Al Qasr hotel entrance; taxi to 'Pierchic, Madinat Jumeirah'",
+      "Special occasions: Mention celebrations when booking for complimentary touches (rose petals, anniversary cake)"
     ],
     "faq": [
-      {"question": "Do I need a reservation?", "answer": "100-200 word detailed answer"},
-      {"question": "What is the dress code?", "answer": "100-200 word detailed answer"},
-      {"question": "What are the signature dishes?", "answer": "100-200 word detailed answer"},
-      {"question": "Is the restaurant suitable for children?", "answer": "100-200 word detailed answer"},
-      {"question": "Does the restaurant serve alcohol?", "answer": "100-200 word detailed answer"},
-      {"question": "Is there outdoor seating?", "answer": "100-200 word detailed answer"}
+      {
+        "question": "What is the dress code at [Restaurant Name] Dubai?",
+        "answer": "Write 150-200 words covering: Exact dress code requirements (smart casual/formal), what's NOT allowed (shorts, flip-flops, sportswear), specific guidelines for men and women, seasonal considerations, how strict enforcement is, what happens if dress code not met, suggestions for special occasions."
+      },
+      {
+        "question": "How much does dinner at [Restaurant Name] cost?",
+        "answer": "Write 150-200 words covering: Average spend per person (food only), drinks pricing range, lunch vs dinner costs, à la carte vs set menu options, service charge/VAT inclusions, tipping customs, how to save money, special occasion packages if available."
+      },
+      {
+        "question": "How do I make a reservation at [Restaurant Name]?",
+        "answer": "Write 150-200 words covering: Booking methods (online, phone, email), how far in advance to book (2-4 weeks for weekends), deposit requirements, cancellation policy, modification options, walk-in availability, best times to secure preferred tables."
+      },
+      {
+        "question": "What is the best time to visit [Restaurant Name]?",
+        "answer": "Write 150-200 words covering: Most popular time slots (sunset/dinner), least crowded times, seasonal considerations (November-March peak), lunch vs dinner experience differences, special event nights, weather considerations for outdoor seating."
+      },
+      {
+        "question": "Is [Restaurant Name] suitable for children?",
+        "answer": "Write 150-200 words covering: Official child policy, high chairs/booster seats availability, kids menu if available, atmosphere considerations (romantic/formal vs family-friendly), age recommendations, alternative family-friendly restaurants nearby."
+      },
+      {
+        "question": "How do I get to [Restaurant Name] Dubai?",
+        "answer": "Write 150-200 words covering: Full address, taxi/Uber instructions (what to tell driver), valet parking details and costs, public transportation options (metro + taxi), walking from nearby hotels/landmarks, best entrance to use."
+      },
+      {
+        "question": "Does [Restaurant Name] have delivery or takeaway?",
+        "answer": "Write 150-200 words covering: Delivery availability (Deliveroo, Talabat), limited menu vs full menu, delivery areas covered, packaging quality, typical delivery times, whether experience translates to delivery, pricing differences."
+      },
+      {
+        "question": "What makes [Restaurant Name] special compared to other Dubai restaurants?",
+        "answer": "Write 150-200 words covering: Unique selling points (location, views, chef, concept), signature dishes/specialties, awards and recognitions, who it's best suited for (romantic, business, celebrations), honest comparison to similar restaurants, value proposition."
+      }
     ],
-    "nearbyAttractions": [
-      {"name": "Dubai Fountain", "distance": "5 min walk", "type": "Attraction"},
-      {"name": "Dubai Mall", "distance": "3 min walk", "type": "Shopping"},
-      {"name": "Burj Khalifa", "distance": "5 min walk", "type": "Attraction"}
+
+    "relatedRestaurants": [
+      {
+        "name": "Pai Thai",
+        "cuisine": "Thai Fine Dining",
+        "location": "Madinat Jumeirah",
+        "priceRange": "AED 350-500",
+        "distance": "50m walk",
+        "image": "pai-thai.jpg",
+        "link": "/restaurants/pai-thai-dubai"
+      },
+      {
+        "name": "Nathan Outlaw",
+        "cuisine": "British Seafood",
+        "location": "Al Mahara, Burj Al Arab",
+        "priceRange": "AED 500-800",
+        "distance": "5 min drive",
+        "image": "nathan-outlaw.jpg",
+        "link": "/restaurants/nathan-outlaw-dubai"
+      },
+      {
+        "name": "Nobu",
+        "cuisine": "Japanese-Peruvian",
+        "location": "Atlantis The Palm",
+        "priceRange": "AED 400-600",
+        "distance": "15 min drive",
+        "image": "nobu.jpg",
+        "link": "/restaurants/nobu-dubai"
+      },
+      {
+        "name": "La Petite Maison",
+        "cuisine": "French Mediterranean",
+        "location": "DIFC",
+        "priceRange": "AED 300-450",
+        "distance": "20 min drive",
+        "image": "la-petite-maison.jpg",
+        "link": "/restaurants/la-petite-maison-dubai"
+      }
+    ],
+
+    "trustSignals": [
+      "TripAdvisor Travelers' Choice 2024",
+      "3,200+ verified Google reviews (4.7/5)",
+      "Featured in Michelin Guide Dubai",
+      "What's On Dubai Restaurant Award Winner",
+      "TimeOut Dubai Best Seafood Restaurant"
     ]
   }
 }
 
-Generate unique IDs for each block. Make content appetizing, accurate for Dubai restaurants, and SEO-optimized.`;
+IMPORTANT GUIDELINES:
+
+1. **Conversion Focus:**
+   - Dual CTAs: Reserve Table + Order Delivery (where applicable)
+   - Multiple reservation touchpoints: Hero, reservation section, final CTA
+   - Trust signals near booking buttons
+   - Dress code PROMINENT (critical for Dubai fine dining)
+   - Use urgency: "Book 2-4 weeks ahead" not "Book now or lose out!"
+
+2. **Content Structure:**
+   - introText: 3 sentences, 60-80 words (visible first)
+   - expandedIntroText: 150 words (hidden, expandable)
+   - Total content: 1,500-1,900 words
+   - FAQ answers: 150-200 words each (8 questions)
+   - Diner tips: 5 specific, actionable points
+
+3. **Restaurant-Specific SEO:**
+   - Primary keyword in title, introText, one H2, meta description
+   - Include cuisine type + location in keywords
+   - Restaurant schema (NOT TouristAttraction)
+   - FAQPage schema for all 8 questions
+   - Internal links to 4 related restaurants
+
+4. **Menu Highlights:**
+   - 3-4 signature dishes with mouthwatering descriptions
+   - NO prices in dish descriptions (keep focus on reservation)
+   - Include dish images and icons (emojis)
+   - 40-60 words each, sensory language
+
+5. **Reservation & Delivery Info:**
+   - reservationInfo: booking URL, advance timeline, phone, cancellation
+   - deliveryInfo: platforms (Deliveroo, Talabat), delivery URL, coverage areas
+   - Both with clear CTAs
+
+6. **Dubai Dining Specifics:**
+   - All prices in AED
+   - Dress code details (especially for fine dining)
+   - Valet parking availability
+   - Metro station + taxi instructions
+   - Alcohol policy (licensed venues only)
+   - Peak season (November-March)
+   - Cultural considerations (Ramadan, modest dress)
+
+7. **Trust & Social Proof:**
+   - 5 trust signals (TripAdvisor, Michelin, local awards, review count)
+   - Include specific ratings (4.7/5) and review counts (3,200+)
+   - Awards and recognitions
+
+Generate unique IDs for each block. Make content appetizing, accurate, and conversion-focused with clear reservation path.`;
 
 const DISTRICT_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized neighborhood/district guide pages for Dubai Travel website.
 
