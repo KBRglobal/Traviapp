@@ -497,30 +497,30 @@ function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlo
       
     case 'highlights':
       // Ensure items array exists with at least 4 items
-      let items = data.items;
+      let items = data.items as unknown[];
       if (!Array.isArray(items) || items.length < 4) {
         items = items && Array.isArray(items) ? items : [];
         while (items.length < 4) {
-          items.push(`Key highlight ${items.length + 1}`);
+          (items as string[]).push(`Key highlight ${items.length + 1}`);
         }
       }
       return { type, data: { ...data, items } };
       
     case 'tips':
       // Normalize tips array - accept "tips" or "items"
-      let tips = data.tips || data.items;
+      let tips = (data.tips || data.items) as unknown[];
       if (!Array.isArray(tips) || tips.length < 5) {
         tips = tips && Array.isArray(tips) ? tips : [];
         const defaultTips = ['Visit during off-peak hours', 'Book in advance', 'Wear comfortable clothing', 'Stay hydrated', 'Check local customs', 'Download offline maps', 'Carry local currency'];
         while (tips.length < 5) {
-          tips.push(defaultTips[tips.length] || `Tip ${tips.length + 1}`);
+          (tips as string[]).push(defaultTips[tips.length] || `Tip ${tips.length + 1}`);
         }
       }
       return { type, data: { ...data, tips } };
       
     case 'faq':
       // Normalize FAQ structure - accept "faqs" or "items"
-      let faqs = data.faqs || data.items;
+      let faqs = (data.faqs || data.items) as unknown[];
       if (!Array.isArray(faqs) || faqs.length < 3) {
         faqs = faqs && Array.isArray(faqs) ? faqs : [];
         const defaultFaqs = [
@@ -529,11 +529,11 @@ function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlo
           { question: 'What should I wear?', answer: 'Dress modestly and wear comfortable shoes for walking.' }
         ];
         while (faqs.length < 3) {
-          faqs.push(defaultFaqs[faqs.length] || { question: `Question ${faqs.length + 1}?`, answer: 'Please check with the venue for more details.' });
+          (faqs as Array<{question: string; answer: string}>).push(defaultFaqs[faqs.length] || { question: `Question ${faqs.length + 1}?`, answer: 'Please check with the venue for more details.' });
         }
       }
       // Ensure each FAQ has question and answer
-      faqs = faqs.map((faq: unknown) => {
+      const normalizedFaqs = faqs.map((faq: unknown) => {
         if (typeof faq !== 'object' || !faq) return { question: 'Question?', answer: 'Answer pending.' };
         const f = faq as Record<string, unknown>;
         return {
@@ -541,7 +541,7 @@ function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlo
           answer: f.answer || f.a || 'Answer pending.'
         };
       });
-      return { type, data: { ...data, faqs } };
+      return { type, data: { ...data, faqs: normalizedFaqs } };
       
     case 'cta':
       return { type, data };
@@ -1008,7 +1008,7 @@ export async function registerRoutes(
   // Audit logging helper
   async function logAuditEvent(
     req: Request,
-    actionType: "create" | "update" | "delete" | "publish" | "unpublish" | "submit_for_review" | "approve" | "reject" | "login" | "logout" | "user_create" | "user_update" | "user_delete" | "role_change" | "settings_change" | "media_upload" | "media_delete",
+    actionType: "create" | "update" | "delete" | "publish" | "unpublish" | "submit_for_review" | "approve" | "reject" | "login" | "logout" | "user_create" | "user_update" | "user_delete" | "role_change" | "settings_change" | "media_upload" | "media_delete" | "restore",
     entityType: "content" | "user" | "media" | "settings" | "rss_feed" | "affiliate_link" | "translation" | "session" | "tag" | "cluster" | "campaign" | "newsletter_subscriber",
     entityId: string | null,
     description: string,
@@ -1358,13 +1358,13 @@ export async function registerRoutes(
       }
       const updated = await storage.updateContent(req.params.id, {
         title: version.title,
-        slug: version.slug,
-        metaTitle: version.metaTitle,
-        metaDescription: version.metaDescription,
-        primaryKeyword: version.primaryKeyword,
-        heroImage: version.heroImage,
-        heroImageAlt: version.heroImageAlt,
-        blocks: version.blocks,
+        slug: version.slug ?? undefined,
+        metaTitle: version.metaTitle ?? undefined,
+        metaDescription: version.metaDescription ?? undefined,
+        primaryKeyword: version.primaryKeyword ?? undefined,
+        heroImage: version.heroImage ?? undefined,
+        heroImageAlt: version.heroImageAlt ?? undefined,
+        blocks: version.blocks ?? undefined,
       });
       const latestNum = await storage.getLatestVersionNumber(req.params.id) || 0;
       await storage.createContentVersion({
@@ -1385,7 +1385,7 @@ export async function registerRoutes(
       const user = req.user as any;
       await logAuditEvent(req, "restore", "content", req.params.id, 
         `Restored from version ${version.versionNumber}`,
-        null,
+        undefined,
         { title: version.title, versionNumber: version.versionNumber }
       );
       
@@ -1726,8 +1726,7 @@ export async function registerRoutes(
       const items = await parseRssFeed(feed.url);
       
       await storage.updateRssFeed(req.params.id, {
-        lastFetched: new Date(),
-        itemCount: items.length,
+        lastFetchedAt: new Date(),
       });
 
       res.json({ items, count: items.length });
@@ -1856,7 +1855,7 @@ export async function registerRoutes(
       }
 
       await storage.updateRssFeed(req.params.id, {
-        lastFetched: new Date(),
+        lastFetchedAt: new Date(),
       });
 
       res.status(201).json({ 
@@ -1902,7 +1901,7 @@ export async function registerRoutes(
     try {
       const parsed = insertAffiliateLinkSchema.parse(req.body);
       const link = await storage.createAffiliateLink(parsed);
-      await logAuditEvent(req, "create", "affiliate_link", link.id, `Created affiliate link: ${link.name}`, undefined, { name: link.name, url: link.url });
+      await logAuditEvent(req, "create", "affiliate_link", link.id, `Created affiliate link: ${link.anchor}`, undefined, { anchor: link.anchor, url: link.url });
       res.status(201).json(link);
     } catch (error) {
       console.error("Error creating affiliate link:", error);
@@ -1920,7 +1919,7 @@ export async function registerRoutes(
       if (!link) {
         return res.status(404).json({ error: "Affiliate link not found" });
       }
-      await logAuditEvent(req, "update", "affiliate_link", link.id, `Updated affiliate link: ${link.name}`, existingLink ? { name: existingLink.name, url: existingLink.url } : undefined, { name: link.name, url: link.url });
+      await logAuditEvent(req, "update", "affiliate_link", link.id, `Updated affiliate link: ${link.anchor}`, existingLink ? { anchor: existingLink.anchor, url: existingLink.url } : undefined, { anchor: link.anchor, url: link.url });
       res.json(link);
     } catch (error) {
       console.error("Error updating affiliate link:", error);
@@ -1933,7 +1932,7 @@ export async function registerRoutes(
       const existingLink = await storage.getAffiliateLink(req.params.id);
       await storage.deleteAffiliateLink(req.params.id);
       if (existingLink) {
-        await logAuditEvent(req, "delete", "affiliate_link", req.params.id, `Deleted affiliate link: ${existingLink.name}`, { name: existingLink.name, url: existingLink.url });
+        await logAuditEvent(req, "delete", "affiliate_link", req.params.id, `Deleted affiliate link: ${existingLink.anchor}`, { anchor: existingLink.anchor, url: existingLink.url });
       }
       res.status(204).send();
     } catch (error) {
@@ -2000,7 +1999,7 @@ export async function registerRoutes(
       if (storageClient) {
         objectPath = `public/${filename}`;
         await storageClient.uploadFromBytes(objectPath, req.file.buffer);
-        const signedUrl = await storageClient.getSignedDownloadUrl(objectPath);
+        const signedUrl = await (storageClient as any).getSignedDownloadUrl(objectPath);
         url = signedUrl.split("?")[0];
       } else {
         const uploadsDir = path.join(process.cwd(), "uploads");
@@ -3050,9 +3049,9 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
       // Sort by priority (high first) and usage count (low first)
       const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
       const sortedTopics = topics.sort((a, b) => {
-        const priorityDiff = (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
+        const priorityDiff = (priorityOrder[a.priority ?? ''] || 1) - (priorityOrder[b.priority ?? ''] || 1);
         if (priorityDiff !== 0) return priorityDiff;
-        return (a.usageCount || 0) - (b.usageCount || 0);
+        return (a.timesUsed || 0) - (b.timesUsed || 0);
       }).slice(0, limit);
 
       if (sortedTopics.length === 0) {
@@ -4099,7 +4098,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
           htmlContent = htmlContent.replace(/\{\{email\}\}/g, subscriber.email);
           
           await resend.emails.send({
-            from: campaign.fromEmail || "Dubai Travel <noreply@dubaitravel.com>",
+            from: (campaign as any).fromEmail || "Dubai Travel <noreply@dubaitravel.com>",
             to: subscriber.email,
             subject: campaign.subject,
             html: htmlContent,
@@ -4178,7 +4177,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const campaign = await storage.getCampaign(campaignId);
       if (campaign) {
         await storage.updateCampaign(campaignId, {
-          totalOpened: campaign.totalOpened + 1,
+          totalOpened: (campaign.totalOpened || 0) + 1,
         });
       }
       
@@ -4230,7 +4229,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const campaign = await storage.getCampaign(campaignId);
       if (campaign) {
         await storage.updateCampaign(campaignId, {
-          totalClicked: campaign.totalClicked + 1,
+          totalClicked: (campaign.totalClicked || 0) + 1,
         });
       }
       
@@ -4281,8 +4280,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         }
         
         // Get type-specific data
-        if (content.type === "attraction" && content.attraction) {
-          const attr = content.attraction;
+        if (content.type === "attraction" && (content as any).attraction) {
+          const attr = (content as any).attraction;
           
           // Add intro text block
           if (attr.introText) {
@@ -4345,8 +4344,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
               order: blockOrder++
             });
           }
-        } else if (content.type === "hotel" && content.hotel) {
-          const hotel = content.hotel;
+        } else if (content.type === "hotel" && (content as any).hotel) {
+          const hotel = (content as any).hotel;
           
           // Add description
           if (hotel.description) {
@@ -4379,8 +4378,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
               });
             }
           }
-        } else if (content.type === "article" && content.article) {
-          const article = content.article;
+        } else if (content.type === "article" && (content as any).article) {
+          const article = (content as any).article;
           
           // Add body content
           if (article.body) {
@@ -4855,7 +4854,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const template = await storage.createContentTemplate({
         name,
         description,
-        type,
+        contentType: type,
         blocks: blocks || [],
         seoDefaults: seoDefaults || {},
       });
@@ -4872,7 +4871,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const template = await storage.updateContentTemplate(req.params.id, {
         name,
         description,
-        type,
+        contentType: type,
         blocks,
         seoDefaults,
       });
@@ -4909,7 +4908,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const content = await storage.createContent({
         title,
         slug,
-        type: template.type as any,
+        type: template.contentType as any,
         status: "draft",
         blocks: template.blocks as any[],
         metaTitle: (template.seoDefaults as any)?.metaTitle || title,

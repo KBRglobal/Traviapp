@@ -29,7 +29,7 @@ const rateLimitStore = new Map<string, RateLimitEntry>();
 // Clean up expired entries every 5 minutes
 setInterval(() => {
   const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
+  for (const [key, entry] of Array.from(rateLimitStore.entries())) {
     if (entry.resetTime < now) {
       rateLimitStore.delete(key);
     }
@@ -228,7 +228,7 @@ export function requireOwnContentOrPermission(permission: PermissionKey) {
     if (userRole === "author" || userRole === "contributor") {
       const contentId = req.params.id;
       if (contentId) {
-        const content = await storage.getContentById(contentId);
+        const content = await storage.getContent(contentId);
         if (content && content.authorId === user.claims.sub) {
           (req as any).dbUser = dbUser;
           (req as any).userRole = userRole;
@@ -354,7 +354,7 @@ export async function validateAnalyticsRequest(req: Request, res: Response, next
   }
 
   // Validate contentId exists
-  const content = await storage.getContentById(contentId);
+  const content = await storage.getContent(contentId);
   if (!content) {
     return res.status(404).json({ error: "Content not found" });
   }

@@ -765,7 +765,7 @@ export default function ContentEditor() {
     } else {
       setBlocks([...blocks, newBlock]);
     }
-    setSelectedBlockId(newBlock.id);
+    setSelectedBlockId(newBlock.id ?? null);
   };
 
   const updateBlock = (id: string, data: Record<string, unknown>) => {
@@ -789,7 +789,7 @@ export default function ContentEditor() {
       const newBlocks = [...blocks];
       newBlocks.splice(blockIndex + 1, 0, newBlock);
       setBlocks(newBlocks.map((b, i) => ({ ...b, order: i })));
-      setSelectedBlockId(newBlock.id);
+      setSelectedBlockId(newBlock.id ?? null);
     }
   };
 
@@ -961,25 +961,27 @@ export default function ContentEditor() {
           <div className="max-w-3xl mx-auto py-8 px-4">
             {/* Canvas blocks */}
             <div className="space-y-4">
-              {blocks.map((block, index) => (
+              {blocks.map((block, index) => {
+                const blockId = block.id ?? `block-${index}`;
+                return (
                 <CanvasBlock
-                  key={block.id}
+                  key={blockId}
                   block={block}
-                  isSelected={selectedBlockId === block.id}
-                  onSelect={() => setSelectedBlockId(block.id)}
-                  onUpdate={(data) => updateBlock(block.id, data)}
-                  onDelete={() => removeBlock(block.id)}
-                  onDuplicate={() => duplicateBlock(block.id)}
-                  onMoveUp={() => moveBlock(block.id, "up")}
-                  onMoveDown={() => moveBlock(block.id, "down")}
+                  isSelected={selectedBlockId === blockId}
+                  onSelect={() => setSelectedBlockId(blockId)}
+                  onUpdate={(data) => updateBlock(blockId, data)}
+                  onDelete={() => removeBlock(blockId)}
+                  onDuplicate={() => duplicateBlock(blockId)}
+                  onMoveUp={() => moveBlock(blockId, "up")}
+                  onMoveDown={() => moveBlock(blockId, "down")}
                   canMoveUp={index > 0}
                   canMoveDown={index < blocks.length - 1}
                   title={title}
                   onTitleChange={setTitle}
-                  onGenerateImage={() => handleGenerateImage(block.id, block.type === "hero" ? "hero" : "image")}
-                  isGeneratingImage={imageGeneratingBlock === block.id}
+                  onGenerateImage={() => handleGenerateImage(blockId, block.type === "hero" ? "hero" : "image")}
+                  isGeneratingImage={imageGeneratingBlock === blockId}
                 />
-              ))}
+              );})}
 
               {blocks.length === 0 && (
                 <div className="text-center py-20 text-muted-foreground">
@@ -1014,8 +1016,8 @@ export default function ContentEditor() {
               {selectedBlock ? (
                 <BlockSettingsPanel
                   block={selectedBlock}
-                  onUpdate={(data) => updateBlock(selectedBlock.id, data)}
-                  onGenerateImage={() => handleGenerateImage(selectedBlock.id, selectedBlock.type === "hero" ? "hero" : "image")}
+                  onUpdate={(data) => updateBlock(selectedBlock.id ?? '', data)}
+                  onGenerateImage={() => handleGenerateImage(selectedBlock.id ?? '', selectedBlock.type === "hero" ? "hero" : "image")}
                   isGeneratingImage={imageGeneratingBlock === selectedBlock.id}
                 />
               ) : (

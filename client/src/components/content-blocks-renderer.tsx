@@ -353,7 +353,7 @@ export function ContentBlocksRenderer({ blocks }: ContentBlocksRendererProps) {
     return null;
   }
 
-  const sortedBlocks = [...blocks].sort((a, b) => a.order - b.order);
+  const sortedBlocks = [...blocks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   return (
     <div className="space-y-8" data-testid="content-blocks">

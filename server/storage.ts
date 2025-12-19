@@ -25,6 +25,7 @@ import {
   clusterMembers,
   tags,
   contentTags,
+  otpCodes,
   type User,
   type InsertUser,
   type UpsertUser,
@@ -81,6 +82,8 @@ import {
   type InsertTag,
   type ContentTag,
   type InsertContentTag,
+  type OtpCode,
+  type InsertOtpCode,
   homepagePromotions,
   newsletterCampaigns,
   campaignEvents,
@@ -134,7 +137,7 @@ export interface IStorage {
   getRssFeeds(): Promise<RssFeed[]>;
   getRssFeed(id: string): Promise<RssFeed | undefined>;
   createRssFeed(feed: InsertRssFeed): Promise<RssFeed>;
-  updateRssFeed(id: string, feed: Partial<InsertRssFeed>): Promise<RssFeed | undefined>;
+  updateRssFeed(id: string, feed: Partial<InsertRssFeed> & { lastFetchedAt?: Date }): Promise<RssFeed | undefined>;
   deleteRssFeed(id: string): Promise<boolean>;
 
   getAffiliateLinks(contentId?: string): Promise<AffiliateLink[]>;
@@ -343,12 +346,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const [user] = await db.insert(users).values(insertUser as any).returning();
     return user;
   }
 
   async updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined> {
-    const [user] = await db.update(users).set(data).where(eq(users.id, id)).returning();
+    const [user] = await db.update(users).set(data as any).where(eq(users.id, id)).returning();
     return user;
   }
 
@@ -515,14 +518,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createContent(insertContent: InsertContent): Promise<Content> {
-    const [content] = await db.insert(contents).values(insertContent).returning();
+    const [content] = await db.insert(contents).values(insertContent as any).returning();
     return content;
   }
 
   async updateContent(id: string, updateData: Partial<InsertContent>): Promise<Content | undefined> {
     const [content] = await db
       .update(contents)
-      .set({ ...updateData, updatedAt: new Date() })
+      .set({ ...updateData, updatedAt: new Date() } as any)
       .where(eq(contents.id, id))
       .returning();
     return content;
@@ -544,14 +547,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAttraction(insertAttraction: InsertAttraction): Promise<Attraction> {
-    const [attraction] = await db.insert(attractions).values(insertAttraction).returning();
+    const [attraction] = await db.insert(attractions).values(insertAttraction as any).returning();
     return attraction;
   }
 
   async updateAttraction(contentId: string, updateData: Partial<InsertAttraction>): Promise<Attraction | undefined> {
     const [attraction] = await db
       .update(attractions)
-      .set(updateData)
+      .set(updateData as any)
       .where(eq(attractions.contentId, contentId))
       .returning();
     return attraction;
@@ -563,14 +566,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createHotel(insertHotel: InsertHotel): Promise<Hotel> {
-    const [hotel] = await db.insert(hotels).values(insertHotel).returning();
+    const [hotel] = await db.insert(hotels).values(insertHotel as any).returning();
     return hotel;
   }
 
   async updateHotel(contentId: string, updateData: Partial<InsertHotel>): Promise<Hotel | undefined> {
     const [hotel] = await db
       .update(hotels)
-      .set(updateData)
+      .set(updateData as any)
       .where(eq(hotels.contentId, contentId))
       .returning();
     return hotel;
@@ -582,14 +585,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createArticle(insertArticle: InsertArticle): Promise<Article> {
-    const [article] = await db.insert(articles).values(insertArticle).returning();
+    const [article] = await db.insert(articles).values(insertArticle as any).returning();
     return article;
   }
 
   async updateArticle(contentId: string, updateData: Partial<InsertArticle>): Promise<Article | undefined> {
     const [article] = await db
       .update(articles)
-      .set(updateData)
+      .set(updateData as any)
       .where(eq(articles.contentId, contentId))
       .returning();
     return article;
@@ -601,14 +604,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
-    const [event] = await db.insert(events).values(insertEvent).returning();
+    const [event] = await db.insert(events).values(insertEvent as any).returning();
     return event;
   }
 
   async updateEvent(contentId: string, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
     const [event] = await db
       .update(events)
-      .set(updateData)
+      .set(updateData as any)
       .where(eq(events.contentId, contentId))
       .returning();
     return event;
@@ -620,14 +623,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createItinerary(insertItinerary: InsertItinerary): Promise<Itinerary> {
-    const [itinerary] = await db.insert(itineraries).values(insertItinerary).returning();
+    const [itinerary] = await db.insert(itineraries).values(insertItinerary as any).returning();
     return itinerary;
   }
 
   async updateItinerary(contentId: string, updateData: Partial<InsertItinerary>): Promise<Itinerary | undefined> {
     const [itinerary] = await db
       .update(itineraries)
-      .set(updateData)
+      .set(updateData as any)
       .where(eq(itineraries.contentId, contentId))
       .returning();
     return itinerary;
@@ -643,14 +646,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRssFeed(insertFeed: InsertRssFeed): Promise<RssFeed> {
-    const [feed] = await db.insert(rssFeeds).values(insertFeed).returning();
+    const [feed] = await db.insert(rssFeeds).values(insertFeed as any).returning();
     return feed;
   }
 
-  async updateRssFeed(id: string, updateData: Partial<InsertRssFeed>): Promise<RssFeed | undefined> {
+  async updateRssFeed(id: string, updateData: Partial<InsertRssFeed> & { lastFetchedAt?: Date }): Promise<RssFeed | undefined> {
     const [feed] = await db
       .update(rssFeeds)
-      .set(updateData)
+      .set(updateData as any)
       .where(eq(rssFeeds.id, id))
       .returning();
     return feed;
@@ -674,14 +677,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAffiliateLink(insertLink: InsertAffiliateLink): Promise<AffiliateLink> {
-    const [link] = await db.insert(affiliateLinks).values(insertLink).returning();
+    const [link] = await db.insert(affiliateLinks).values(insertLink as any).returning();
     return link;
   }
 
   async updateAffiliateLink(id: string, updateData: Partial<InsertAffiliateLink>): Promise<AffiliateLink | undefined> {
     const [link] = await db
       .update(affiliateLinks)
-      .set(updateData)
+      .set(updateData as any)
       .where(eq(affiliateLinks.id, id))
       .returning();
     return link;
@@ -702,14 +705,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMediaFile(insertFile: InsertMediaFile): Promise<MediaFile> {
-    const [file] = await db.insert(mediaFiles).values(insertFile).returning();
+    const [file] = await db.insert(mediaFiles).values(insertFile as any).returning();
     return file;
   }
 
   async updateMediaFile(id: string, updateData: Partial<InsertMediaFile>): Promise<MediaFile | undefined> {
     const [file] = await db
       .update(mediaFiles)
-      .set(updateData)
+      .set(updateData as any)
       .where(eq(mediaFiles.id, id))
       .returning();
     return file;
@@ -728,7 +731,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createInternalLink(insertLink: InsertInternalLink): Promise<InternalLink> {
-    const [link] = await db.insert(internalLinks).values(insertLink).returning();
+    const [link] = await db.insert(internalLinks).values(insertLink as any).returning();
     return link;
   }
 
@@ -784,12 +787,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTopicBankItem(insertItem: InsertTopicBank): Promise<TopicBank> {
-    const [item] = await db.insert(topicBank).values(insertItem).returning();
+    const [item] = await db.insert(topicBank).values(insertItem as any).returning();
     return item;
   }
 
   async updateTopicBankItem(id: string, updateData: Partial<InsertTopicBank>): Promise<TopicBank | undefined> {
-    const [item] = await db.update(topicBank).set(updateData).where(eq(topicBank.id, id)).returning();
+    const [item] = await db.update(topicBank).set(updateData as any).where(eq(topicBank.id, id)).returning();
     return item;
   }
 
@@ -810,7 +813,7 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
-  async getKeywords(filters?: { type?: string; category?: string; isActive?: boolean }): Promise<KeywordRepository[]> {
+  async getKeywords(filters?: { type?: string; category?: string; isActive?: boolean; search?: string }): Promise<KeywordRepository[]> {
     let query = db.select().from(keywordRepository);
     const conditions = [];
     if (filters?.type) {
@@ -821,6 +824,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (filters?.isActive !== undefined) {
       conditions.push(eq(keywordRepository.isActive, filters.isActive));
+    }
+    if (filters?.search) {
+      conditions.push(ilike(keywordRepository.keyword, `%${filters.search}%`));
     }
     if (conditions.length > 0) {
       query = query.where(and(...conditions)) as any;
@@ -834,14 +840,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createKeyword(insertItem: InsertKeywordRepository): Promise<KeywordRepository> {
-    const [item] = await db.insert(keywordRepository).values(insertItem).returning();
+    const [item] = await db.insert(keywordRepository).values(insertItem as any).returning();
     return item;
   }
 
   async updateKeyword(id: string, updateData: Partial<InsertKeywordRepository>): Promise<KeywordRepository | undefined> {
     const [item] = await db
       .update(keywordRepository)
-      .set({ ...updateData, updatedAt: new Date() })
+      .set({ ...updateData, updatedAt: new Date() } as any)
       .where(eq(keywordRepository.id, id))
       .returning();
     return item;
@@ -878,7 +884,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createContentVersion(insertVersion: InsertContentVersion): Promise<ContentVersion> {
-    const [version] = await db.insert(contentVersions).values(insertVersion).returning();
+    const [version] = await db.insert(contentVersions).values(insertVersion as any).returning();
     return version;
   }
 
@@ -900,14 +906,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTranslation(insertTranslation: InsertTranslation): Promise<Translation> {
-    const [translation] = await db.insert(translations).values(insertTranslation).returning();
+    const [translation] = await db.insert(translations).values(insertTranslation as any).returning();
     return translation;
   }
 
   async updateTranslation(id: string, updateData: Partial<InsertTranslation>): Promise<Translation | undefined> {
     const [translation] = await db
       .update(translations)
-      .set({ ...updateData, updatedAt: new Date() })
+      .set({ ...updateData, updatedAt: new Date() } as any)
       .where(eq(translations.id, id))
       .returning();
     return translation;
@@ -928,7 +934,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createContentFingerprint(insertFingerprint: InsertContentFingerprint): Promise<ContentFingerprint> {
-    const [fingerprint] = await db.insert(contentFingerprints).values(insertFingerprint).returning();
+    const [fingerprint] = await db.insert(contentFingerprints).values(insertFingerprint as any).returning();
     return fingerprint;
   }
 
@@ -981,14 +987,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createHomepagePromotion(insertPromotion: InsertHomepagePromotion): Promise<HomepagePromotion> {
-    const [promotion] = await db.insert(homepagePromotions).values(insertPromotion).returning();
+    const [promotion] = await db.insert(homepagePromotions).values(insertPromotion as any).returning();
     return promotion;
   }
 
   async updateHomepagePromotion(id: string, updateData: Partial<InsertHomepagePromotion>): Promise<HomepagePromotion | undefined> {
     const [promotion] = await db
       .update(homepagePromotions)
-      .set(updateData)
+      .set(updateData as any)
       .where(eq(homepagePromotions.id, id))
       .returning();
     return promotion;
@@ -1221,7 +1227,7 @@ export class DatabaseStorage implements IStorage {
   async getActiveNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
     return await db.select().from(newsletterSubscribers)
       .where(and(
-        eq(newsletterSubscribers.status, "confirmed"),
+        eq(newsletterSubscribers.status, "subscribed" as any),
         eq(newsletterSubscribers.isActive, true)
       ))
       .orderBy(desc(newsletterSubscribers.subscribedAt));
@@ -1243,12 +1249,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createNewsletterSubscriber(subscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber> {
-    const [newSubscriber] = await db.insert(newsletterSubscribers).values(subscriber).returning();
+    const [newSubscriber] = await db.insert(newsletterSubscribers).values(subscriber as any).returning();
     return newSubscriber;
   }
 
   async updateNewsletterSubscriber(id: string, data: Partial<InsertNewsletterSubscriber>): Promise<NewsletterSubscriber | undefined> {
-    const [subscriber] = await db.update(newsletterSubscribers).set(data).where(eq(newsletterSubscribers.id, id)).returning();
+    const [subscriber] = await db.update(newsletterSubscribers).set(data as any).where(eq(newsletterSubscribers.id, id)).returning();
     return subscriber;
   }
 
@@ -1272,9 +1278,9 @@ export class DatabaseStorage implements IStorage {
     return newCampaign;
   }
 
-  async updateCampaign(id: string, data: Partial<InsertCampaign>): Promise<NewsletterCampaign | undefined> {
+  async updateCampaign(id: string, data: Partial<NewsletterCampaign>): Promise<NewsletterCampaign | undefined> {
     const [campaign] = await db.update(newsletterCampaigns)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...data, updatedAt: new Date() } as any)
       .where(eq(newsletterCampaigns.id, id))
       .returning();
     return campaign;
@@ -1506,13 +1512,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createContentTemplate(template: InsertContentTemplate): Promise<ContentTemplate> {
-    const [newTemplate] = await db.insert(contentTemplates).values(template).returning();
+    const [newTemplate] = await db.insert(contentTemplates).values(template as any).returning();
     return newTemplate;
   }
 
   async updateContentTemplate(id: string, data: Partial<InsertContentTemplate>): Promise<ContentTemplate | undefined> {
     const [template] = await db.update(contentTemplates)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...data, updatedAt: new Date() } as any)
       .where(eq(contentTemplates.id, id))
       .returning();
     return template;
@@ -1591,6 +1597,29 @@ export class DatabaseStorage implements IStorage {
     }
     
     return { isUsed: usedIn.length > 0, usedIn };
+  }
+
+  // OTP Codes
+  async createOtpCode(data: InsertOtpCode): Promise<OtpCode> {
+    const [code] = await db.insert(otpCodes).values(data as any).returning();
+    return code;
+  }
+
+  async getValidOtpCode(email: string, code: string): Promise<OtpCode | undefined> {
+    const [otp] = await db.select().from(otpCodes)
+      .where(and(
+        sql`LOWER(${otpCodes.email}) = LOWER(${email})`,
+        eq(otpCodes.code, code),
+        eq(otpCodes.used, false),
+        sql`${otpCodes.expiresAt} > NOW()`
+      ))
+      .orderBy(desc(otpCodes.createdAt))
+      .limit(1);
+    return otp;
+  }
+
+  async markOtpAsUsed(id: string): Promise<void> {
+    await db.update(otpCodes).set({ used: true } as any).where(eq(otpCodes.id, id));
   }
 }
 

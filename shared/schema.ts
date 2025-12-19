@@ -103,6 +103,24 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// OTP codes table for passwordless email login
+export const otpCodes = pgTable("otp_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull(),
+  code: varchar("code", { length: 6 }).notNull(),
+  used: boolean("used").notNull().default(false),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOtpCodeSchema = createInsertSchema(otpCodes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;
+export type OtpCode = typeof otpCodes.$inferSelect;
+
 // Users table - with username/password auth and role-based permissions
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -476,13 +494,14 @@ export const auditActionTypeEnum = pgEnum("audit_action_type", [
   "create", "update", "delete", "publish", "unpublish", 
   "submit_for_review", "approve", "reject", "login", "logout",
   "user_create", "user_update", "user_delete", "role_change",
-  "settings_change", "media_upload", "media_delete"
+  "settings_change", "media_upload", "media_delete", "restore"
 ]);
 
 // Audit entity type enum
 export const auditEntityTypeEnum = pgEnum("audit_entity_type", [
   "content", "user", "media", "settings", "rss_feed", 
-  "affiliate_link", "translation", "session"
+  "affiliate_link", "translation", "session", "tag", 
+  "cluster", "campaign", "newsletter_subscriber"
 ]);
 
 // Audit Logs table - immutable append-only logging
@@ -713,10 +732,10 @@ export const internalLinksRelations = relations(internalLinks, ({ one }) => ({
 
 // Types for JSONB fields
 export interface ContentBlock {
-  id: string;
-  type: "hero" | "text" | "image" | "gallery" | "faq" | "cta" | "info_grid" | "highlights" | "room_cards" | "tips";
+  id?: string;
+  type: string;
   data: Record<string, unknown>;
-  order: number;
+  order?: number;
 }
 
 export interface QuickInfoItem {
