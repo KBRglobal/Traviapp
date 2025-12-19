@@ -62,8 +62,8 @@ import { SeoScore } from "@/components/seo-score";
 import { SchemaPreview } from "@/components/schema-preview";
 import { AttractionSeoEditor } from "@/components/attraction-seo-editor";
 
-type ContentType = "attraction" | "hotel" | "article" | "dining" | "district" | "event";
-// TEMPORARILY DISABLED: "transport" | "itinerary" - Will be enabled later
+type ContentType = "attraction" | "hotel" | "article" | "dining" | "district";
+// TEMPORARILY DISABLED: "transport" | "event" | "itinerary" - Will be enabled later
 
 interface BlockTypeConfig {
   type: ContentBlock["type"];
@@ -134,9 +134,9 @@ export default function ContentEditor() {
     if (hotelMatch || hotelNewMatch) return "hotel";
     if (diningMatch || diningNewMatch) return "dining";
     if (districtMatch || districtNewMatch) return "district";
-    if (eventMatch || eventNewMatch) return "event";
-    // TEMPORARILY DISABLED: transport and itinerary will be enabled later
+    // TEMPORARILY DISABLED: transport, event, and itinerary will be enabled later
     // if (transportMatch || transportNewMatch) return "transport";
+    // if (eventMatch || eventNewMatch) return "event";
     // if (itineraryMatch || itineraryNewMatch) return "itinerary";
     return "article";
   };
@@ -637,9 +637,9 @@ export default function ContentEditor() {
         contentType === "attraction" ? "/api/ai/generate-attraction" :
         contentType === "dining" ? "/api/ai/generate-dining" :
         contentType === "district" ? "/api/ai/generate-district" :
-        contentType === "event" ? "/api/ai/generate-event" :
-        // TEMPORARILY DISABLED: transport and itinerary will be enabled later
+        // TEMPORARILY DISABLED: transport, event, and itinerary will be enabled later
         // contentType === "transport" ? "/api/ai/generate-transport" :
+        // contentType === "event" ? "/api/ai/generate-event" :
         // contentType === "itinerary" ? "/api/ai/generate-itinerary" :
         "/api/ai/generate-article";
 

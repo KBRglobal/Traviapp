@@ -2557,28 +2557,29 @@ Return valid JSON-LD that can be embedded in a webpage.`,
   //   }
   // });
 
-  app.post("/api/ai/generate-event", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
-    if (safeMode.aiDisabled) {
-      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
-    }
-    try {
-      const { name } = req.body;
-      if (!name || typeof name !== "string" || name.trim().length === 0) {
-        return res.status(400).json({ error: "Event name is required" });
-      }
-
-      const result = await generateEventContent(name.trim());
-      if (!result) {
-        return res.status(500).json({ error: "Failed to generate event content" });
-      }
-
-      res.json(result);
-    } catch (error) {
-      console.error("Error generating event content:", error);
-      const message = error instanceof Error ? error.message : "Failed to generate event content";
-      res.status(500).json({ error: message });
-    }
-  });
+  // TEMPORARILY DISABLED - Will be enabled later
+  // app.post("/api/ai/generate-event", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+  //   if (safeMode.aiDisabled) {
+  //     return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+  //   }
+  //   try {
+  //     const { name } = req.body;
+  //     if (!name || typeof name !== "string" || name.trim().length === 0) {
+  //       return res.status(400).json({ error: "Event name is required" });
+  //     }
+  //
+  //     const result = await generateEventContent(name.trim());
+  //     if (!result) {
+  //       return res.status(500).json({ error: "Failed to generate event content" });
+  //     }
+  //
+  //     res.json(result);
+  //   } catch (error) {
+  //     console.error("Error generating event content:", error);
+  //     const message = error instanceof Error ? error.message : "Failed to generate event content";
+  //     res.status(500).json({ error: message });
+  //   }
+  // });
 
   // TEMPORARILY DISABLED - Will be enabled later
   // app.post("/api/ai/generate-itinerary", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
