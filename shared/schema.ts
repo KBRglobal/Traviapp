@@ -736,6 +736,8 @@ export interface TicketInfoItem {
   description: string;
   price?: string;
   affiliateLinkId?: string;
+  label?: string;
+  value?: string;
 }
 
 export interface EssentialInfoItem {
@@ -1249,14 +1251,15 @@ export type SeoAnalysisResult = typeof seoAnalysisResults.$inferSelect;
 export type ContentWithRelations = Content & {
   author?: User;
   attraction?: Attraction;
-  hotel?: Hotel;
-  article?: Article;
+  hotel?: Hotel & { checkInTime?: string | null; checkOutTime?: string | null };
+  article?: Article & { focusKeyword?: string | null };
+  dining?: Dining;
   diningData?: Dining;
   district?: District;
   transport?: Transport;
   event?: Event;
   itinerary?: Itinerary;
-  affiliateLinks?: AffiliateLink[];
+  affiliateLinks?: (AffiliateLink & { label?: string; price?: string })[];
   translations?: Translation[];
   views?: ContentView[];
   tags?: Tag[];

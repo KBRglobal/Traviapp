@@ -283,7 +283,7 @@ export default function NewsletterSubscribersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" size="sm">
+                          <Badge variant="outline">
                             {subscriber.source || "coming_soon"}
                           </Badge>
                         </TableCell>

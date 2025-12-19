@@ -92,7 +92,7 @@ function generateArticleSchema(article: ContentWithRelations, url: string) {
       "@id": url
     },
     "articleSection": article.article?.category || "Travel",
-    "keywords": article.focusKeyword || "Dubai, Travel, Tourism"
+    "keywords": article.article?.focusKeyword || "Dubai, Travel, Tourism"
   };
 }
 

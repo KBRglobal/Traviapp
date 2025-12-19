@@ -81,13 +81,13 @@ export default function PublicEvents() {
         title: content.title,
         slug: content.slug,
         description: content.metaDescription || "",
-        date: eventData?.startDate || new Date().toISOString(),
-        endDate: eventData?.endDate || undefined,
-        time: eventData?.startTime || "All Day",
-        location: eventData?.location || "Dubai",
-        category: eventData?.category || "cultural",
-        image: content.featuredImage || "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=600",
-        featured: eventData?.featured || false,
+        date: eventData?.eventDate?.toISOString?.() || (eventData?.eventDate ? String(eventData.eventDate) : new Date().toISOString()),
+        endDate: eventData?.endDate?.toISOString?.() || (eventData?.endDate ? String(eventData.endDate) : undefined),
+        time: "All Day",
+        location: eventData?.venue || "Dubai",
+        category: "cultural",
+        image: content.heroImage || "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=600",
+        featured: eventData?.isFeatured || false,
       };
     });
   }, [eventsData]);

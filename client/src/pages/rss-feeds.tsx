@@ -28,10 +28,7 @@ export default function RssFeeds() {
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string; url: string; category?: string }) =>
-      apiRequest("/api/rss-feeds", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/rss-feeds", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rss-feeds"] });
       setDialogOpen(false);
@@ -47,7 +44,7 @@ export default function RssFeeds() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      apiRequest(`/api/rss-feeds/${id}`, { method: "DELETE" }),
+      apiRequest("DELETE", `/api/rss-feeds/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rss-feeds"] });
       toast({ title: "RSS Feed deleted" });
@@ -56,10 +53,7 @@ export default function RssFeeds() {
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      apiRequest(`/api/rss-feeds/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ isActive }),
-      }),
+      apiRequest("PATCH", `/api/rss-feeds/${id}`, { isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rss-feeds"] });
     },
@@ -165,12 +159,8 @@ export default function RssFeeds() {
           icon={Rss}
           title="No RSS feeds"
           description="Add RSS feeds to automatically import news and articles for your CMS."
-          action={
-            <Button onClick={() => setDialogOpen(true)} data-testid="button-add-first-feed">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Feed
-            </Button>
-          }
+          actionLabel="Add Your First Feed"
+          onAction={() => setDialogOpen(true)}
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

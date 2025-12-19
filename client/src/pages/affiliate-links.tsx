@@ -28,10 +28,7 @@ export default function AffiliateLinks() {
 
   const createMutation = useMutation({
     mutationFn: (data: { provider: string; anchor: string; url: string; productId?: string; placement?: string }) =>
-      apiRequest("/api/affiliate-links", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/affiliate-links", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/affiliate-links"] });
       setDialogOpen(false);
@@ -49,7 +46,7 @@ export default function AffiliateLinks() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      apiRequest(`/api/affiliate-links/${id}`, { method: "DELETE" }),
+      apiRequest("DELETE", `/api/affiliate-links/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/affiliate-links"] });
       toast({ title: "Affiliate link deleted" });
@@ -175,12 +172,8 @@ export default function AffiliateLinks() {
           icon={Link2}
           title="No affiliate links"
           description="Add affiliate links to track and manage your monetization partners."
-          action={
-            <Button onClick={() => setDialogOpen(true)} data-testid="button-add-first-link">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Link
-            </Button>
-          }
+          actionLabel="Add Your First Link"
+          onAction={() => setDialogOpen(true)}
         />
       ) : (
         <Card>
