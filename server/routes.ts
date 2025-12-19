@@ -3773,6 +3773,40 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       });
       
       console.log("[Property Lead] New lead saved:", lead.id, email);
+      
+      // Send email notification to admin
+      const notificationEmail = process.env.LEAD_NOTIFICATION_EMAIL;
+      if (notificationEmail) {
+        const resend = getResendClient();
+        if (resend) {
+          try {
+            await resend.emails.send({
+              from: "Dubai Off-Plan <onboarding@resend.dev>",
+              to: notificationEmail,
+              subject: `New Property Lead: ${name.trim()}`,
+              html: `
+                <h2>New Property Lead Received</h2>
+                <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
+                  <tr style="background: #f5f5f5;"><td style="padding: 10px; font-weight: bold;">Name</td><td style="padding: 10px;">${name.trim()}</td></tr>
+                  <tr><td style="padding: 10px; font-weight: bold;">Email</td><td style="padding: 10px;"><a href="mailto:${email.trim()}">${email.trim()}</a></td></tr>
+                  ${phone ? `<tr style="background: #f5f5f5;"><td style="padding: 10px; font-weight: bold;">Phone</td><td style="padding: 10px;"><a href="tel:${phone}">${phone}</a></td></tr>` : ''}
+                  ${propertyType ? `<tr><td style="padding: 10px; font-weight: bold;">Property Type</td><td style="padding: 10px;">${propertyType}</td></tr>` : ''}
+                  ${budget ? `<tr style="background: #f5f5f5;"><td style="padding: 10px; font-weight: bold;">Budget</td><td style="padding: 10px;">${budget}</td></tr>` : ''}
+                  ${paymentMethod ? `<tr><td style="padding: 10px; font-weight: bold;">Payment Method</td><td style="padding: 10px;">${paymentMethod}</td></tr>` : ''}
+                  ${preferredAreas?.length ? `<tr style="background: #f5f5f5;"><td style="padding: 10px; font-weight: bold;">Preferred Areas</td><td style="padding: 10px;">${preferredAreas.join(', ')}</td></tr>` : ''}
+                  ${timeline ? `<tr><td style="padding: 10px; font-weight: bold;">Timeline</td><td style="padding: 10px;">${timeline}</td></tr>` : ''}
+                  ${message ? `<tr style="background: #f5f5f5;"><td style="padding: 10px; font-weight: bold;">Message</td><td style="padding: 10px;">${message}</td></tr>` : ''}
+                </table>
+                <p style="margin-top: 20px; color: #666; font-size: 12px;">Lead ID: ${lead.id} | Submitted: ${new Date().toLocaleString()}</p>
+              `,
+            });
+            console.log("[Property Lead] Email notification sent to:", notificationEmail);
+          } catch (emailError) {
+            console.error("[Property Lead] Failed to send email notification:", emailError);
+          }
+        }
+      }
+      
       res.json({ success: true, message: "Thank you! Our team will contact you within 24 hours.", leadId: lead.id });
     } catch (error) {
       console.error("Error saving property lead:", error);
