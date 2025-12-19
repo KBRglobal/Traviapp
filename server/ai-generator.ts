@@ -2956,226 +2956,398 @@ OUTPUT STRUCTURE:
 
 Generate unique IDs for each block. Make content practical, accurate for Dubai transport, and SEO-optimized.`;
 
-const EVENT_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized event pages for Dubai Travel website.
+const EVENT_SYSTEM_PROMPT = `You are creating CONVERSION-FOCUSED event landing pages for Dubai. These pages are designed for:
 
-CONTENT REQUIREMENTS:
-- Total word count: 1500-2500 words across all text blocks
-- Every piece of content must be accurate, engaging, and valuable for attendees
-- Include natural keyword placement throughout the content
-- Write in an exciting, informative tone that builds anticipation
-- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
+1. SEO: Rank for "[Event Name] Dubai" searches
+2. CONVERSION: Drive ticket sales and event registrations
+3. MINIMALIST DESIGN: Clean, fast-loading, scannable, mobile-first
+
+USER JOURNEY: User searches "Dubai Shopping Festival 2024" → lands on page → reads key info → clicks "Buy Tickets" or "Register Now"
+
+NOT: Long event reviews, detailed history, or comprehensive guides
+YES: Essential info + strong ticket/registration conversion focus
 
 Your output must be a valid JSON object matching this exact structure:
 
-OUTPUT STRUCTURE:
 {
   "content": {
-    "title": "[Event Name] Dubai 2025 | Complete Guide & Tickets",
-    "slug": "event-name-dubai-2025",
-    "metaTitle": "[Event Name] Dubai 2025 - Dates, Tickets & What to Expect",
-    "metaDescription": "150-160 char description with event name, dates, venue, and ticket call to action",
-    "primaryKeyword": "[event name] dubai 2025",
-    "secondaryKeywords": ["[event] tickets", "[event] dubai dates", "[event] schedule", "attend [event] dubai"],
-    "lsiKeywords": ["event", "festival", "show", "tickets", "venue", "performance", "entertainment"],
-    "heroImageAlt": "[Event Name] Dubai showing [specific scene or moment]",
+    "title": "[Event Name] Dubai 2024 | Dates, Deals & Events",
+    "slug": "event-name-dubai-2024",
+    "metaTitle": "[Event Name] Dubai 2024: Dates, Tickets & What to Expect",
+    "metaDescription": "150-155 chars with event name, dates, venue, key highlights, and ticket call to action",
+    "primaryKeyword": "[event name] dubai 2024",
+    "secondaryKeywords": ["[event] tickets dubai", "[event] dates 2024", "[event] schedule", "[event] dubai guide"],
+    "lsiKeywords": ["dubai events", "festival", "entertainment", "tickets", "venue", "performances", "activities"],
+    "heroImageAlt": "[Event Name] Dubai 2024 showing [specific iconic scene - fireworks/stage/crowd/venue]",
     "heroImageCaption": "Experience the excitement of [Event Name] in Dubai",
-    "blocks": [
+
+    "introText": "3 compelling sentences (60-80 words visible). First sentence: What the event is and its scale/significance. Second sentence: Running dates and key highlights (discounts/entertainment/activities). Third sentence: What makes it special and who should attend.",
+
+    "expandedIntroText": "150-200 words (hidden/expandable). Cover: Event history and growth, current edition details and duration, visitor numbers and economic impact, weather/season context, highlight categories (retail/entertainment/attractions), special draws and activities, regional appeal (GCC/international visitors), booking/planning advice.",
+
+    "quickInfoBar": [
+      {"icon": "calendar", "label": "Dates", "value": "Dec 15, 2024 - Jan 28, 2025"},
+      {"icon": "location", "label": "Location", "value": "City-wide (All Dubai Malls)"},
+      {"icon": "ticket", "label": "Entry", "value": "Free Entry (Some events paid)"},
+      {"icon": "gift", "label": "Deals", "value": "Up to 90% Off + Raffles"},
+      {"icon": "music", "label": "Events", "value": "500+ Concerts & Shows"},
+      {"icon": "clock", "label": "Hours", "value": "Daily 10 AM - Midnight"}
+    ],
+
+    "ticketInfo": {
+      "freeAccess": {
+        "title": "Free Mall Access",
+        "description": "Enter all participating malls and outlets. No ticket required for shopping.",
+        "ctaText": "View Participating Malls",
+        "ctaLink": "#venues"
+      },
+      "paidEvents": {
+        "title": "Paid Events (Concerts/Shows)",
+        "description": "Tickets vary by event",
+        "priceRange": "From AED 50 - AED 500",
+        "ctaText": "Browse Event Tickets",
+        "ctaLink": "#tickets"
+      },
+      "raffle": {
+        "title": "Grand Raffle",
+        "description": "Daily draws for luxury prizes",
+        "price": "AED 200 per ticket",
+        "ctaText": "Buy Raffle Tickets",
+        "ctaLink": "#raffle"
+      },
+      "tipNote": "Download event app for exclusive flash sale alerts"
+    },
+
+    "essentialInfo": [
+      {"icon": "calendar", "label": "Dates", "value": "Dec 15, 2024 - Jan 28, 2025 (45 days)"},
+      {"icon": "location", "label": "Location", "value": "City-wide - All major malls & outlets"},
+      {"icon": "ticket", "label": "Cost", "value": "Free entry (events vary)"},
+      {"icon": "gift", "label": "Deals", "value": "Up to 90% off sales + BOGO"},
+      {"icon": "clock", "label": "Hours", "value": "Daily 10 AM - Midnight (varies)"},
+      {"icon": "music", "label": "Events", "value": "500+ concerts, shows & activities"},
+      {"icon": "trophy", "label": "Raffles", "value": "Daily AED 1M+ prizes"},
+      {"icon": "fireworks", "label": "Fireworks", "value": "Nightly at 5 locations, 8-10 PM"}
+    ],
+
+    "eventHighlights": [
       {
-        "id": "hero_block",
-        "type": "hero",
-        "data": {
-          "title": "[Event Name] Dubai 2025",
-          "subtitle": "One compelling sentence about the event experience",
-          "overlayText": "Dubai's Premier [Event Type] Experience"
-        },
-        "order": 0
+        "image": "shopping-mall-sale-crowds.jpg",
+        "imageAlt": "Dubai Shopping Festival sale with up to 90% off discounts at Dubai Mall",
+        "icon": "shopping-bag",
+        "title": "Up to 90% Off Sales",
+        "description": "50-80 words about 3,500+ outlets with massive discounts on fashion, electronics, gold and more",
+        "ctaText": "Shop Now",
+        "ctaLink": "#venues"
       },
       {
-        "id": "overview_text",
-        "type": "text",
-        "data": {
-          "heading": "About [Event Name]",
-          "content": "Write 350-450 words. Start with 2-3 engaging sentences capturing the event's excitement. Then expand covering: what the event is and its significance, history and past highlights, what attendees can expect, lineup or program highlights, why Dubai is the perfect venue, who should attend."
-        },
-        "order": 1
+        "image": "raffle-draw-ceremony.jpg",
+        "imageAlt": "Grand Raffle draw ceremony with luxury car prize at event",
+        "icon": "gift",
+        "title": "Grand Raffle",
+        "description": "50-80 words about daily draws for luxury cars, AED 1M cash, gold bars and shopping vouchers",
+        "ctaText": "Buy Raffle Tickets",
+        "ctaLink": "#raffle"
       },
       {
-        "id": "highlights_block",
-        "type": "highlights",
-        "data": {
-          "title": "Event Highlights",
-          "items": ["6 key event highlights and experiences to look forward to"]
-        },
-        "order": 2
+        "image": "concert-stage-crowd.jpg",
+        "imageAlt": "Live concert performance at event outdoor stage with crowd",
+        "icon": "music",
+        "title": "Live Concerts & Entertainment",
+        "description": "50-80 words about international artists, DJs, street performances and family shows",
+        "ctaText": "View Event Schedule",
+        "ctaLink": "#schedule"
       },
       {
-        "id": "schedule_text",
-        "type": "text",
-        "data": {
-          "heading": "Event Schedule & Program",
-          "content": "Write 200-250 words covering: event dates and times, daily schedule breakdown, key performances or activities, special sessions, opening and closing ceremonies."
-        },
-        "order": 3
-      },
-      {
-        "id": "venue_text",
-        "type": "text",
-        "data": {
-          "heading": "Venue & Location",
-          "content": "Write 150-200 words about: venue details, facilities, how to get there, parking, nearby accommodation, what the venue offers."
-        },
-        "order": 4
-      },
-      {
-        "id": "tickets_text",
-        "type": "text",
-        "data": {
-          "heading": "Tickets & Pricing",
-          "content": "Write 150-200 words covering: ticket categories, pricing tiers, early bird offers, VIP packages, where to buy, refund policies."
-        },
-        "order": 5
-      },
-      {
-        "id": "tips_block",
-        "type": "tips",
-        "data": {
-          "title": "Tips for Attendees",
-          "tips": ["7 detailed practical tips for getting the most out of the event"]
-        },
-        "order": 6
-      },
-      {
-        "id": "faq_block",
-        "type": "faq",
-        "data": {
-          "title": "Frequently Asked Questions",
-          "faqs": [
-            {"question": "When is [Event Name] Dubai 2025?", "answer": "100-200 word detailed answer about dates, times, and schedule."},
-            {"question": "Where is [Event Name] held?", "answer": "100-200 word detailed answer about venue, location, and access."},
-            {"question": "How much are tickets for [Event Name]?", "answer": "100-200 word detailed answer about pricing tiers and packages."},
-            {"question": "What is included with VIP tickets?", "answer": "100-200 word detailed answer about VIP benefits and experiences."},
-            {"question": "Can I bring children to [Event Name]?", "answer": "100-200 word detailed answer about age restrictions and family policies."},
-            {"question": "What should I wear to [Event Name]?", "answer": "100-200 word detailed answer about dress code and comfort tips."},
-            {"question": "Is there food and drink at [Event Name]?", "answer": "100-200 word detailed answer about F&B options and policies."},
-            {"question": "How do I get to [Event Name] venue?", "answer": "100-200 word detailed answer about transportation options."}
-          ]
-        },
-        "order": 7
-      },
-      {
-        "id": "cta_block",
-        "type": "cta",
-        "data": {
-          "heading": "Don't Miss [Event Name] Dubai 2025!",
-          "text": "Secure your tickets now and be part of this incredible experience",
-          "buttonText": "Get Tickets",
-          "buttonLink": "#tickets"
-        },
-        "order": 8
+        "image": "fireworks-dubai-skyline.jpg",
+        "imageAlt": "Spectacular fireworks show over Dubai skyline at night",
+        "icon": "sparkles",
+        "title": "Nightly Fireworks Shows",
+        "description": "50-80 words about spectacular displays at 5 locations across Dubai every night at 8-10 PM",
+        "ctaText": "Fireworks Schedule",
+        "ctaLink": "#schedule"
       }
     ],
+
+    "dailySchedule": {
+      "weekdays": [
+        {"time": "10:00 AM", "activity": "Malls open with sales"},
+        {"time": "6:00 PM", "activity": "Market Outside the Box (City Walk)"},
+        {"time": "8:00 PM", "activity": "Fireworks (Dubai Festival City, Al Seef)"},
+        {"time": "9:00 PM", "activity": "Street performances (The Beach JBR)"}
+      ],
+      "weekends": [
+        {"time": "10:00 AM", "activity": "Extended mall hours"},
+        {"time": "5:00 PM", "activity": "Live concerts (varies by week)"},
+        {"time": "7:00 PM", "activity": "Raffle draws (broadcast live)"},
+        {"time": "8:00 PM", "activity": "Drone shows (Bluewaters Island)"},
+        {"time": "10:00 PM", "activity": "Additional fireworks displays"}
+      ],
+      "downloadLink": "Download Full Event Calendar PDF"
+    },
+
+    "participatingVenues": {
+      "majorMalls": [
+        {"name": "Dubai Mall", "highlight": "Fashion, electronics, gold souk"},
+        {"name": "Mall of the Emirates", "highlight": "Luxury brands, Ski Dubai deals"},
+        {"name": "Ibn Battuta Mall", "highlight": "Home furnishings, family entertainment"},
+        {"name": "City Centre Deira", "highlight": "Electronics, cosmetics, family zone"},
+        {"name": "Dubai Festival City Mall", "highlight": "Fashion, waterfront dining"}
+      ],
+      "outdoorMarkets": [
+        {"name": "Market Outside the Box", "location": "City Walk & Bluewaters pop-ups"},
+        {"name": "Global Village", "highlight": "International pavilions & street shopping"},
+        {"name": "Souk Madinat Jumeirah", "highlight": "Traditional souvenirs & gold"}
+      ],
+      "entertainmentZones": [
+        {"name": "The Beach JBR", "highlight": "Street performances & beach concerts"},
+        {"name": "Bluewaters Island", "highlight": "Drone shows & art installations"},
+        {"name": "Al Seef", "highlight": "Fireworks viewing & waterfront dining"}
+      ],
+      "mapLink": "View Interactive Event Map"
+    },
+
+    "visitorTips": [
+      "Download event app - Get flash sale alerts, raffle results, event schedules",
+      "Shop weekday mornings - Avoid weekend crowds (Friday-Saturday busiest)",
+      "Credit card offers - Check bank promotions for extra 10-20% discounts",
+      "Raffle strategy - Buy tickets early in the festival for more draw chances",
+      "Parking tips - Use metro to major venues; parking fills by noon on weekends",
+      "Price comparison - Check multiple outlets; discounts vary 25-90%",
+      "Book hotels early - Properties near major malls sell out 2 months ahead"
+    ],
+
+    "faq": [
+      {
+        "question": "When is [Event Name] Dubai 2024?",
+        "answer": "120-180 word answer covering: exact dates and duration, daily operating hours (with mall variations), milestone dates (opening weekend, New Year's Eve, final weekend), best times to visit (weekday mornings vs weekend crowds), raffle draw times (7:00 PM daily), season context (winter tourism, school holidays), visitor numbers annually."
+      },
+      {
+        "question": "How much are tickets to [Event Name]?",
+        "answer": "120-180 word answer covering: free entry to all malls and outlets (no tickets needed for shopping), paid entertainment events (concerts AED 150-500, shows AED 100-300, dining experiences AED 250-600, children's shows AED 50-150), raffle tickets (AED 200 each, available at malls and online), raffle prize details (luxury cars, AED 1M cash, gold bars), ticket validity (one ticket valid for all remaining daily draws), no secret fees or hidden charges."
+      },
+      {
+        "question": "What are the best deals at [Event Name]?",
+        "answer": "120-180 word answer covering: discount ranges by category (fashion 50-90%, electronics 30-70%, gold jewelry 30-50%, cosmetics 40-70%, home furnishings 35-75%), flash sales (announced via app, 70-90% off for 2-4 hours), BOGO deals (common in fashion and footwear), credit card offers (additional 10-20% with specific banks), best timing for maximum discounts (opening weekend December 15-16, final week January 22-28), electronics deals (peak around New Year), gold prices (best mid-festival)."
+      },
+      {
+        "question": "Where is [Event Name] held?",
+        "answer": "120-180 word answer covering: city-wide event spanning 3,500+ retail outlets across Dubai, major venue names (Dubai Mall, Mall of the Emirates, Ibn Battuta, City Centre Deira, Dubai Festival City), traditional shopping areas (Gold Souk, Spice Souk, Textile Souk, Souk Madinat), outdoor markets (Market Outside the Box at City Walk and Bluewaters, Global Village), entertainment locations (fireworks at 5 locations, concerts at Dubai World Trade Centre and Coca-Cola Arena, street performances at The Beach JBR and City Walk), interactive map availability (via app and website)."
+      },
+      {
+        "question": "How do I enter the [Event] Grand Raffle?",
+        "answer": "120-180 word answer covering: how to purchase tickets (AED 200 each at malls, electronics stores, supermarkets, online via website/app), automatic entry into all remaining daily draws from purchase date, draw timing (7:00 PM daily), where draws are broadcast (social media, Dubai TV), winner notification process (contacted via phone number on ticket), prize categories (luxury vehicles, AED 1M cash grand prize on final day, AED 100k daily cash prizes, gold bars, shopping vouchers AED 10k-50k), no need to be present to win, physical ticket/receipt required for prize collection, claim prizes within 30 days."
+      },
+      {
+        "question": "What entertainment is included in [Event Name]?",
+        "answer": "120-180 word answer covering: 500+ entertainment events total, international concerts and comedy shows (artists announced closer to dates), theatrical performances and magic shows, street performances daily 6-10 PM (acrobats, dancers, musicians, interactive art), nightly fireworks at 5 locations simultaneously at 8 PM and 10 PM (15-minute synchronized shows), drone shows on weekends (500+ synchronized drones), special experiences (art installations, pop-up markets, celebrity chef events, fashion shows), free street entertainment vs paid concerts (AED 50-500 for special shows)."
+      },
+      {
+        "question": "Is [Event Name] good for families?",
+        "answer": "120-180 word answer covering: highly family-friendly with dedicated kids' zones at every major mall, children's attractions (character meet-and-greets, magic shows, puppet theaters, face painting, balloon artists, interactive games), supervised play areas, educational activities (science shows, art workshops, robotics, storytelling), outdoor family zones (Global Village, City Walk, The Beach JBR), fireworks timed for families (8 PM and 10 PM), family package deals (Kids Eat Free, discounted family raffle tickets 5 for AED 900), weekday mornings recommended for comfortable family visits (vs crowded weekends), stroller-friendly access at all venues."
+      },
+      {
+        "question": "What is the best time to visit [Event Name]?",
+        "answer": "120-180 word answer covering: for maximum discounts (opening weekend December 15-16 or final week January 22-28 with 70-90% off clearance), to avoid crowds (weekday mornings Sunday-Thursday 10 AM-2 PM, 40-50% less crowded than weekends), for entertainment (weekends with more concerts, extended fireworks, drone displays), best overall experience (New Year's Eve December 31 for spectacular fireworks), weather comfortable throughout (January temperatures 20-24°C), booking timeline (hotels 2-3 months ahead for mid-festival peak dates December 25-January 10), crowd patterns (weekends Friday-Saturday busiest but most events)."
+      }
+    ],
+
+    "gettingThere": {
+      "transportation": [
+        {"icon": "metro", "method": "Metro", "details": "Red & Green lines serve all major malls (RTA day pass AED 20)"},
+        {"icon": "bus", "method": "Buses", "details": "Free shuttle buses between major venues (weekends only)"},
+        {"icon": "taxi", "method": "Taxi/Uber", "details": "Expect surge pricing on weekends; budget AED 30-60 between venues"},
+        {"icon": "parking", "method": "Parking", "details": "Use metro for major malls (parking fills by 11 AM weekends)"}
+      ],
+      "accommodation": "Book hotels near target malls 2-3 months ahead. Properties near Dubai Mall, Downtown, and Marina sell out first. Budget hotels in Deira and Bur Dubai offer easy access to Gold Souk and City Centre Deira.",
+      "resources": [
+        {"name": "Event Official App", "purpose": "Event schedules, flash sales, raffle results"},
+        {"name": "RTA Dubai App", "purpose": "Metro/bus routes and timings"},
+        {"name": "Google Maps", "purpose": "Mall navigation and traffic updates"}
+      ]
+    },
+
+    "finalCta": {
+      "heading": "Ready to Experience Dubai's Biggest Shopping Event?",
+      "subheading": "Get your raffle tickets and event passes for [Event Name]",
+      "buttonText": "Get Tickets & Passes Now",
+      "buttonLink": "#tickets",
+      "trustSignals": [
+        "Up to 90% off deals",
+        "Daily AED 1M+ raffles",
+        "500+ events & concerts",
+        "Nightly fireworks"
+      ]
+    },
+
+    "relatedEvents": [
+      {
+        "name": "Dubai Food Festival",
+        "date": "Feb 2025",
+        "image": "dubai-food-festival.jpg",
+        "link": "/events/dubai-food-festival-2025"
+      },
+      {
+        "name": "Gitex Tech Week",
+        "date": "Oct 2024",
+        "image": "gitex-tech-week.jpg",
+        "link": "/events/gitex-tech-week-2024"
+      },
+      {
+        "name": "Dubai Jazz Festival",
+        "date": "Feb 2025",
+        "image": "dubai-jazz-festival.jpg",
+        "link": "/events/dubai-jazz-festival-2025"
+      },
+      {
+        "name": "Art Dubai",
+        "date": "Mar 2025",
+        "image": "art-dubai.jpg",
+        "link": "/events/art-dubai-2025"
+      }
+    ],
+
     "seoSchema": {
       "@context": "https://schema.org",
       "@type": "Event",
-      "name": "[Event Name] Dubai 2025",
-      "description": "150-200 word description for SEO schema",
-      "url": "https://dubaitravel.com/events/event-name-dubai-2025",
-      "image": {"@type": "ImageObject", "url": "", "caption": "[Event Name] Dubai"},
-      "startDate": "2025-XX-XX",
-      "endDate": "2025-XX-XX",
+      "name": "[Event Name] Dubai 2024",
+      "description": "150-200 word description covering what the event is, dates, key highlights, activities, and appeal",
+      "image": "https://yoursite.com/images/event-name-2024-hero.jpg",
+      "url": "https://yoursite.com/events/event-name-dubai-2024",
+      "startDate": "2024-12-15T10:00",
+      "endDate": "2025-01-28T23:59",
       "eventStatus": "https://schema.org/EventScheduled",
       "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
       "location": {
         "@type": "Place",
-        "name": "Venue Name",
-        "address": {"@type": "PostalAddress", "addressLocality": "Dubai", "addressCountry": "AE"}
+        "name": "Dubai (City-wide)",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Dubai",
+          "addressCountry": "AE"
+        }
       },
       "offers": {
         "@type": "Offer",
-        "url": "https://tickets.example.com",
-        "price": "200",
+        "url": "https://yoursite.com/events/event-name-dubai-2024",
+        "price": "0",
         "priceCurrency": "AED",
         "availability": "https://schema.org/InStock",
-        "validFrom": "2025-01-01"
+        "validFrom": "2024-10-01"
       },
-      "performer": {"@type": "Organization", "name": "Performer/Organizer Name"},
-      "organizer": {"@type": "Organization", "name": "Organizer Name"}
+      "performer": {
+        "@type": "Organization",
+        "name": "Event Organizer Name"
+      },
+      "organizer": {
+        "@type": "Organization",
+        "name": "Dubai Economy and Tourism",
+        "url": "https://www.visitdubai.com"
+      }
     },
-    "images": [
-      {"filename": "event-name-main.jpg", "alt": "Main stage at [Event Name] Dubai", "caption": "The spectacular main stage"},
-      {"filename": "event-name-crowd.jpg", "alt": "Crowd at [Event Name] Dubai", "caption": "Join thousands of attendees"},
-      {"filename": "event-name-performance.jpg", "alt": "Performance at [Event Name]", "caption": "World-class entertainment"},
-      {"filename": "event-name-venue.jpg", "alt": "[Venue Name] hosting [Event Name]", "caption": "The iconic venue"}
-    ]
-  },
-  "event": {
-    "eventName": "Full Event Name",
-    "eventType": "Music Festival/Sports Event/Exhibition/Cultural Festival/Conference",
-    "dates": "March 15-17, 2025",
-    "venue": "Venue Name",
-    "location": "Area, Dubai",
-    "targetAudience": ["Music Lovers", "Families", "Sports Fans", "Art Enthusiasts"],
-    "primaryCta": "Buy Tickets",
-    "quickInfoBar": [
-      {"icon": "Calendar", "label": "Dates", "value": "Mar 15-17, 2025"},
-      {"icon": "MapPin", "label": "Venue", "value": "Venue Name"},
-      {"icon": "Clock", "label": "Time", "value": "4 PM - 12 AM"},
-      {"icon": "Ticket", "label": "Tickets", "value": "From AED 200"},
-      {"icon": "Users", "label": "Capacity", "value": "50,000+"},
-      {"icon": "Star", "label": "Type", "value": "Music Festival"}
-    ],
-    "highlights": [
-      {"image": "", "title": "Highlight 1", "description": "50-80 word description"},
-      {"image": "", "title": "Highlight 2", "description": "50-80 word description"},
-      {"image": "", "title": "Highlight 3", "description": "50-80 word description"},
-      {"image": "", "title": "Highlight 4", "description": "50-80 word description"},
-      {"image": "", "title": "Highlight 5", "description": "50-80 word description"},
-      {"image": "", "title": "Highlight 6", "description": "50-80 word description"}
-    ],
-    "ticketInfo": [
-      {"image": "", "title": "General Admission", "features": ["Access to main area", "Standing room", "Food stalls access"], "price": "AED 200"},
-      {"image": "", "title": "Premium", "features": ["Prime viewing area", "Dedicated bars", "Fast entry"], "price": "AED 450"},
-      {"image": "", "title": "VIP", "features": ["VIP lounge access", "Premium viewing", "Complimentary drinks", "Meet & greet"], "price": "AED 1,200"},
-      {"image": "", "title": "3-Day Pass", "features": ["All days access", "Priority entry", "Merchandise discount"], "price": "AED 500"}
-    ],
-    "schedule": [
-      {"time": "4:00 PM", "activity": "Gates Open", "description": "Arrive early for the best spots"},
-      {"time": "5:00 PM", "activity": "Opening Act", "description": "Local artists kick off the event"},
-      {"time": "7:00 PM", "activity": "Main Performance", "description": "Headline act takes the stage"},
-      {"time": "11:00 PM", "activity": "Closing", "description": "Grand finale and fireworks"}
-    ],
-    "essentialInfo": [
-      {"icon": "Calendar", "label": "Dates", "value": "March 15-17, 2025"},
-      {"icon": "Clock", "label": "Time", "value": "4 PM - 12 AM daily"},
-      {"icon": "MapPin", "label": "Venue", "value": "Full venue address"},
-      {"icon": "Ticket", "label": "Tickets", "value": "From AED 200"},
-      {"icon": "DollarSign", "label": "Age", "value": "All ages welcome"},
-      {"icon": "Car", "label": "Parking", "value": "Available, AED 50"},
-      {"icon": "Utensils", "label": "Food", "value": "Multiple vendors on-site"},
-      {"icon": "Info", "label": "Policy", "value": "No outside food/drink"}
-    ],
-    "attendeeTips": [
-      "Buy tickets early - popular categories sell out fast",
-      "Arrive at least 2 hours before your desired act for good positioning",
-      "Wear comfortable shoes - you'll be standing for hours",
-      "Stay hydrated - water stations are available throughout",
-      "Check the event app for real-time schedule updates",
-      "Arrange transportation in advance - surge pricing applies after events",
-      "Bring a portable phone charger - you'll want battery for photos"
-    ],
-    "faq": [
-      {"question": "What are the dates?", "answer": "100-200 word answer"},
-      {"question": "How do I get tickets?", "answer": "100-200 word answer"},
-      {"question": "What can I bring?", "answer": "100-200 word answer"},
-      {"question": "Is it family-friendly?", "answer": "100-200 word answer"},
-      {"question": "What about food and drinks?", "answer": "100-200 word answer"},
-      {"question": "How do I get there?", "answer": "100-200 word answer"}
-    ],
-    "relatedEvents": ["Similar Event 1", "Similar Event 2", "Similar Event 3"]
+
+    "faqSchema": {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "When is [Event Name] Dubai 2024?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Full FAQ answer text here"
+          }
+        }
+        // Include all 8 FAQ questions
+      ]
+    },
+
+    "breadcrumbSchema": {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://yoursite.com"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Dubai Events",
+          "item": "https://yoursite.com/events"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "[Event Name] Dubai 2024",
+          "item": "https://yoursite.com/events/event-name-dubai-2024"
+        }
+      ]
+    }
   }
 }
 
-Generate unique IDs for each block. Make content exciting, accurate for Dubai events, and SEO-optimized.`;
+IMPORTANT GUIDELINES:
+
+1. CONVERSION FOCUS: Every element drives ticket sales/registrations
+   - Multiple CTAs throughout (Get Tickets, Buy Raffle Tickets, Register Now, View Schedule)
+   - Clear ticket pricing and access information upfront
+   - Trust signals (visitor numbers, prize amounts, discount percentages)
+   - Urgency triggers (limited tickets, early bird pricing, sellout warnings)
+
+2. MINIMALIST DESIGN: Scannable, fast-loading pages
+   - introText: 3 sentences visible (60-80 words)
+   - expandedIntroText: Hidden/expandable (150-200 words)
+   - Quick info bar with 6 key data points (dates, location, cost, highlights)
+   - Visual cards for event highlights with images and CTAs
+   - Collapsed FAQs (expand on click)
+   - Clean navigation with jump links
+
+3. SEO OPTIMIZATION:
+   - Primary keyword: [Event Name] Dubai 2024 (10-12 times naturally)
+   - Secondary keywords in headings and content
+   - LSI keywords naturally integrated
+   - Schema markup: Event + FAQPage + Breadcrumbs
+   - Image ALT texts descriptive and keyword-rich
+   - FAQ answers 120-180 words each (comprehensive for search intent)
+   - Internal links to related events, venues, districts
+
+4. DUBAI-SPECIFIC DETAILS:
+   - All prices in AED
+   - Metro/RTA transportation options
+   - Peak season context (November-April)
+   - Weekend timing (Friday-Saturday)
+   - Cultural considerations where relevant
+   - Specific venue names and locations
+   - Mobile-first approach for tourist convenience
+
+5. CONTENT HIERARCHY:
+   - Visible content: ~750 words (scannable)
+   - Hidden/expandable: ~1,400 words (SEO depth)
+   - Total SEO content: ~2,150 words
+   - User sees essentials first, can expand for details
+   - Every section adds conversion or SEO value
+
+6. EVENT HIGHLIGHTS (4-5 cards):
+   - Each with image, icon, title (H3), 50-80 word description
+   - Specific CTA for each highlight (Shop Now, Buy Tickets, View Schedule)
+   - Focus on unique selling points (massive discounts, luxury prizes, entertainment, spectacle)
+
+7. VISITOR TIPS (5-7 points):
+   - Actionable, practical advice
+   - Enhance experience and drive conversions
+   - App downloads, timing, booking, logistics
+   - Save money tips (credit cards, price comparison)
+
+8. FAQ STRUCTURE (8 questions):
+   - Cover all major search intents
+   - 120-180 words per answer
+   - Natural keyword integration
+   - Complete information (no "contact us" cop-outs)
+   - Address common objections and concerns
+
+Generate accurate, exciting, conversion-focused event content for Dubai.`;
 
 const ITINERARY_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized itinerary pages for Dubai Travel website.
 
