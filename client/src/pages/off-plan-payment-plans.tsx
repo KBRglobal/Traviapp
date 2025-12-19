@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { 
   Building2, CheckCircle2, DollarSign, 
@@ -14,6 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { PublicNav } from "@/components/public-nav";
+import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { 
   OffPlanStatsBar, 
   OffPlanBreadcrumb, 
@@ -142,9 +143,11 @@ const RELATED_LINKS = [
 export default function OffPlanPaymentPlans() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
-  useEffect(() => {
-    document.title = "Dubai Off-Plan Payment Plans 2025 | 80/20, Post-Handover, Monthly Options";
-  }, []);
+  useDocumentMeta({
+    title: "Dubai Off-Plan Payment Plans 2025 | 80/20, Post-Handover, Monthly Options",
+    description: "Complete guide to Dubai off-plan payment plans: 80/20, 60/40, post-handover, and 1% monthly options. Interest-free developer financing with crypto payment acceptance.",
+    ogType: "article"
+  });
 
   return (
     <>

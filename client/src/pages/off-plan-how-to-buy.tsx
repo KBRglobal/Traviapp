@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { 
   Building2, CheckCircle2, FileText, Shield, 
@@ -15,6 +15,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { PublicNav } from "@/components/public-nav";
+import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { 
   OffPlanStatsBar, 
   OffPlanBreadcrumb, 
@@ -172,9 +173,11 @@ const RELATED_LINKS = [
 export default function OffPlanHowToBuy() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
-  useEffect(() => {
-    document.title = "How to Buy Off-Plan Property in Dubai 2025 | Step-by-Step Guide";
-  }, []);
+  useDocumentMeta({
+    title: "How to Buy Off-Plan Property in Dubai 2025 | Step-by-Step Guide",
+    description: "Complete guide to buying off-plan property in Dubai: 7-step purchase process, required documents, costs, and legal protection. Updated for 2025 with crypto payment options.",
+    ogType: "article"
+  });
 
   return (
     <>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { 
   Building2, CheckCircle2, TrendingUp, 
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PublicNav } from "@/components/public-nav";
+import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { 
   OffPlanStatsBar, 
   OffPlanBreadcrumb, 
@@ -155,9 +156,11 @@ const RELATED_LINKS = [
 export default function OffPlanBest2025() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
-  useEffect(() => {
-    document.title = "Best Off-Plan Projects Dubai 2025 | Top 10 Investment Opportunities";
-  }, []);
+  useDocumentMeta({
+    title: "Best Off-Plan Projects Dubai 2025 | Top 10 Investment Opportunities",
+    description: "Curated list of best off-plan projects in Dubai for 2025: top ROI opportunities from Emaar, Sobha, DAMAC, Nakheel. Expert-rated with payment plan analysis.",
+    ogType: "article"
+  });
 
   return (
     <>

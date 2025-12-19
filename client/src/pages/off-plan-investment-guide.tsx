@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { 
   TrendingUp, Building2, Shield, ChevronRight, 
@@ -14,6 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { PublicNav } from "@/components/public-nav";
+import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { 
   OffPlanStatsBar, 
   OffPlanBreadcrumb, 
@@ -143,9 +144,11 @@ const RELATED_LINKS = [
 export default function OffPlanInvestmentGuide() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
-  useEffect(() => {
-    document.title = "Dubai Off-Plan Investment Guide 2025 | ROI, Strategies & Risk Analysis";
-  }, []);
+  useDocumentMeta({
+    title: "Dubai Off-Plan Investment Guide 2025 | ROI, Strategies & Risk Analysis",
+    description: "Complete Dubai off-plan investment guide: 15-40% ROI potential, payment plan strategies, risk mitigation, and expert tips for international investors. Updated for 2025.",
+    ogType: "article"
+  });
 
   return (
     <>
