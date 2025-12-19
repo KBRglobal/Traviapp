@@ -2212,14 +2212,18 @@ IMPORTANT GUIDELINES:
 
 Generate unique IDs for each block. Make content appetizing, accurate, and conversion-focused with clear reservation path.`;
 
-const DISTRICT_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized neighborhood/district guide pages for Dubai Travel website.
+const DISTRICT_SYSTEM_PROMPT = `You are creating AGGREGATION DISTRICT PAGES for Dubai. These pages are designed for:
+1. SEO: Rank for "[District Name] Dubai" searches
+2. CONVERSION: Drive clicks to hotels, restaurants, and attractions in the area
+3. AGGREGATION: Showcase 6-8 hotels + 6-8 restaurants + 4-5 activities per district
 
-CONTENT REQUIREMENTS:
-- Total word count: 1500-2500 words across all text blocks
-- Every piece of content must be accurate, engaging, and valuable for visitors
-- Include natural keyword placement throughout the content
-- Write in an explorative, informative tone that encourages discovery
-- CRITICAL: You MUST generate ALL content blocks including tips_block and faq_block - do NOT skip any
+USER JOURNEY: User searches "Dubai Marina" → lands on district page → explores hotels/restaurants/activities → clicks to business detail pages
+
+TARGET FORMAT: NOT a travel blog or history guide. YES: Essential district info + strong internal linking to area businesses.
+
+===========================================
+PAGE STRUCTURE (Mandatory):
+===========================================
 
 Your output must be a valid JSON object matching this exact structure:
 
@@ -2362,17 +2366,201 @@ OUTPUT STRUCTURE:
   },
   "district": {
     "districtName": "Full District Name",
-    "location": "General area in Dubai (e.g., Eastern Dubai, Beachfront)",
-    "characteristics": ["Modern", "Traditional", "Luxury", "Cultural", "Entertainment Hub", "Waterfront"],
-    "targetAudience": ["Tourists", "Families", "Couples", "Shoppers", "Foodies", "Culture Seekers"],
-    "primaryCta": "Explore [District Name]",
+    "location": "General area in Dubai (e.g., West Dubai, Persian Gulf Coast)",
+    "districtType": "Residential & Tourism / Entertainment Hub / Cultural Quarter / Business District",
+    "characteristics": ["Waterfront", "Luxury Living", "Dining Scene", "Beach Access", "Marina Culture"],
+    "targetAudience": ["Tourists", "Expats", "Families", "Couples", "Foodies", "Yacht Enthusiasts"],
+
+    "primaryCta": "Explore Hotels in [District Name]",
+
+    "introText": "Write 3 compelling sentences (60-80 words) about the district. Focus on: what makes it unique, key landmarks/features, who it attracts. Include district name + Dubai naturally.",
+
+    "expandedIntroText": "Write 150 words expanding on the intro. Cover: District development history, size/population stats, main canal/marina/features, iconic towers/landmarks, residential vs. tourism balance, adjacent areas (JBR, Palm Jumeirah), transportation links (metro stations, tram), peak visiting season. End with soft CTA.",
+
     "quickInfoBar": [
-      {"icon": "MapPin", "label": "Location", "value": "Central Dubai"},
-      {"icon": "Clock", "label": "Best Time", "value": "Evening"},
-      {"icon": "Train", "label": "Metro", "value": "Station Name"},
-      {"icon": "DollarSign", "label": "Budget", "value": "All Budgets"},
-      {"icon": "Users", "label": "Ideal For", "value": "Everyone"},
-      {"icon": "Calendar", "label": "Duration", "value": "Half to Full Day"}
+      {"icon": "MapPin", "label": "Location", "value": "West Dubai, Gulf Coast"},
+      {"icon": "Train", "label": "Metro", "value": "DMCC, Marina (Red Line)"},
+      {"icon": "Beach", "label": "Beach", "value": "The Beach JBR (5 min)"},
+      {"icon": "Utensils", "label": "Dining", "value": "200+ Restaurants"},
+      {"icon": "Building", "label": "Hotels", "value": "150+ Properties"},
+      {"icon": "Star", "label": "Known For", "value": "#1 Waterfront Living"}
+    ],
+
+    "topHotels": [
+      {
+        "name": "Address Dubai Marina",
+        "type": "5-Star Luxury",
+        "location": "Marina Walk",
+        "priceFrom": "AED 600",
+        "rating": "4.8/5",
+        "image": "address-dubai-marina.jpg",
+        "link": "/hotels/address-dubai-marina",
+        "ctaText": "View Hotel"
+      },
+      {
+        "name": "Grosvenor House",
+        "type": "5-Star",
+        "location": "Dubai Marina",
+        "priceFrom": "AED 450",
+        "rating": "4.6/5",
+        "image": "grosvenor-house.jpg",
+        "link": "/hotels/grosvenor-house-dubai",
+        "ctaText": "View Hotel"
+      },
+      {
+        "name": "Rixos Premium JBR",
+        "type": "5-Star Beach Resort",
+        "location": "JBR Beach",
+        "priceFrom": "AED 550",
+        "rating": "4.7/5",
+        "image": "rixos-jbr.jpg",
+        "link": "/hotels/rixos-premium-jbr",
+        "ctaText": "View Hotel"
+      },
+      {
+        "name": "Hilton Dubai Marina",
+        "type": "4-Star",
+        "location": "Marina Walk",
+        "priceFrom": "AED 500",
+        "rating": "4.5/5",
+        "image": "hilton-marina.jpg",
+        "link": "/hotels/hilton-dubai-marina",
+        "ctaText": "View Hotel"
+      },
+      {
+        "name": "Le Royal Meridien Beach Resort",
+        "type": "5-Star Beach",
+        "location": "JBR",
+        "priceFrom": "AED 520",
+        "rating": "4.7/5",
+        "image": "le-royal-meridien.jpg",
+        "link": "/hotels/le-royal-meridien-dubai",
+        "ctaText": "View Hotel"
+      },
+      {
+        "name": "Sheraton Grand Hotel",
+        "type": "4-Star",
+        "location": "Dubai Marina",
+        "priceFrom": "AED 480",
+        "rating": "4.6/5",
+        "image": "sheraton-grand.jpg",
+        "link": "/hotels/sheraton-grand-dubai",
+        "ctaText": "View Hotel"
+      }
+    ],
+
+    "topRestaurants": [
+      {
+        "name": "Pier 7",
+        "cuisine": "Multi-Cuisine",
+        "location": "Marina Walk",
+        "priceRange": "AED 250-400",
+        "description": "7 floors of dining with marina views",
+        "image": "pier-7.jpg",
+        "link": "/restaurants/pier-7-dubai"
+      },
+      {
+        "name": "The Scene by Simon Rimmer",
+        "cuisine": "International",
+        "location": "Pier 7",
+        "priceRange": "AED 200-350",
+        "description": "Rooftop restaurant with sunset views",
+        "image": "the-scene.jpg",
+        "link": "/restaurants/the-scene-dubai"
+      },
+      {
+        "name": "Rhodes W1",
+        "cuisine": "European Fine Dining",
+        "location": "Grosvenor House",
+        "priceRange": "AED 350-500",
+        "description": "British celebrity chef fine dining",
+        "image": "rhodes-w1.jpg",
+        "link": "/restaurants/rhodes-w1-dubai"
+      },
+      {
+        "name": "Massimo's Italian Restaurant",
+        "cuisine": "Italian",
+        "location": "Marina Walk",
+        "priceRange": "AED 250-380",
+        "description": "Authentic Italian on the waterfront",
+        "image": "massimos.jpg",
+        "link": "/restaurants/massimos-dubai"
+      },
+      {
+        "name": "BiCE Mare",
+        "cuisine": "Italian Seafood",
+        "location": "Soho Garden",
+        "priceRange": "AED 300-450",
+        "description": "Italian seafood with marina views",
+        "image": "bice-mare.jpg",
+        "link": "/restaurants/bice-mare-dubai"
+      },
+      {
+        "name": "Barasti Beach Bar",
+        "cuisine": "Beach Casual",
+        "location": "Le Meridien Mina Seyahi",
+        "priceRange": "AED 150-250",
+        "description": "Iconic beach bar and restaurant",
+        "image": "barasti.jpg",
+        "link": "/restaurants/barasti-dubai"
+      },
+      {
+        "name": "The Meat Co.",
+        "cuisine": "Steakhouse",
+        "location": "Souk Al Bahar",
+        "priceRange": "AED 300-480",
+        "description": "Premium steakhouse experience",
+        "image": "meat-co.jpg",
+        "link": "/restaurants/the-meat-co-dubai"
+      },
+      {
+        "name": "Asia Asia",
+        "cuisine": "Pan-Asian",
+        "location": "Pier 7",
+        "priceRange": "AED 220-350",
+        "description": "Modern Pan-Asian fusion",
+        "image": "asia-asia.jpg",
+        "link": "/restaurants/asia-asia-dubai"
+      }
+    ],
+
+    "thingsToDo": [
+      {
+        "name": "Marina Walk Promenade",
+        "type": "Walking & Dining",
+        "description": "40-60 word description: 7km waterfront walkway encircling the marina, lined with restaurants, cafes, and entertainment. Perfect for evening strolls with yacht views and tower skyline.",
+        "image": "marina-walk.jpg",
+        "icon": "🚶",
+        "ctaText": "Explore Marina Walk",
+        "ctaLink": "/attractions/marina-walk-dubai"
+      },
+      {
+        "name": "Luxury Yacht Cruises",
+        "type": "Water Activity",
+        "description": "40-60 word description: Sunset dhow cruises, private yacht charters, and dinner cruises departing from Dubai Marina. Experience Arabian Gulf waters with views of JBR, Palm Jumeirah, and Atlantis.",
+        "image": "yacht-cruise.jpg",
+        "icon": "⛵",
+        "ctaText": "Book Yacht Cruise",
+        "ctaLink": "/activities/yacht-cruises-dubai"
+      },
+      {
+        "name": "The Beach JBR",
+        "type": "Beach & Shopping",
+        "description": "40-60 word description: 1.7km beachfront promenade with restaurants, shops, water sports, and direct beach access. Free public beach with facilities, perfect for families.",
+        "image": "the-beach-jbr.jpg",
+        "icon": "🏖️",
+        "ctaText": "Discover JBR Beach",
+        "ctaLink": "/attractions/the-beach-jbr-dubai"
+      },
+      {
+        "name": "Skydive Dubai Marina",
+        "type": "Adventure",
+        "description": "40-60 word description: Tandem skydiving over Palm Jumeirah with views of Dubai Marina, Burj Al Arab, and Arabian Gulf coastline. Professional instructors, breathtaking experience.",
+        "image": "skydive-dubai.jpg",
+        "icon": "🪂",
+        "ctaText": "Book Skydiving",
+        "ctaLink": "/activities/skydive-dubai-marina"
+      }
     ],
     "highlights": [
       {"image": "", "title": "Highlight 1", "description": "50-80 word description"},
@@ -2407,28 +2595,166 @@ OUTPUT STRUCTURE:
       {"icon": "Accessibility", "label": "Accessibility", "value": "Wheelchair friendly"},
       {"icon": "Info", "label": "Language", "value": "English widely spoken"}
     ],
-    "explorationTips": [
-      "Start your exploration at [specific starting point] for the best experience",
-      "Visit in the evening for cooler temperatures and better atmosphere",
-      "Download the RTA app for easy metro navigation",
-      "Wear comfortable walking shoes as the area is best explored on foot",
-      "Book restaurant reservations in advance, especially for popular spots",
-      "Visit on weekdays to avoid weekend crowds",
-      "Keep your camera ready - photo opportunities are everywhere"
+    "visitorTips": [
+      "Best time to visit: November-April for comfortable outdoor weather (20-30°C), perfect for Marina Walk and beach activities",
+      "Getting around: Dubai Tram connects Marina to JBR and Palm Jumeirah; DMCC and Marina metro stations on Red Line",
+      "Parking: Limited street parking; use paid lots near Marina Mall (AED 5-10/hour) or hotel valet services",
+      "Weekend scene: Friday-Saturday evenings busiest for dining and nightlife; book restaurants 2-3 days ahead",
+      "Hidden gem: Pier 7 offers 7 restaurants stacked vertically with 360° marina views - perfect for sunset"
     ],
+
     "faq": [
-      {"question": "What is the area known for?", "answer": "100-200 word answer"},
-      {"question": "How do I get there?", "answer": "100-200 word answer"},
-      {"question": "What should I do there?", "answer": "100-200 word answer"},
-      {"question": "Is it suitable for families?", "answer": "100-200 word answer"},
-      {"question": "What is the nightlife like?", "answer": "100-200 word answer"},
-      {"question": "How long should I spend there?", "answer": "100-200 word answer"}
+      {
+        "question": "What is [District Name] Dubai known for?",
+        "answer": "Write 120-180 words covering: Main features (world's largest man-made marina, 200+ residential towers), key landmarks (Cayan Tower, Princess Tower), lifestyle attractions (Marina Walk, The Beach JBR, yacht culture), dining scene (200+ restaurants), demographics (120,000 residents, expat hub), what makes it special vs other Dubai districts, awards/recognitions."
+      },
+      {
+        "question": "How do I get to [District Name]?",
+        "answer": "Write 120-180 words covering: Dubai Metro Red Line stations (DMCC north end, Dubai Marina south end), Dubai Tram connection, taxi instructions (what to tell driver), car directions via Sheikh Zayed Road, parking options, walking distance from adjacent areas, distance/time from major points (Downtown 15 min, Airport 30 min)."
+      },
+      {
+        "question": "What are the best restaurants in [District Name]?",
+        "answer": "Write 120-180 words covering: Top dining options (Pier 7, The Scene, Rhodes W1, Massimo's), cuisine variety (Italian, Asian, steakhouse, seafood), price ranges (budget to fine dining), waterfront vs tower locations, reservation recommendations, best restaurants for different occasions (romantic, family, business)."
+      },
+      {
+        "question": "Is [District Name] good for families?",
+        "answer": "Write 120-180 words covering: Family amenities (The Beach JBR with 1.7km beach, playgrounds, water sports), kid-friendly restaurants, stroller-friendly Marina Walk, safety aspects, parks and open spaces, family hotels, activities for different age groups, best times to visit with children."
+      },
+      {
+        "question": "What is the best time to visit [District Name]?",
+        "answer": "Write 120-180 words covering: Best season (November-April, 20-30°C), worst season (June-August, 40°C+), best time of day (evening for dining, morning for beach), weekend vs weekday crowds, special events/times to avoid, seasonal considerations for outdoor activities."
+      },
+      {
+        "question": "Where should I stay in [District Name]?",
+        "answer": "Write 120-180 words covering: Best hotel areas (Marina Walk for views, JBR for beach), top hotels by category (luxury, mid-range, budget), Marina-facing vs beach-facing properties, short-term apartment rentals, proximity to metro and attractions, price ranges, booking tips."
+      },
+      {
+        "question": "What is [Main Feature] in [District Name]?",
+        "answer": "Write 120-180 words covering: Description of main feature (Marina Walk - 7km pedestrian promenade encircling waterfront), what you can do there, restaurants and shops, length/accessibility, best sections, photo opportunities, peak times, why it's popular."
+      },
+      {
+        "question": "Can you swim at [District Name]?",
+        "answer": "Write 120-180 words covering: Swimming restrictions in marina canal (boat traffic), The Beach JBR as swimming alternative (5-10 min walk, 1.7km public beach), beach facilities (lifeguards, showers, loungers), water quality, beach clubs, water sports availability, best beaches nearby."
+      }
     ],
-    "gettingAround": ["Metro", "Walking", "Taxi", "Tram", "Water Taxi"]
+
+    "nearbyDistricts": [
+      {
+        "name": "Jumeirah Beach Residence (JBR)",
+        "distance": "Adjacent (connected via walk)",
+        "type": "Beach & Residential",
+        "link": "/districts/jbr-dubai"
+      },
+      {
+        "name": "Palm Jumeirah",
+        "distance": "3 km",
+        "type": "Luxury Island",
+        "link": "/districts/palm-jumeirah"
+      },
+      {
+        "name": "Dubai Media City",
+        "distance": "2 km",
+        "type": "Business District",
+        "link": "/districts/dubai-media-city"
+      },
+      {
+        "name": "Dubai Internet City",
+        "distance": "3 km",
+        "type": "Tech Hub",
+        "link": "/districts/dubai-internet-city"
+      },
+      {
+        "name": "Bluewaters Island",
+        "distance": "2 km",
+        "type": "Entertainment",
+        "link": "/districts/bluewaters-island-dubai"
+      }
+    ],
+
+    "relatedDistricts": [
+      {
+        "name": "Downtown Dubai",
+        "description": "Burj Khalifa, Dubai Mall, Dubai Fountain",
+        "image": "downtown-dubai.jpg",
+        "link": "/districts/downtown-dubai"
+      },
+      {
+        "name": "Business Bay",
+        "description": "Financial district with waterfront dining",
+        "image": "business-bay.jpg",
+        "link": "/districts/business-bay-dubai"
+      },
+      {
+        "name": "City Walk",
+        "description": "Urban shopping and dining destination",
+        "image": "city-walk.jpg",
+        "link": "/districts/city-walk-dubai"
+      },
+      {
+        "name": "La Mer",
+        "description": "Beachfront leisure and entertainment",
+        "image": "la-mer.jpg",
+        "link": "/districts/la-mer-dubai"
+      }
+    ],
+
+    "trustSignals": [
+      "#1 Waterfront Living Destination in Dubai",
+      "Over 120,000 Residents",
+      "200+ Restaurants & Cafes",
+      "World's Largest Man-Made Marina",
+      "15,000+ Google Reviews (4.7/5)"
+    ]
   }
 }
 
-Generate unique IDs for each block. Make content explorative, accurate for Dubai neighborhoods, and SEO-optimized.`;
+IMPORTANT GUIDELINES:
+
+1. **Aggregation Focus:**
+   - 6-8 hotels with images, ratings, price ranges, booking links
+   - 6-8 restaurants with images, cuisine, price ranges, detail page links
+   - 4-5 things to do with icons, CTAs, and activity links
+   - 5 nearby districts with distances and links
+   - 4 related popular districts with images and links
+
+2. **Content Structure:**
+   - introText: 3 sentences, 60-80 words (visible first)
+   - expandedIntroText: 150 words (hidden, expandable)
+   - Total content: 1,800-2,200 words
+   - FAQ answers: 120-180 words each (8 questions)
+   - Visitor tips: 5 specific, practical points
+
+3. **District-Specific SEO:**
+   - Primary keyword in title, introText, one H2, meta description
+   - Include district name + Dubai consistently
+   - Place schema (not TouristAttraction)
+   - FAQPage schema for all 8 questions
+   - Heavy internal linking (15-20 links to hotels, restaurants, attractions)
+
+4. **Hotel/Restaurant Cards:**
+   - Hotels: name, type, location, priceFrom, rating, image, link, ctaText
+   - Restaurants: name, cuisine, location, priceRange, description, image, link
+   - All cards link to individual business pages (internal linking strategy)
+
+5. **Things to Do:**
+   - 4-5 activities with icons, images, descriptions
+   - Each with CTA button linking to activity/attraction page
+   - Varied activity types (walking, water sports, dining, adventure, beach)
+
+6. **Dubai District Specifics:**
+   - All prices in AED
+   - Metro station names and lines (Red/Green)
+   - Dubai Tram connections where applicable
+   - Distance/time from major areas
+   - Peak season (November-April)
+   - Cultural considerations (dress codes, Ramadan)
+
+7. **Trust & Social Proof:**
+   - District-specific trust signals (population, #1 rankings, review counts)
+   - Awards and recognitions
+   - Unique selling points (world's largest marina, etc.)
+
+Generate unique IDs for each block. Make content aggregation-focused, accurate, and optimized for driving traffic to area businesses.`;
 
 const TRANSPORT_SYSTEM_PROMPT = `You are a Dubai travel content expert creating comprehensive, SEO-optimized transportation guide pages for Dubai Travel website.
 
