@@ -12,6 +12,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -47,9 +48,19 @@ import {
   RotateCcw,
   Check,
 } from "lucide-react";
-import type { ContentWithRelations, ContentBlock, ContentVersion } from "@shared/schema";
+import type {
+  ContentWithRelations,
+  ContentBlock,
+  ContentVersion,
+  QuickInfoItem,
+  HighlightItem,
+  TicketInfoItem,
+  EssentialInfoItem,
+  RelatedItem
+} from "@shared/schema";
 import { SeoScore } from "@/components/seo-score";
 import { SchemaPreview } from "@/components/schema-preview";
+import { AttractionSeoEditor } from "@/components/attraction-seo-editor";
 
 type ContentType = "attraction" | "hotel" | "article" | "event" | "itinerary";
 
@@ -151,6 +162,23 @@ export default function ContentEditor() {
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [lastAutosaveTime, setLastAutosaveTime] = useState<string | null>(null);
 
+  // Attraction-specific SEO data
+  const [attractionSeoData, setAttractionSeoData] = useState({
+    introText: "",
+    expandedIntroText: "",
+    quickInfoBar: [] as QuickInfoItem[],
+    highlights: [] as HighlightItem[],
+    ticketInfo: [] as TicketInfoItem[],
+    essentialInfo: [] as EssentialInfoItem[],
+    visitorTips: [] as string[],
+    relatedAttractions: [] as RelatedItem[],
+    trustSignals: [] as string[],
+    primaryCta: "",
+    location: "",
+    priceFrom: "",
+    duration: "",
+  });
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const hasChangedRef = useRef(false);
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -171,7 +199,26 @@ export default function ContentEditor() {
       setHeroImage(content.heroImage || "");
       setHeroImageAlt(content.heroImageAlt || "");
       setStatus(content.status || "draft");
-      
+
+      // Load attraction-specific SEO data if it exists
+      if (content.attraction) {
+        setAttractionSeoData({
+          introText: content.attraction.introText || "",
+          expandedIntroText: content.attraction.expandedIntroText || "",
+          quickInfoBar: content.attraction.quickInfoBar || [],
+          highlights: content.attraction.highlights || [],
+          ticketInfo: content.attraction.ticketInfo || [],
+          essentialInfo: content.attraction.essentialInfo || [],
+          visitorTips: content.attraction.visitorTips || [],
+          relatedAttractions: content.attraction.relatedAttractions || [],
+          trustSignals: content.attraction.trustSignals || [],
+          primaryCta: content.attraction.primaryCta || "",
+          location: content.attraction.location || "",
+          priceFrom: content.attraction.priceFrom || "",
+          duration: content.attraction.duration || "",
+        });
+      }
+
       // Check if blocks are empty but extension data exists - auto-generate blocks
       const existingBlocks = content.blocks || [];
       if (existingBlocks.length === 0) {
@@ -220,8 +267,8 @@ export default function ContentEditor() {
           }
           return count;
         }, 0);
-        
-        autosaveMutation.mutate({
+
+        const autosaveData: Record<string, unknown> = {
           title,
           slug: slug || generateSlug(title),
           metaTitle,
@@ -232,7 +279,14 @@ export default function ContentEditor() {
           blocks,
           wordCount: currentWordCount,
           status,
-        });
+        };
+
+        // Include attraction-specific SEO data if this is an attraction
+        if (contentType === "attraction") {
+          autosaveData.attractionData = attractionSeoData;
+        }
+
+        autosaveMutation.mutate(autosaveData);
       }
     }, 30000);
 
@@ -242,7 +296,7 @@ export default function ContentEditor() {
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [title, slug, metaTitle, metaDescription, primaryKeyword, heroImage, heroImageAlt, blocks, status, contentId]);
+  }, [title, slug, metaTitle, metaDescription, primaryKeyword, heroImage, heroImageAlt, blocks, status, contentId, contentType, attractionSeoData]);
 
   // Generate blocks from attraction/hotel/article extension data
   // Blocks use simple string content (one item per line) for tips, highlights, info_grid
@@ -696,7 +750,7 @@ export default function ContentEditor() {
   }, [blocks, heroImage, heroImageAlt]);
 
   const handleSave = () => {
-    saveMutation.mutate({
+    const saveData: Record<string, unknown> = {
       title,
       slug: slug || generateSlug(title),
       metaTitle,
@@ -707,11 +761,18 @@ export default function ContentEditor() {
       blocks,
       wordCount,
       status,
-    });
+    };
+
+    // Include attraction-specific SEO data if this is an attraction
+    if (contentType === "attraction") {
+      saveData.attractionData = attractionSeoData;
+    }
+
+    saveMutation.mutate(saveData);
   };
 
   const handlePublish = () => {
-    publishMutation.mutate({
+    const publishData: Record<string, unknown> = {
       title,
       slug: slug || generateSlug(title),
       metaTitle,
@@ -723,7 +784,14 @@ export default function ContentEditor() {
       wordCount,
       status: "published",
       publishedAt: new Date().toISOString(),
-    });
+    };
+
+    // Include attraction-specific SEO data if this is an attraction
+    if (contentType === "attraction") {
+      publishData.attractionData = attractionSeoData;
+    }
+
+    publishMutation.mutate(publishData);
   };
 
   const getDefaultBlockData = (type: ContentBlock["type"]): Record<string, unknown> => {
@@ -1010,7 +1078,7 @@ export default function ContentEditor() {
             </h3>
           </div>
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-6">
+            <div className="p-4">
               {selectedBlock ? (
                 <BlockSettingsPanel
                   block={selectedBlock}
@@ -1018,8 +1086,48 @@ export default function ContentEditor() {
                   onGenerateImage={() => handleGenerateImage(selectedBlock.id, selectedBlock.type === "hero" ? "hero" : "image")}
                   isGeneratingImage={imageGeneratingBlock === selectedBlock.id}
                 />
+              ) : contentType === "attraction" ? (
+                <Tabs defaultValue="basic" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="basic">Basic</TabsTrigger>
+                    <TabsTrigger value="seo">SEO Sections</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="basic" className="space-y-6 mt-4">
+                    <PageSettingsPanel
+                      title={title}
+                      onTitleChange={setTitle}
+                      slug={slug}
+                      onSlugChange={setSlug}
+                      status={status}
+                      onStatusChange={setStatus}
+                      metaTitle={metaTitle}
+                      onMetaTitleChange={setMetaTitle}
+                      metaDescription={metaDescription}
+                      onMetaDescriptionChange={setMetaDescription}
+                      primaryKeyword={primaryKeyword}
+                      onPrimaryKeywordChange={setPrimaryKeyword}
+                      contentId={contentId}
+                    />
+                    <Separator />
+                    <SeoScore
+                      title={title}
+                      metaTitle={metaTitle}
+                      metaDescription={metaDescription}
+                      primaryKeyword={primaryKeyword}
+                      content={seoContentText}
+                      headings={seoHeadings}
+                      images={seoImages}
+                    />
+                  </TabsContent>
+                  <TabsContent value="seo" className="mt-4">
+                    <AttractionSeoEditor
+                      data={attractionSeoData}
+                      onChange={setAttractionSeoData}
+                    />
+                  </TabsContent>
+                </Tabs>
               ) : (
-                <>
+                <div className="space-y-6">
                   <PageSettingsPanel
                     title={title}
                     onTitleChange={setTitle}
@@ -1033,6 +1141,7 @@ export default function ContentEditor() {
                     onMetaDescriptionChange={setMetaDescription}
                     primaryKeyword={primaryKeyword}
                     onPrimaryKeywordChange={setPrimaryKeyword}
+                    contentId={contentId}
                   />
                   <Separator />
                   <SeoScore
@@ -1044,7 +1153,7 @@ export default function ContentEditor() {
                     headings={seoHeadings}
                     images={seoImages}
                   />
-                </>
+                </div>
               )}
             </div>
           </ScrollArea>
