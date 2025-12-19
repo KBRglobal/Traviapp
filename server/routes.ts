@@ -410,22 +410,22 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
   if (!Array.isArray(blocks) || blocks.length === 0) {
     return createDefaultBlocks(title);
   }
-  
-  const normalizedBlocks: ContentBlock[] = [];
+
+  const normalizedBlocks: Omit<ContentBlock, 'id' | 'order'>[] = [];
   const blockTypes = new Set<string>();
-  
+
   for (const block of blocks) {
     if (typeof block !== 'object' || !block) continue;
     const b = block as Record<string, unknown>;
     if (typeof b.type !== 'string' || !b.data) continue;
-    
+
     const normalized = normalizeBlock(b.type, b.data as Record<string, unknown>);
     if (normalized) {
       normalizedBlocks.push(normalized);
       blockTypes.add(normalized.type);
     }
   }
-  
+
   // Ensure required block types exist
   if (!blockTypes.has('hero')) {
     normalizedBlocks.unshift({
@@ -433,31 +433,31 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
       data: { title, subtitle: 'Discover Dubai Travel', overlayText: '' }
     });
   }
-  
+
   if (!blockTypes.has('highlights')) {
     normalizedBlocks.push({
       type: 'highlights',
-      data: { 
+      data: {
         title: 'Key Highlights',
         items: ['Key attraction feature', 'Unique experience offered', 'Must-see element', 'Popular activity', 'Essential stop', 'Notable landmark']
       }
     });
   }
-  
+
   if (!blockTypes.has('tips')) {
     normalizedBlocks.push({
       type: 'tips',
-      data: { 
+      data: {
         title: 'Expert Tips',
         tips: ['Plan your visit during cooler months', 'Book tickets in advance', 'Arrive early to avoid crowds', 'Bring comfortable walking shoes', 'Stay hydrated', 'Check dress codes beforehand', 'Consider guided tours for insights']
       }
     });
   }
-  
+
   if (!blockTypes.has('faq')) {
     normalizedBlocks.push({
       type: 'faq',
-      data: { 
+      data: {
         title: 'Frequently Asked Questions',
         faqs: [
           { question: 'What are the opening hours?', answer: 'Opening hours vary by season. Check the official website for current timings.' },
@@ -469,11 +469,11 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
       }
     });
   }
-  
+
   if (!blockTypes.has('cta')) {
     normalizedBlocks.push({
       type: 'cta',
-      data: { 
+      data: {
         title: 'Plan Your Visit',
         content: 'Ready to experience this amazing destination? Book your trip today!',
         buttonText: 'Book Now',
@@ -485,19 +485,21 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
   // Add id and order to all blocks before returning
   return normalizedBlocks.map((block, index) => ({
     ...block,
-    id: block.id || `${block.type}-${Date.now()}-${index}`,
-    order: block.order !== undefined ? block.order : index
+    id: `${block.type}-${Date.now()}-${index}`,
+    order: index
   }));
 }
 
-function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlock | null {
+function normalizeBlock(type: string, data: Record<string, unknown>): Omit<ContentBlock, 'id' | 'order'> | null {
+  const validTypes: ContentBlock['type'][] = ['hero', 'text', 'image', 'gallery', 'faq', 'cta', 'info_grid', 'highlights', 'room_cards', 'tips'];
+
   switch (type) {
     case 'hero':
-      return { type, data };
-      
+      return { type: 'hero' as const, data };
+
     case 'text':
-      return { type, data };
-      
+      return { type: 'text' as const, data };
+
     case 'highlights':
       // Ensure items array exists with at least 4 items
       let items = (data as any).items;
@@ -507,8 +509,8 @@ function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlo
           items.push(`Key highlight ${items.length + 1}`);
         }
       }
-      return { type, data: { ...data, items } };
-      
+      return { type: 'highlights' as const, data: { ...data, items } };
+
     case 'tips':
       // Normalize tips array - accept "tips" or "items"
       let tips = (data as any).tips || (data as any).items;
@@ -519,8 +521,8 @@ function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlo
           tips.push(defaultTips[tips.length] || `Tip ${tips.length + 1}`);
         }
       }
-      return { type, data: { ...data, tips } };
-      
+      return { type: 'tips' as const, data: { ...data, tips } };
+
     case 'faq':
       // Normalize FAQ structure - accept "faqs" or "items"
       let faqs = (data as any).faqs || (data as any).items;
@@ -544,18 +546,24 @@ function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlo
           answer: f.answer || f.a || 'Answer pending.'
         };
       });
-      return { type, data: { ...data, faqs } };
-      
+      return { type: 'faq' as const, data: { ...data, faqs } };
+
     case 'cta':
-      return { type, data };
-      
+      return { type: 'cta' as const, data };
+
     case 'image':
+      return { type: 'image' as const, data };
     case 'gallery':
+      return { type: 'gallery' as const, data };
     case 'info_grid':
-      return { type, data };
-      
+      return { type: 'info_grid' as const, data };
+
     default:
-      return { type, data };
+      // Check if type is valid, otherwise return text
+      if (validTypes.includes(type as any)) {
+        return { type: type as ContentBlock['type'], data };
+      }
+      return { type: 'text' as const, data };
   }
 }
 
@@ -1012,7 +1020,7 @@ export async function registerRoutes(
   // Audit logging helper
   async function logAuditEvent(
     req: Request,
-    actionType: "create" | "update" | "delete" | "publish" | "unpublish" | "submit_for_review" | "approve" | "reject" | "login" | "logout" | "user_create" | "user_update" | "user_delete" | "role_change" | "settings_change" | "media_upload" | "media_delete",
+    actionType: "create" | "update" | "delete" | "publish" | "unpublish" | "submit_for_review" | "approve" | "reject" | "login" | "logout" | "user_create" | "user_update" | "user_delete" | "role_change" | "settings_change" | "media_upload" | "media_delete" | "restore",
     entityType: "content" | "user" | "media" | "settings" | "rss_feed" | "affiliate_link" | "translation" | "session" | "tag" | "cluster" | "campaign" | "newsletter_subscriber",
     entityId: string | null,
     description: string,
@@ -1387,9 +1395,9 @@ export async function registerRoutes(
       });
       
       const user = req.user as any;
-      await logAuditEvent(req, "restore", "content", req.params.id, 
+      await logAuditEvent(req, "restore", "content", req.params.id,
         `Restored from version ${version.versionNumber}`,
-        null,
+        undefined,
         { title: version.title, versionNumber: version.versionNumber }
       );
       
@@ -4270,27 +4278,28 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         if (content.blocks && Array.isArray(content.blocks) && content.blocks.length > 0) {
           continue;
         }
-        
+
         const blocks: any[] = [];
         let blockOrder = 0;
-        
+
         // Add hero block if there's a hero image
         if (content.heroImage) {
           blocks.push({
             id: `hero-${Date.now()}-${blockOrder}`,
             type: "hero",
-            data: { 
-              image: content.heroImage, 
+            data: {
+              image: content.heroImage,
               alt: content.heroImageAlt || content.title,
-              title: content.title 
+              title: content.title
             },
             order: blockOrder++
           });
         }
-        
-        // Get type-specific data
-        if (content.type === "attraction" && content.attractionData) {
-          const attr = content.attractionData;
+
+        // Get type-specific data (using type assertion since getContents doesn't join related tables)
+        const contentWithData = content as any;
+        if (content.type === "attraction" && contentWithData.attractionData) {
+          const attr = contentWithData.attractionData;
           
           // Add intro text block
           if (attr.introText) {
@@ -4353,8 +4362,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
               order: blockOrder++
             });
           }
-        } else if (content.type === "hotel" && content.hotelData) {
-          const hotel = content.hotelData;
+        } else if (content.type === "hotel" && contentWithData.hotelData) {
+          const hotel = contentWithData.hotelData;
           
           // Add description
           if (hotel.description) {
@@ -4387,8 +4396,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
               });
             }
           }
-        } else if (content.type === "article" && content.articleData) {
-          const article = content.articleData;
+        } else if (content.type === "article" && contentWithData.articleData) {
+          const article = contentWithData.articleData;
           
           // Add body content
           if (article.body) {
