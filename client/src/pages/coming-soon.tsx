@@ -243,9 +243,8 @@ export default function ComingSoon() {
   }, [language, t.invalidEmail]);
 
   useEffect(() => {
-    const launchDate = new Date();
-    launchDate.setDate(launchDate.getDate() + 14);
-    launchDate.setHours(0, 0, 0, 0);
+    // Launch date: January 1, 2026 at 00:00:00 (midnight)
+    const launchDate = new Date('2026-01-01T00:00:00');
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
@@ -258,6 +257,8 @@ export default function ComingSoon() {
           minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
           seconds: Math.floor((distance % (1000 * 60)) / 1000)
         });
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
       }
     }, 1000);
 

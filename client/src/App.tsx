@@ -195,6 +195,7 @@ function App() {
             <Switch>
               <Route path="/login" component={Login} />
               <Route path="/access-denied" component={AccessDenied} />
+              <Route path="/coming-soon" component={ComingSoon} />
               <Route path="/search" component={PublicSearch} />
               <Route path="/attractions" component={PublicAttractions} />
               <Route path="/attractions/:slug" component={PublicContentViewer} />
