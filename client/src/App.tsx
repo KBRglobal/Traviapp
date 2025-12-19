@@ -23,6 +23,10 @@ const PublicArticles = lazy(() => import("@/pages/public-articles"));
 const PublicEvents = lazy(() => import("@/pages/public-events"));
 const PublicSearch = lazy(() => import("@/pages/public-search"));
 const PublicOffPlan = lazy(() => import("@/pages/public-off-plan"));
+const OffPlanInvestmentGuide = lazy(() => import("@/pages/off-plan-investment-guide"));
+const OffPlanHowToBuy = lazy(() => import("@/pages/off-plan-how-to-buy"));
+const OffPlanPaymentPlans = lazy(() => import("@/pages/off-plan-payment-plans"));
+const OffPlanBest2025 = lazy(() => import("@/pages/off-plan-best-2025"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -213,6 +217,10 @@ function App() {
               <Route path="/itineraries/:slug" component={PublicContentViewer} />
               <Route path="/dubai-real-estate" component={PublicOffPlan} />
               <Route path="/dubai-off-plan-properties" component={PublicOffPlan} />
+              <Route path="/dubai-off-plan-investment-guide" component={OffPlanInvestmentGuide} />
+              <Route path="/how-to-buy-dubai-off-plan" component={OffPlanHowToBuy} />
+              <Route path="/dubai-off-plan-payment-plans" component={OffPlanPaymentPlans} />
+              <Route path="/best-off-plan-projects-dubai-2025" component={OffPlanBest2025} />
               <Route path="/" component={PublicHome} />
               <Route component={NotFound} />
             </Switch>
