@@ -77,6 +77,8 @@ const CaseStudyRetirementPlanning = lazy(() => import("@/pages/case-study-retire
 const GlossaryHub = lazy(() => import("@/pages/glossary-hub"));
 const DistrictsGateway = lazy(() => import("@/pages/districts-gateway"));
 const DistrictDowntownDubai = lazy(() => import("@/pages/district-downtown-dubai"));
+const DistrictDubaiMarina = lazy(() => import("@/pages/district-dubai-marina"));
+const DistrictJBR = lazy(() => import("@/pages/district-jbr"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -261,6 +263,8 @@ function App() {
               <Route path="/districts/:slug" component={PublicContentViewer} />
               <Route path="/dubai/districts" component={DistrictsGateway} />
               <Route path="/dubai/districts/downtown-dubai" component={DistrictDowntownDubai} />
+              <Route path="/dubai/districts/dubai-marina" component={DistrictDubaiMarina} />
+              <Route path="/dubai/districts/jbr-jumeirah-beach-residence" component={DistrictJBR} />
               <Route path="/transport/:slug" component={PublicContentViewer} />
               <Route path="/articles" component={PublicArticles} />
               <Route path="/articles/:slug" component={PublicContentViewer} />
