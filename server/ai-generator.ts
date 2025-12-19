@@ -144,7 +144,7 @@ export async function generateImage(
       style: options.style || 'natural',
     });
 
-    return response.data[0]?.url || null;
+    return response.data?.[0]?.url || null;
   } catch (error) {
     console.error("Error generating image with DALL-E:", error);
     return null;

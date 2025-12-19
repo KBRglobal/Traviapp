@@ -497,7 +497,7 @@ function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlo
       
     case 'highlights':
       // Ensure items array exists with at least 4 items
-      let items = data.items;
+      let items = (data as any).items;
       if (!Array.isArray(items) || items.length < 4) {
         items = items && Array.isArray(items) ? items : [];
         while (items.length < 4) {
@@ -508,7 +508,7 @@ function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlo
       
     case 'tips':
       // Normalize tips array - accept "tips" or "items"
-      let tips = data.tips || data.items;
+      let tips = (data as any).tips || (data as any).items;
       if (!Array.isArray(tips) || tips.length < 5) {
         tips = tips && Array.isArray(tips) ? tips : [];
         const defaultTips = ['Visit during off-peak hours', 'Book in advance', 'Wear comfortable clothing', 'Stay hydrated', 'Check local customs', 'Download offline maps', 'Carry local currency'];
@@ -520,7 +520,7 @@ function normalizeBlock(type: string, data: Record<string, unknown>): ContentBlo
       
     case 'faq':
       // Normalize FAQ structure - accept "faqs" or "items"
-      let faqs = data.faqs || data.items;
+      let faqs = (data as any).faqs || (data as any).items;
       if (!Array.isArray(faqs) || faqs.length < 3) {
         faqs = faqs && Array.isArray(faqs) ? faqs : [];
         const defaultFaqs = [
@@ -1902,7 +1902,7 @@ export async function registerRoutes(
     try {
       const parsed = insertAffiliateLinkSchema.parse(req.body);
       const link = await storage.createAffiliateLink(parsed);
-      await logAuditEvent(req, "create", "affiliate_link", link.id, `Created affiliate link: ${link.name}`, undefined, { name: link.name, url: link.url });
+      await logAuditEvent(req, "create", "affiliate_link", link.id, `Created affiliate link: ${link.anchor}`, undefined, { anchor: link.anchor, url: link.url });
       res.status(201).json(link);
     } catch (error) {
       console.error("Error creating affiliate link:", error);
@@ -1920,7 +1920,7 @@ export async function registerRoutes(
       if (!link) {
         return res.status(404).json({ error: "Affiliate link not found" });
       }
-      await logAuditEvent(req, "update", "affiliate_link", link.id, `Updated affiliate link: ${link.name}`, existingLink ? { name: existingLink.name, url: existingLink.url } : undefined, { name: link.name, url: link.url });
+      await logAuditEvent(req, "update", "affiliate_link", link.id, `Updated affiliate link: ${link.anchor}`, existingLink ? { anchor: existingLink.anchor, url: existingLink.url } : undefined, { anchor: link.anchor, url: link.url });
       res.json(link);
     } catch (error) {
       console.error("Error updating affiliate link:", error);
@@ -1933,7 +1933,7 @@ export async function registerRoutes(
       const existingLink = await storage.getAffiliateLink(req.params.id);
       await storage.deleteAffiliateLink(req.params.id);
       if (existingLink) {
-        await logAuditEvent(req, "delete", "affiliate_link", req.params.id, `Deleted affiliate link: ${existingLink.name}`, { name: existingLink.name, url: existingLink.url });
+        await logAuditEvent(req, "delete", "affiliate_link", req.params.id, `Deleted affiliate link: ${existingLink.anchor}`, { anchor: existingLink.anchor, url: existingLink.url });
       }
       res.status(204).send();
     } catch (error) {

@@ -85,34 +85,37 @@ export async function requestOtp(email: string): Promise<{ success: boolean; mes
   if (!user.isActive) {
     return { success: false, message: 'This account has been deactivated' };
   }
-  
-  const code = generateOtpCode();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-  
-  await storage.createOtpCode({
-    email,
-    code,
-    expiresAt,
-    used: false,
-  });
-  
-  const sent = await sendOtpEmail(email, code);
-  
-  if (!sent) {
-    return { success: false, message: 'Failed to send verification email' };
-  }
-  
-  return { success: true, message: 'Verification code sent to your email' };
+
+  // TODO: Implement OTP storage methods in DatabaseStorage
+  // const code = generateOtpCode();
+  // const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  // await storage.createOtpCode({
+  //   email,
+  //   code,
+  //   expiresAt,
+  //   used: false,
+  // });
+
+  // const sent = await sendOtpEmail(email, code);
+
+  // if (!sent) {
+  //   return { success: false, message: 'Failed to send verification email' };
+  // }
+
+  // return { success: true, message: 'Verification code sent to your email' };
+  return { success: false, message: 'OTP functionality not yet implemented' };
 }
 
 export async function verifyOtp(email: string, code: string): Promise<{ success: boolean; user?: User; message: string }> {
-  const otp = await storage.getValidOtpCode(email, code);
-  
-  if (!otp) {
-    return { success: false, message: 'Invalid or expired verification code' };
-  }
-  
-  await storage.markOtpAsUsed(otp.id);
+  // TODO: Implement OTP storage methods in DatabaseStorage
+  // const otp = await storage.getValidOtpCode(email, code);
+
+  // if (!otp) {
+  //   return { success: false, message: 'Invalid or expired verification code' };
+  // }
+
+  // await storage.markOtpAsUsed(otp.id);
   
   const user = await storage.getUserByEmail(email);
   
