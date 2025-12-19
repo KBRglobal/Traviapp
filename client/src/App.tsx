@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { initGA } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
+import { LocaleProvider } from "@/lib/i18n/LocaleRouter";
 
 // Lazy load all pages for better performance
 const ComingSoon = lazy(() => import("@/pages/coming-soon"));
@@ -225,6 +226,112 @@ function AdminLayout() {
   );
 }
 
+// All public routes - will be mounted with and without locale prefix
+const publicRoutes = [
+  { path: "/login", component: Login },
+  { path: "/access-denied", component: AccessDenied },
+  { path: "/coming-soon", component: ComingSoon },
+  { path: "/search", component: PublicSearch },
+  { path: "/attractions", component: PublicAttractions },
+  { path: "/attractions/:slug", component: PublicContentViewer },
+  { path: "/hotels", component: PublicHotels },
+  { path: "/hotels/:slug", component: PublicContentViewer },
+  { path: "/dining", component: PublicDining },
+  { path: "/dining/:slug", component: PublicContentViewer },
+  { path: "/districts", component: PublicDistricts },
+  { path: "/districts/:slug", component: PublicContentViewer },
+  { path: "/transport/:slug", component: PublicContentViewer },
+  { path: "/articles", component: PublicArticles },
+  { path: "/articles/:slug", component: PublicContentViewer },
+  { path: "/events", component: PublicEvents },
+  { path: "/events/:slug", component: PublicContentViewer },
+  { path: "/itineraries/:slug", component: PublicContentViewer },
+  { path: "/dubai-real-estate", component: PublicOffPlan },
+  { path: "/dubai-off-plan-properties", component: PublicOffPlan },
+  { path: "/dubai-off-plan-investment-guide", component: OffPlanInvestmentGuide },
+  { path: "/how-to-buy-dubai-off-plan", component: OffPlanHowToBuy },
+  { path: "/dubai-off-plan-payment-plans", component: OffPlanPaymentPlans },
+  { path: "/best-off-plan-projects-dubai-2025", component: OffPlanBest2025 },
+  { path: "/dubai-off-plan-business-bay", component: OffPlanBusinessBay },
+  { path: "/dubai-off-plan-marina", component: OffPlanDubaiMarina },
+  { path: "/dubai-off-plan-jvc", component: OffPlanJVC },
+  { path: "/dubai-off-plan-palm-jumeirah", component: OffPlanPalmJumeirah },
+  { path: "/dubai-off-plan-creek-harbour", component: OffPlanCreekHarbour },
+  { path: "/dubai-off-plan-al-furjan", component: OffPlanAlFurjan },
+  { path: "/dubai-off-plan-villas", component: OffPlanVillas },
+  { path: "/off-plan-emaar", component: OffPlanEmaar },
+  { path: "/off-plan-damac", component: OffPlanDamac },
+  { path: "/off-plan-nakheel", component: OffPlanNakheel },
+  { path: "/off-plan-meraas", component: OffPlanMeraas },
+  { path: "/off-plan-sobha", component: OffPlanSobha },
+  { path: "/off-plan-crypto-payments", component: OffPlanCryptoPayments },
+  { path: "/off-plan-usdt", component: OffPlanUSDT },
+  { path: "/off-plan-golden-visa", component: OffPlanGoldenVisa },
+  { path: "/off-plan-post-handover", component: OffPlanPostHandover },
+  { path: "/off-plan-escrow", component: OffPlanEscrow },
+  { path: "/off-plan-vs-ready", component: OffPlanVsReady },
+  { path: "/compare-off-plan-vs-ready", component: CompareOffPlanVsReady },
+  { path: "/compare-jvc-vs-dubai-south", component: CompareJVCvsDubaiSouth },
+  { path: "/compare-emaar-vs-damac", component: CompareEmaarVsDamac },
+  { path: "/tools-roi-calculator", component: ToolsROICalculator },
+  { path: "/tools-payment-calculator", component: ToolsPaymentCalculator },
+  { path: "/tools-affordability-calculator", component: ToolsAffordabilityCalculator },
+  { path: "/compare-downtown-vs-marina", component: CompareDowntownVsMarina },
+  { path: "/case-study-jvc-investor", component: CaseStudyInvestorJVC },
+  { path: "/case-study-crypto-buyer", component: CaseStudyCryptoBuyer },
+  { path: "/dubai-roi-rental-yields", component: PillarROIRentalYields },
+  { path: "/dubai-legal-security-guide", component: PillarLegalSecurity },
+  { path: "/case-study-golden-visa", component: CaseStudyGoldenVisa },
+  { path: "/compare-60-40-vs-80-20", component: Compare6040vs8020 },
+  { path: "/compare-sobha-vs-meraas", component: CompareSobhaVsMeraas },
+  { path: "/compare-crypto-vs-bank-transfer", component: CompareCryptoVsBankTransfer },
+  { path: "/case-study-expat-family", component: CaseStudyExpatFamily },
+  { path: "/case-study-investor-flip", component: CaseStudyInvestorFlip },
+  { path: "/tools-currency-converter", component: ToolsCurrencyConverter },
+  { path: "/compare-business-bay-vs-jlt", component: CompareBusinessBayVsJLT },
+  { path: "/compare-new-vs-resale", component: CompareNewVsResale },
+  { path: "/tools-fees-calculator", component: ToolsStampDutyCalculator },
+  { path: "/compare-nakheel-vs-azizi", component: CompareNakheelVsAzizi },
+  { path: "/compare-villa-vs-apartment", component: CompareVillaVsApartment },
+  { path: "/tools-rental-yield-calculator", component: ToolsRentalYieldCalculator },
+  { path: "/tools-mortgage-calculator", component: ToolsMortgageCalculator },
+  { path: "/compare-studio-vs-1bed", component: CompareStudioVs1Bed },
+  { path: "/case-study-portfolio-diversification", component: CaseStudyPortfolioDiversification },
+  { path: "/case-study-off-plan-launch", component: CaseStudyOffPlanLaunch },
+  { path: "/case-study-retirement-planning", component: CaseStudyRetirementPlanning },
+  { path: "/glossary", component: GlossaryHub },
+];
+
+// Locale codes for URL prefixes
+const LOCALE_PREFIXES = ["ar", "hi", "ur", "ru", "fa", "zh", "fr", "de", "it", "es", "tr"];
+
+function PublicRouter() {
+  return (
+    <Switch>
+      {/* Routes with locale prefix (e.g., /ar/attractions, /hi/hotels) */}
+      {LOCALE_PREFIXES.map((locale) => (
+        <Route key={`${locale}-home`} path={`/${locale}`} component={PublicHome} />
+      ))}
+      {LOCALE_PREFIXES.flatMap((locale) =>
+        publicRoutes.map((route) => (
+          <Route
+            key={`${locale}-${route.path}`}
+            path={`/${locale}${route.path}`}
+            component={route.component}
+          />
+        ))
+      )}
+
+      {/* Routes without locale prefix (English default) */}
+      {publicRoutes.map((route) => (
+        <Route key={route.path} path={route.path} component={route.component} />
+      ))}
+      <Route path="/" component={PublicHome} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
 function App() {
   const [location] = useLocation();
   const isAdminRoute = location.startsWith("/admin");
@@ -239,91 +346,18 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Suspense fallback={<PageLoader />}>
-          {isAdminRoute ? (
-            <AdminLayout />
-          ) : (
-            <Switch>
-              <Route path="/login" component={Login} />
-              <Route path="/access-denied" component={AccessDenied} />
-              <Route path="/coming-soon" component={ComingSoon} />
-              <Route path="/search" component={PublicSearch} />
-              <Route path="/attractions" component={PublicAttractions} />
-              <Route path="/attractions/:slug" component={PublicContentViewer} />
-              <Route path="/hotels" component={PublicHotels} />
-              <Route path="/hotels/:slug" component={PublicContentViewer} />
-              <Route path="/dining" component={PublicDining} />
-              <Route path="/dining/:slug" component={PublicContentViewer} />
-              <Route path="/districts" component={PublicDistricts} />
-              <Route path="/districts/:slug" component={PublicContentViewer} />
-              <Route path="/transport/:slug" component={PublicContentViewer} />
-              <Route path="/articles" component={PublicArticles} />
-              <Route path="/articles/:slug" component={PublicContentViewer} />
-              <Route path="/events" component={PublicEvents} />
-              <Route path="/events/:slug" component={PublicContentViewer} />
-              <Route path="/itineraries/:slug" component={PublicContentViewer} />
-              <Route path="/dubai-real-estate" component={PublicOffPlan} />
-              <Route path="/dubai-off-plan-properties" component={PublicOffPlan} />
-              <Route path="/dubai-off-plan-investment-guide" component={OffPlanInvestmentGuide} />
-              <Route path="/how-to-buy-dubai-off-plan" component={OffPlanHowToBuy} />
-              <Route path="/dubai-off-plan-payment-plans" component={OffPlanPaymentPlans} />
-              <Route path="/best-off-plan-projects-dubai-2025" component={OffPlanBest2025} />
-              <Route path="/dubai-off-plan-business-bay" component={OffPlanBusinessBay} />
-              <Route path="/dubai-off-plan-marina" component={OffPlanDubaiMarina} />
-              <Route path="/dubai-off-plan-jvc" component={OffPlanJVC} />
-              <Route path="/dubai-off-plan-palm-jumeirah" component={OffPlanPalmJumeirah} />
-              <Route path="/dubai-off-plan-creek-harbour" component={OffPlanCreekHarbour} />
-              <Route path="/dubai-off-plan-al-furjan" component={OffPlanAlFurjan} />
-              <Route path="/dubai-off-plan-villas" component={OffPlanVillas} />
-              <Route path="/off-plan-emaar" component={OffPlanEmaar} />
-              <Route path="/off-plan-damac" component={OffPlanDamac} />
-              <Route path="/off-plan-nakheel" component={OffPlanNakheel} />
-              <Route path="/off-plan-meraas" component={OffPlanMeraas} />
-              <Route path="/off-plan-sobha" component={OffPlanSobha} />
-              <Route path="/off-plan-crypto-payments" component={OffPlanCryptoPayments} />
-              <Route path="/off-plan-usdt" component={OffPlanUSDT} />
-              <Route path="/off-plan-golden-visa" component={OffPlanGoldenVisa} />
-              <Route path="/off-plan-post-handover" component={OffPlanPostHandover} />
-              <Route path="/off-plan-escrow" component={OffPlanEscrow} />
-              <Route path="/off-plan-vs-ready" component={OffPlanVsReady} />
-              <Route path="/compare-off-plan-vs-ready" component={CompareOffPlanVsReady} />
-              <Route path="/compare-jvc-vs-dubai-south" component={CompareJVCvsDubaiSouth} />
-              <Route path="/compare-emaar-vs-damac" component={CompareEmaarVsDamac} />
-              <Route path="/tools-roi-calculator" component={ToolsROICalculator} />
-              <Route path="/tools-payment-calculator" component={ToolsPaymentCalculator} />
-              <Route path="/tools-affordability-calculator" component={ToolsAffordabilityCalculator} />
-              <Route path="/compare-downtown-vs-marina" component={CompareDowntownVsMarina} />
-              <Route path="/case-study-jvc-investor" component={CaseStudyInvestorJVC} />
-              <Route path="/case-study-crypto-buyer" component={CaseStudyCryptoBuyer} />
-              <Route path="/dubai-roi-rental-yields" component={PillarROIRentalYields} />
-              <Route path="/dubai-legal-security-guide" component={PillarLegalSecurity} />
-              <Route path="/case-study-golden-visa" component={CaseStudyGoldenVisa} />
-              <Route path="/compare-60-40-vs-80-20" component={Compare6040vs8020} />
-              <Route path="/compare-sobha-vs-meraas" component={CompareSobhaVsMeraas} />
-              <Route path="/compare-crypto-vs-bank-transfer" component={CompareCryptoVsBankTransfer} />
-              <Route path="/case-study-expat-family" component={CaseStudyExpatFamily} />
-              <Route path="/case-study-investor-flip" component={CaseStudyInvestorFlip} />
-              <Route path="/tools-currency-converter" component={ToolsCurrencyConverter} />
-              <Route path="/compare-business-bay-vs-jlt" component={CompareBusinessBayVsJLT} />
-              <Route path="/compare-new-vs-resale" component={CompareNewVsResale} />
-              <Route path="/tools-fees-calculator" component={ToolsStampDutyCalculator} />
-              <Route path="/compare-nakheel-vs-azizi" component={CompareNakheelVsAzizi} />
-              <Route path="/compare-villa-vs-apartment" component={CompareVillaVsApartment} />
-              <Route path="/tools-rental-yield-calculator" component={ToolsRentalYieldCalculator} />
-              <Route path="/tools-mortgage-calculator" component={ToolsMortgageCalculator} />
-              <Route path="/compare-studio-vs-1bed" component={CompareStudioVs1Bed} />
-              <Route path="/case-study-portfolio-diversification" component={CaseStudyPortfolioDiversification} />
-              <Route path="/case-study-off-plan-launch" component={CaseStudyOffPlanLaunch} />
-              <Route path="/case-study-retirement-planning" component={CaseStudyRetirementPlanning} />
-              <Route path="/glossary" component={GlossaryHub} />
-              <Route path="/" component={PublicHome} />
-              <Route component={NotFound} />
-            </Switch>
-          )}
-        </Suspense>
-        <Toaster />
-      </TooltipProvider>
+      <LocaleProvider>
+        <TooltipProvider>
+          <Suspense fallback={<PageLoader />}>
+            {isAdminRoute ? (
+              <AdminLayout />
+            ) : (
+              <PublicRouter />
+            )}
+          </Suspense>
+          <Toaster />
+        </TooltipProvider>
+      </LocaleProvider>
     </QueryClientProvider>
   );
 }

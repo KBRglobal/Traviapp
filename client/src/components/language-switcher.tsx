@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useLocation } from "wouter";
 import { Globe, Check, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { SUPPORTED_LOCALES, RTL_LOCALES, type Locale } from "@shared/schema";
-import { changeLanguage, getCurrentLocale } from "@/lib/i18n/config";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 
 interface LanguageSwitcherProps {
   variant?: "default" | "compact" | "icon-only";
@@ -44,6 +44,17 @@ const getFlag = (locale: Locale): string => {
   return flagMap[locale] || "🌐";
 };
 
+// Extract path without locale prefix
+function getPathWithoutLocale(path: string): string {
+  const segments = path.split("/").filter(Boolean);
+  const locales = SUPPORTED_LOCALES.map((l) => l.code);
+
+  if (segments.length > 0 && locales.includes(segments[0] as Locale)) {
+    return "/" + segments.slice(1).join("/") || "/";
+  }
+  return path;
+}
+
 export function LanguageSwitcher({
   variant = "default",
   showFlag = true,
@@ -51,9 +62,9 @@ export function LanguageSwitcher({
   tierFilter,
   className = "",
 }: LanguageSwitcherProps) {
-  const { i18n } = useTranslation();
+  const [location, setLocation] = useLocation();
+  const { locale: currentLocale } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
-  const currentLocale = getCurrentLocale();
 
   // Filter locales based on tier if specified
   let locales = SUPPORTED_LOCALES;
@@ -75,10 +86,30 @@ export function LanguageSwitcher({
 
   const currentLocaleInfo = SUPPORTED_LOCALES.find((l) => l.code === currentLocale);
 
-  const handleLanguageChange = async (locale: Locale) => {
-    await changeLanguage(locale);
+  const handleLanguageChange = (newLocale: Locale) => {
     setIsOpen(false);
-    // Language is saved in localStorage, no URL change needed
+
+    // Get path without current locale prefix
+    const basePath = getPathWithoutLocale(location);
+
+    // Create new URL with new locale prefix
+    let newPath: string;
+    if (newLocale === "en") {
+      // English is default - no prefix
+      newPath = basePath || "/";
+    } else {
+      newPath = `/${newLocale}${basePath === "/" ? "" : basePath}`;
+    }
+
+    // Save locale preference
+    localStorage.setItem("i18nextLng", newLocale);
+
+    // Update document direction for RTL languages
+    document.documentElement.lang = newLocale;
+    document.documentElement.dir = RTL_LOCALES.includes(newLocale) ? "rtl" : "ltr";
+
+    // Navigate to new URL
+    setLocation(newPath);
   };
 
   if (variant === "icon-only") {
@@ -202,12 +233,30 @@ export function LanguageSelectorMobile({
 }: {
   className?: string;
 }) {
-  const currentLocale = getCurrentLocale();
+  const [location, setLocation] = useLocation();
+  const { locale: currentLocale } = useLocale();
+
+  const handleChange = (newLocale: Locale) => {
+    const basePath = getPathWithoutLocale(location);
+
+    let newPath: string;
+    if (newLocale === "en") {
+      newPath = basePath || "/";
+    } else {
+      newPath = `/${newLocale}${basePath === "/" ? "" : basePath}`;
+    }
+
+    localStorage.setItem("i18nextLng", newLocale);
+    document.documentElement.lang = newLocale;
+    document.documentElement.dir = RTL_LOCALES.includes(newLocale) ? "rtl" : "ltr";
+
+    setLocation(newPath);
+  };
 
   return (
     <select
       value={currentLocale}
-      onChange={(e) => changeLanguage(e.target.value as Locale)}
+      onChange={(e) => handleChange(e.target.value as Locale)}
       className={`bg-transparent border rounded px-2 py-1 text-sm ${className}`}
     >
       {SUPPORTED_LOCALES.map((locale) => (
