@@ -473,16 +473,17 @@ export const contentViews = pgTable("content_views", {
 
 // Audit action type enum
 export const auditActionTypeEnum = pgEnum("audit_action_type", [
-  "create", "update", "delete", "publish", "unpublish", 
+  "create", "update", "delete", "publish", "unpublish",
   "submit_for_review", "approve", "reject", "login", "logout",
   "user_create", "user_update", "user_delete", "role_change",
-  "settings_change", "media_upload", "media_delete"
+  "settings_change", "media_upload", "media_delete", "restore"
 ]);
 
 // Audit entity type enum
 export const auditEntityTypeEnum = pgEnum("audit_entity_type", [
-  "content", "user", "media", "settings", "rss_feed", 
-  "affiliate_link", "translation", "session"
+  "content", "user", "media", "settings", "rss_feed",
+  "affiliate_link", "translation", "session", "tag", "cluster",
+  "campaign", "newsletter_subscriber"
 ]);
 
 // Audit Logs table - immutable append-only logging

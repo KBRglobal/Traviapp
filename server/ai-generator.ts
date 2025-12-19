@@ -217,7 +217,7 @@ export async function generateContentImages(
     });
 
     const contentResults = await Promise.all(contentPromises);
-    images.push(...contentResults.filter((img): img is GeneratedImage => img !== null));
+    images.push(...contentResults.filter((img): img is NonNullable<typeof img> => img !== null) as GeneratedImage[]);
   }
 
   return images;
