@@ -27,6 +27,13 @@ const OffPlanInvestmentGuide = lazy(() => import("@/pages/off-plan-investment-gu
 const OffPlanHowToBuy = lazy(() => import("@/pages/off-plan-how-to-buy"));
 const OffPlanPaymentPlans = lazy(() => import("@/pages/off-plan-payment-plans"));
 const OffPlanBest2025 = lazy(() => import("@/pages/off-plan-best-2025"));
+const OffPlanBusinessBay = lazy(() => import("@/pages/off-plan-business-bay"));
+const OffPlanDubaiMarina = lazy(() => import("@/pages/off-plan-dubai-marina"));
+const OffPlanJVC = lazy(() => import("@/pages/off-plan-jvc"));
+const OffPlanPalmJumeirah = lazy(() => import("@/pages/off-plan-palm-jumeirah"));
+const OffPlanCreekHarbour = lazy(() => import("@/pages/off-plan-creek-harbour"));
+const OffPlanAlFurjan = lazy(() => import("@/pages/off-plan-al-furjan"));
+const OffPlanVillas = lazy(() => import("@/pages/off-plan-villas"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -221,6 +228,13 @@ function App() {
               <Route path="/how-to-buy-dubai-off-plan" component={OffPlanHowToBuy} />
               <Route path="/dubai-off-plan-payment-plans" component={OffPlanPaymentPlans} />
               <Route path="/best-off-plan-projects-dubai-2025" component={OffPlanBest2025} />
+              <Route path="/dubai-off-plan-business-bay" component={OffPlanBusinessBay} />
+              <Route path="/dubai-off-plan-marina" component={OffPlanDubaiMarina} />
+              <Route path="/dubai-off-plan-jvc" component={OffPlanJVC} />
+              <Route path="/dubai-off-plan-palm-jumeirah" component={OffPlanPalmJumeirah} />
+              <Route path="/dubai-off-plan-creek-harbour" component={OffPlanCreekHarbour} />
+              <Route path="/dubai-off-plan-al-furjan" component={OffPlanAlFurjan} />
+              <Route path="/dubai-off-plan-villas" component={OffPlanVillas} />
               <Route path="/" component={PublicHome} />
               <Route component={NotFound} />
             </Switch>
