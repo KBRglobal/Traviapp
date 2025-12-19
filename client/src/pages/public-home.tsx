@@ -30,12 +30,12 @@ const dubaiImages = [
 ];
 
 const activityCategories = [
-  { title: "Desert Safari", image: "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=400&h=300&fit=crop", count: "50+ tours" },
-  { title: "Beach & Water", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop", count: "30+ activities" },
-  { title: "City Tours", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", count: "40+ tours" },
-  { title: "Adventure", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=300&fit=crop", count: "25+ experiences" },
-  { title: "Dining", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop", count: "100+ restaurants" },
-  { title: "Shopping", image: "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=400&h=300&fit=crop", count: "20+ malls" },
+  { title: "Attractions", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", type: "attraction" },
+  { title: "Hotels", image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400&h=300&fit=crop", type: "hotel" },
+  { title: "Dining", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop", type: "dining" },
+  { title: "Districts", image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400&h=300&fit=crop", type: "district" },
+  { title: "Events", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=300&fit=crop", type: "event" },
+  { title: "Articles", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop", type: "article" },
 ];
 
 const CloudSVG = ({ className = "", size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) => {
@@ -232,21 +232,15 @@ export default function PublicHome() {
               </div>
             </form>
 
-            {/* Quick Stats */}
-            <div className="flex flex-wrap justify-center gap-8 mt-12">
-              <div className="flex items-center gap-2 text-[#1E1B4B]">
-                <MapPin className="w-5 h-5 text-[#EC4899]" />
-                <span className="font-medium">500+ Places</span>
+            {/* Quick Stats - Dynamic based on content */}
+            {publishedContent && publishedContent.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-8 mt-12">
+                <div className="flex items-center gap-2 text-[#1E1B4B]">
+                  <MapPin className="w-5 h-5 text-[#EC4899]" />
+                  <span className="font-medium">{publishedContent.length} Places</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-[#1E1B4B]">
-                <Star className="w-5 h-5 text-[#FACC15] fill-[#FACC15]" />
-                <span className="font-medium">4.9 Rating</span>
-              </div>
-              <div className="flex items-center gap-2 text-[#1E1B4B]">
-                <Users className="w-5 h-5 text-[#6C5CE7]" />
-                <span className="font-medium">50K+ Travelers</span>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Wavy Divider */}
@@ -278,7 +272,7 @@ export default function PublicHome() {
               {activityCategories.map((category, index) => (
                 <Link
                   key={index}
-                  href={`/search?q=${encodeURIComponent(category.title)}`}
+                  href={`/${category.type}s`}
                   className="group relative overflow-hidden rounded-2xl aspect-[3/4] cursor-pointer"
                   data-testid={`activity-${category.title.toLowerCase().replace(/\s+/g, '-')}`}
                 >
@@ -290,7 +284,6 @@ export default function PublicHome() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-4">
                     <h3 className="text-white font-semibold text-lg mb-1">{category.title}</h3>
-                    <span className="text-white/70 text-sm">{category.count}</span>
                   </div>
                 </Link>
               ))}

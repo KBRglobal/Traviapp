@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 
 // Lazy load all pages for better performance
 const ComingSoon = lazy(() => import("@/pages/coming-soon"));
+const PublicHome = lazy(() => import("@/pages/public-home"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -194,7 +195,7 @@ function App() {
               <Route path="/articles/:slug" component={PublicContentViewer} />
               <Route path="/events/:slug" component={PublicContentViewer} />
               <Route path="/itineraries/:slug" component={PublicContentViewer} />
-              <Route path="/">{() => <Redirect to="/admin" />}</Route>
+              <Route path="/" component={PublicHome} />
               <Route component={NotFound} />
             </Switch>
           )}
