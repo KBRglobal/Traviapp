@@ -194,7 +194,7 @@ function App() {
               <Route path="/articles/:slug" component={PublicContentViewer} />
               <Route path="/events/:slug" component={PublicContentViewer} />
               <Route path="/itineraries/:slug" component={PublicContentViewer} />
-              <Route path="/" component={ComingSoon} />
+              <Route path="/">{() => <Redirect to="/admin" />}</Route>
               <Route component={NotFound} />
             </Switch>
           )}
