@@ -5813,9 +5813,19 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const timestamp = Date.now();
       const filename = `${slugify(topic)}-${imageType || "hero"}-${timestamp}.jpg`;
 
+      // Persist to Object Storage (DALL-E URLs expire after ~1 hour)
+      let persistedUrl = imageUrl;
+      const storedUrl = await persistImageToStorage(imageUrl, `image-engine/${filename}`);
+      if (storedUrl) {
+        persistedUrl = storedUrl;
+        console.log(`Image persisted to Object Storage: ${storedUrl}`);
+      } else {
+        console.warn("Could not persist image to Object Storage, using temporary DALL-E URL");
+      }
+
       const imageData = {
         filename,
-        url: imageUrl,
+        url: persistedUrl,
         topic,
         category: category || "general",
         imageType: imageType || "hero",
