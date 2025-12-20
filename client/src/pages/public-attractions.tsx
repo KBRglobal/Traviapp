@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { 
-  Search, MapPin, Star, Users, Sparkles, Moon, 
+import {
+  Search, MapPin, Star, Users, Sparkles, Moon,
   Heart, Gem, Compass, Mountain, Building2, Ship,
   Camera, TreePine, Waves, ChevronRight, ArrowRight,
   Clock, Sun, Bookmark, Map, Zap
@@ -14,6 +14,7 @@ import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 
 const EXPERIENCE_TYPES = [
   { 
@@ -306,14 +307,21 @@ function CategoryCard({ category }: { category: typeof CATEGORIES[0] }) {
 export default function PublicAttractions() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeExperience, setActiveExperience] = useState<string | null>(null);
-  
+  const { t, locale, isRTL, localePath } = useLocale();
+
   useDocumentMeta({
-    title: "Dubai Experiences & Attractions | Travi - Dubai Travel Guide",
-    description: "Discover unforgettable experiences in Dubai. From iconic landmarks to hidden adventures, find the perfect way to explore the city of dreams.",
-    ogTitle: "Dubai Experiences & Attractions | Travi",
-    ogDescription: "Explore iconic landmarks, thrilling adventures, and unique experiences in Dubai.",
+    title: `${t("attractions.pageTitle")} | Travi - Dubai Travel Guide`,
+    description: t("attractions.pageSubtitle"),
+    ogTitle: `${t("attractions.pageTitle")} | Travi`,
+    ogDescription: t("attractions.pageSubtitle"),
     ogType: "website",
   });
+
+  // Get translated experience types
+  const getExperienceTitle = (id: string) => {
+    const key = `attractions.categories.${id}`;
+    return t(key);
+  };
   
   const { data: allContent, isLoading } = useQuery<ContentWithRelations[]>({
     queryKey: ["/api/public/contents?includeExtensions=true"],
@@ -357,7 +365,7 @@ export default function PublicAttractions() {
   };
 
   return (
-    <div className="bg-background min-h-screen flex flex-col">
+    <div className={`bg-background min-h-screen flex flex-col ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <PublicNav />
 
       {/* SECTION 1: Hero */}
@@ -374,13 +382,10 @@ export default function PublicAttractions() {
         
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-16">
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
-            Experiences that
-            <span className="block bg-gradient-to-r from-[#FF9327] to-[#F94498] bg-clip-text text-transparent">
-              take your breath away
-            </span>
+            {t("attractions.pageTitle")}
           </h1>
           <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto">
-            From sky-high adventures to ancient souks, discover the moments that make Dubai unforgettable.
+            {t("attractions.pageSubtitle")}
           </p>
           
           <div className="max-w-xl mx-auto">
@@ -388,7 +393,7 @@ export default function PublicAttractions() {
               <Search className="w-5 h-5 text-white/60 ml-3" />
               <input
                 type="text"
-                placeholder="Sky views, desert adventure, family fun..."
+                placeholder={t("nav.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-transparent outline-none py-3 text-white placeholder:text-white/50"

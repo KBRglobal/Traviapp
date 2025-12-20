@@ -102,6 +102,74 @@ export const translations = {
       madeWith: "Made with",
       inDubai: "in Dubai",
     },
+    // Attractions
+    attractions: {
+      pageTitle: "Explore Dubai Attractions",
+      pageSubtitle: "Discover the best experiences in Dubai",
+      categories: {
+        iconic: "Iconic Dubai",
+        family: "Family & Kids",
+        thrill: "Thrill & Adventure",
+        culture: "Culture & History",
+        night: "Night & After Dark",
+        relax: "Relax & Scenic",
+        budget: "Budget Friendly",
+        luxury: "Luxury Experiences",
+      },
+      viewDetails: "View Details",
+      allAttractions: "All Attractions",
+    },
+    // Districts
+    districts: {
+      pageTitle: "Dubai Districts",
+      pageSubtitle: "Explore Dubai's diverse neighborhoods",
+      explore: "Explore District",
+      viewProperties: "View Properties",
+      aboutDistrict: "About This District",
+      highlights: "Highlights",
+      nearbyAttractions: "Nearby Attractions",
+      gettingThere: "Getting There",
+      propertyPrices: "Property Prices",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "Dubai Hotels",
+      pageSubtitle: "Find your perfect stay",
+      stars: "Stars",
+      perNight: "per night",
+      checkAvailability: "Check Availability",
+      amenities: "Amenities",
+      reviews: "Reviews",
+      allHotels: "All Hotels",
+    },
+    // Dining
+    dining: {
+      pageTitle: "Dubai Dining",
+      pageSubtitle: "Discover culinary experiences",
+      cuisine: "Cuisine",
+      priceRange: "Price Range",
+      reservation: "Make Reservation",
+      menu: "View Menu",
+      allRestaurants: "All Restaurants",
+    },
+    // Events
+    events: {
+      pageTitle: "Dubai Events",
+      pageSubtitle: "What's happening in Dubai",
+      upcoming: "Upcoming Events",
+      thisWeek: "This Week",
+      thisMonth: "This Month",
+      buyTickets: "Buy Tickets",
+      freeEntry: "Free Entry",
+    },
+    // Search
+    search: {
+      pageTitle: "Search Dubai",
+      noResults: "No results found",
+      tryAgain: "Try different keywords",
+      results: "results",
+      searchIn: "Search in",
+    },
   },
 
   ar: {
@@ -198,6 +266,74 @@ export const translations = {
       madeWith: "صنع بـ",
       inDubai: "في دبي",
     },
+    // Attractions
+    attractions: {
+      pageTitle: "استكشف معالم دبي السياحية",
+      pageSubtitle: "اكتشف أفضل التجارب في دبي",
+      categories: {
+        iconic: "دبي الأيقونية",
+        family: "العائلة والأطفال",
+        thrill: "الإثارة والمغامرة",
+        culture: "الثقافة والتاريخ",
+        night: "الليل وما بعد الغروب",
+        relax: "الاسترخاء والمناظر الطبيعية",
+        budget: "صديقة للميزانية",
+        luxury: "التجارب الفاخرة",
+      },
+      viewDetails: "عرض التفاصيل",
+      allAttractions: "جميع المعالم",
+    },
+    // Districts
+    districts: {
+      pageTitle: "مناطق دبي",
+      pageSubtitle: "استكشف أحياء دبي المتنوعة",
+      explore: "استكشف المنطقة",
+      viewProperties: "عرض العقارات",
+      aboutDistrict: "عن هذه المنطقة",
+      highlights: "المميزات",
+      nearbyAttractions: "المعالم القريبة",
+      gettingThere: "كيفية الوصول",
+      propertyPrices: "أسعار العقارات",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "فنادق دبي",
+      pageSubtitle: "اعثر على إقامتك المثالية",
+      stars: "نجوم",
+      perNight: "في الليلة",
+      checkAvailability: "تحقق من التوافر",
+      amenities: "المرافق",
+      reviews: "التقييمات",
+      allHotels: "جميع الفنادق",
+    },
+    // Dining
+    dining: {
+      pageTitle: "مطاعم دبي",
+      pageSubtitle: "اكتشف تجارب الطهي",
+      cuisine: "المطبخ",
+      priceRange: "نطاق السعر",
+      reservation: "إجراء حجز",
+      menu: "عرض القائمة",
+      allRestaurants: "جميع المطاعم",
+    },
+    // Events
+    events: {
+      pageTitle: "فعاليات دبي",
+      pageSubtitle: "ما يحدث في دبي",
+      upcoming: "الفعاليات القادمة",
+      thisWeek: "هذا الأسبوع",
+      thisMonth: "هذا الشهر",
+      buyTickets: "شراء التذاكر",
+      freeEntry: "دخول مجاني",
+    },
+    // Search
+    search: {
+      pageTitle: "البحث في دبي",
+      noResults: "لم يتم العثور على نتائج",
+      tryAgain: "جرب كلمات مختلفة",
+      results: "نتائج",
+      searchIn: "البحث في",
+    },
   },
 
   hi: {
@@ -293,6 +429,74 @@ export const translations = {
       allRightsReserved: "सर्वाधिकार सुरक्षित",
       madeWith: "बनाया गया",
       inDubai: "दुबई में",
+    },
+    // Attractions
+    attractions: {
+      pageTitle: "दुबई आकर्षण देखें",
+      pageSubtitle: "दुबई में सर्वोत्तम अनुभव खोजें",
+      categories: {
+        iconic: "प्रतिष्ठित दुबई",
+        family: "परिवार और बच्चे",
+        thrill: "रोमांच और साहसिक",
+        culture: "संस्कृति और इतिहास",
+        night: "रात और डार्क के बाद",
+        relax: "आराम और दृश्य",
+        budget: "बजट के अनुकूल",
+        luxury: "लक्जरी अनुभव",
+      },
+      viewDetails: "विवरण देखें",
+      allAttractions: "सभी आकर्षण",
+    },
+    // Districts
+    districts: {
+      pageTitle: "दुबई जिले",
+      pageSubtitle: "दुबई के विविध पड़ोस का अन्वेषण करें",
+      explore: "जिला देखें",
+      viewProperties: "संपत्तियां देखें",
+      aboutDistrict: "इस जिले के बारे में",
+      highlights: "मुख्य बातें",
+      nearbyAttractions: "पास के आकर्षण",
+      gettingThere: "वहां कैसे पहुंचे",
+      propertyPrices: "संपत्ति की कीमतें",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "दुबई होटल",
+      pageSubtitle: "अपना परफेक्ट ठहराव खोजें",
+      stars: "सितारे",
+      perNight: "प्रति रात",
+      checkAvailability: "उपलब्धता जांचें",
+      amenities: "सुविधाएं",
+      reviews: "समीक्षाएं",
+      allHotels: "सभी होटल",
+    },
+    // Dining
+    dining: {
+      pageTitle: "दुबई डाइनिंग",
+      pageSubtitle: "पाक अनुभव खोजें",
+      cuisine: "व्यंजन",
+      priceRange: "मूल्य सीमा",
+      reservation: "आरक्षण करें",
+      menu: "मेनू देखें",
+      allRestaurants: "सभी रेस्टोरेंट",
+    },
+    // Events
+    events: {
+      pageTitle: "दुबई इवेंट्स",
+      pageSubtitle: "दुबई में क्या हो रहा है",
+      upcoming: "आगामी इवेंट्स",
+      thisWeek: "इस सप्ताह",
+      thisMonth: "इस महीने",
+      buyTickets: "टिकट खरीदें",
+      freeEntry: "मुफ्त प्रवेश",
+    },
+    // Search
+    search: {
+      pageTitle: "दुबई खोजें",
+      noResults: "कोई परिणाम नहीं मिला",
+      tryAgain: "विभिन्न कीवर्ड आज़माएं",
+      results: "परिणाम",
+      searchIn: "में खोजें",
     },
   },
 
@@ -391,6 +595,74 @@ export const translations = {
       madeWith: "بنایا گیا",
       inDubai: "دبئی میں",
     },
+    // Attractions
+    attractions: {
+      pageTitle: "دبئی کے پرکشش مقامات دیکھیں",
+      pageSubtitle: "دبئی میں بہترین تجربات دریافت کریں",
+      categories: {
+        iconic: "مشہور دبئی",
+        family: "خاندان اور بچے",
+        thrill: "سنسنی اور مہم جوئی",
+        culture: "ثقافت اور تاریخ",
+        night: "رات اور اندھیرے کے بعد",
+        relax: "آرام اور قدرتی مناظر",
+        budget: "بجٹ دوستانہ",
+        luxury: "لگژری تجربات",
+      },
+      viewDetails: "تفصیلات دیکھیں",
+      allAttractions: "تمام پرکشش مقامات",
+    },
+    // Districts
+    districts: {
+      pageTitle: "دبئی کے اضلاع",
+      pageSubtitle: "دبئی کے متنوع محلوں کو دریافت کریں",
+      explore: "ضلع دیکھیں",
+      viewProperties: "پراپرٹیز دیکھیں",
+      aboutDistrict: "اس ضلع کے بارے میں",
+      highlights: "نمایاں خصوصیات",
+      nearbyAttractions: "قریبی پرکشش مقامات",
+      gettingThere: "وہاں کیسے پہنچیں",
+      propertyPrices: "پراپرٹی کی قیمتیں",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "دبئی ہوٹل",
+      pageSubtitle: "اپنا بہترین قیام تلاش کریں",
+      stars: "ستارے",
+      perNight: "فی رات",
+      checkAvailability: "دستیابی چیک کریں",
+      amenities: "سہولیات",
+      reviews: "جائزے",
+      allHotels: "تمام ہوٹل",
+    },
+    // Dining
+    dining: {
+      pageTitle: "دبئی کھانے",
+      pageSubtitle: "کھانے کے تجربات دریافت کریں",
+      cuisine: "کھانا",
+      priceRange: "قیمت کی حد",
+      reservation: "ریزرویشن کریں",
+      menu: "مینو دیکھیں",
+      allRestaurants: "تمام ریستوران",
+    },
+    // Events
+    events: {
+      pageTitle: "دبئی کی تقریبات",
+      pageSubtitle: "دبئی میں کیا ہو رہا ہے",
+      upcoming: "آنے والی تقریبات",
+      thisWeek: "اس ہفتے",
+      thisMonth: "اس مہینے",
+      buyTickets: "ٹکٹ خریدیں",
+      freeEntry: "مفت داخلہ",
+    },
+    // Search
+    search: {
+      pageTitle: "دبئی تلاش کریں",
+      noResults: "کوئی نتیجہ نہیں ملا",
+      tryAgain: "مختلف الفاظ آزمائیں",
+      results: "نتائج",
+      searchIn: "میں تلاش کریں",
+    },
   },
 
   ru: {
@@ -486,6 +758,74 @@ export const translations = {
       allRightsReserved: "Все права защищены",
       madeWith: "Сделано с",
       inDubai: "в Дубае",
+    },
+    // Attractions
+    attractions: {
+      pageTitle: "Достопримечательности Дубая",
+      pageSubtitle: "Откройте лучшие впечатления в Дубае",
+      categories: {
+        iconic: "Знаковый Дубай",
+        family: "Семья и дети",
+        thrill: "Острые ощущения и приключения",
+        culture: "Культура и история",
+        night: "Ночь и после заката",
+        relax: "Отдых и живописные виды",
+        budget: "Бюджетные варианты",
+        luxury: "Роскошные впечатления",
+      },
+      viewDetails: "Подробности",
+      allAttractions: "Все достопримечательности",
+    },
+    // Districts
+    districts: {
+      pageTitle: "Районы Дубая",
+      pageSubtitle: "Исследуйте разнообразные районы Дубая",
+      explore: "Исследовать район",
+      viewProperties: "Посмотреть недвижимость",
+      aboutDistrict: "О районе",
+      highlights: "Основные моменты",
+      nearbyAttractions: "Достопримечательности поблизости",
+      gettingThere: "Как добраться",
+      propertyPrices: "Цены на недвижимость",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "Отели Дубая",
+      pageSubtitle: "Найдите идеальное место для проживания",
+      stars: "Звезды",
+      perNight: "за ночь",
+      checkAvailability: "Проверить наличие",
+      amenities: "Удобства",
+      reviews: "Отзывы",
+      allHotels: "Все отели",
+    },
+    // Dining
+    dining: {
+      pageTitle: "Рестораны Дубая",
+      pageSubtitle: "Откройте кулинарные впечатления",
+      cuisine: "Кухня",
+      priceRange: "Ценовая категория",
+      reservation: "Забронировать столик",
+      menu: "Посмотреть меню",
+      allRestaurants: "Все рестораны",
+    },
+    // Events
+    events: {
+      pageTitle: "События в Дубае",
+      pageSubtitle: "Что происходит в Дубае",
+      upcoming: "Предстоящие события",
+      thisWeek: "На этой неделе",
+      thisMonth: "В этом месяце",
+      buyTickets: "Купить билеты",
+      freeEntry: "Бесплатный вход",
+    },
+    // Search
+    search: {
+      pageTitle: "Поиск по Дубаю",
+      noResults: "Результатов не найдено",
+      tryAgain: "Попробуйте другие ключевые слова",
+      results: "результатов",
+      searchIn: "Искать в",
     },
   },
 
@@ -583,6 +923,74 @@ export const translations = {
       madeWith: "ساخته شده با",
       inDubai: "در دبی",
     },
+    // Attractions
+    attractions: {
+      pageTitle: "جاذبه‌های دبی را کشف کنید",
+      pageSubtitle: "بهترین تجربیات دبی را کشف کنید",
+      categories: {
+        iconic: "دبی نمادین",
+        family: "خانواده و کودکان",
+        thrill: "هیجان و ماجراجویی",
+        culture: "فرهنگ و تاریخ",
+        night: "شب و بعد از تاریکی",
+        relax: "استراحت و مناظر",
+        budget: "مقرون به صرفه",
+        luxury: "تجربیات لوکس",
+      },
+      viewDetails: "مشاهده جزئیات",
+      allAttractions: "همه جاذبه‌ها",
+    },
+    // Districts
+    districts: {
+      pageTitle: "مناطق دبی",
+      pageSubtitle: "محله‌های متنوع دبی را کشف کنید",
+      explore: "کشف منطقه",
+      viewProperties: "مشاهده املاک",
+      aboutDistrict: "درباره این منطقه",
+      highlights: "نکات برجسته",
+      nearbyAttractions: "جاذبه‌های نزدیک",
+      gettingThere: "چگونه به آنجا برسیم",
+      propertyPrices: "قیمت املاک",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "هتل‌های دبی",
+      pageSubtitle: "اقامت مناسب خود را پیدا کنید",
+      stars: "ستاره",
+      perNight: "هر شب",
+      checkAvailability: "بررسی موجودی",
+      amenities: "امکانات",
+      reviews: "نظرات",
+      allHotels: "همه هتل‌ها",
+    },
+    // Dining
+    dining: {
+      pageTitle: "رستوران‌های دبی",
+      pageSubtitle: "تجربیات آشپزی را کشف کنید",
+      cuisine: "غذا",
+      priceRange: "محدوده قیمت",
+      reservation: "رزرو میز",
+      menu: "مشاهده منو",
+      allRestaurants: "همه رستوران‌ها",
+    },
+    // Events
+    events: {
+      pageTitle: "رویدادهای دبی",
+      pageSubtitle: "چه اتفاقی در دبی می‌افتد",
+      upcoming: "رویدادهای آینده",
+      thisWeek: "این هفته",
+      thisMonth: "این ماه",
+      buyTickets: "خرید بلیط",
+      freeEntry: "ورود رایگان",
+    },
+    // Search
+    search: {
+      pageTitle: "جستجوی دبی",
+      noResults: "نتیجه‌ای یافت نشد",
+      tryAgain: "کلمات کلیدی دیگری امتحان کنید",
+      results: "نتایج",
+      searchIn: "جستجو در",
+    },
   },
 
   zh: {
@@ -678,6 +1086,74 @@ export const translations = {
       allRightsReserved: "版权所有",
       madeWith: "制作于",
       inDubai: "迪拜",
+    },
+    // Attractions
+    attractions: {
+      pageTitle: "探索迪拜景点",
+      pageSubtitle: "发现迪拜最佳体验",
+      categories: {
+        iconic: "标志性迪拜",
+        family: "家庭和儿童",
+        thrill: "惊险和冒险",
+        culture: "文化和历史",
+        night: "夜晚和黄昏后",
+        relax: "放松和风景",
+        budget: "经济实惠",
+        luxury: "奢华体验",
+      },
+      viewDetails: "查看详情",
+      allAttractions: "所有景点",
+    },
+    // Districts
+    districts: {
+      pageTitle: "迪拜区域",
+      pageSubtitle: "探索迪拜多样化的社区",
+      explore: "探索区域",
+      viewProperties: "查看房产",
+      aboutDistrict: "关于本区域",
+      highlights: "亮点",
+      nearbyAttractions: "附近景点",
+      gettingThere: "如何到达",
+      propertyPrices: "房产价格",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "迪拜酒店",
+      pageSubtitle: "找到您的完美住宿",
+      stars: "星级",
+      perNight: "每晚",
+      checkAvailability: "查看可用性",
+      amenities: "设施",
+      reviews: "评论",
+      allHotels: "所有酒店",
+    },
+    // Dining
+    dining: {
+      pageTitle: "迪拜餐饮",
+      pageSubtitle: "发现烹饪体验",
+      cuisine: "菜系",
+      priceRange: "价格范围",
+      reservation: "预订",
+      menu: "查看菜单",
+      allRestaurants: "所有餐厅",
+    },
+    // Events
+    events: {
+      pageTitle: "迪拜活动",
+      pageSubtitle: "迪拜正在发生什么",
+      upcoming: "即将举行的活动",
+      thisWeek: "本周",
+      thisMonth: "本月",
+      buyTickets: "购买门票",
+      freeEntry: "免费入场",
+    },
+    // Search
+    search: {
+      pageTitle: "搜索迪拜",
+      noResults: "未找到结果",
+      tryAgain: "尝试不同的关键词",
+      results: "结果",
+      searchIn: "搜索范围",
     },
   },
 
@@ -776,6 +1252,74 @@ export const translations = {
       madeWith: "Fait avec",
       inDubai: "à Dubaï",
     },
+    // Attractions
+    attractions: {
+      pageTitle: "Explorer les attractions de Dubaï",
+      pageSubtitle: "Découvrez les meilleures expériences à Dubaï",
+      categories: {
+        iconic: "Dubaï iconique",
+        family: "Famille et enfants",
+        thrill: "Sensations fortes et aventure",
+        culture: "Culture et histoire",
+        night: "Nuit et après la tombée",
+        relax: "Détente et paysages",
+        budget: "Budget limité",
+        luxury: "Expériences de luxe",
+      },
+      viewDetails: "Voir les détails",
+      allAttractions: "Toutes les attractions",
+    },
+    // Districts
+    districts: {
+      pageTitle: "Quartiers de Dubaï",
+      pageSubtitle: "Explorez les quartiers variés de Dubaï",
+      explore: "Explorer le quartier",
+      viewProperties: "Voir les propriétés",
+      aboutDistrict: "À propos de ce quartier",
+      highlights: "Points forts",
+      nearbyAttractions: "Attractions à proximité",
+      gettingThere: "Comment s'y rendre",
+      propertyPrices: "Prix de l'immobilier",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "Hôtels de Dubaï",
+      pageSubtitle: "Trouvez votre séjour idéal",
+      stars: "Étoiles",
+      perNight: "par nuit",
+      checkAvailability: "Vérifier la disponibilité",
+      amenities: "Équipements",
+      reviews: "Avis",
+      allHotels: "Tous les hôtels",
+    },
+    // Dining
+    dining: {
+      pageTitle: "Restaurants de Dubaï",
+      pageSubtitle: "Découvrez les expériences culinaires",
+      cuisine: "Cuisine",
+      priceRange: "Fourchette de prix",
+      reservation: "Réserver une table",
+      menu: "Voir le menu",
+      allRestaurants: "Tous les restaurants",
+    },
+    // Events
+    events: {
+      pageTitle: "Événements à Dubaï",
+      pageSubtitle: "Ce qui se passe à Dubaï",
+      upcoming: "Événements à venir",
+      thisWeek: "Cette semaine",
+      thisMonth: "Ce mois-ci",
+      buyTickets: "Acheter des billets",
+      freeEntry: "Entrée gratuite",
+    },
+    // Search
+    search: {
+      pageTitle: "Rechercher à Dubaï",
+      noResults: "Aucun résultat trouvé",
+      tryAgain: "Essayez d'autres mots-clés",
+      results: "résultats",
+      searchIn: "Rechercher dans",
+    },
   },
 
   de: {
@@ -872,6 +1416,74 @@ export const translations = {
       madeWith: "Erstellt mit",
       inDubai: "in Dubai",
     },
+    // Attractions
+    attractions: {
+      pageTitle: "Dubai Attraktionen erkunden",
+      pageSubtitle: "Entdecken Sie die besten Erlebnisse in Dubai",
+      categories: {
+        iconic: "Ikonisches Dubai",
+        family: "Familie & Kinder",
+        thrill: "Nervenkitzel & Abenteuer",
+        culture: "Kultur & Geschichte",
+        night: "Nacht & Nach Einbruch der Dunkelheit",
+        relax: "Entspannung & Landschaft",
+        budget: "Budgetfreundlich",
+        luxury: "Luxuserlebnisse",
+      },
+      viewDetails: "Details anzeigen",
+      allAttractions: "Alle Attraktionen",
+    },
+    // Districts
+    districts: {
+      pageTitle: "Dubai Bezirke",
+      pageSubtitle: "Erkunden Sie Dubais vielfältige Stadtteile",
+      explore: "Bezirk erkunden",
+      viewProperties: "Immobilien ansehen",
+      aboutDistrict: "Über diesen Bezirk",
+      highlights: "Höhepunkte",
+      nearbyAttractions: "Attraktionen in der Nähe",
+      gettingThere: "Anreise",
+      propertyPrices: "Immobilienpreise",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "Dubai Hotels",
+      pageSubtitle: "Finden Sie Ihren perfekten Aufenthalt",
+      stars: "Sterne",
+      perNight: "pro Nacht",
+      checkAvailability: "Verfügbarkeit prüfen",
+      amenities: "Ausstattung",
+      reviews: "Bewertungen",
+      allHotels: "Alle Hotels",
+    },
+    // Dining
+    dining: {
+      pageTitle: "Dubai Restaurants",
+      pageSubtitle: "Entdecken Sie kulinarische Erlebnisse",
+      cuisine: "Küche",
+      priceRange: "Preisspanne",
+      reservation: "Reservierung vornehmen",
+      menu: "Menü ansehen",
+      allRestaurants: "Alle Restaurants",
+    },
+    // Events
+    events: {
+      pageTitle: "Dubai Veranstaltungen",
+      pageSubtitle: "Was passiert in Dubai",
+      upcoming: "Kommende Veranstaltungen",
+      thisWeek: "Diese Woche",
+      thisMonth: "Diesen Monat",
+      buyTickets: "Tickets kaufen",
+      freeEntry: "Freier Eintritt",
+    },
+    // Search
+    search: {
+      pageTitle: "Dubai durchsuchen",
+      noResults: "Keine Ergebnisse gefunden",
+      tryAgain: "Versuchen Sie andere Suchbegriffe",
+      results: "Ergebnisse",
+      searchIn: "Suchen in",
+    },
   },
 
   it: {
@@ -967,6 +1579,74 @@ export const translations = {
       allRightsReserved: "Tutti i diritti riservati",
       madeWith: "Fatto con",
       inDubai: "a Dubai",
+    },
+    // Attractions
+    attractions: {
+      pageTitle: "Esplora le attrazioni di Dubai",
+      pageSubtitle: "Scopri le migliori esperienze a Dubai",
+      categories: {
+        iconic: "Dubai iconica",
+        family: "Famiglia e bambini",
+        thrill: "Emozioni e avventura",
+        culture: "Cultura e storia",
+        night: "Notte e dopo il tramonto",
+        relax: "Relax e panorami",
+        budget: "Budget-friendly",
+        luxury: "Esperienze di lusso",
+      },
+      viewDetails: "Vedi dettagli",
+      allAttractions: "Tutte le attrazioni",
+    },
+    // Districts
+    districts: {
+      pageTitle: "Quartieri di Dubai",
+      pageSubtitle: "Esplora i diversi quartieri di Dubai",
+      explore: "Esplora il quartiere",
+      viewProperties: "Vedi proprietà",
+      aboutDistrict: "Informazioni sul quartiere",
+      highlights: "Punti salienti",
+      nearbyAttractions: "Attrazioni vicine",
+      gettingThere: "Come arrivare",
+      propertyPrices: "Prezzi immobili",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "Hotel di Dubai",
+      pageSubtitle: "Trova il tuo soggiorno perfetto",
+      stars: "Stelle",
+      perNight: "a notte",
+      checkAvailability: "Controlla disponibilità",
+      amenities: "Servizi",
+      reviews: "Recensioni",
+      allHotels: "Tutti gli hotel",
+    },
+    // Dining
+    dining: {
+      pageTitle: "Ristoranti di Dubai",
+      pageSubtitle: "Scopri esperienze culinarie",
+      cuisine: "Cucina",
+      priceRange: "Fascia di prezzo",
+      reservation: "Prenota tavolo",
+      menu: "Vedi menu",
+      allRestaurants: "Tutti i ristoranti",
+    },
+    // Events
+    events: {
+      pageTitle: "Eventi a Dubai",
+      pageSubtitle: "Cosa succede a Dubai",
+      upcoming: "Eventi in arrivo",
+      thisWeek: "Questa settimana",
+      thisMonth: "Questo mese",
+      buyTickets: "Acquista biglietti",
+      freeEntry: "Ingresso gratuito",
+    },
+    // Search
+    search: {
+      pageTitle: "Cerca a Dubai",
+      noResults: "Nessun risultato trovato",
+      tryAgain: "Prova parole chiave diverse",
+      results: "risultati",
+      searchIn: "Cerca in",
     },
   },
 
@@ -1065,6 +1745,74 @@ export const translations = {
       madeWith: "Hecho con",
       inDubai: "en Dubái",
     },
+    // Attractions
+    attractions: {
+      pageTitle: "Explora las atracciones de Dubái",
+      pageSubtitle: "Descubre las mejores experiencias en Dubái",
+      categories: {
+        iconic: "Dubái icónico",
+        family: "Familia y niños",
+        thrill: "Emoción y aventura",
+        culture: "Cultura e historia",
+        night: "Noche y después del anochecer",
+        relax: "Relajación y paisajes",
+        budget: "Económico",
+        luxury: "Experiencias de lujo",
+      },
+      viewDetails: "Ver detalles",
+      allAttractions: "Todas las atracciones",
+    },
+    // Districts
+    districts: {
+      pageTitle: "Distritos de Dubái",
+      pageSubtitle: "Explora los diversos barrios de Dubái",
+      explore: "Explorar distrito",
+      viewProperties: "Ver propiedades",
+      aboutDistrict: "Sobre este distrito",
+      highlights: "Aspectos destacados",
+      nearbyAttractions: "Atracciones cercanas",
+      gettingThere: "Cómo llegar",
+      propertyPrices: "Precios de propiedades",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "Hoteles de Dubái",
+      pageSubtitle: "Encuentra tu estancia perfecta",
+      stars: "Estrellas",
+      perNight: "por noche",
+      checkAvailability: "Comprobar disponibilidad",
+      amenities: "Servicios",
+      reviews: "Reseñas",
+      allHotels: "Todos los hoteles",
+    },
+    // Dining
+    dining: {
+      pageTitle: "Restaurantes de Dubái",
+      pageSubtitle: "Descubre experiencias culinarias",
+      cuisine: "Cocina",
+      priceRange: "Rango de precios",
+      reservation: "Hacer reserva",
+      menu: "Ver menú",
+      allRestaurants: "Todos los restaurantes",
+    },
+    // Events
+    events: {
+      pageTitle: "Eventos en Dubái",
+      pageSubtitle: "Qué está pasando en Dubái",
+      upcoming: "Próximos eventos",
+      thisWeek: "Esta semana",
+      thisMonth: "Este mes",
+      buyTickets: "Comprar entradas",
+      freeEntry: "Entrada gratuita",
+    },
+    // Search
+    search: {
+      pageTitle: "Buscar en Dubái",
+      noResults: "No se encontraron resultados",
+      tryAgain: "Prueba con otras palabras clave",
+      results: "resultados",
+      searchIn: "Buscar en",
+    },
   },
 
   tr: {
@@ -1160,6 +1908,74 @@ export const translations = {
       allRightsReserved: "Tüm hakları saklıdır",
       madeWith: "Yapıldı",
       inDubai: "Dubai'de",
+    },
+    // Attractions
+    attractions: {
+      pageTitle: "Dubai Gezilecek Yerleri Keşfedin",
+      pageSubtitle: "Dubai'de en iyi deneyimleri keşfedin",
+      categories: {
+        iconic: "İkonik Dubai",
+        family: "Aile ve Çocuklar",
+        thrill: "Heyecan ve Macera",
+        culture: "Kültür ve Tarih",
+        night: "Gece ve Karanlık Sonrası",
+        relax: "Rahatlatıcı ve Manzara",
+        budget: "Bütçe Dostu",
+        luxury: "Lüks Deneyimler",
+      },
+      viewDetails: "Detayları Görüntüle",
+      allAttractions: "Tüm Yerler",
+    },
+    // Districts
+    districts: {
+      pageTitle: "Dubai Bölgeleri",
+      pageSubtitle: "Dubai'nin çeşitli mahallelerini keşfedin",
+      explore: "Bölgeyi Keşfedin",
+      viewProperties: "Mülkleri Görüntüle",
+      aboutDistrict: "Bu Bölge Hakkında",
+      highlights: "Öne Çıkanlar",
+      nearbyAttractions: "Yakındaki Yerler",
+      gettingThere: "Nasıl Gidilir",
+      propertyPrices: "Mülk Fiyatları",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "Dubai Otelleri",
+      pageSubtitle: "Mükemmel konaklamanızı bulun",
+      stars: "Yıldız",
+      perNight: "gecelik",
+      checkAvailability: "Müsaitliği Kontrol Et",
+      amenities: "Olanaklar",
+      reviews: "Yorumlar",
+      allHotels: "Tüm Oteller",
+    },
+    // Dining
+    dining: {
+      pageTitle: "Dubai Restoranları",
+      pageSubtitle: "Mutfak deneyimlerini keşfedin",
+      cuisine: "Mutfak",
+      priceRange: "Fiyat Aralığı",
+      reservation: "Rezervasyon Yap",
+      menu: "Menüyü Görüntüle",
+      allRestaurants: "Tüm Restoranlar",
+    },
+    // Events
+    events: {
+      pageTitle: "Dubai Etkinlikleri",
+      pageSubtitle: "Dubai'de neler oluyor",
+      upcoming: "Yaklaşan Etkinlikler",
+      thisWeek: "Bu Hafta",
+      thisMonth: "Bu Ay",
+      buyTickets: "Bilet Satın Al",
+      freeEntry: "Ücretsiz Giriş",
+    },
+    // Search
+    search: {
+      pageTitle: "Dubai'de Ara",
+      noResults: "Sonuç bulunamadı",
+      tryAgain: "Farklı anahtar kelimeler deneyin",
+      results: "sonuç",
+      searchIn: "İçinde ara",
     },
   },
 
@@ -1258,6 +2074,74 @@ export const translations = {
       madeWith: "তৈরি করা হয়েছে",
       inDubai: "দুবাইতে",
     },
+    // Attractions
+    attractions: {
+      pageTitle: "দুবাই আকর্ষণ অন্বেষণ করুন",
+      pageSubtitle: "দুবাইতে সেরা অভিজ্ঞতা আবিষ্কার করুন",
+      categories: {
+        iconic: "আইকনিক দুবাই",
+        family: "পরিবার এবং শিশু",
+        thrill: "রোমাঞ্চ এবং দুঃসাহসিক",
+        culture: "সংস্কৃতি এবং ইতিহাস",
+        night: "রাত এবং অন্ধকারের পরে",
+        relax: "বিশ্রাম এবং প্রাকৃতিক দৃশ্য",
+        budget: "বাজেট বন্ধুত্বপূর্ণ",
+        luxury: "বিলাসবহুল অভিজ্ঞতা",
+      },
+      viewDetails: "বিবরণ দেখুন",
+      allAttractions: "সমস্ত আকর্ষণ",
+    },
+    // Districts
+    districts: {
+      pageTitle: "দুবাই জেলা",
+      pageSubtitle: "দুবাইয়ের বৈচিত্র্যময় এলাকা অন্বেষণ করুন",
+      explore: "জেলা অন্বেষণ করুন",
+      viewProperties: "সম্পত্তি দেখুন",
+      aboutDistrict: "এই জেলা সম্পর্কে",
+      highlights: "হাইলাইটস",
+      nearbyAttractions: "কাছাকাছি আকর্ষণ",
+      gettingThere: "সেখানে পৌঁছানোর উপায়",
+      propertyPrices: "সম্পত্তির দাম",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "দুবাই হোটেল",
+      pageSubtitle: "আপনার নিখুঁত থাকার জায়গা খুঁজুন",
+      stars: "তারকা",
+      perNight: "প্রতি রাতে",
+      checkAvailability: "উপলব্ধতা পরীক্ষা করুন",
+      amenities: "সুবিধা",
+      reviews: "পর্যালোচনা",
+      allHotels: "সমস্ত হোটেল",
+    },
+    // Dining
+    dining: {
+      pageTitle: "দুবাই খাবার",
+      pageSubtitle: "রন্ধনশিল্পের অভিজ্ঞতা আবিষ্কার করুন",
+      cuisine: "খাবার",
+      priceRange: "মূল্য পরিসীমা",
+      reservation: "রিজার্ভেশন করুন",
+      menu: "মেনু দেখুন",
+      allRestaurants: "সমস্ত রেস্তোরাঁ",
+    },
+    // Events
+    events: {
+      pageTitle: "দুবাই ইভেন্ট",
+      pageSubtitle: "দুবাইতে কী ঘটছে",
+      upcoming: "আসন্ন ইভেন্ট",
+      thisWeek: "এই সপ্তাহে",
+      thisMonth: "এই মাসে",
+      buyTickets: "টিকিট কিনুন",
+      freeEntry: "বিনামূল্যে প্রবেশ",
+    },
+    // Search
+    search: {
+      pageTitle: "দুবাই অনুসন্ধান করুন",
+      noResults: "কোনো ফলাফল পাওয়া যায়নি",
+      tryAgain: "বিভিন্ন কীওয়ার্ড চেষ্টা করুন",
+      results: "ফলাফল",
+      searchIn: "এতে অনুসন্ধান করুন",
+    },
   },
 
   // Filipino
@@ -1354,6 +2238,74 @@ export const translations = {
       allRightsReserved: "Lahat ng karapatan ay nakalaan",
       madeWith: "Ginawa gamit ang",
       inDubai: "sa Dubai",
+    },
+    // Attractions
+    attractions: {
+      pageTitle: "Tuklasin ang mga Atraksyon sa Dubai",
+      pageSubtitle: "Tuklasin ang pinakamahusay na karanasan sa Dubai",
+      categories: {
+        iconic: "Iconic na Dubai",
+        family: "Pamilya at Bata",
+        thrill: "Kasiyahan at Pakikipagsapalaran",
+        culture: "Kultura at Kasaysayan",
+        night: "Gabi at Pagkatapos ng Dilim",
+        relax: "Magpahinga at Tanawin",
+        budget: "Budget Friendly",
+        luxury: "Mga Karanasang Luho",
+      },
+      viewDetails: "Tingnan ang Detalye",
+      allAttractions: "Lahat ng Atraksyon",
+    },
+    // Districts
+    districts: {
+      pageTitle: "Mga Distrito ng Dubai",
+      pageSubtitle: "Tuklasin ang magkakaibang kapitbahayan ng Dubai",
+      explore: "Tuklasin ang Distrito",
+      viewProperties: "Tingnan ang mga Ari-arian",
+      aboutDistrict: "Tungkol sa Distrito na ito",
+      highlights: "Mga Highlight",
+      nearbyAttractions: "Mga Malapit na Atraksyon",
+      gettingThere: "Paano Makarating Doon",
+      propertyPrices: "Mga Presyo ng Ari-arian",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "Mga Hotel sa Dubai",
+      pageSubtitle: "Hanapin ang iyong perpektong tuluyan",
+      stars: "Bituin",
+      perNight: "bawat gabi",
+      checkAvailability: "Tingnan ang Availability",
+      amenities: "Mga Pasilidad",
+      reviews: "Mga Review",
+      allHotels: "Lahat ng Hotel",
+    },
+    // Dining
+    dining: {
+      pageTitle: "Mga Kainan sa Dubai",
+      pageSubtitle: "Tuklasin ang mga karanasan sa pagluluto",
+      cuisine: "Lutuin",
+      priceRange: "Hanay ng Presyo",
+      reservation: "Gumawa ng Reserbasyon",
+      menu: "Tingnan ang Menu",
+      allRestaurants: "Lahat ng Restawran",
+    },
+    // Events
+    events: {
+      pageTitle: "Mga Kaganapan sa Dubai",
+      pageSubtitle: "Ano ang nangyayari sa Dubai",
+      upcoming: "Mga Paparating na Kaganapan",
+      thisWeek: "Ngayong Linggo",
+      thisMonth: "Ngayong Buwan",
+      buyTickets: "Bumili ng Tiket",
+      freeEntry: "Libreng Pagpasok",
+    },
+    // Search
+    search: {
+      pageTitle: "Maghanap sa Dubai",
+      noResults: "Walang nahanap na resulta",
+      tryAgain: "Subukan ang ibang keywords",
+      results: "mga resulta",
+      searchIn: "Maghanap sa",
     },
   },
 
@@ -1452,6 +2404,74 @@ export const translations = {
       madeWith: "作成",
       inDubai: "ドバイにて",
     },
+    // Attractions
+    attractions: {
+      pageTitle: "ドバイの観光スポットを探索",
+      pageSubtitle: "ドバイで最高の体験を発見",
+      categories: {
+        iconic: "象徴的なドバイ",
+        family: "家族と子供",
+        thrill: "スリルと冒険",
+        culture: "文化と歴史",
+        night: "夜と暗闇の後",
+        relax: "リラックスと景色",
+        budget: "予算に優しい",
+        luxury: "ラグジュアリー体験",
+      },
+      viewDetails: "詳細を見る",
+      allAttractions: "すべての観光スポット",
+    },
+    // Districts
+    districts: {
+      pageTitle: "ドバイのエリア",
+      pageSubtitle: "ドバイの多様な地域を探索",
+      explore: "エリアを探索",
+      viewProperties: "物件を見る",
+      aboutDistrict: "このエリアについて",
+      highlights: "ハイライト",
+      nearbyAttractions: "近くの観光スポット",
+      gettingThere: "アクセス方法",
+      propertyPrices: "物件価格",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "ドバイのホテル",
+      pageSubtitle: "完璧な滞在を見つける",
+      stars: "星",
+      perNight: "1泊あたり",
+      checkAvailability: "空室状況を確認",
+      amenities: "設備",
+      reviews: "レビュー",
+      allHotels: "すべてのホテル",
+    },
+    // Dining
+    dining: {
+      pageTitle: "ドバイのレストラン",
+      pageSubtitle: "料理体験を発見",
+      cuisine: "料理",
+      priceRange: "価格帯",
+      reservation: "予約する",
+      menu: "メニューを見る",
+      allRestaurants: "すべてのレストラン",
+    },
+    // Events
+    events: {
+      pageTitle: "ドバイのイベント",
+      pageSubtitle: "ドバイで何が起こっているか",
+      upcoming: "今後のイベント",
+      thisWeek: "今週",
+      thisMonth: "今月",
+      buyTickets: "チケットを購入",
+      freeEntry: "無料入場",
+    },
+    // Search
+    search: {
+      pageTitle: "ドバイを検索",
+      noResults: "結果が見つかりません",
+      tryAgain: "別のキーワードを試す",
+      results: "件の結果",
+      searchIn: "検索対象",
+    },
   },
 
   // Korean
@@ -1549,6 +2569,74 @@ export const translations = {
       madeWith: "제작",
       inDubai: "두바이에서",
     },
+    // Attractions
+    attractions: {
+      pageTitle: "두바이 명소 탐험",
+      pageSubtitle: "두바이 최고의 경험을 발견하세요",
+      categories: {
+        iconic: "상징적인 두바이",
+        family: "가족과 어린이",
+        thrill: "스릴과 모험",
+        culture: "문화와 역사",
+        night: "밤과 어둠 이후",
+        relax: "휴식과 경치",
+        budget: "예산 친화적",
+        luxury: "럭셔리 경험",
+      },
+      viewDetails: "상세정보 보기",
+      allAttractions: "모든 명소",
+    },
+    // Districts
+    districts: {
+      pageTitle: "두바이 지역",
+      pageSubtitle: "두바이의 다양한 지역을 탐험하세요",
+      explore: "지역 탐험",
+      viewProperties: "부동산 보기",
+      aboutDistrict: "이 지역에 대해",
+      highlights: "하이라이트",
+      nearbyAttractions: "인근 명소",
+      gettingThere: "가는 방법",
+      propertyPrices: "부동산 가격",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "두바이 호텔",
+      pageSubtitle: "완벽한 숙박을 찾으세요",
+      stars: "별",
+      perNight: "1박당",
+      checkAvailability: "예약 가능 여부 확인",
+      amenities: "편의시설",
+      reviews: "리뷰",
+      allHotels: "모든 호텔",
+    },
+    // Dining
+    dining: {
+      pageTitle: "두바이 레스토랑",
+      pageSubtitle: "요리 경험을 발견하세요",
+      cuisine: "요리",
+      priceRange: "가격대",
+      reservation: "예약하기",
+      menu: "메뉴 보기",
+      allRestaurants: "모든 레스토랑",
+    },
+    // Events
+    events: {
+      pageTitle: "두바이 이벤트",
+      pageSubtitle: "두바이에서 무슨 일이 일어나고 있나요",
+      upcoming: "예정된 이벤트",
+      thisWeek: "이번 주",
+      thisMonth: "이번 달",
+      buyTickets: "티켓 구매",
+      freeEntry: "무료 입장",
+    },
+    // Search
+    search: {
+      pageTitle: "두바이 검색",
+      noResults: "결과를 찾을 수 없습니다",
+      tryAgain: "다른 키워드를 시도하세요",
+      results: "결과",
+      searchIn: "검색 위치",
+    },
   },
 
   // Hebrew
@@ -1645,6 +2733,74 @@ export const translations = {
       allRightsReserved: "כל הזכויות שמורות",
       madeWith: "נוצר עם",
       inDubai: "בדובאי",
+    },
+    // Attractions
+    attractions: {
+      pageTitle: "גלה אטרקציות בדובאי",
+      pageSubtitle: "גלה את החוויות הטובות ביותר בדובאי",
+      categories: {
+        iconic: "דובאי אייקונית",
+        family: "משפחה וילדים",
+        thrill: "ריגוש והרפתקאות",
+        culture: "תרבות והיסטוריה",
+        night: "לילה ואחרי החשיכה",
+        relax: "הרפיה ונוף",
+        budget: "ידידותי לתקציב",
+        luxury: "חוויות יוקרה",
+      },
+      viewDetails: "צפה בפרטים",
+      allAttractions: "כל האטרקציות",
+    },
+    // Districts
+    districts: {
+      pageTitle: "אזורי דובאי",
+      pageSubtitle: "גלה את השכונות המגוונות של דובאי",
+      explore: "גלה אזור",
+      viewProperties: "צפה בנכסים",
+      aboutDistrict: "אודות אזור זה",
+      highlights: "מומלצים",
+      nearbyAttractions: "אטרקציות בקרבת מקום",
+      gettingThere: "איך להגיע",
+      propertyPrices: "מחירי נכסים",
+    },
+    // Hotels
+    hotels: {
+      pageTitle: "מלונות בדובאי",
+      pageSubtitle: "מצא את השהות המושלמת",
+      stars: "כוכבים",
+      perNight: "ללילה",
+      checkAvailability: "בדוק זמינות",
+      amenities: "שירותים",
+      reviews: "ביקורות",
+      allHotels: "כל המלונות",
+    },
+    // Dining
+    dining: {
+      pageTitle: "מסעדות בדובאי",
+      pageSubtitle: "גלה חוויות קולינריות",
+      cuisine: "מטבח",
+      priceRange: "טווח מחירים",
+      reservation: "הזמן מקום",
+      menu: "צפה בתפריט",
+      allRestaurants: "כל המסעדות",
+    },
+    // Events
+    events: {
+      pageTitle: "אירועים בדובאי",
+      pageSubtitle: "מה קורה בדובאי",
+      upcoming: "אירועים קרובים",
+      thisWeek: "השבוע",
+      thisMonth: "החודש",
+      buyTickets: "קנה כרטיסים",
+      freeEntry: "כניסה חופשית",
+    },
+    // Search
+    search: {
+      pageTitle: "חיפוש בדובאי",
+      noResults: "לא נמצאו תוצאות",
+      tryAgain: "נסה מילות חיפוש שונות",
+      results: "תוצאות",
+      searchIn: "חפש ב",
     },
   },
 };

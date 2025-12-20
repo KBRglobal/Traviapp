@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ContentWithRelations } from "@shared/schema";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 
 const categories = [
   { id: "all", name: "All Events" },
@@ -64,6 +65,7 @@ function getCategoryColor(category: string): string {
 }
 
 export default function PublicEvents() {
+  const { t, locale, isRTL, localePath } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState("all");
@@ -112,7 +114,7 @@ export default function PublicEvents() {
   const regularEvents = filteredEvents.filter(e => !e.featured);
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b" data-testid="nav-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -133,17 +135,17 @@ export default function PublicEvents() {
         <div className="absolute bottom-10 left-20 w-32 h-32 bg-[#9a3412] rounded-full blur-3xl opacity-20" />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
+          <Link href={localePath("/")} className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            Back to Home
+            {t('common.viewAll')}
           </Link>
           <div className="flex items-center gap-4 mb-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#fef3c7] to-[#f97316] flex items-center justify-center shadow-lg">
               <Calendar className="w-8 h-8 text-[#9a3412]" />
             </div>
             <div>
-              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white drop-shadow-lg">Dubai Events Calendar</h1>
-              <p className="text-white/90">Discover upcoming events, festivals, and experiences</p>
+              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white drop-shadow-lg">{t('events.pageTitle')}</h1>
+              <p className="text-white/90">{t('events.pageSubtitle')}</p>
             </div>
           </div>
         </div>
@@ -156,7 +158,7 @@ export default function PublicEvents() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search events..."
+                placeholder={t('nav.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -200,10 +202,10 @@ export default function PublicEvents() {
           ) : filteredEvents.length === 0 ? (
             <div className="text-center py-16">
               <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-heading text-xl font-semibold mb-2">No events available</h3>
-              <p className="text-muted-foreground mb-6">Check back soon for upcoming events in Dubai</p>
-              <Link href="/">
-                <Button data-testid="button-back-home">Back to Home</Button>
+              <h3 className="font-heading text-xl font-semibold mb-2">{t('search.noResults')}</h3>
+              <p className="text-muted-foreground mb-6">{t('events.pageSubtitle')}</p>
+              <Link href={localePath("/")}>
+                <Button data-testid="button-back-home">{t('common.viewAll')}</Button>
               </Link>
             </div>
           ) : (
@@ -212,7 +214,7 @@ export default function PublicEvents() {
                 <div className="mb-12">
                   <h2 className="font-heading text-2xl font-bold mb-6 flex items-center gap-2">
                     <span className="w-2 h-8 bg-gradient-to-b from-orange-500 to-amber-500 rounded-full" />
-                    Featured Events
+                    {t('events.upcoming')}
                   </h2>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {featuredEvents.map((event) => (
@@ -261,7 +263,7 @@ export default function PublicEvents() {
               <div>
                 <h2 className="font-heading text-2xl font-bold mb-6 flex items-center gap-2">
                   <span className="w-2 h-8 bg-gradient-to-b from-orange-500 to-amber-500 rounded-full" />
-                  {featuredEvents.length > 0 ? "All Events" : "Events"} 
+                  {featuredEvents.length > 0 ? t('events.pageTitle') : t('events.pageTitle')}
                   <span className="text-muted-foreground font-normal text-lg">({filteredEvents.length})</span>
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -305,21 +307,21 @@ export default function PublicEvents() {
           <Card className="p-8 bg-gradient-to-r from-orange-500 to-amber-500 border-0 text-white">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div>
-                <h3 className="font-heading text-2xl font-bold mb-2">Planning Your Visit?</h3>
-                <p className="text-white/90">Use our budget calculator to estimate your trip costs</p>
+                <h3 className="font-heading text-2xl font-bold mb-2">{t('common.learnMore')}</h3>
+                <p className="text-white/90">{t('events.pageSubtitle')}</p>
               </div>
               <div className="flex gap-3">
-                <Link href="/tools/budget">
+                <Link href={localePath("/tools/budget")}>
                   <Button className="bg-white text-orange-600 hover:bg-white/90" data-testid="link-budget">
                     Budget Calculator
                   </Button>
                 </Link>
-                <Link href="/tools/currency">
+                <Link href={localePath("/tools/currency")}>
                   <Button variant="outline" className="border-white/50 text-white hover:bg-white/10" data-testid="link-currency">
                     Currency Converter
                   </Button>
                 </Link>
-                <Link href="/tools/plan">
+                <Link href={localePath("/tools/plan")}>
                   <Button variant="outline" className="border-white/50 text-white hover:bg-white/10" data-testid="link-plan">
                     Travel Planning
                   </Button>
