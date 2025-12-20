@@ -13,6 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { useTranslatedContents } from "@/hooks/use-translated-content";
+
+interface TranslatedContentData {
+  title: string;
+  metaDescription: string | null;
+}
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&h=600&fit=crop",
@@ -21,11 +27,17 @@ const defaultImages = [
   "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop",
 ];
 
-function HotelCard({ content, index }: { content: ContentWithRelations; index: number }) {
+function HotelCard({ content, index, translation }: { 
+  content: ContentWithRelations; 
+  index: number;
+  translation?: TranslatedContentData | null;
+}) {
   const { localePath } = useLocale();
   const imageUrl = content.heroImage || defaultImages[index % defaultImages.length];
   const location = content.hotel?.location || "Dubai";
   const starRating = content.hotel?.starRating || 5;
+  const displayTitle = translation?.title || content.title;
+  const displayDescription = translation?.metaDescription || content.metaDescription;
 
   return (
     <Link href={localePath(`/hotels/${content.slug}`)}>
@@ -36,7 +48,7 @@ function HotelCard({ content, index }: { content: ContentWithRelations; index: n
         <div className="relative aspect-[4/3] overflow-hidden">
           <img 
             src={imageUrl} 
-            alt={content.heroImageAlt || content.title}
+            alt={content.heroImageAlt || displayTitle}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -48,7 +60,7 @@ function HotelCard({ content, index }: { content: ContentWithRelations; index: n
               ))}
             </div>
             <h3 className="font-semibold text-white text-base md:text-lg line-clamp-1 group-hover:text-white transition-colors">
-              {content.title}
+              {displayTitle}
             </h3>
             <div className="flex items-center gap-1 text-xs text-white/70 mt-1">
               <MapPin className="w-3 h-3" />
@@ -57,10 +69,10 @@ function HotelCard({ content, index }: { content: ContentWithRelations; index: n
           </div>
         </div>
         
-        {content.metaDescription && (
+        {displayDescription && (
           <div className="p-4">
             <p className="text-sm text-muted-foreground line-clamp-2">
-              {content.metaDescription}
+              {displayDescription}
             </p>
           </div>
         )}
@@ -86,6 +98,8 @@ export default function PublicHotels() {
   });
 
   const hotels = allContent?.filter(c => c.type === "hotel") || [];
+  
+  const { data: translationsMap } = useTranslatedContents(hotels);
   
   const filteredHotels = useMemo(() => {
     if (!searchQuery) return hotels;
@@ -161,7 +175,12 @@ export default function PublicHotels() {
           ) : filteredHotels.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredHotels.map((hotel, index) => (
-                <HotelCard key={hotel.id} content={hotel} index={index} />
+                <HotelCard 
+                  key={hotel.id} 
+                  content={hotel} 
+                  index={index}
+                  translation={translationsMap?.get(hotel.id)}
+                />
               ))}
             </div>
           ) : (

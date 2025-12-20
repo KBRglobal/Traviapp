@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { useTranslatedContents } from "@/hooks/use-translated-content";
 
 const EXPERIENCE_TYPES = [
   { 
@@ -234,14 +235,22 @@ function FeaturedCard({
   );
 }
 
+interface TranslatedContentData {
+  title: string;
+  metaDescription: string | null;
+}
+
 function AttractionCard({ 
   attraction, 
-  index 
+  index,
+  translation
 }: { 
   attraction: ContentWithRelations; 
   index: number;
+  translation?: TranslatedContentData | null;
 }) {
   const image = attraction.heroImage || `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop`;
+  const displayTitle = translation?.title || attraction.title;
   
   return (
     <Link href={`/attractions/${attraction.slug}`}>
@@ -252,14 +261,14 @@ function AttractionCard({
         <div className="relative aspect-[4/3] overflow-hidden">
           <img 
             src={image} 
-            alt={attraction.title}
+            alt={displayTitle}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           
           <div className="absolute bottom-0 left-0 right-0 p-3">
             <h3 className="font-semibold text-white text-sm md:text-base line-clamp-1 group-hover:text-white transition-colors">
-              {attraction.title}
+              {displayTitle}
             </h3>
             {attraction.attraction?.location && (
               <div className="flex items-center gap-1 text-xs text-white/70 mt-1">
@@ -279,7 +288,7 @@ function AttractionCard({
             )}
           </div>
           {attraction.attraction?.priceFrom && (
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
+            <span className="text-xs text-muted-foreground whitespace-nowrap price-display">
               From AED {attraction.attraction.priceFrom}
             </span>
           )}
@@ -328,6 +337,8 @@ export default function PublicAttractions() {
   });
 
   const attractions = allContent?.filter(c => c.type === "attraction") || [];
+  
+  const { data: translationsMap } = useTranslatedContents(attractions);
   
   const filteredAttractions = useMemo(() => {
     let filtered = attractions;
@@ -481,7 +492,12 @@ export default function PublicAttractions() {
               
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {trendingAttractions.map((attraction, index) => (
-                  <AttractionCard key={attraction.id} attraction={attraction} index={index} />
+                  <AttractionCard 
+                    key={attraction.id} 
+                    attraction={attraction} 
+                    index={index}
+                    translation={translationsMap?.get(attraction.id)}
+                  />
                 ))}
               </div>
             </div>
@@ -535,7 +551,12 @@ export default function PublicAttractions() {
               ) : allAttractions.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                   {allAttractions.map((attraction, index) => (
-                    <AttractionCard key={attraction.id} attraction={attraction} index={index} />
+                    <AttractionCard 
+                      key={attraction.id} 
+                      attraction={attraction} 
+                      index={index}
+                      translation={translationsMap?.get(attraction.id)}
+                    />
                   ))}
                 </div>
               ) : (
