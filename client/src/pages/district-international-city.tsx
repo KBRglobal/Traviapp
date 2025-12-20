@@ -52,7 +52,7 @@ const faqs = [
   },
   {
     question: "What is Dragon Mart?",
-    answer: "World's largest Chinese trading hub outside China — 1.2 km long, 3,500+ shops selling electronics, furniture, toys, clothing at 20-50% off mall prices. 5-minute drive from International City."
+    answer: "World's largest Chinese trading hub outside China   1.2 km long, 3,500+ shops selling electronics, furniture, toys, clothing at 20-50% off mall prices. 5-minute drive from International City."
   },
   {
     question: "Should tourists stay in International City?",
@@ -93,13 +93,13 @@ function HeroSection() {
           <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             International City
             <span className="block text-3xl md:text-4xl font-normal text-red-200 mt-2">
-              Budget Living & Dragon Mart 2025
+              Budget Living & Dragon Mart 2026
             </span>
           </motion.h1>
           
           <motion.p variants={fadeInUp} className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-8">
             120,000+ residents, 10 themed clusters, Dubai's lowest rents. 
-            Where budget meets multiculturalism — and Dragon Mart is 5 mins away.
+            Where budget meets multiculturalism   and Dragon Mart is 5 mins away.
           </motion.p>
           
           <motion.div variants={fadeInUp} className="flex flex-wrap justify-center gap-4 mb-12">
@@ -181,7 +181,7 @@ function OverviewSection() {
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Dubai's Budget Hub</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              International City is Dubai's most distinctive — and polarizing — residential community. 
+              International City is Dubai's most distinctive   and polarizing   residential community. 
               800 hectares of themed clusters, 100+ nationalities, and rents 60-70% below Marina.
             </p>
           </motion.div>
@@ -279,8 +279,8 @@ function ClustersSection() {
             <Card className="p-6 bg-muted/30">
               <h3 className="font-bold mb-4">Best Clusters for Families</h3>
               <p className="text-sm text-muted-foreground">
-                <strong>England, France, Italy</strong> — Quieter, better maintained. 
-                <strong>China, Morocco, Persia</strong> — Older buildings, louder, but cheapest.
+                <strong>England, France, Italy</strong>   Quieter, better maintained. 
+                <strong>China, Morocco, Persia</strong>   Older buildings, louder, but cheapest.
               </p>
             </Card>
           </motion.div>
@@ -356,7 +356,7 @@ function DragonMartSection() {
                 <div>
                   <h3 className="font-bold text-2xl mb-4">The Reason to Be in This Area</h3>
                   <p className="text-muted-foreground mb-6">
-                    1.2 km long, 3,500+ shops — electronics, furniture, toys, clothing, kitchenware at 
+                    1.2 km long, 3,500+ shops   electronics, furniture, toys, clothing, kitchenware at 
                     20-50% below mall prices. Wholesale and retail.
                   </p>
                   
@@ -364,8 +364,8 @@ function DragonMartSection() {
                     <div>
                       <p className="font-semibold mb-2">What You'll Find:</p>
                       <ul className="space-y-1 text-sm text-muted-foreground">
-                        <li>Electronics (phones, laptops) — 20-40% cheaper</li>
-                        <li>Furniture (home, office) — Massive selection</li>
+                        <li>Electronics (phones, laptops)   20-40% cheaper</li>
+                        <li>Furniture (home, office)   Massive selection</li>
                         <li>Toys, gadgets, kitchenware</li>
                         <li>Clothing (bulk, wholesale)</li>
                         <li>Car accessories</li>
@@ -403,7 +403,7 @@ function TransportSection() {
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
           <motion.div variants={fadeInUp} className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">Getting Around</h2>
-            <p className="text-xl text-muted-foreground">No Metro — car essential</p>
+            <p className="text-xl text-muted-foreground">No Metro   car essential</p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -458,7 +458,7 @@ function TipsSection() {
               </h3>
               <ul className="space-y-3">
                 {[
-                  "Get a car — essential for living here",
+                  "Get a car   essential for living here",
                   "Try authentic ethnic food (Chinese, Pakistani, Arab) at rock-bottom prices",
                   "Shop Dragon Mart for wholesale deals",
                   "Choose England/France clusters for quieter living",
@@ -538,7 +538,7 @@ function CTASection() {
           </h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Save AED 35K+/year in Dubai's most affordable neighborhood. 
-            Trade location for savings — and enjoy Dragon Mart next door.
+            Trade location for savings   and enjoy Dragon Mart next door.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/districts">

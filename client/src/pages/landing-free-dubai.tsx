@@ -99,7 +99,7 @@ export default function LandingFreeDubai() {
   const parksRef = useRef<HTMLDivElement>(null);
 
   useDocumentMeta({
-    title: "70+ Free Things to Do in Dubai 2025 - Complete Guide | Save AED 2,500+ Every Week",
+    title: "70+ Free Things to Do in Dubai 2026 - Complete Guide | Save AED 2,500+ Every Week",
     description: "Dubai on AED 0: 7 free beaches, 500 flamingos, AED 1 abra rides, 11km Palm boardwalk, nightly fountain shows. Complete guide to 70+ free Dubai experiences.",
     ogType: "article"
   });
@@ -130,7 +130,7 @@ export default function LandingFreeDubai() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <Badge className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white border-0 px-6 py-2.5 text-base mb-8">
                 <Trophy className="w-5 h-5 mr-2" />
-                2025 Complete Free Dubai Guide
+                2026 Complete Free Dubai Guide
               </Badge>
             </motion.div>
 
@@ -211,7 +211,7 @@ export default function LandingFreeDubai() {
               </h2>
               <p className="text-base md:text-lg text-white/90 mb-6">
                 At Ras Al Khor Wildlife Sanctuary, watch over 500 Greater Flamingos in their 
-                natural habitat—completely free. Three viewing hides with free binoculars, 
+                natural habitat completely free. Three viewing hides with free binoculars, 
                 just 15 minutes from Downtown Dubai.
               </p>
               <div className="grid grid-cols-2 gap-2 mb-6">
@@ -343,7 +343,7 @@ export default function LandingFreeDubai() {
               Dubai's Best Free Beaches
             </h2>
             <p className="text-lg text-white/80 max-w-2xl mx-auto">
-              Crystal-clear waters, pristine sand, and world-class facilities—all completely free.
+              Crystal-clear waters, pristine sand, and world-class facilities all completely free.
             </p>
           </div>
 
@@ -432,7 +432,7 @@ export default function LandingFreeDubai() {
               Old Dubai Walking Tour
             </h2>
             <p className="text-lg text-white/80 max-w-2xl mx-auto">
-              Step back in time through wind-tower houses, ancient souks, and museums—all free to explore.
+              Step back in time through wind-tower houses, ancient souks, and museums all free to explore.
             </p>
           </div>
 
@@ -546,7 +546,7 @@ export default function LandingFreeDubai() {
               Green Oasis in the Desert
             </h2>
             <p className="text-lg text-white/80 max-w-2xl mx-auto">
-              Escape the city heat in Dubai's beautiful parks—all with free entry.
+              Escape the city heat in Dubai's beautiful parks all with free entry.
             </p>
           </div>
 

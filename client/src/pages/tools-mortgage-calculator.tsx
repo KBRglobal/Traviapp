@@ -26,7 +26,7 @@ export default function ToolsMortgageCalculator() {
   const [buyerType, setBuyerType] = useState("expat");
   
   useDocumentMeta({
-    title: "Dubai Mortgage Calculator 2025 | Monthly Payment Estimator",
+    title: "Dubai Mortgage Calculator 2026 | Monthly Payment Estimator",
     description: "Calculate your Dubai mortgage payments. Estimate monthly repayments based on property price, down payment, interest rate, and loan term. Free calculator for UAE residents and expats.",
     ogType: "website"
   });
@@ -116,7 +116,7 @@ export default function ToolsMortgageCalculator() {
                   Free Tool
                 </Badge>
                 <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-200 border-indigo-400/30">
-                  2025 Rates
+                  2026 Rates
                 </Badge>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">

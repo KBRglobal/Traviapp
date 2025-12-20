@@ -62,7 +62,7 @@ const redFlags = [
 
 export default function PillarLegalSecurity() {
   useDocumentMeta({
-    title: "Dubai Off-Plan Legal & Security Guide 2025 | Buyer Protection",
+    title: "Dubai Off-Plan Legal & Security Guide 2026 | Buyer Protection",
     description: "Complete guide to Dubai off-plan buyer protections. Understand escrow accounts, RERA regulations, Oqood registration, and due diligence checklist. Invest safely.",
     ogType: "article"
   });

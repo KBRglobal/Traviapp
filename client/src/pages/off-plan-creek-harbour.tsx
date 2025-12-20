@@ -40,7 +40,7 @@ const projects = [
     developer: "Emaar",
     type: "Branded Residences",
     priceFrom: "AED 2,100,000",
-    completion: "Q4 2025",
+    completion: "Q4 2026",
     paymentPlan: "50/50",
     roi: "15-18%",
     highlights: ["Hotel services", "Tower views", "Premium location"]
@@ -101,7 +101,7 @@ export default function OffPlanCreekHarbour() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "Dubai Creek Harbour Off-Plan 2025 | Waterfront Living from AED 950K",
+    title: "Dubai Creek Harbour Off-Plan 2026 | Waterfront Living from AED 950K",
     description: "Dubai Creek Harbour off-plan properties: Emaar's flagship waterfront community, future Creek Tower, from AED 950K. Complete guide with ROI analysis and payment plans.",
     ogType: "article"
   });

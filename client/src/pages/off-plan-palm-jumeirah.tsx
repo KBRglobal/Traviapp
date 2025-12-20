@@ -94,14 +94,14 @@ const faqs = [
 const relatedPages = [
   { title: "Dubai Marina", href: "/dubai-off-plan-marina", description: "Waterfront alternative" },
   { title: "Luxury Villas", href: "/dubai-off-plan-villas", description: "Villa investments" },
-  { title: "Best 2025 Projects", href: "/best-off-plan-projects-dubai-2025", description: "Top picks" },
+  { title: "Best 2026 Projects", href: "/best-off-plan-projects-dubai-2026", description: "Top picks" },
 ];
 
 export default function OffPlanPalmJumeirah() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "Palm Jumeirah Off-Plan Properties 2025 | Luxury Beachfront from AED 5M",
+    title: "Palm Jumeirah Off-Plan Properties 2026 | Luxury Beachfront from AED 5M",
     description: "Palm Jumeirah off-plan properties: iconic island living, beachfront villas, 65% capital growth. Exclusive projects from Nakheel and Six Senses from AED 5M.",
     ogType: "article"
   });

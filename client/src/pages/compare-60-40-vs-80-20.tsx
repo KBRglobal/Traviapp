@@ -26,7 +26,7 @@ const comparisonTable = [
 
 export default function Compare6040vs8020() {
   useDocumentMeta({
-    title: "60/40 vs 80/20 Payment Plans | Dubai Off-Plan Comparison 2025",
+    title: "60/40 vs 80/20 Payment Plans | Dubai Off-Plan Comparison 2026",
     description: "Compare 60/40 and 80/20 Dubai off-plan payment plans. 60/40 has lower monthly payments, 80/20 reduces handover burden. Find your ideal plan.",
     ogType: "article"
   });

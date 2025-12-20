@@ -50,7 +50,7 @@ const faqs = [
   },
   {
     question: "What is Gate Avenue?",
-    answer: "Gate Avenue is DIFC's pedestrianized dining and retail boulevard — arguably Dubai's best restaurant row with Michelin-caliber restaurants, outdoor terraces, and upscale ambiance."
+    answer: "Gate Avenue is DIFC's pedestrianized dining and retail boulevard   arguably Dubai's best restaurant row with Michelin-caliber restaurants, outdoor terraces, and upscale ambiance."
   },
   {
     question: "How do I get to DIFC?",
@@ -96,12 +96,12 @@ function HeroSection() {
           <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             DIFC
             <span className="block text-3xl md:text-4xl font-normal text-slate-200 mt-2">
-              Financial Hub, Fine Dining & Art 2025
+              Financial Hub, Fine Dining & Art 2026
             </span>
           </motion.h1>
           
           <motion.p variants={fadeInUp} className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-8">
-            Dubai International Financial Centre — 110 acres of power suits, Michelin-level dining, 
+            Dubai International Financial Centre   110 acres of power suits, Michelin-level dining, 
             contemporary art galleries, and $4 trillion under management.
           </motion.p>
           
@@ -185,7 +185,7 @@ function OverviewSection() {
             <h2 className="text-4xl md:text-5xl font-bold mb-6">More Than a Financial District</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               DIFC is a self-governing free zone with its own courts, laws (English Common Law), 
-              and regulatory framework — the Middle East's premier financial hub.
+              and regulatory framework   the Middle East's premier financial hub.
             </p>
           </motion.div>
 
@@ -217,7 +217,7 @@ function OverviewSection() {
                   "Own financial regulator (DFSA, not UAE Central Bank)",
                   "100% foreign ownership allowed",
                   "0% corporate and personal tax (50-year guarantee)",
-                  "Gate Avenue — Dubai's finest dining destination",
+                  "Gate Avenue   Dubai's finest dining destination",
                   "10+ contemporary art galleries in Gate Village",
                   "Walkable (rare in Dubai)"
                 ].map((item, idx) => (
@@ -401,7 +401,7 @@ function HotelsSection() {
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
           <motion.div variants={fadeInUp} className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">Where to Stay</h2>
-            <p className="text-xl text-muted-foreground">DIFC is offices-first — stay nearby</p>
+            <p className="text-xl text-muted-foreground">DIFC is offices-first   stay nearby</p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -485,12 +485,12 @@ function TipsSection() {
                 </h3>
                 <ul className="space-y-3">
                   {[
-                    "Visit Gate Avenue for dinner — Dubai's best restaurant row",
+                    "Visit Gate Avenue for dinner   Dubai's best restaurant row",
                     "Attend First Thursday gallery nights (free, 6-9pm)",
                     "Book restaurants 1-2 weeks ahead (especially Zuma, LPM)",
                     "Walk around The Gate Building at sunset for photos",
-                    "Try Friday brunch — AED 350-600, all-you-can-eat + drinks",
-                    "Dress smart casual — DIFC is professional"
+                    "Try Friday brunch   AED 350-600, all-you-can-eat + drinks",
+                    "Dress smart casual   DIFC is professional"
                   ].map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <Check className="w-4 h-4 text-green-600 shrink-0 mt-1" />
@@ -508,11 +508,11 @@ function TipsSection() {
                 </h3>
                 <ul className="space-y-3">
                   {[
-                    "Expect nightlife — DIFC is dining, not clubs",
-                    "Visit on weekends without plans — it's quiet (offices closed)",
-                    "Skip reservations — walk-ins rarely work at top restaurants",
-                    "Wear beach casual — smart dress expected",
-                    "Expect budget dining — DIFC is premium pricing"
+                    "Expect nightlife   DIFC is dining, not clubs",
+                    "Visit on weekends without plans   it's quiet (offices closed)",
+                    "Skip reservations   walk-ins rarely work at top restaurants",
+                    "Wear beach casual   smart dress expected",
+                    "Expect budget dining   DIFC is premium pricing"
                   ].map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <X className="w-4 h-4 text-red-600 shrink-0 mt-1" />
@@ -569,7 +569,7 @@ function CTASection() {
             Where Finance Meets Fine Dining
           </h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Experience Dubai's most sophisticated district — world-class restaurants, 
+            Experience Dubai's most sophisticated district   world-class restaurants, 
             contemporary art, and the power center of Middle Eastern finance.
           </p>
           <div className="flex flex-wrap justify-center gap-4">

@@ -131,7 +131,7 @@ function HeroSection() {
           <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             Dubai Creek Harbour
             <span className="block text-3xl md:text-4xl font-normal text-cyan-200 mt-2">
-              Future Skyline District Guide 2025
+              Future Skyline District Guide 2026
             </span>
           </motion.h1>
           
@@ -219,7 +219,7 @@ function OverviewSection() {
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">The Most Ambitious Promise</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Larger than Downtown Dubai, Creek Harbour represents Dubai's vision for the next 50 years — 
+              Larger than Downtown Dubai, Creek Harbour represents Dubai's vision for the next 50 years   
               a smart city with the world's tallest building at its heart.
             </p>
           </motion.div>
@@ -362,7 +362,7 @@ function VisionSection() {
                   { year: "2016", event: "Project announced" },
                   { year: "2017-2020", event: "Construction begins, first towers" },
                   { year: "2023", event: "Tower construction resumed" },
-                  { year: "2025", event: "Ongoing development" },
+                  { year: "2026", event: "Ongoing development" },
                   { year: "2030+", event: "Full completion" }
                 ].map((item, idx) => (
                   <div key={idx} className="p-3 bg-white/50 dark:bg-black/20 rounded-lg">
@@ -426,7 +426,7 @@ function HotelsSection() {
           <motion.div variants={fadeInUp} className="text-center mb-12">
             <Badge className="bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200 mb-4">Accommodation</Badge>
             <h2 className="text-4xl font-bold mb-4">Where to Stay</h2>
-            <p className="text-xl text-muted-foreground">Limited on-site options — nearby alternatives</p>
+            <p className="text-xl text-muted-foreground">Limited on-site options   nearby alternatives</p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -484,7 +484,7 @@ function TransportSection() {
             <Card className="p-6 hover-elevate">
               <Train className="w-10 h-10 text-cyan-600 mb-4" />
               <h3 className="font-bold mb-2">Metro (Nearest)</h3>
-              <p className="text-sm text-muted-foreground mb-3">Creek Station (Red Line) — 5 mins taxi</p>
+              <p className="text-sm text-muted-foreground mb-3">Creek Station (Red Line)   5 mins taxi</p>
               <p className="text-xs text-muted-foreground">Future: Route 2020 extension planned</p>
             </Card>
             <Card className="p-6 hover-elevate">
@@ -529,11 +529,11 @@ function TipsSection() {
                 </h3>
                 <ul className="space-y-3">
                   {[
-                    "Embrace the 'under development' reality — early adopters benefit",
+                    "Embrace the 'under development' reality   early adopters benefit",
                     "Best jogging time: 6-7am (cool, peaceful)",
                     "Flamingo viewing: October-March (winter migration)",
                     "Leverage proximity to Downtown (5 mins by car)",
-                    "Enjoy 80% green space — rare in Dubai",
+                    "Enjoy 80% green space   rare in Dubai",
                     "Use water taxi for scenic commute"
                   ].map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-3">
@@ -552,11 +552,11 @@ function TipsSection() {
                 </h3>
                 <ul className="space-y-3">
                   {[
-                    "Expect complete amenities (2025) — district still developing",
-                    "Expect beach access — Creek waterfront only, JBR 25 mins away",
-                    "Underestimate construction timelines — patience required",
-                    "Ignore summer heat — June-August 40-45°C outdoors",
-                    "Overpay — research comparable prices in Business Bay"
+                    "Expect complete amenities (2026)   district still developing",
+                    "Expect beach access   Creek waterfront only, JBR 25 mins away",
+                    "Underestimate construction timelines   patience required",
+                    "Ignore summer heat   June-August 40-45°C outdoors",
+                    "Overpay   research comparable prices in Business Bay"
                   ].map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <X className="w-4 h-4 text-red-600 shrink-0 mt-1" />

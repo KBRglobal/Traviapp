@@ -19,7 +19,7 @@ import {
   OffPlanCTASection 
 } from "@/components/off-plan-shared";
 
-const TOP_PROJECTS_2025 = [
+const TOP_PROJECTS_2026 = [
   {
     name: "Dubai Creek Residences",
     developer: "Emaar",
@@ -153,12 +153,12 @@ const RELATED_LINKS = [
   { title: "JVC Projects", href: "/dubai-off-plan-jvc", description: "Highest yields" },
 ];
 
-export default function OffPlanBest2025() {
+export default function OffPlanBest2026() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "Best Off-Plan Projects Dubai 2025 | Top 10 Investment Opportunities",
-    description: "Curated list of best off-plan projects in Dubai for 2025: top ROI opportunities from Emaar, Sobha, DAMAC, Nakheel. Expert-rated with payment plan analysis.",
+    title: "Best Off-Plan Projects Dubai 2026 | Top 10 Investment Opportunities",
+    description: "Curated list of best off-plan projects in Dubai for 2026: top ROI opportunities from Emaar, Sobha, DAMAC, Nakheel. Expert-rated with payment plan analysis.",
     ogType: "article"
   });
 
@@ -168,17 +168,17 @@ export default function OffPlanBest2025() {
       <OffPlanStatsBar />
       <OffPlanBreadcrumb items={[
         { label: "Off-Plan Properties", href: "/dubai-off-plan-properties" },
-        { label: "Best 2025" }
+        { label: "Best 2026" }
       ]} />
-      <OffPlanSubNav activeHref="/best-off-plan-projects-dubai-2025" />
+      <OffPlanSubNav activeHref="/best-off-plan-projects-dubai-2026" />
 
       <main className="bg-background">
         {/* Hero */}
         <section className="py-12 md:py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <Badge variant="secondary" className="mb-4">Updated January 2025</Badge>
+            <Badge variant="secondary" className="mb-4">Updated January 2026</Badge>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
-              Best Off-Plan Projects Dubai 2025
+              Best Off-Plan Projects Dubai 2026
             </h1>
             <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
               Expert-curated selection of top investment opportunities with detailed ROI projections, 
@@ -224,12 +224,12 @@ export default function OffPlanBest2025() {
         {/* Top Projects */}
         <section className="py-12 md:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">Top 8 Projects for 2025</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">Top 8 Projects for 2026</h2>
             <p className="text-muted-foreground mb-8">
               Selected based on developer track record, location potential, and ROI outlook
             </p>
             <div className="grid md:grid-cols-2 gap-6">
-              {TOP_PROJECTS_2025.map((project, index) => (
+              {TOP_PROJECTS_2026.map((project, index) => (
                 <Card key={project.name} className="p-6 relative">
                   <div className="absolute top-4 right-4">
                     <Badge variant="secondary" className="font-bold">

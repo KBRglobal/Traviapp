@@ -41,7 +41,7 @@ const projects = [
     developer: "Majid Al Futtaim",
     type: "Luxury Villas",
     priceFrom: "AED 3,200,000",
-    completion: "Q4 2025",
+    completion: "Q4 2026",
     paymentPlan: "60/40",
     roi: "12-16%",
     location: "Dubailand",
@@ -52,7 +52,7 @@ const projects = [
     developer: "DAMAC",
     type: "Affordable Villas",
     priceFrom: "AED 900,000",
-    completion: "Q3 2025",
+    completion: "Q3 2026",
     paymentPlan: "70/30",
     roi: "16-20%",
     location: "Dubailand",
@@ -104,7 +104,7 @@ const areaStats = [
 
 const faqs = [
   {
-    question: "Are Dubai villas a good investment in 2025?",
+    question: "Are Dubai villas a good investment in 2026?",
     answer: "Yes, Dubai villas have shown 55% capital appreciation over 5 years, outperforming apartments. Post-pandemic demand for space, gardens, and privacy has driven sustained interest. Villa rental yields (5-6%) are slightly lower than apartments but capital growth is significantly higher."
   },
   {
@@ -124,14 +124,14 @@ const faqs = [
 const relatedPages = [
   { title: "Palm Jumeirah", href: "/dubai-off-plan-palm-jumeirah", description: "Luxury beachfront" },
   { title: "Al Furjan", href: "/dubai-off-plan-al-furjan", description: "Family townhouses" },
-  { title: "Best 2025 Projects", href: "/best-off-plan-projects-dubai-2025", description: "Top investments" },
+  { title: "Best 2026 Projects", href: "/best-off-plan-projects-dubai-2026", description: "Top investments" },
 ];
 
 export default function OffPlanVillas() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "Dubai Off-Plan Villas 2025 | Best Villa Communities from AED 900K",
+    title: "Dubai Off-Plan Villas 2026 | Best Villa Communities from AED 900K",
     description: "Complete guide to Dubai off-plan villas: best communities, payment plans, and ROI analysis. Family villas, townhouses, and luxury estates from AED 900K with 55% growth.",
     ogType: "article"
   });

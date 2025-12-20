@@ -52,7 +52,7 @@ export default function TermsConditions() {
 
           <article className="prose prose-lg dark:prose-invert max-w-none">
             <h1 className="font-heading" data-testid="text-page-title">Terms & Conditions</h1>
-            <p className="text-muted-foreground">Last updated: October 28, 2025</p>
+            <p className="text-muted-foreground">Last updated: October 28, 2026</p>
 
             <div className="bg-muted/50 p-4 rounded-lg mb-8">
               <p className="font-medium mb-2">Important Notice</p>
@@ -88,7 +88,7 @@ export default function TermsConditions() {
             <p>We may suspend or terminate access without notice for violations.</p>
 
             <h2 className="font-heading">5. Intellectual Property & Limited License</h2>
-            <p>Unless otherwise credited, all original content on the Website—articles, text, layout, design, trademarks, logos, and compilations—is the intellectual property of TRAVI World or its licensors and is protected by law. Subject to these Terms, we grant you a limited, revocable, non-exclusive, non-transferable license to access and use the Website for personal, non-commercial purposes. Any other use (including reproduction, distribution, public display, or commercial exploitation) requires our prior written consent.</p>
+            <p>Unless otherwise credited, all original content on the Website articles, text, layout, design, trademarks, logos, and compilations is the intellectual property of TRAVI World or its licensors and is protected by law. Subject to these Terms, we grant you a limited, revocable, non-exclusive, non-transferable license to access and use the Website for personal, non-commercial purposes. Any other use (including reproduction, distribution, public display, or commercial exploitation) requires our prior written consent.</p>
 
             <h2 className="font-heading">6. Notice-and-Takedown (DMCA/Similar)</h2>
             <p>If you believe that content on the Website infringes your rights, please send a notice to our Designated Agent:</p>

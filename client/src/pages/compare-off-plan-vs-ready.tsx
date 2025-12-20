@@ -73,7 +73,7 @@ const investorProfiles = [
 
 export default function CompareOffPlanVsReady() {
   useDocumentMeta({
-    title: "Off-Plan vs Ready Property Dubai | Complete Comparison 2025",
+    title: "Off-Plan vs Ready Property Dubai | Complete Comparison 2026",
     description: "Compare Dubai off-plan vs ready properties. Off-plan offers 10-30% lower prices and flexible payments. Ready provides immediate possession. Find which suits your investment strategy.",
     ogType: "article"
   });
@@ -102,11 +102,11 @@ export default function CompareOffPlanVsReady() {
                   Comparison Guide
                 </Badge>
                 <Badge variant="secondary" className="bg-violet-500/20 text-violet-200 border-violet-400/30">
-                  2025 Analysis
+                  2026 Analysis
                 </Badge>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-                Off-Plan vs Ready Property Dubai: Complete Comparison 2025
+                Off-Plan vs Ready Property Dubai: Complete Comparison 2026
               </h1>
               <p className="text-lg md:text-xl text-indigo-100 mb-6 max-w-3xl">
                 Should you invest in off-plan or ready property in Dubai? This comprehensive 

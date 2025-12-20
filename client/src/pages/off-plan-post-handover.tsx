@@ -61,7 +61,7 @@ const developerPlans = [
 
 export default function OffPlanPostHandover() {
   useDocumentMeta({
-    title: "Post-Handover Payment Plans Dubai | Off-Plan Developer Financing 2025",
+    title: "Post-Handover Payment Plans Dubai | Off-Plan Developer Financing 2026",
     description: "Explore Dubai off-plan post-handover payment plans. Pay 40-50% after receiving keys. Interest-free developer financing for 2-5 years. Use rental income to cover payments.",
     ogType: "website"
   });

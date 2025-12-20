@@ -128,7 +128,7 @@ function HeroSection() {
           <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             Al Barsha & Barsha Heights
             <span className="block text-3xl md:text-4xl font-normal text-sky-200 mt-2">
-              Mall of Emirates, Ski Dubai & Family Living 2025
+              Mall of Emirates, Ski Dubai & Family Living 2026
             </span>
           </motion.h1>
           
@@ -624,7 +624,7 @@ function TipsSection() {
                 </h3>
                 <ul className="space-y-3">
                   {[
-                    "Maximize Metro access — live near Mall of Emirates or Sharaf DG",
+                    "Maximize Metro access   live near Mall of Emirates or Sharaf DG",
                     "Embrace Mall of Emirates as social hub",
                     "Enjoy the budget advantage (30-40% cheaper)",
                     "Explore ethnic restaurants (authentic Indian, Pakistani, Filipino)",
@@ -647,10 +647,10 @@ function TipsSection() {
                 </h3>
                 <ul className="space-y-3">
                   {[
-                    "Expect beach lifestyle — 15 mins drive to coast",
-                    "Expect nightlife — family district, quiet after 11pm",
+                    "Expect beach lifestyle   15 mins drive to coast",
+                    "Expect nightlife   family district, quiet after 11pm",
                     "Expect walkability in Al Barsha proper (car needed)",
-                    "Overpay for 'luxury' — Al Barsha is mid-range",
+                    "Overpay for 'luxury'   Al Barsha is mid-range",
                     "Stay here as first-time tourist (stay Downtown/Marina)"
                   ].map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-3">

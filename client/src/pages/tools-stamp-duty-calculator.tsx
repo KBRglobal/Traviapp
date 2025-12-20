@@ -24,7 +24,7 @@ export default function ToolsStampDutyCalculator() {
   const [buyerType, setBuyerType] = useState("individual");
   
   useDocumentMeta({
-    title: "Dubai Property Fees Calculator 2025 | DLD, Registration & Agency Fees",
+    title: "Dubai Property Fees Calculator 2026 | DLD, Registration & Agency Fees",
     description: "Calculate all Dubai property purchase fees: 4% DLD registration, agency commission, Oqood fees, and admin charges. Free calculator with detailed breakdown.",
     ogType: "website"
   });
@@ -84,7 +84,7 @@ export default function ToolsStampDutyCalculator() {
                   Free Tool
                 </Badge>
                 <Badge variant="secondary" className="bg-pink-500/20 text-pink-200 border-pink-400/30">
-                  2025 Rates
+                  2026 Rates
                 </Badge>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">

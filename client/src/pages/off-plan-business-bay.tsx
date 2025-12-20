@@ -50,7 +50,7 @@ const projects = [
     developer: "Select Group",
     type: "Luxury Apartments",
     priceFrom: "AED 1,800,000",
-    completion: "Q3 2025",
+    completion: "Q3 2026",
     paymentPlan: "50/50",
     roi: "16-20%",
     highlights: ["Canal views", "Smart home tech", "Infinity pool"]
@@ -92,7 +92,7 @@ const faqs = [
     answer: "Business Bay offers prime central location next to Downtown Dubai, strong rental yields (6.5-7.5%), direct Dubai Canal access, and proximity to DIFC financial district. Entry prices start 20-30% below Downtown while offering similar lifestyle amenities and appreciation potential."
   },
   {
-    question: "What are the best off-plan projects in Business Bay 2025?",
+    question: "What are the best off-plan projects in Business Bay 2026?",
     answer: "Top projects include Dorchester Collection Residences (ultra-luxury), Paramount Tower (branded residences), MARQUISE Square (canal views), and Peninsula by Select Group. Each offers unique value propositions from investment ROI to lifestyle amenities."
   },
   {
@@ -109,14 +109,14 @@ const faqs = [
   },
   {
     question: "When will Business Bay off-plan projects be completed?",
-    answer: "Current pipeline shows deliveries through 2028, with major completions in Q2-Q4 2025 and 2026. Developer track records average 92% on-time delivery for Business Bay, among Dubai's highest completion rates."
+    answer: "Current pipeline shows deliveries through 2028, with major completions in Q2-Q4 2026 and 2026. Developer track records average 92% on-time delivery for Business Bay, among Dubai's highest completion rates."
   }
 ];
 
 const relatedPages = [
   { title: "Downtown Dubai Off-Plan", href: "/dubai-off-plan-downtown", description: "Adjacent luxury district" },
   { title: "DIFC Off-Plan", href: "/dubai-off-plan-difc", description: "Financial district" },
-  { title: "Best 2025 Projects", href: "/best-off-plan-projects-dubai-2025", description: "Top investments" },
+  { title: "Best 2026 Projects", href: "/best-off-plan-projects-dubai-2026", description: "Top investments" },
   { title: "Payment Plans Guide", href: "/dubai-off-plan-payment-plans", description: "Financing options" },
 ];
 
@@ -124,8 +124,8 @@ export default function OffPlanBusinessBay() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "Business Bay Off-Plan Properties Dubai 2025 | Best Projects & ROI Analysis",
-    description: "Discover the best off-plan properties in Business Bay Dubai: central location, 6.8% yields, canal views, from AED 1.2M. Complete 2025 guide with payment plans and ROI analysis.",
+    title: "Business Bay Off-Plan Properties Dubai 2026 | Best Projects & ROI Analysis",
+    description: "Discover the best off-plan properties in Business Bay Dubai: central location, 6.8% yields, canal views, from AED 1.2M. Complete 2026 guide with payment plans and ROI analysis.",
     ogType: "article"
   });
 

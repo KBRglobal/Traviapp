@@ -36,7 +36,7 @@ export default function ToolsCurrencyConverter() {
   const [selectedCurrency, setSelectedCurrency] = useState("USD");
   
   useDocumentMeta({
-    title: "AED Currency Converter | Dubai Property Investment Tool 2025",
+    title: "AED Currency Converter | Dubai Property Investment Tool 2026",
     description: "Convert AED to USD, EUR, GBP, INR, BTC, USDT and more. Free currency converter for Dubai property investment. Updated exchange rates.",
     ogType: "website"
   });

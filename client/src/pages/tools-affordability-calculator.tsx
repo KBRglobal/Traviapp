@@ -33,7 +33,7 @@ export default function ToolsAffordabilityCalculator() {
   const [paymentPlan, setPaymentPlan] = useState(60);
 
   useDocumentMeta({
-    title: "Dubai Affordability Calculator | What Property Can I Afford 2025",
+    title: "Dubai Affordability Calculator | What Property Can I Afford 2026",
     description: "Find out what Dubai property you can afford. Input your savings and income to see matching off-plan options. Free calculator with real market prices.",
     ogType: "website"
   });

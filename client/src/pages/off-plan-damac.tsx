@@ -14,12 +14,12 @@ import {
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 
 const damacProjects = [
-  { name: "DAMAC Lagoons", location: "DAMAC Hills 2", type: "Villas", price: "AED 1.5M", completion: "Q3 2025", roi: "21%" },
+  { name: "DAMAC Lagoons", location: "DAMAC Hills 2", type: "Villas", price: "AED 1.5M", completion: "Q3 2026", roi: "21%" },
   { name: "Cavalli Tower", location: "Dubai Marina", type: "Luxury Apartments", price: "AED 2.8M", completion: "Q1 2027", roi: "18%" },
   { name: "Safa Two by de Grisogono", location: "Business Bay", type: "Ultra-Luxury", price: "AED 5.5M", completion: "Q4 2026", roi: "17%" },
   { name: "DAMAC Bay by Cavalli", location: "Dubai Harbour", type: "Waterfront", price: "AED 3.2M", completion: "Q2 2027", roi: "19%" },
   { name: "The Enclaves", location: "DAMAC Hills", type: "Townhouses", price: "AED 1.9M", completion: "Q1 2026", roi: "20%" },
-  { name: "DAMAC Riverside", location: "Dubai South", type: "Apartments", price: "AED 750K", completion: "Q4 2025", roi: "22%" }
+  { name: "DAMAC Riverside", location: "Dubai South", type: "Apartments", price: "AED 750K", completion: "Q4 2026", roi: "22%" }
 ];
 
 const brandPartnerships = [
@@ -33,7 +33,7 @@ const brandPartnerships = [
 
 export default function OffPlanDamac() {
   useDocumentMeta({
-    title: "DAMAC Properties Dubai | Luxury Off-Plan Projects 2025",
+    title: "DAMAC Properties Dubai | Luxury Off-Plan Projects 2026",
     description: "Discover DAMAC luxury off-plan properties in Dubai. Designer residences with Cavalli, Versace & Fendi. 88% on-time delivery. Apartments from AED 750K with branded interiors.",
     ogType: "website"
   });

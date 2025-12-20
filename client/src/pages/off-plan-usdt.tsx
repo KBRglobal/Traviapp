@@ -36,7 +36,7 @@ const paymentSteps = [
 
 export default function OffPlanUSDT() {
   useDocumentMeta({
-    title: "Buy Dubai Property with USDT | Tether Payment Guide 2025",
+    title: "Buy Dubai Property with USDT | Tether Payment Guide 2026",
     description: "Purchase Dubai off-plan properties using USDT (Tether) stablecoin. Same-day processing, 1:1 USD peg stability, and lowest conversion fees. Complete USDT payment guide.",
     ogType: "website"
   });

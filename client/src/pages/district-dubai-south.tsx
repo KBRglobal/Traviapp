@@ -47,7 +47,7 @@ const attractions = [
     name: "Surreal Water Park",
     tagline: "World's First Surrealism-Themed Water Park",
     description: "Region's largest water park integrated with Expo City green spaces.",
-    status: "Opening 2025+",
+    status: "Opening 2026+",
     entry: "TBD"
   },
   {
@@ -116,12 +116,12 @@ function HeroSection() {
           <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             Dubai South
             <span className="block text-3xl md:text-4xl font-normal text-indigo-200 mt-2">
-              Expo City, Airport & Future Hub 2025
+              Expo City, Airport & Future Hub 2026
             </span>
           </motion.h1>
           
           <motion.p variants={fadeInUp} className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-8">
-            145 sq km mega-development — 3x Manhattan. World's largest airport, 
+            145 sq km mega-development   3x Manhattan. World's largest airport, 
             Expo City legacy, Palm Jebel Ali. 30 mins from Abu Dhabi.
           </motion.p>
           
@@ -228,7 +228,7 @@ function OverviewSection() {
 
           <motion.div variants={fadeInUp} className="mt-12">
             <Card className="p-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30">
-              <h3 className="font-bold text-lg mb-4">What Exists NOW (2025) vs. FUTURE</h3>
+              <h3 className="font-bold text-lg mb-4">What Exists NOW (2026) vs. FUTURE</h3>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <h4 className="font-semibold text-green-600 mb-3 flex items-center gap-2">
@@ -244,10 +244,10 @@ function OverviewSection() {
                 </div>
                 <div>
                   <h4 className="font-semibold text-indigo-600 mb-3 flex items-center gap-2">
-                    <Construction className="w-4 h-4" /> Coming (2025-2040)
+                    <Construction className="w-4 h-4" /> Coming (2026-2040)
                   </h4>
                   <ul className="space-y-2 text-sm">
-                    <li className="flex items-center gap-2"><Construction className="w-4 h-4 text-indigo-600" /> Surreal Water Park (2025+)</li>
+                    <li className="flex items-center gap-2"><Construction className="w-4 h-4 text-indigo-600" /> Surreal Water Park (2026+)</li>
                     <li className="flex items-center gap-2"><Construction className="w-4 h-4 text-indigo-600" /> Palm Jebel Ali (2030-2035)</li>
                     <li className="flex items-center gap-2"><Construction className="w-4 h-4 text-indigo-600" /> Full airport (260M capacity)</li>
                     <li className="flex items-center gap-2"><Construction className="w-4 h-4 text-indigo-600" /> Emirates airline relocation</li>
@@ -373,7 +373,7 @@ function AirportSection() {
 
           <div className="grid md:grid-cols-2 gap-8">
             <Card className="p-6">
-              <h3 className="font-bold text-lg mb-4 text-green-600">Current Operations (2025)</h3>
+              <h3 className="font-bold text-lg mb-4 text-green-600">Current Operations (2026)</h3>
               <ul className="space-y-3 text-sm">
                 <li className="flex items-center gap-3"><Check className="w-4 h-4 text-green-600" /> 1 concourse, 1 runway operational</li>
                 <li className="flex items-center gap-3"><Check className="w-4 h-4 text-green-600" /> 26 million passengers/year capacity</li>
@@ -407,7 +407,7 @@ function PalmJebelAliSection() {
           <motion.div variants={fadeInUp} className="text-center mb-12">
             <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 mb-4">Construction Resumed</Badge>
             <h2 className="text-4xl font-bold mb-4">Palm Jebel Ali</h2>
-            <p className="text-xl text-muted-foreground">The Second Palm Island — 50% Larger</p>
+            <p className="text-xl text-muted-foreground">The Second Palm Island   50% Larger</p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-8">
@@ -539,10 +539,10 @@ function TipsSection() {
                 </h3>
                 <ul className="space-y-3">
                   {[
-                    "Own or rent a car — Dubai South is car-dependent",
+                    "Own or rent a car   Dubai South is car-dependent",
                     "Embrace the budget advantage (30-50% cheaper rent)",
                     "Utilize Expo City for free events and activities",
-                    "Fly DWC when possible — less crowded than DXB",
+                    "Fly DWC when possible   less crowded than DXB",
                     "Take Abu Dhabi weekend trips (only 30 mins!)",
                     "Think long-term investment (5-10 year horizon)"
                   ].map((tip, idx) => (
@@ -562,11 +562,11 @@ function TipsSection() {
                 </h3>
                 <ul className="space-y-3">
                   {[
-                    "Expect beach lifestyle — no ocean until Palm Jebel Ali (2030s)",
-                    "Expect nightlife — family-oriented district",
-                    "Underestimate commute times — 50+ mins to Downtown",
-                    "Expect complete amenities — it's a 20-year project",
-                    "Rely on Metro alone — last-mile gaps require car"
+                    "Expect beach lifestyle   no ocean until Palm Jebel Ali (2030s)",
+                    "Expect nightlife   family-oriented district",
+                    "Underestimate commute times   50+ mins to Downtown",
+                    "Expect complete amenities   it's a 20-year project",
+                    "Rely on Metro alone   last-mile gaps require car"
                   ].map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <X className="w-4 h-4 text-red-600 shrink-0 mt-1" />

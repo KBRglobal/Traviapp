@@ -28,7 +28,7 @@ const comparisonTable = [
 
 export default function CompareCryptoVsBankTransfer() {
   useDocumentMeta({
-    title: "Crypto vs Bank Transfer for Dubai Property | Payment Comparison 2025",
+    title: "Crypto vs Bank Transfer for Dubai Property | Payment Comparison 2026",
     description: "Compare cryptocurrency and bank transfer for Dubai property purchases. Crypto offers speed and lower fees. Bank transfers provide stability. See full comparison.",
     ogType: "article"
   });
@@ -57,7 +57,7 @@ export default function CompareCryptoVsBankTransfer() {
                   Payment Comparison
                 </Badge>
                 <Badge variant="secondary" className="bg-amber-500/20 text-amber-200 border-amber-400/30">
-                  2025 Guide
+                  2026 Guide
                 </Badge>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">

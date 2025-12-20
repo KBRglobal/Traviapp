@@ -27,7 +27,7 @@ const PublicOffPlan = lazy(() => import("@/pages/public-off-plan"));
 const OffPlanInvestmentGuide = lazy(() => import("@/pages/off-plan-investment-guide"));
 const OffPlanHowToBuy = lazy(() => import("@/pages/off-plan-how-to-buy"));
 const OffPlanPaymentPlans = lazy(() => import("@/pages/off-plan-payment-plans"));
-const OffPlanBest2025 = lazy(() => import("@/pages/off-plan-best-2025"));
+const OffPlanBest2026 = lazy(() => import("@/pages/off-plan-best-2026"));
 const OffPlanBusinessBay = lazy(() => import("@/pages/off-plan-business-bay"));
 const OffPlanDubaiMarina = lazy(() => import("@/pages/off-plan-dubai-marina"));
 const OffPlanJVC = lazy(() => import("@/pages/off-plan-jvc"));
@@ -95,6 +95,8 @@ const DistrictInternationalCity = lazy(() => import("@/pages/district-internatio
 const DistrictAlKarama = lazy(() => import("@/pages/district-al-karama"));
 const LandingFreeDubai = lazy(() => import("@/pages/landing-free-dubai"));
 const LandingDubaiLaws = lazy(() => import("@/pages/landing-dubai-laws"));
+const LandingSheikhMohammed = lazy(() => import("@/pages/landing-sheikh-mohammed"));
+const LandingDubai247 = lazy(() => import("@/pages/landing-dubai-247"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -272,7 +274,7 @@ const publicRoutes = [
   { path: "/dubai-off-plan-investment-guide", component: OffPlanInvestmentGuide },
   { path: "/how-to-buy-dubai-off-plan", component: OffPlanHowToBuy },
   { path: "/dubai-off-plan-payment-plans", component: OffPlanPaymentPlans },
-  { path: "/best-off-plan-projects-dubai-2025", component: OffPlanBest2025 },
+  { path: "/best-off-plan-projects-dubai-2026", component: OffPlanBest2026 },
   { path: "/dubai-off-plan-business-bay", component: OffPlanBusinessBay },
   { path: "/dubai-off-plan-marina", component: OffPlanDubaiMarina },
   { path: "/dubai-off-plan-jvc", component: OffPlanJVC },
@@ -324,6 +326,8 @@ const publicRoutes = [
   // Landing pages
   { path: "/dubai/free-things-to-do", component: LandingFreeDubai },
   { path: "/dubai/laws-for-tourists", component: LandingDubaiLaws },
+  { path: "/dubai/sheikh-mohammed-bin-rashid", component: LandingSheikhMohammed },
+  { path: "/dubai/24-hours-open", component: LandingDubai247 },
   // District pages
   { path: "/districts", component: DistrictsGateway },
   { path: "/districts/downtown-dubai", component: DistrictDowntownDubai },

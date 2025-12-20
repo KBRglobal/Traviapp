@@ -33,7 +33,7 @@ export default function ToolsPaymentCalculator() {
   const [postHandoverMonths, setPostHandoverMonths] = useState("24");
 
   useDocumentMeta({
-    title: "Dubai Payment Plan Calculator | Off-Plan Installment Tool 2025",
+    title: "Dubai Payment Plan Calculator | Off-Plan Installment Tool 2026",
     description: "Calculate Dubai off-plan payment schedules. Compare 60/40, 70/30, 80/20, and post-handover plans. Free interactive tool shows monthly installments.",
     ogType: "website"
   });

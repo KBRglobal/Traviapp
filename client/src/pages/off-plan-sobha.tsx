@@ -19,7 +19,7 @@ const sobhaProjects = [
   { name: "Sobha One", location: "Sobha Hartland", type: "Towers", price: "AED 1.8M", completion: "Q1 2026", roi: "22%" },
   { name: "Sobha SeaHaven", location: "Dubai Harbour", type: "Waterfront", price: "AED 2.5M", completion: "Q3 2026", roi: "21%" },
   { name: "The Crest", location: "Sobha Hartland", type: "Premium Apartments", price: "AED 2.2M", completion: "Q2 2026", roi: "22%" },
-  { name: "Sobha Elwood", location: "Sobha Hartland", type: "Townhouses", price: "AED 3.8M", completion: "Q4 2025", roi: "19%" }
+  { name: "Sobha Elwood", location: "Sobha Hartland", type: "Townhouses", price: "AED 3.8M", completion: "Q4 2026", roi: "19%" }
 ];
 
 const qualityStandards = [
@@ -33,7 +33,7 @@ const qualityStandards = [
 
 export default function OffPlanSobha() {
   useDocumentMeta({
-    title: "Sobha Realty Dubai | Premium Off-Plan Projects 2025",
+    title: "Sobha Realty Dubai | Premium Off-Plan Projects 2026",
     description: "Explore Sobha Realty off-plan properties in Dubai. Known for exceptional quality with 94% on-time delivery and 22% average ROI. Luxury apartments and villas from AED 1.2M.",
     ogType: "website"
   });

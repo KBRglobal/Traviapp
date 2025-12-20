@@ -56,7 +56,7 @@ export default function GlossaryHub() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useDocumentMeta({
-    title: "Dubai Real Estate Glossary | A-Z Property Terms Explained 2025",
+    title: "Dubai Real Estate Glossary | A-Z Property Terms Explained 2026",
     description: "Complete Dubai real estate glossary. Learn DLD, RERA, Oqood, escrow, freehold, Golden Visa, and 50+ property terms. Essential guide for Dubai investors.",
     ogType: "website"
   });
