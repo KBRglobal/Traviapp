@@ -1,15 +1,16 @@
-import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail, Globe, Building2, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail, Globe, Building2, TrendingUp, Sparkles, Heart, Camera, Utensils, Palmtree, Sun, Compass } from "lucide-react";
+import { useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
+import { motion } from "framer-motion";
 import type { Content, ContentWithRelations } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PublicNav } from "@/components/public-nav";
+import { PublicFooter } from "@/components/public-footer";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
 import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
-import logoImg from "@assets/Full_Logo_for_Light_Background_1765570034686.png";
 
 interface HomepagePromotion {
   id: string;
@@ -30,13 +31,20 @@ const dubaiImages = [
   "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=600&h=800&fit=crop",
 ];
 
-const activityCategories = [
-  { titleKey: "nav.attractions", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", type: "attraction" },
-  { titleKey: "nav.hotels", image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400&h=300&fit=crop", type: "hotel" },
-  { titleKey: "nav.dining", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop", type: "dining" },
-  { titleKey: "nav.districts", image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400&h=300&fit=crop", type: "district" },
-  { titleKey: "nav.events", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=300&fit=crop", type: "event" },
-  { titleKey: "nav.articles", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop", type: "article" },
+const categories = [
+  { title: "Attractions", titleAr: "معالم سياحية", icon: Camera, href: "/attractions", color: "from-purple-500 to-pink-500", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=500&fit=crop" },
+  { title: "Hotels", titleAr: "فنادق", icon: Building2, href: "/hotels", color: "from-blue-500 to-cyan-500", image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400&h=500&fit=crop" },
+  { title: "Dining", titleAr: "مطاعم", icon: Utensils, href: "/dining", color: "from-orange-500 to-amber-500", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=500&fit=crop" },
+  { title: "Districts", titleAr: "أحياء", icon: MapPin, href: "/districts", color: "from-emerald-500 to-teal-500", image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400&h=500&fit=crop" },
+  { title: "Events", titleAr: "فعاليات", icon: Sparkles, href: "/events", color: "from-rose-500 to-pink-500", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=500&fit=crop" },
+  { title: "Articles", titleAr: "مقالات", icon: Compass, href: "/articles", color: "from-indigo-500 to-purple-500", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=500&fit=crop" },
+];
+
+const featuredDistricts = [
+  { name: "Downtown Dubai", tagline: "Iconic Burj Khalifa", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop", slug: "downtown-dubai", stats: { attractions: 12, hotels: 25 } },
+  { name: "Dubai Marina", tagline: "Waterfront Living", image: "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=600&h=400&fit=crop", slug: "dubai-marina", stats: { attractions: 8, hotels: 18 } },
+  { name: "Palm Jumeirah", tagline: "The Eighth Wonder", image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=600&h=400&fit=crop", slug: "palm-jumeirah", stats: { attractions: 6, hotels: 12 } },
+  { name: "Old Dubai", tagline: "Heritage & Souks", image: "https://images.unsplash.com/photo-1534551767192-78b8dd45b51b?w=600&h=400&fit=crop", slug: "old-dubai", stats: { attractions: 10, hotels: 15 } },
 ];
 
 const CloudSVG = ({ className = "", size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) => {
@@ -74,11 +82,21 @@ const BirdSVG = ({ className = "" }: { className?: string }) => (
   </svg>
 );
 
+const fadeInUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
 export default function PublicHome() {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
   const [, setLocation] = useLocation();
-  const { t, locale, localePath, isRTL } = useLocale();
+  const { t, localePath, isRTL } = useLocale();
 
   useDocumentMeta({
     title: `Travi - ${t("home.heroTitle")} | ${t("nav.hotels")}, ${t("nav.attractions")}`,
@@ -108,7 +126,6 @@ export default function PublicHome() {
   };
 
   const trendingContent = getActiveContent(featuredPromotions);
-  
   const exploreContent = getActiveContent(attractionsPromotions);
 
   const handleSearch = () => {
@@ -117,7 +134,7 @@ export default function PublicHome() {
     }
   };
 
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+  const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch();
     }
@@ -126,7 +143,7 @@ export default function PublicHome() {
   const getContentPath = (content: Content) => `/${content.type}s/${content.slug}`;
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-white via-slate-50 to-white">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md">
         Skip to main content
       </a>
@@ -157,29 +174,14 @@ export default function PublicHome() {
 
           {/* Main Hero Content */}
           <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20">
-            {/* Giant TRAVI Letters with Dubai Images - Always LTR for logo */}
+            {/* Giant TRAVI Letters with Dubai Images */}
             <div className="text-center mb-8" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
               <h1 className="text-[8rem] sm:text-[12rem] lg:text-[16rem] font-bold leading-none tracking-tight select-none inline-flex">
-                <span
-                  className="travi-letter-mask"
-                  style={{ backgroundImage: `url(${dubaiImages[0]})` }}
-                >T</span>
-                <span
-                  className="travi-letter-mask"
-                  style={{ backgroundImage: `url(${dubaiImages[1]})` }}
-                >R</span>
-                <span
-                  className="travi-letter-mask"
-                  style={{ backgroundImage: `url(${dubaiImages[2]})` }}
-                >A</span>
-                <span
-                  className="travi-letter-mask"
-                  style={{ backgroundImage: `url(${dubaiImages[3]})` }}
-                >V</span>
-                <span
-                  className="travi-letter-mask"
-                  style={{ backgroundImage: `url(${dubaiImages[4]})` }}
-                >I</span>
+                <span className="travi-letter-mask" style={{ backgroundImage: `url(${dubaiImages[0]})` }}>T</span>
+                <span className="travi-letter-mask" style={{ backgroundImage: `url(${dubaiImages[1]})` }}>R</span>
+                <span className="travi-letter-mask" style={{ backgroundImage: `url(${dubaiImages[2]})` }}>A</span>
+                <span className="travi-letter-mask" style={{ backgroundImage: `url(${dubaiImages[3]})` }}>V</span>
+                <span className="travi-letter-mask" style={{ backgroundImage: `url(${dubaiImages[4]})` }}>I</span>
               </h1>
             </div>
 
@@ -205,14 +207,14 @@ export default function PublicHome() {
               role="search" 
               className="max-w-2xl mx-auto px-2 sm:px-4"
             >
-              <div className="bg-white rounded-2xl md:rounded-full shadow-xl p-3 md:p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-full shadow-2xl shadow-purple-500/10 p-3 md:p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 border border-white/50">
                 <div className="flex-1 flex items-center gap-3 px-4 md:px-5">
                   <Search className="w-5 h-5 text-[#6C5CE7] shrink-0" aria-hidden="true" />
                   <label htmlFor="hero-search" className="sr-only">Search Dubai experiences</label>
                   <input
                     id="hero-search"
                     type="search"
-                    placeholder="Where do you want to go?"
+                    placeholder={t("home.searchPlaceholder") || "Where do you want to go?"}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
@@ -222,7 +224,7 @@ export default function PublicHome() {
                 </div>
                 <Button 
                   type="submit"
-                  className="btn-gold rounded-full px-6 md:px-8 py-3 md:py-6 text-base md:text-lg shrink-0" 
+                  className="bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] hover:opacity-90 text-white rounded-full px-6 md:px-8 py-3 md:py-6 text-base md:text-lg shrink-0 shadow-lg shadow-purple-500/25 transition-all duration-300" 
                   data-testid="button-search"
                 >
                   {t("home.exploreAttractions")}
@@ -230,10 +232,10 @@ export default function PublicHome() {
               </div>
             </form>
 
-            {/* Quick Stats - Dynamic based on content */}
+            {/* Quick Stats */}
             {publishedContent && publishedContent.length > 0 && (
               <div className="flex flex-wrap justify-center gap-8 mt-12">
-                <div className="flex items-center gap-2 text-[#1E1B4B]">
+                <div className="flex items-center gap-2 text-[#1E1B4B] bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
                   <MapPin className="w-5 h-5 text-[#EC4899]" />
                   <span className="font-medium">{publishedContent.length} {t("common.places")}</span>
                 </div>
@@ -241,473 +243,444 @@ export default function PublicHome() {
             )}
           </div>
 
-          {/* Wavy Divider */}
-          <div className="absolute bottom-0 left-0 right-0">
-            <svg viewBox="0 0 1440 100" fill="none" className="w-full h-16 sm:h-24">
-              <path d="M0,60 C360,100 720,20 1080,60 C1260,80 1380,70 1440,60 L1440,100 L0,100 Z" fill="white" />
-            </svg>
-          </div>
+          {/* Smooth Gradient Transition */}
+          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-white via-white/80 to-transparent" />
         </section>
 
-        {/* EXPLORE ACTIVITIES SECTION */}
-        <section className="py-20 bg-white relative overflow-hidden" data-testid="section-activities">
-          {/* Decorative Hot Air Balloons */}
-          <HotAirBalloonSVG className="absolute top-10 right-[5%] animate-float-slow opacity-60" color="#A855F7" />
-          <HotAirBalloonSVG className="absolute bottom-20 left-[3%] animate-float-slow animation-delay-1000 opacity-50" color="#F59E0B" />
-
+        {/* EXPLORE CATEGORIES - Glass Cards Grid */}
+        <section className="py-24 relative" data-testid="section-categories">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4" dir={isRTL ? "rtl" : "ltr"}>
-                {t("home.topAttractions")}
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={fadeInUp}
+              className="text-center mb-16"
+            >
+              <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-[#6C5CE7] border-0 mb-4 px-4 py-1.5">
+                <Compass className="w-4 h-4 mr-2" />
+                Explore Dubai
+              </Badge>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#1E1B4B] mb-4 tracking-tight">
+                Your Adventure Starts Here
               </h2>
-              <p className="text-xl text-[#64748B]" dir={isRTL ? "rtl" : "ltr"}>
-                {t("home.activitiesInDubai")}
+              <p className="text-xl text-slate-500 max-w-2xl mx-auto">
+                Discover the best of Dubai across every category
               </p>
-            </div>
+            </motion.div>
 
-            {/* Activity Cards Carousel */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {activityCategories.map((category, index) => (
-                <Link
-                  key={index}
-                  href={localePath(`/${category.type}s`)}
-                  className="group relative overflow-hidden rounded-2xl aspect-[3/4] cursor-pointer"
-                  data-testid={`activity-${category.type}`}
-                >
-                  <img
-                    src={category.image}
-                    alt={t(category.titleKey)}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <h3 className="text-white font-semibold text-lg mb-1">{t(category.titleKey)}</h3>
-                  </div>
-                </Link>
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-50px" }}
+              variants={staggerContainer}
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6"
+            >
+              {categories.map((category, index) => (
+                <motion.div key={category.title} variants={fadeInUp}>
+                  <Link href={localePath(category.href)} data-testid={`category-${category.title.toLowerCase()}`}>
+                    <div className="group relative overflow-hidden rounded-3xl aspect-[3/4] cursor-pointer">
+                      {/* Background Image */}
+                      <img
+                        src={category.image}
+                        alt={category.title}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      
+                      {/* Gradient Overlay */}
+                      <div className={`absolute inset-0 bg-gradient-to-t ${category.color} opacity-60 mix-blend-multiply transition-opacity duration-300 group-hover:opacity-70`} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      
+                      {/* Icon */}
+                      <div className="absolute top-4 right-4">
+                        <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                          <category.icon className="w-5 h-5 text-white" />
+                        </div>
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <h3 className="text-white font-bold text-xl mb-1">{category.title}</h3>
+                        <p className="text-white/70 text-sm">{category.titleAr}</p>
+                      </div>
+                      
+                      {/* Hover Arrow */}
+                      <div className="absolute bottom-5 right-5 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                        <ArrowRight className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
-        {/* READY TO EXPLORE SECTION - Tilted Cards with Clouds */}
-        <section className="py-20 sky-gradient-light relative overflow-hidden" data-testid="section-explore">
-          {/* Background Clouds */}
-          <div className="absolute inset-0 pointer-events-none">
-            <CloudSVG className="absolute top-10 left-[10%] opacity-50" size="lg" />
-            <CloudSVG className="absolute top-40 right-[15%] opacity-40" size="md" />
-            <CloudSVG className="absolute bottom-20 left-[25%] opacity-45" size="sm" />
-          </div>
-
+        {/* FEATURED DISTRICTS - Immersive Cards */}
+        <section className="py-24 relative overflow-hidden" data-testid="section-districts">
+          {/* Subtle Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-purple-50/30 to-slate-50" />
+          
           <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4" dir={isRTL ? "rtl" : "ltr"}>
-                {t("home.exploreAttractions")}
-              </h2>
-              <p className="text-xl text-[#64748B]" dir={isRTL ? "rtl" : "ltr"}>
-                {t("home.handPickedDestinations")}
-              </p>
-            </div>
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={fadeInUp}
+              className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12"
+            >
+              <div>
+                <Badge className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-600 border-0 mb-4 px-4 py-1.5">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  21 Districts
+                </Badge>
+                <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] mb-2 tracking-tight">
+                  Iconic Neighborhoods
+                </h2>
+                <p className="text-lg text-slate-500 max-w-xl">
+                  Each district tells a unique story of Dubai's remarkable transformation
+                </p>
+              </div>
+              <Link href="/districts">
+                <Button variant="outline" className="border-2 border-[#6C5CE7] text-[#6C5CE7] rounded-full px-6 gap-2 hover:bg-[#6C5CE7] hover:text-white transition-all duration-300" data-testid="button-view-all-districts">
+                  Explore All Districts <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </motion.div>
 
-            {/* Content or Coming Soon */}
-            {exploreContent.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                  {exploreContent.slice(0, 4).map((content, index) => (
-                    <Link 
-                      key={content.id} 
-                      href={getContentPath(content)}
-                      data-testid={`explore-card-${content.id}`}
-                    >
-                      <article 
-                        className={`tilted-card relative overflow-hidden rounded-2xl shadow-xl cursor-pointer aspect-[3/4] ${
-                          index % 2 === 0 ? 'tilt-left-sm' : 'tilt-right-sm'
-                        }`}
-                      >
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-50px" }}
+              variants={staggerContainer}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            >
+              {featuredDistricts.map((district, index) => (
+                <motion.div key={district.slug} variants={fadeInUp}>
+                  <Link href={`/districts/${district.slug}`} data-testid={`district-${district.slug}`}>
+                    <div className="group relative overflow-hidden rounded-3xl cursor-pointer bg-white shadow-lg shadow-slate-200/50 hover:shadow-xl hover:shadow-purple-200/30 transition-all duration-500">
+                      {/* Image */}
+                      <div className="relative aspect-[4/3] overflow-hidden">
+                        <img
+                          src={district.image}
+                          alt={district.name}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        
+                        {/* Stats Overlay */}
+                        <div className="absolute bottom-4 left-4 right-4 flex gap-3">
+                          <span className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full border border-white/30">
+                            <Camera className="w-3 h-3" /> {district.stats.attractions}
+                          </span>
+                          <span className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full border border-white/30">
+                            <Building2 className="w-3 h-3" /> {district.stats.hotels}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="p-5">
+                        <h3 className="text-xl font-bold text-[#1E1B4B] mb-1 group-hover:text-[#6C5CE7] transition-colors">
+                          {district.name}
+                        </h3>
+                        <p className="text-slate-500 text-sm">{district.tagline}</p>
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+
+        {/* EXPLORE CONTENT - Editorial Style */}
+        {exploreContent.length > 0 && (
+          <section className="py-24 bg-white relative overflow-hidden" data-testid="section-explore">
+            <div className="max-w-7xl mx-auto px-6">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-100px" }}
+                variants={fadeInUp}
+                className="text-center mb-16"
+              >
+                <Badge className="bg-gradient-to-r from-pink-100 to-rose-100 text-pink-600 border-0 mb-4 px-4 py-1.5">
+                  <Heart className="w-4 h-4 mr-2" />
+                  Hand-Picked
+                </Badge>
+                <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] mb-4 tracking-tight">
+                  {t("home.exploreAttractions")}
+                </h2>
+                <p className="text-xl text-slate-500 max-w-2xl mx-auto">
+                  {t("home.handPickedDestinations")}
+                </p>
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-50px" }}
+                variants={staggerContainer}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+              >
+                {exploreContent.slice(0, 4).map((content, index) => (
+                  <motion.div key={content.id} variants={fadeInUp}>
+                    <Link href={getContentPath(content)} data-testid={`explore-card-${content.id}`}>
+                      <div className="group relative overflow-hidden rounded-3xl cursor-pointer aspect-[3/4]">
                         <img
                           src={content.heroImage || dubaiImages[index % dubaiImages.length]}
                           alt={content.heroImageAlt || content.title}
-                          className="w-full h-full object-cover"
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                         
                         <div className="absolute top-4 left-4">
-                          <Badge className="bg-white/90 text-[#6C5CE7] border-0 text-xs font-semibold">
+                          <Badge className="bg-white/90 backdrop-blur-sm text-[#6C5CE7] border-0 text-xs font-semibold capitalize">
                             {content.type}
                           </Badge>
                         </div>
 
-                        <div className="absolute bottom-0 left-0 right-0 p-5">
-                          <h3 className="text-white font-bold text-lg line-clamp-2">
+                        <div className="absolute bottom-0 left-0 right-0 p-6">
+                          <h3 className="text-white font-bold text-xl line-clamp-2 mb-2">
+                            {content.title}
+                          </h3>
+                          <span className="inline-flex items-center gap-1 text-white/80 text-sm opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                            Explore <ArrowRight className="w-4 h-4" />
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeInUp}
+                className="text-center mt-12"
+              >
+                <Link href={localePath("/attractions")}>
+                  <Button className="bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] hover:opacity-90 text-white rounded-full px-8 py-6 text-lg shadow-lg shadow-purple-500/25" data-testid="button-view-all-explore">
+                    {t("home.viewAll")} {t("nav.attractions")}
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </Link>
+              </motion.div>
+            </div>
+          </section>
+        )}
+
+        {/* TRENDING - Glass Cards */}
+        {trendingContent.length > 0 && (
+          <section className="py-24 bg-gradient-to-b from-slate-50 to-white relative overflow-hidden" data-testid="section-trending">
+            <div className="max-w-7xl mx-auto px-6">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-100px" }}
+                variants={fadeInUp}
+                className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12"
+              >
+                <div>
+                  <Badge className="bg-gradient-to-r from-rose-100 to-orange-100 text-rose-600 border-0 mb-4 px-4 py-1.5">
+                    <Star className="w-4 h-4 mr-2" />
+                    Hot Right Now
+                  </Badge>
+                  <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] tracking-tight">
+                    Trending in Dubai
+                  </h2>
+                </div>
+                <Link href={localePath("/articles")}>
+                  <Button variant="outline" className="border-2 border-rose-400 text-rose-500 rounded-full px-6 gap-2 hover:bg-rose-500 hover:text-white transition-all duration-300" data-testid="button-view-all-trending">
+                    {t("home.viewAll")} <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-50px" }}
+                variants={staggerContainer}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+              >
+                {trendingContent.slice(0, 4).map((content, index) => (
+                  <motion.div key={content.id} variants={fadeInUp}>
+                    <Link href={getContentPath(content)} data-testid={`trending-card-${content.id}`}>
+                      <div className="group relative overflow-hidden rounded-3xl cursor-pointer aspect-[4/5] shadow-lg shadow-rose-100/50 hover:shadow-xl hover:shadow-rose-200/50 transition-all duration-500">
+                        <img
+                          src={content.heroImage || dubaiImages[index % dubaiImages.length]}
+                          alt={content.heroImageAlt || content.title}
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        
+                        <div className="absolute top-4 right-4">
+                          <Badge className="bg-gradient-to-r from-rose-500 to-orange-500 text-white border-0 text-xs font-semibold shadow-lg">
+                            <Star className="w-3 h-3 mr-1" /> Hot
+                          </Badge>
+                        </div>
+
+                        <div className="absolute bottom-0 left-0 right-0 p-6">
+                          <span className="text-rose-300 text-sm font-medium uppercase tracking-wide mb-2 block">
+                            {content.type}
+                          </span>
+                          <h3 className="text-white font-bold text-xl line-clamp-2">
                             {content.title}
                           </h3>
                         </div>
-                      </article>
+                      </div>
                     </Link>
-                  ))}
-                </div>
-
-                <div className="text-center mt-10">
-                  <Link href={localePath("/attractions")} data-testid="link-view-all-explore">
-                    <Button className="btn-gold rounded-full px-8 py-6 text-lg" data-testid="button-view-all-explore">
-                      {t("home.viewAll")} {t("nav.attractions")}
-                      <ArrowRight className={`w-5 h-5 ${isRTL ? "mr-2 rotate-180" : "ml-2"}`} />
-                    </Button>
-                  </Link>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center mx-auto mb-6">
-                  <MapPin className="w-10 h-10 text-[#6C5CE7]" />
-                </div>
-                <h3 className="text-2xl font-bold text-[#1E1B4B] mb-3">Coming Soon</h3>
-                <p className="text-[#64748B] max-w-md mx-auto">
-                  We're curating the best Dubai experiences for you. Check back soon for hand-picked destinations!
-                </p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* TRENDING IN DUBAI SECTION - Watermark Background */}
-        <section className="py-20 bg-white relative overflow-hidden" data-testid="section-trending">
-          {/* Large Watermark Text */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-            <span className="watermark-text">TRENDING</span>
-          </div>
-
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="flex items-end justify-between mb-12 gap-4 flex-wrap">
-              <div>
-                <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-2">
-                  Trending in Dubai
-                </h2>
-                <p className="text-xl text-[#64748B]">What everyone's talking about</p>
-              </div>
-              {trendingContent.length > 0 && (
-                <Link href={localePath("/articles")} className="hidden sm:block" data-testid="link-view-all-trending">
-                  <Button variant="outline" className="border-[#6C5CE7] text-[#6C5CE7] rounded-full px-6" data-testid="button-view-all-trending">
-                    {t("home.viewAll")} <ChevronRight className={`w-4 h-4 ${isRTL ? "mr-1 rotate-180" : "ml-1"}`} />
-                  </Button>
-                </Link>
-              )}
-            </div>
-
-            {/* Content or Coming Soon */}
-            {trendingContent.length > 0 ? (
-              <div className="flex flex-wrap justify-center gap-6 lg:gap-0 lg:justify-start">
-                {trendingContent.slice(0, 4).map((content, index) => (
-                  <Link 
-                    key={content.id} 
-                    href={getContentPath(content)}
-                    className={`w-full sm:w-72 lg:w-80 ${index > 0 ? 'lg:-ml-8' : ''}`}
-                    style={{ zIndex: 4 - index }}
-                    data-testid={`trending-card-${content.id}`}
-                  >
-                    <article 
-                      className={`tilted-card relative overflow-hidden rounded-2xl shadow-2xl cursor-pointer aspect-[4/5] ${
-                        index === 0 ? '' : index === 1 ? 'tilt-right-sm' : index === 2 ? 'tilt-left-sm' : 'tilt-right-sm'
-                      }`}
-                    >
-                      <img
-                        src={content.heroImage || dubaiImages[index % dubaiImages.length]}
-                        alt={content.heroImageAlt || content.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                      
-                      <div className="absolute top-4 right-4">
-                        <Badge className="bg-[#EC4899] text-white border-0 text-xs font-semibold">
-                          Hot
-                        </Badge>
-                      </div>
-
-                      <div className="absolute bottom-0 left-0 right-0 p-5">
-                        <span className="text-[#A855F7] text-sm font-medium uppercase tracking-wide mb-2 block">
-                          {content.type}
-                        </span>
-                        <h3 className="text-white font-bold text-xl line-clamp-2">
-                          {content.title}
-                        </h3>
-                      </div>
-                    </article>
-                  </Link>
+                  </motion.div>
                 ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="w-20 h-20 rounded-full bg-[#EC4899]/10 flex items-center justify-center mx-auto mb-6">
-                  <Star className="w-10 h-10 text-[#EC4899]" />
-                </div>
-                <h3 className="text-2xl font-bold text-[#1E1B4B] mb-3">Coming Soon</h3>
-                <p className="text-[#64748B] max-w-md mx-auto">
-                  We're gathering the hottest trends in Dubai. Stay tuned for exciting content!
-                </p>
-              </div>
-            )}
-          </div>
-        </section>
+              </motion.div>
+            </div>
+          </section>
+        )}
 
-        {/* OFF-PLAN PROPERTIES SECTION */}
-        <section className="py-16 bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4C1D95] relative overflow-hidden" data-testid="section-off-plan">
+        {/* OFF-PLAN PROPERTIES - Premium Finance Section */}
+        <section className="py-24 relative overflow-hidden" data-testid="section-off-plan">
+          {/* Premium Gradient Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4C1D95]" />
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920')] bg-cover bg-center mix-blend-overlay opacity-10" />
+          
+          {/* Animated Orbs */}
+          <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/30 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse animation-delay-2000" />
+          
           <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="text-center mb-12">
-              <Badge className="bg-[#F59E0B] text-white border-0 mb-4">
-                <Building2 className="w-3 h-3 mr-1" />
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={fadeInUp}
+              className="text-center mb-16"
+            >
+              <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 mb-6 px-5 py-2 text-sm shadow-lg">
+                <Building2 className="w-4 h-4 mr-2" />
                 Investment Hub
               </Badge>
-              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight">
                 Dubai Off-Plan Properties
               </h2>
-              <p className="text-xl text-white/80 max-w-2xl mx-auto">
+              <p className="text-xl text-white/70 max-w-3xl mx-auto leading-relaxed">
                 Invest in Dubai real estate with cryptocurrency (BTC/USDT/ETH) or cash. 
                 Entry from AED 420K with 15-30% ROI potential.
               </p>
-            </div>
+            </motion.div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <Link href="/dubai-off-plan-properties" data-testid="link-offplan-hub">
-                <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
-                  <Building2 className="w-8 h-8 text-[#F59E0B] mb-3" />
-                  <h3 className="font-semibold text-white mb-1">Property Hub</h3>
-                  <p className="text-sm text-white/70">1,577+ Active Projects</p>
-                </div>
-              </Link>
-              <Link href="/tools-roi-calculator" data-testid="link-roi-calculator">
-                <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
-                  <TrendingUp className="w-8 h-8 text-[#10B981] mb-3" />
-                  <h3 className="font-semibold text-white mb-1">ROI Calculator</h3>
-                  <p className="text-sm text-white/70">Calculate Returns</p>
-                </div>
-              </Link>
-              <Link href="/compare-off-plan-vs-ready" data-testid="link-compare">
-                <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
-                  <Users className="w-8 h-8 text-[#8B5CF6] mb-3" />
-                  <h3 className="font-semibold text-white mb-1">Comparisons</h3>
-                  <p className="text-sm text-white/70">11 Analysis Guides</p>
-                </div>
-              </Link>
-              <Link href="/glossary" data-testid="link-glossary">
-                <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
-                  <MapPin className="w-8 h-8 text-[#EC4899] mb-3" />
-                  <h3 className="font-semibold text-white mb-1">Glossary</h3>
-                  <p className="text-sm text-white/70">25+ Terms Explained</p>
-                </div>
-              </Link>
-            </div>
-
-            <div className="text-center">
-              <Link href={localePath("/dubai-off-plan-properties")}>
-                <Button size="lg" className="btn-gold rounded-full px-8" data-testid="button-explore-offplan">
-                  {t("home.viewAll")} {t("realEstate.offPlan")}
-                  <ChevronRight className={`w-4 h-4 ${isRTL ? "mr-2 rotate-180" : "ml-2"}`} />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* DISCOVER DUBAI DISTRICTS SECTION */}
-        <section className="py-20 bg-gradient-to-br from-[#6443F4] via-[#8B5CF6] to-[#F94498] relative overflow-hidden" data-testid="section-districts">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920')] bg-cover bg-center" />
-          </div>
-          
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="text-center mb-12">
-              <Badge className="bg-white/20 text-white border-white/30 mb-4">
-                <MapPin className="w-3 h-3 mr-1" />
-                21 Districts to Explore
-              </Badge>
-              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">
-                Discover Dubai's Districts
-              </h2>
-              <p className="text-xl text-white/80 max-w-2xl mx-auto">
-                From iconic Downtown to historic Old Dubai, explore neighborhoods that define the city's diverse character.
-              </p>
-            </div>
-
-            {/* Featured Districts Carousel */}
-            <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide mb-8">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-50px" }}
+              variants={staggerContainer}
+              className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12"
+            >
               {[
-                { name: "Downtown Dubai", tagline: "Iconic Burj Khalifa", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", slug: "downtown-dubai" },
-                { name: "Dubai Marina", tagline: "Waterfront Living", image: "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=400&h=300&fit=crop", slug: "dubai-marina" },
-                { name: "Palm Jumeirah", tagline: "The Eighth Wonder", image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=400&h=300&fit=crop", slug: "palm-jumeirah" },
-                { name: "Old Dubai", tagline: "Heritage & Souks", image: "https://images.unsplash.com/photo-1534551767192-78b8dd45b51b?w=400&h=300&fit=crop", slug: "old-dubai" },
-                { name: "DIFC", tagline: "Financial Hub", image: "https://images.unsplash.com/photo-1546412414-e1885259563a?w=400&h=300&fit=crop", slug: "difc" },
-                { name: "JBR Beach", tagline: "Beach Paradise", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", slug: "jbr-jumeirah-beach-residence" },
-              ].map((district, index) => (
-                <Link 
-                  key={district.slug} 
-                  href={`/districts/${district.slug}`}
-                  className="flex-shrink-0 snap-start"
-                  data-testid={`district-card-${district.slug}`}
-                >
-                  <div className="w-64 rounded-xl overflow-hidden bg-white/10 backdrop-blur border border-white/20 hover-elevate cursor-pointer">
-                    <div className="relative h-36">
-                      <img 
-                        src={district.image} 
-                        alt={district.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                { title: "Property Hub", desc: "1,577+ Active Projects", icon: Building2, color: "amber", href: "/dubai-off-plan-properties" },
+                { title: "ROI Calculator", desc: "Calculate Returns", icon: TrendingUp, color: "emerald", href: "/tools-roi-calculator" },
+                { title: "Comparisons", desc: "11 Analysis Guides", icon: Users, color: "purple", href: "/compare-off-plan-vs-ready" },
+                { title: "Glossary", desc: "25+ Terms Explained", icon: MapPin, color: "pink", href: "/glossary" },
+              ].map((item, index) => (
+                <motion.div key={item.title} variants={fadeInUp}>
+                  <Link href={item.href} data-testid={`link-${item.title.toLowerCase().replace(' ', '-')}`}>
+                    <div className="group bg-white/10 backdrop-blur-xl rounded-2xl p-6 cursor-pointer border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color === 'amber' ? 'from-amber-400 to-orange-500' : item.color === 'emerald' ? 'from-emerald-400 to-teal-500' : item.color === 'purple' ? 'from-purple-400 to-indigo-500' : 'from-pink-400 to-rose-500'} flex items-center justify-center mb-4 shadow-lg`}>
+                        <item.icon className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="font-semibold text-white text-lg mb-1">{item.title}</h3>
+                      <p className="text-sm text-white/60">{item.desc}</p>
                     </div>
-                    <div className="p-4">
-                      <h3 className="font-semibold text-white text-lg">{district.name}</h3>
-                      <p className="text-white/70 text-sm">{district.tagline}</p>
-                    </div>
-                  </div>
-                </Link>
+                  </Link>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
 
-            <div className="text-center">
-              <Link href="/districts">
-                <Button size="lg" className="bg-white text-[#6443F4] hover:bg-white/90 rounded-full px-8 gap-2" data-testid="button-explore-districts">
-                  Explore All 21 Districts
-                  <ArrowRight className="w-4 h-4" />
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+              className="text-center"
+            >
+              <Link href="/dubai-off-plan-properties">
+                <Button size="lg" className="bg-gradient-to-r from-amber-400 to-orange-500 hover:opacity-90 text-white rounded-full px-10 py-7 text-lg shadow-xl shadow-amber-500/30" data-testid="button-explore-offplan">
+                  Explore Investment Opportunities <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
-            </div>
+            </motion.div>
           </div>
         </section>
 
-        {/* REGION NOTICE - Dubai Only Banner */}
-        <section className="py-8 bg-gradient-to-r from-[#6C5CE7]/10 via-[#A855F7]/10 to-[#EC4899]/10 border-y border-[#6C5CE7]/20">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <Globe className="w-6 h-6 text-[#6C5CE7]" />
-              <h3 className="text-lg font-semibold text-[#1E1B4B]">Currently Focused on Dubai</h3>
-            </div>
-            <p className="text-[#64748B]">
-              Travi is your dedicated Dubai travel companion. We're expanding to more destinations in the coming months - 
-              stay tuned for Abu Dhabi, Saudi Arabia, and beyond!
-            </p>
-          </div>
-        </section>
-
-        {/* NEWSLETTER SECTION - Dubai Skyline */}
-        <section className="py-20 bg-gradient-to-b from-[#E8F4FD] to-[#87CEEB] relative overflow-hidden" data-testid="section-newsletter">
-          {/* Dubai Skyline Silhouette at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 dubai-skyline opacity-20" />
+        {/* NEWSLETTER - Dreamy Cloud Section */}
+        <section className="py-24 relative overflow-hidden" data-testid="section-newsletter">
+          {/* Sky Gradient Background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-sky-100 via-purple-50 to-pink-50" />
           
-          {/* Floating Elements */}
-          <HotAirBalloonSVG className="absolute top-10 left-[8%] animate-float-slow" color="#EC4899" />
-          <CloudSVG className="absolute top-20 right-[10%] opacity-80" size="md" />
+          {/* Floating Clouds */}
+          <CloudSVG className="absolute top-10 left-[5%] opacity-40 animate-cloud-drift" size="lg" />
+          <CloudSVG className="absolute top-20 right-[10%] opacity-30 animate-cloud-drift animation-delay-1000" size="md" />
+          <CloudSVG className="absolute bottom-20 left-[15%] opacity-35 animate-cloud-drift animation-delay-2000" size="sm" />
           
           {/* Mascot */}
           <img 
             src={mascotImg} 
             alt="" 
-            className="absolute bottom-0 right-[10%] w-40 h-40 animate-float-gentle hidden lg:block"
+            className="absolute bottom-0 right-[8%] w-32 h-32 md:w-40 md:h-40 animate-float-gentle hidden lg:block"
           />
 
           <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
-            <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4">
-              Stay in the Loop
-            </h2>
-            <p className="text-xl text-[#475569] mb-8">
-              Get exclusive Dubai travel tips, deals, and inspiration delivered to your inbox
-            </p>
-
-            <form 
-              onSubmit={(e) => { e.preventDefault(); }}
-              className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto"
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={fadeInUp}
             >
-              <div className="flex-1 relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94A3B8]" />
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-full border-0 shadow-lg text-[#1E1B4B] placeholder:text-[#94A3B8] outline-none focus:ring-2 focus:ring-[#6C5CE7]"
-                  data-testid="input-newsletter-email"
-                />
+              <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-5 py-2 mb-6 shadow-sm">
+                <Sparkles className="w-5 h-5 text-[#EC4899]" />
+                <span className="text-sm font-medium text-[#1E1B4B]">Join the Cloud Club</span>
               </div>
-              <Button 
-                type="submit"
-                className="btn-gold rounded-full px-8 py-4 text-lg whitespace-nowrap"
-                data-testid="button-newsletter-subscribe"
-              >
-                Subscribe
-              </Button>
-            </form>
+              
+              <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] mb-4 tracking-tight">
+                Stay in the Loop
+              </h2>
+              <p className="text-xl text-slate-500 mb-10">
+                Get exclusive Dubai travel tips, deals, and inspiration delivered to your inbox
+              </p>
 
-            <p className="text-sm text-[#64748B] mt-4">
-              No spam, unsubscribe anytime
-            </p>
+              <form onSubmit={(e) => { e.preventDefault(); }} className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
+                <div className="flex-1 relative">
+                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-14 pr-5 py-5 rounded-full border-0 shadow-xl shadow-slate-200/50 text-[#1E1B4B] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#6C5CE7] bg-white/90 backdrop-blur-sm"
+                    data-testid="input-newsletter-email"
+                  />
+                </div>
+                <Button 
+                  type="submit"
+                  className="bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] hover:opacity-90 text-white rounded-full px-8 py-5 text-lg shadow-lg shadow-purple-500/25"
+                  data-testid="button-newsletter-subscribe"
+                >
+                  Subscribe
+                </Button>
+              </form>
+
+              <p className="text-sm text-slate-400 mt-6">
+                No spam, unsubscribe anytime
+              </p>
+            </motion.div>
           </div>
         </section>
-
-        {/* FOOTER - Sky Theme */}
-        <footer className="py-16 bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4C1D95] relative overflow-hidden" data-testid="footer">
-          {/* Stars/sparkles decoration */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-10 left-[20%] w-1 h-1 bg-white rounded-full opacity-60" />
-            <div className="absolute top-20 left-[40%] w-1.5 h-1.5 bg-white rounded-full opacity-40" />
-            <div className="absolute top-8 right-[30%] w-1 h-1 bg-white rounded-full opacity-50" />
-            <div className="absolute top-32 right-[20%] w-1 h-1 bg-white rounded-full opacity-60" />
-          </div>
-
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-              {/* Logo & Mascot */}
-              <div className="flex flex-col items-start">
-                <img src={logoImg} alt="Travi" className="h-12 mb-4" />
-                <p className="text-white/70 text-sm leading-relaxed mb-4">
-                  Your trusted companion for discovering the best of Dubai.
-                </p>
-                <img src={mascotImg} alt="" className="w-20 h-20 opacity-80" />
-              </div>
-
-              {/* Explore Links */}
-              <div>
-                <h4 className="font-semibold text-white mb-4">Explore</h4>
-                <ul className="space-y-3 text-sm text-white/70">
-                  <li><Link href="/hotels" className="hover:text-white transition-colors" data-testid="link-footer-hotels">Hotels</Link></li>
-                  <li><Link href="/attractions" className="hover:text-white transition-colors" data-testid="link-footer-attractions">Attractions</Link></li>
-                  <li><Link href="/articles" className="hover:text-white transition-colors" data-testid="link-footer-articles">Travel Guides</Link></li>
-                  <li><Link href="/search" className="hover:text-white transition-colors" data-testid="link-footer-search">Search</Link></li>
-                </ul>
-              </div>
-
-              {/* Company Links */}
-              <div>
-                <h4 className="font-semibold text-white mb-4">Company</h4>
-                <ul className="space-y-3 text-sm text-white/70">
-                  <li><Link href="/about" className="hover:text-white transition-colors" data-testid="link-footer-about">About Us</Link></li>
-                  <li><Link href="/contact" className="hover:text-white transition-colors" data-testid="link-footer-contact">Contact</Link></li>
-                  <li><Link href="/privacy" className="hover:text-white transition-colors" data-testid="link-footer-privacy">Privacy Policy</Link></li>
-                  <li><Link href="/terms" className="hover:text-white transition-colors" data-testid="link-footer-terms">Terms of Service</Link></li>
-                </ul>
-              </div>
-
-              {/* Connect */}
-              <div>
-                <h4 className="font-semibold text-white mb-4">Connect</h4>
-                <ul className="space-y-3 text-sm text-white/70">
-                  <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</a></li>
-                  <li><a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter</a></li>
-                  <li><a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Facebook</a></li>
-                  <li><a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">YouTube</a></li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Bottom Bar */}
-            <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-white/50 text-sm">
-                2024 Travi. All rights reserved.
-              </p>
-              <p className="text-white/50 text-sm">
-                Made with love in Dubai
-              </p>
-            </div>
-          </div>
-        </footer>
       </main>
+
+      <PublicFooter />
     </div>
   );
 }
