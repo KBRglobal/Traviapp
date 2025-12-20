@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { motion } from "framer-motion";
 import { 
   MapPin, Building2, Star, ArrowRight, Clock, Users, Camera, 
