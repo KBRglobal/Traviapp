@@ -2,13 +2,21 @@ import OpenAI from "openai";
 import { SUPPORTED_LOCALES, type Locale, type ContentBlock } from "@shared/schema";
 
 // ============================================================================
-// TRANSLATION PROVIDERS
+// TRANSLATION PROVIDERS - COST OPTIMIZED (December 2025)
 // ============================================================================
-// Multi-provider translation system for best quality/cost balance:
-// - DeepL: Premium quality, best for European languages ($20/M chars) - USE BY DEFAULT
-// - GPT-4o-mini: Cost-effective fallback ($0.15/M input) - for unsupported languages
+// CRITICAL: DeepL Pro charged $100 for 4 uses! Switch to GPT-4o-mini as PRIMARY
+//
+// Cost comparison per 1M characters:
+// - DeepL Pro: $25+ (AVOID - too expensive!)
+// - DeepL Free: $0 (500K chars/month limit)
+// - GPT-4o-mini: ~$0.22 (based on ~4 chars per token, $0.15/$0.60 per 1M tokens)
+//
+// STRATEGY:
+// 1. PRIMARY: GPT-4o-mini (100x cheaper than DeepL Pro)
+// 2. OPTIONAL: DeepL Free tier only (if enabled and within limit)
+// 3. NEVER fall back to DeepL Pro API
 
-type TranslationProvider = 'deepl' | 'gpt' | 'auto';
+type TranslationProvider = 'gpt' | 'deepl_free_only' | 'auto';
 
 // DeepL supported language codes (official codes)
 const DEEPL_SUPPORTED_LANGUAGES: Record<string, string> = {
@@ -96,27 +104,16 @@ async function translateWithDeepL(
       const errorText = await response.text();
       console.error(`[DeepL] API error: ${response.status} - ${errorText}`);
 
-      // If free API limit exceeded, try pro API
-      if (response.status === 456 || response.status === 429) {
-        const proResponse = await fetch('https://api.deepl.com/v2/translate', {
-          method: 'POST',
-          headers: {
-            'Authorization': `DeepL-Auth-Key ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            text: [text],
-            source_lang: sourceCode,
-            target_lang: targetCode,
-            preserve_formatting: true,
-            tag_handling: 'html',
-          }),
-        });
-
-        if (proResponse.ok) {
-          const data = await proResponse.json();
-          return { text: data.translations[0].text, success: true };
-        }
+      // IMPORTANT: Do NOT fall back to DeepL Pro API - it's extremely expensive ($25+/M chars)
+      // If free tier limit is exceeded (456) or rate limited (429), return error
+      // The calling code will automatically fall back to GPT-4o-mini (100x cheaper)
+      if (response.status === 456) {
+        console.warn('[DeepL] FREE TIER LIMIT EXCEEDED - switching to GPT-4o-mini (100x cheaper)');
+        return { text: '', success: false, error: 'DeepL free tier limit exceeded. Using GPT instead.' };
+      }
+      if (response.status === 429) {
+        console.warn('[DeepL] Rate limited - switching to GPT-4o-mini');
+        return { text: '', success: false, error: 'DeepL rate limited. Using GPT instead.' };
       }
 
       return { text: '', success: false, error: `DeepL API error: ${response.status}` };
@@ -176,13 +173,15 @@ interface ContentTranslation {
 }
 
 // Translate a single piece of text
-// Uses DeepL for supported languages (higher quality), falls back to GPT-4o-mini
+// PRIMARY: GPT-4o-mini (~$0.22/M chars) - 100x cheaper than DeepL Pro
+// OPTIONAL: DeepL Free tier only (500K chars/month limit)
 export async function translateText(
   request: TranslationRequest,
   options?: { provider?: TranslationProvider }
 ): Promise<TranslationResult> {
   const { text, sourceLocale, targetLocale, contentType = "body" } = request;
-  const provider = options?.provider || 'auto';
+  // DEFAULT TO GPT (100x cheaper than DeepL Pro)
+  const provider = options?.provider || 'gpt';
 
   if (!text || text.trim() === "") {
     return { translatedText: "", locale: targetLocale, success: true };
@@ -195,11 +194,12 @@ export async function translateText(
   const targetLocaleInfo = SUPPORTED_LOCALES.find((l) => l.code === targetLocale);
   const targetLanguageName = targetLocaleInfo?.name || targetLocale;
 
-  // Try DeepL first for supported languages (better quality)
-  const useDeepL = provider === 'deepl' || (provider === 'auto' && isDeepLSupported(targetLocale) && process.env.DEEPL_API_KEY);
+  // Only use DeepL if explicitly requested AND it's free tier only
+  // NEVER use DeepL Pro - it charged $100 for 4 uses!
+  const useDeepLFree = provider === 'deepl_free_only' && isDeepLSupported(targetLocale) && process.env.DEEPL_API_KEY;
 
-  if (useDeepL) {
-    console.log(`[Translation] Using DeepL for ${sourceLocale} -> ${targetLocale}`);
+  if (useDeepLFree) {
+    console.log(`[Translation] Trying DeepL FREE tier for ${sourceLocale} -> ${targetLocale}`);
     const deeplResult = await translateWithDeepL(text, sourceLocale, targetLocale);
 
     if (deeplResult.success) {
@@ -210,12 +210,13 @@ export async function translateText(
       };
     }
 
-    // Log the error but continue to fallback
-    console.warn(`[Translation] DeepL failed for ${targetLocale}: ${deeplResult.error}, falling back to GPT`);
+    // DeepL failed (probably free tier limit exceeded) - use GPT
+    console.warn(`[Translation] DeepL free tier failed: ${deeplResult.error}, using GPT-4o-mini`);
   }
 
-  // Fallback to GPT-4o-mini (or primary if DeepL not available)
-  console.log(`[Translation] Using GPT-4o-mini for ${sourceLocale} -> ${targetLocale}`);
+  // PRIMARY: GPT-4o-mini (100x cheaper than DeepL Pro!)
+  // Cost: ~$0.22 per million characters vs DeepL Pro's $25+
+  console.log(`[Translation] Using GPT-4o-mini for ${sourceLocale} -> ${targetLocale} (cost: ~$0.22/M chars)`);
 
   const contentTypeInstructions = {
     title: "This is a title/heading. Keep it concise, impactful, and SEO-friendly.",

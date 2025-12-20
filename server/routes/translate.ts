@@ -1,97 +1,81 @@
 /**
- * Translation API endpoint using DeepL
+ * Translation API endpoint
  * POST /api/translate
  *
- * Translates text from English to target language
+ * Uses GPT-4o-mini as PRIMARY (100x cheaper than DeepL Pro)
+ * DeepL FREE tier available as optional fallback
  */
 
 import { Router, Request, Response } from 'express';
+import { translateText } from '../services/translation-service';
+import type { Locale } from '@shared/schema';
 
 const router = Router();
 
-// DeepL API configuration
-const DEEPL_API_KEY = process.env.DEEPL_API_KEY;
-const DEEPL_API_URL = 'https://api-free.deepl.com/v2/translate';
-
-// Map our locale codes to DeepL language codes
-const LOCALE_TO_DEEPL: Record<string, string> = {
-  ar: 'AR',
-  ru: 'RU',
-  zh: 'ZH',
-  de: 'DE',
-  fr: 'FR',
-  es: 'ES',
-  it: 'IT',
-  pt: 'PT-PT',
-  ja: 'JA',
-  ko: 'KO',
-  tr: 'TR',
-  nl: 'NL',
-};
+// Supported languages
+const SUPPORTED_LANGUAGES = [
+  'ar', 'ru', 'zh', 'de', 'fr', 'es', 'it', 'pt', 'ja', 'ko', 'tr', 'nl',
+  'hi', 'he', 'pl', 'uk', 'id', 'sv', 'da', 'fi', 'nb', 'el', 'cs', 'ro',
+  'hu', 'sk', 'bg', 'lt', 'lv', 'sl', 'et'
+];
 
 interface TranslateRequest {
   text: string | string[];
   targetLang: string;
-}
-
-interface DeepLResponse {
-  translations: Array<{
-    text: string;
-    detected_source_language: string;
-  }>;
+  provider?: 'gpt' | 'deepl_free_only';
 }
 
 /**
  * POST /api/translate
- * Body: { text: string | string[], targetLang: string }
+ * Body: { text: string | string[], targetLang: string, provider?: 'gpt' | 'deepl_free_only' }
  * Returns: { translations: string[] }
+ *
+ * COST INFO:
+ * - GPT-4o-mini: ~$0.22 per million characters (DEFAULT)
+ * - DeepL Free: $0 but 500K chars/month limit
+ * - DeepL Pro: $25+/M chars (NEVER USED - too expensive!)
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { text, targetLang } = req.body as TranslateRequest;
+    const { text, targetLang, provider = 'gpt' } = req.body as TranslateRequest;
 
     if (!text || !targetLang) {
       return res.status(400).json({ error: 'text and targetLang are required' });
     }
 
-    if (!DEEPL_API_KEY) {
-      return res.status(500).json({ error: 'DEEPL_API_KEY not configured' });
-    }
-
-    const deeplLang = LOCALE_TO_DEEPL[targetLang];
-    if (!deeplLang) {
+    if (!SUPPORTED_LANGUAGES.includes(targetLang)) {
       return res.status(400).json({
         error: `Language ${targetLang} not supported`,
-        supported: Object.keys(LOCALE_TO_DEEPL)
+        supported: SUPPORTED_LANGUAGES
       });
     }
 
     const texts = Array.isArray(text) ? text : [text];
 
-    const response = await fetch(DEEPL_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        source_lang: 'EN',
-        target_lang: deeplLang,
-        ...texts.reduce((acc, t, i) => ({ ...acc, [`text`]: t }), {}),
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('DeepL API error:', error);
-      return res.status(502).json({ error: 'Translation service error' });
-    }
-
-    const result: DeepLResponse = await response.json();
+    // Translate all texts using the translation service
+    // Default is GPT-4o-mini which is 100x cheaper than DeepL Pro
+    const translations = await Promise.all(
+      texts.map(async (t) => {
+        const result = await translateText(
+          {
+            text: t,
+            sourceLocale: 'en' as Locale,
+            targetLocale: targetLang as Locale,
+            contentType: 'body',
+          },
+          { provider: provider as 'gpt' | 'deepl_free_only' }
+        );
+        return result.translatedText;
+      })
+    );
 
     res.json({
-      translations: result.translations.map(t => t.text),
+      translations,
       targetLang,
+      provider: provider,
+      costNote: provider === 'gpt'
+        ? 'Using GPT-4o-mini (~$0.22/M chars)'
+        : 'Using DeepL Free tier (500K chars/month limit)',
     });
 
   } catch (error) {
@@ -106,8 +90,51 @@ router.post('/', async (req: Request, res: Response) => {
  */
 router.get('/languages', (req: Request, res: Response) => {
   res.json({
-    supported: Object.keys(LOCALE_TO_DEEPL),
-    mapping: LOCALE_TO_DEEPL,
+    supported: SUPPORTED_LANGUAGES,
+    defaultProvider: 'gpt',
+    providers: {
+      gpt: {
+        name: 'GPT-4o-mini',
+        cost: '~$0.22 per million characters',
+        default: true,
+      },
+      deepl_free_only: {
+        name: 'DeepL Free',
+        cost: '$0 (500K chars/month limit)',
+        default: false,
+      },
+    },
+    warning: 'DeepL Pro is DISABLED - it charged $100 for 4 uses!',
+  });
+});
+
+/**
+ * GET /api/translate/cost-estimate
+ * Estimate cost for translation
+ */
+router.get('/cost-estimate', (req: Request, res: Response) => {
+  const charCount = parseInt(req.query.chars as string) || 100000;
+  const languages = parseInt(req.query.languages as string) || 17;
+
+  const totalChars = charCount * languages;
+  const gptCost = (totalChars / 1000000) * 0.22;
+  const deeplProCost = (totalChars / 1000000) * 25;
+
+  res.json({
+    charCount,
+    languages,
+    totalChars,
+    costs: {
+      'gpt-4o-mini': {
+        cost: `$${gptCost.toFixed(2)}`,
+        note: 'Recommended - 100x cheaper',
+      },
+      'deepl-pro': {
+        cost: `$${deeplProCost.toFixed(2)}`,
+        note: 'DISABLED - too expensive!',
+      },
+    },
+    savings: `$${(deeplProCost - gptCost).toFixed(2)} saved by using GPT-4o-mini`,
   });
 });
 
