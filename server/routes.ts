@@ -1432,9 +1432,13 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/translations/:id", async (req, res) => {
+  app.get("/api/translations/:id", async (req, res, next) => {
+    // Skip to next route if this is a reserved path
+    if (["stats"].includes(req.params.id)) {
+      return next('route');
+    }
     try {
-      const translation = await storage.getTranslation(req.params.id);
+      const translation = await storage.getTranslationById(req.params.id);
       if (!translation) {
         return res.status(404).json({ error: "Translation not found" });
       }
@@ -5348,6 +5352,64 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // ============================================================================
   // TRANSLATIONS - DeepL Multi-Language SEO System
   // ============================================================================
+
+  // Get translation statistics for admin dashboard
+  app.get("/api/translations/stats", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const contents = await storage.getContents();
+      const publishedContents = contents.filter(c => c.status === "published");
+      const allTranslations = await storage.getAllTranslations();
+      
+      const supportedLocales = ["ar", "hi", "zh", "ru", "ur", "fr", "de", "fa", "bn", "fil", "es", "tr", "it", "ja", "ko", "he"];
+      
+      const languageStats = supportedLocales.map(locale => {
+        const localeTranslations = allTranslations.filter(t => t.locale === locale && t.status === "completed");
+        const translated = localeTranslations.length;
+        const pending = publishedContents.length - translated;
+        const percentage = publishedContents.length > 0 ? Math.round((translated / publishedContents.length) * 100) : 0;
+        return { locale, translated, pending: Math.max(0, pending), percentage };
+      });
+
+      const totalTranslated = new Set(allTranslations.filter(t => t.status === "completed").map(t => t.contentId)).size;
+      
+      res.json({
+        totalContent: publishedContents.length,
+        translatedContent: totalTranslated,
+        pendingContent: publishedContents.length - totalTranslated,
+        languageStats,
+      });
+    } catch (error) {
+      console.error("Error fetching translation stats:", error);
+      res.status(500).json({ error: "Failed to fetch translation stats" });
+    }
+  });
+
+  // Get all translations with content info (admin list view)
+  app.get("/api/translations", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const contents = await storage.getContents();
+      const publishedContents = contents.filter(c => c.status === "published");
+      const allTranslations = await storage.getAllTranslations();
+
+      const contentTranslations = publishedContents.map(content => {
+        const contentTrans = allTranslations.filter(t => t.contentId === content.id);
+        const completedLocales = contentTrans.filter(t => t.status === "completed").map(t => t.locale);
+        return {
+          contentId: content.id,
+          title: content.title,
+          slug: content.slug,
+          type: content.type,
+          completedLocales,
+          translationCount: completedLocales.length,
+        };
+      });
+
+      res.json(contentTranslations);
+    } catch (error) {
+      console.error("Error fetching translations:", error);
+      res.status(500).json({ error: "Failed to fetch translations" });
+    }
+  });
 
   // Get translations for a content item
   app.get("/api/translations/:contentId", async (req, res) => {

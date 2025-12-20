@@ -191,6 +191,7 @@ export interface IStorage {
   createContentVersion(version: InsertContentVersion): Promise<ContentVersion>;
   getLatestVersionNumber(contentId: string): Promise<number>;
 
+  getAllTranslations(): Promise<Translation[]>;
   getTranslationsByContentId(contentId: string): Promise<Translation[]>;
   getTranslation(contentId: string, locale: Locale): Promise<Translation | undefined>;
   getTranslationById(id: string): Promise<Translation | undefined>;
@@ -906,6 +907,10 @@ export class DatabaseStorage implements IStorage {
       .from(contentVersions)
       .where(eq(contentVersions.contentId, contentId));
     return result?.maxVersion ?? 0;
+  }
+
+  async getAllTranslations(): Promise<Translation[]> {
+    return await db.select().from(translations);
   }
 
   async getTranslationsByContentId(contentId: string): Promise<Translation[]> {
