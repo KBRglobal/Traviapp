@@ -75,6 +75,8 @@ import {
   type ImageGenerationOptions
 } from "./ai-generator";
 import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-queue";
+import { registerEnterpriseRoutes } from "./enterprise-routes";
+import { cache, cacheKeys } from "./cache";
 
 // Permission checking utilities (imported from security.ts for route-level checks)
 type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
@@ -5775,6 +5777,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       res.status(500).send("Error generating robots.txt");
     }
   });
+
+  // ============================================================================
+  // ENTERPRISE ROUTES (Teams, Workflows, Notifications, etc.)
+  // ============================================================================
+  registerEnterpriseRoutes(app);
 
   // ============================================================================
   // SECURE ERROR HANDLER (no stack traces to client)
