@@ -509,6 +509,7 @@ export default function ContentList({ type }: ContentListProps) {
               onSelectionChange={setSelectedIds}
               getItemId={(item) => item.id}
               pageSize={10}
+              onRowClick={(item) => navigate(`${config.basePath}/${item.id}`)}
             />
           )}
         </CardContent>
