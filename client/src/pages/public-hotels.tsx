@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { 
-  Search, MapPin, Star, Building2, 
+import {
+  Search, MapPin, Star, Building2,
   ChevronRight, ArrowRight
 } from "lucide-react";
 import type { ContentWithRelations } from "@shared/schema";
@@ -12,6 +12,7 @@ import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&h=600&fit=crop",
@@ -21,12 +22,13 @@ const defaultImages = [
 ];
 
 function HotelCard({ content, index }: { content: ContentWithRelations; index: number }) {
+  const { localePath } = useLocale();
   const imageUrl = content.heroImage || defaultImages[index % defaultImages.length];
   const location = content.hotel?.location || "Dubai";
   const starRating = content.hotel?.starRating || 5;
-  
+
   return (
-    <Link href={`/hotels/${content.slug}`}>
+    <Link href={localePath(`/hotels/${content.slug}`)}>
       <Card 
         className="group overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
         data-testid={`card-hotel-${content.slug}`}
@@ -68,8 +70,9 @@ function HotelCard({ content, index }: { content: ContentWithRelations; index: n
 }
 
 export default function PublicHotels() {
+  const { t, locale, isRTL, localePath } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   useDocumentMeta({
     title: "Luxury Hotels in Dubai | Travi - Dubai Travel Guide",
     description: "Find the perfect Dubai hotel. From Palm Jumeirah resorts to Downtown high-rises, discover luxury hotels across Dubai.",
@@ -96,7 +99,7 @@ export default function PublicHotels() {
   }, [hotels, searchQuery]);
 
   return (
-    <div className="bg-background min-h-screen flex flex-col">
+    <div className="bg-background min-h-screen flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
       <PublicNav />
 
       <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden">
@@ -111,10 +114,10 @@ export default function PublicHotels() {
         
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-16">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
-            Dubai Hotels
+            {t('hotels.pageTitle')}
           </h1>
           <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto">
-            Discover luxury accommodations across Dubai's most sought-after neighborhoods.
+            {t('hotels.pageSubtitle')}
           </p>
           
           <div className="max-w-xl mx-auto">
@@ -122,7 +125,7 @@ export default function PublicHotels() {
               <Search className="w-5 h-5 text-white/60 ml-3" />
               <input
                 type="text"
-                placeholder="Search hotels..."
+                placeholder={t('nav.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-transparent outline-none py-3 text-white placeholder:text-white/50"
@@ -138,10 +141,10 @@ export default function PublicHotels() {
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold mb-1">
-                {searchQuery ? "Search Results" : "All Hotels"}
+                {searchQuery ? t('search.results') : t('hotels.allHotels')}
               </h2>
               <p className="text-muted-foreground">
-                {isLoading ? "Loading..." : `${filteredHotels.length} hotels found`}
+                {isLoading ? t('common.loading') : `${filteredHotels.length} ${t('hotels.pageTitle').toLowerCase()}`}
               </p>
             </div>
           </div>
@@ -166,17 +169,17 @@ export default function PublicHotels() {
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                 <Building2 className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">No hotels found</h3>
+              <h3 className="text-xl font-semibold mb-2">{t('search.noResults')}</h3>
               <p className="text-muted-foreground mb-6">
-                {searchQuery ? "Try a different search term" : "Hotels will appear here once published"}
+                {searchQuery ? t('search.tryAgain') : "Hotels will appear here once published"}
               </p>
               {searchQuery && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setSearchQuery("")}
                   data-testid="button-clear-search"
                 >
-                  Clear Search
+                  {t('search.tryAgain')}
                 </Button>
               )}
             </div>

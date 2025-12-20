@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 import { useState } from "react";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 
 const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop",
@@ -36,12 +37,13 @@ function getContentPath(type: string, slug: string) {
 }
 
 function SearchResultCard({ content, index }: { content: Content; index: number }) {
+  const { localePath } = useLocale();
   const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
   const TypeIcon = getTypeIcon(content.type);
   const contentPath = getContentPath(content.type, content.slug);
-  
+
   return (
-    <Link href={contentPath}>
+    <Link href={localePath(contentPath)}>
       <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col sm:flex-row">
         <div className="sm:w-64 aspect-[16/10] sm:aspect-auto overflow-hidden shrink-0">
           <img 
@@ -91,11 +93,12 @@ function SearchResultSkeleton() {
 }
 
 export default function PublicSearch() {
+  const { t, locale, isRTL, localePath } = useLocale();
   const searchParams = useSearch();
   const urlParams = new URLSearchParams(searchParams);
   const initialQuery = urlParams.get('q') || '';
   const [searchQuery, setSearchQuery] = useState(initialQuery);
-  
+
   const { data: allContent, isLoading } = useQuery<Content[]>({
     queryKey: ["/api/contents?status=published"],
   });
@@ -108,7 +111,7 @@ export default function PublicSearch() {
     : [];
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b" data-testid="nav-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -127,18 +130,18 @@ export default function PublicSearch() {
 
       <section className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
+          <Link href={localePath("/")} className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            Back to Home
+            {t('common.viewAll')}
           </Link>
-          
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold text-white mb-6">Search Results</h1>
+
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold text-white mb-6">{t('search.pageTitle')}</h1>
           
           <div className="bg-white rounded-xl p-2 flex items-center gap-2">
             <Search className="w-5 h-5 text-muted-foreground ml-3" />
             <input
               type="text"
-              placeholder="Search hotels, attractions, dining, districts..."
+              placeholder={t('nav.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 bg-transparent outline-none py-2 text-foreground"
@@ -154,14 +157,14 @@ export default function PublicSearch() {
           {!searchQuery.trim() ? (
             <div className="text-center py-16">
               <Search className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-              <h2 className="font-heading text-xl font-semibold text-foreground mb-2">Start searching</h2>
-              <p className="text-muted-foreground">Type something to search for hotels, attractions, and articles</p>
+              <h2 className="font-heading text-xl font-semibold text-foreground mb-2">{t('search.searchIn')}</h2>
+              <p className="text-muted-foreground">{t('search.pageTitle')}</p>
             </div>
           ) : (
             <>
               <div className="mb-6">
                 <p className="text-muted-foreground">
-                  {isLoading ? "Searching..." : `${filteredContent.length} results for "${searchQuery}"`}
+                  {isLoading ? t('common.loading') : `${filteredContent.length} ${t('search.results')} "${searchQuery}"`}
                 </p>
               </div>
 
@@ -180,17 +183,17 @@ export default function PublicSearch() {
               ) : (
                 <div className="text-center py-16">
                   <Search className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-                  <h2 className="font-heading text-xl font-semibold text-foreground mb-2">No results found</h2>
-                  <p className="text-muted-foreground mb-6">Try a different search term or browse our categories</p>
+                  <h2 className="font-heading text-xl font-semibold text-foreground mb-2">{t('search.noResults')}</h2>
+                  <p className="text-muted-foreground mb-6">{t('search.tryAgain')}</p>
                   <div className="flex flex-wrap items-center justify-center gap-3">
-                    <Link href="/hotels">
-                      <Button variant="outline">Browse Hotels</Button>
+                    <Link href={localePath("/hotels")}>
+                      <Button variant="outline">{t('hotels.pageTitle')}</Button>
                     </Link>
-                    <Link href="/attractions">
-                      <Button variant="outline">Browse Attractions</Button>
+                    <Link href={localePath("/attractions")}>
+                      <Button variant="outline">Attractions</Button>
                     </Link>
-                    <Link href="/articles">
-                      <Button variant="outline">Browse Articles</Button>
+                    <Link href={localePath("/articles")}>
+                      <Button variant="outline">Articles</Button>
                     </Link>
                   </div>
                 </div>

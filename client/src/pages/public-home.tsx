@@ -31,12 +31,12 @@ const dubaiImages = [
 ];
 
 const activityCategories = [
-  { title: "Attractions", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", type: "attraction" },
-  { title: "Hotels", image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400&h=300&fit=crop", type: "hotel" },
-  { title: "Dining", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop", type: "dining" },
-  { title: "Districts", image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400&h=300&fit=crop", type: "district" },
-  { title: "Events", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=300&fit=crop", type: "event" },
-  { title: "Articles", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop", type: "article" },
+  { titleKey: "nav.attractions", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", type: "attraction" },
+  { titleKey: "nav.hotels", image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400&h=300&fit=crop", type: "hotel" },
+  { titleKey: "nav.dining", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop", type: "dining" },
+  { titleKey: "nav.districts", image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400&h=300&fit=crop", type: "district" },
+  { titleKey: "nav.events", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=300&fit=crop", type: "event" },
+  { titleKey: "nav.articles", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop", type: "article" },
 ];
 
 const CloudSVG = ({ className = "", size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) => {
@@ -157,27 +157,27 @@ export default function PublicHome() {
 
           {/* Main Hero Content */}
           <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20">
-            {/* Giant TRAVI Letters with Dubai Images */}
-            <div className="text-center mb-8">
-              <h1 className="text-[8rem] sm:text-[12rem] lg:text-[16rem] font-bold leading-none tracking-tight select-none">
-                <span 
-                  className="travi-letter-mask inline-block"
+            {/* Giant TRAVI Letters with Dubai Images - Always LTR for logo */}
+            <div className="text-center mb-8" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
+              <h1 className="text-[8rem] sm:text-[12rem] lg:text-[16rem] font-bold leading-none tracking-tight select-none inline-flex">
+                <span
+                  className="travi-letter-mask"
                   style={{ backgroundImage: `url(${dubaiImages[0]})` }}
                 >T</span>
-                <span 
-                  className="travi-letter-mask inline-block"
+                <span
+                  className="travi-letter-mask"
                   style={{ backgroundImage: `url(${dubaiImages[1]})` }}
                 >R</span>
-                <span 
-                  className="travi-letter-mask inline-block"
+                <span
+                  className="travi-letter-mask"
                   style={{ backgroundImage: `url(${dubaiImages[2]})` }}
                 >A</span>
-                <span 
-                  className="travi-letter-mask inline-block"
+                <span
+                  className="travi-letter-mask"
                   style={{ backgroundImage: `url(${dubaiImages[3]})` }}
                 >V</span>
-                <span 
-                  className="travi-letter-mask inline-block"
+                <span
+                  className="travi-letter-mask"
                   style={{ backgroundImage: `url(${dubaiImages[4]})` }}
                 >I</span>
               </h1>
@@ -235,7 +235,7 @@ export default function PublicHome() {
               <div className="flex flex-wrap justify-center gap-8 mt-12">
                 <div className="flex items-center gap-2 text-[#1E1B4B]">
                   <MapPin className="w-5 h-5 text-[#EC4899]" />
-                  <span className="font-medium">{publishedContent.length} Places</span>
+                  <span className="font-medium">{publishedContent.length} {t("common.places")}</span>
                 </div>
               </div>
             )}
@@ -260,8 +260,8 @@ export default function PublicHome() {
               <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4" dir={isRTL ? "rtl" : "ltr"}>
                 {t("home.topAttractions")}
               </h2>
-              <p className="text-xl text-[#64748B]">
-                <span className="font-script text-2xl text-[#EC4899]">of activities</span> in Dubai
+              <p className="text-xl text-[#64748B]" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.activitiesInDubai")}
               </p>
             </div>
 
@@ -270,18 +270,18 @@ export default function PublicHome() {
               {activityCategories.map((category, index) => (
                 <Link
                   key={index}
-                  href={`/${category.type}s`}
+                  href={localePath(`/${category.type}s`)}
                   className="group relative overflow-hidden rounded-2xl aspect-[3/4] cursor-pointer"
-                  data-testid={`activity-${category.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  data-testid={`activity-${category.type}`}
                 >
                   <img
                     src={category.image}
-                    alt={category.title}
+                    alt={t(category.titleKey)}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <h3 className="text-white font-semibold text-lg mb-1">{category.title}</h3>
+                    <h3 className="text-white font-semibold text-lg mb-1">{t(category.titleKey)}</h3>
                   </div>
                 </Link>
               ))}
@@ -303,8 +303,8 @@ export default function PublicHome() {
               <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4" dir={isRTL ? "rtl" : "ltr"}>
                 {t("home.exploreAttractions")}
               </h2>
-              <p className="text-xl text-[#64748B]">
-                Hand-picked destinations <span className="font-script text-2xl text-[#6C5CE7]">just for you</span>
+              <p className="text-xl text-[#64748B]" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.handPickedDestinations")}
               </p>
             </div>
 

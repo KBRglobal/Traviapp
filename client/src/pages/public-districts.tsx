@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { 
+import {
   MapPin, Search, ArrowRight, Map
 } from "lucide-react";
 import type { Content } from "@shared/schema";
@@ -11,6 +11,7 @@ import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { useState, useMemo } from "react";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=1000&fit=crop",
@@ -20,10 +21,11 @@ const defaultImages = [
 ];
 
 function DistrictCard({ content, index }: { content: Content; index: number }) {
+  const { t, localePath } = useLocale();
   const imageUrl = content.heroImage || defaultImages[index % defaultImages.length];
-  
+
   return (
-    <Link href={`/districts/${content.slug}`}>
+    <Link href={localePath(`/districts/${content.slug}`)}>
       <Card 
         className="group overflow-visible border-0 shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer"
         data-testid={`card-district-${content.slug}`}
@@ -48,7 +50,7 @@ function DistrictCard({ content, index }: { content: Content; index: number }) {
             )}
             
             <div className="flex items-center gap-2 text-white font-medium text-sm group-hover:gap-3 transition-all">
-              <span>Explore</span>
+              <span>{t('districts.explore')}</span>
               <ArrowRight className="w-4 h-4" />
             </div>
           </div>
@@ -59,8 +61,9 @@ function DistrictCard({ content, index }: { content: Content; index: number }) {
 }
 
 export default function PublicDistricts() {
+  const { t, locale, isRTL, localePath } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   useDocumentMeta({
     title: "Dubai Neighborhoods & Districts | Travi - Dubai Travel Guide",
     description: "Explore Dubai's diverse neighborhoods. From Palm Jumeirah to Downtown, find the perfect district for your lifestyle or travel.",
@@ -86,7 +89,7 @@ export default function PublicDistricts() {
   }, [districts, searchQuery]);
 
   return (
-    <div className="bg-background min-h-screen flex flex-col">
+    <div className="bg-background min-h-screen flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
       <PublicNav />
 
       <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden">
@@ -100,10 +103,10 @@ export default function PublicDistricts() {
         
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-16">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
-            Dubai Neighborhoods
+            {t('districts.pageTitle')}
           </h1>
           <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-            Every corner of Dubai has its own story. Find the neighborhood that matches your vibe.
+            {t('districts.pageSubtitle')}
           </p>
           
           <div className="max-w-xl mx-auto">
@@ -111,7 +114,7 @@ export default function PublicDistricts() {
               <Search className="w-5 h-5 text-white/60 ml-3" />
               <input
                 type="text"
-                placeholder="Search neighborhoods..."
+                placeholder={t('nav.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-transparent outline-none py-3 text-white placeholder:text-white/50"
@@ -127,10 +130,10 @@ export default function PublicDistricts() {
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold mb-1">
-                {searchQuery ? "Search Results" : "All Districts"}
+                {searchQuery ? t('search.results') : t('districts.pageTitle')}
               </h2>
               <p className="text-muted-foreground">
-                {isLoading ? "Loading..." : `${filteredDistricts.length} districts found`}
+                {isLoading ? t('common.loading') : `${filteredDistricts.length} ${t('districts.pageTitle').toLowerCase()}`}
               </p>
             </div>
           </div>
@@ -154,17 +157,17 @@ export default function PublicDistricts() {
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                 <Map className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">No districts found</h3>
+              <h3 className="text-xl font-semibold mb-2">{t('search.noResults')}</h3>
               <p className="text-muted-foreground mb-6">
-                {searchQuery ? "Try a different search term" : "Districts will appear here once published"}
+                {searchQuery ? t('search.tryAgain') : "Districts will appear here once published"}
               </p>
               {searchQuery && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setSearchQuery("")}
                   data-testid="button-clear-search"
                 >
-                  Clear Search
+                  {t('search.tryAgain')}
                 </Button>
               )}
             </div>
