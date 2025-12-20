@@ -380,9 +380,9 @@ export default function PublicHome() {
             </div>
 
             {/* Tagline */}
-            <div className="text-center mb-10">
-              <p className="text-2xl sm:text-3xl text-[#1E1B4B] font-medium" dir={isRTL ? "rtl" : "ltr"}>
-                {t("home.heroTitle")} <span className="font-script text-3xl sm:text-4xl text-[#EC4899]">{t("home.heroSubtitle")}</span>
+            <div className="text-center mb-10" dir={isRTL ? "rtl" : "ltr"}>
+              <p className="text-xl sm:text-2xl md:text-3xl text-[#1E1B4B] font-medium px-4">
+                {t("home.heroTitle")} <span className="font-script text-2xl sm:text-3xl md:text-4xl text-[#EC4899]">{t("home.heroSubtitle")}</span>
               </p>
             </div>
 
@@ -392,8 +392,8 @@ export default function PublicHome() {
               role="search" 
               className="max-w-2xl mx-auto px-2 sm:px-4"
             >
-              <div className="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-full shadow-2xl shadow-purple-500/10 p-3 md:p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 border border-white/50">
-                <div className="flex-1 flex items-center gap-3 px-4 md:px-5">
+              <div className="bg-white/95 backdrop-blur-xl rounded-2xl lg:rounded-full shadow-2xl shadow-purple-500/10 p-3 lg:p-2 flex flex-col lg:flex-row items-stretch lg:items-center gap-2 border border-white/50" dir={isRTL ? "rtl" : "ltr"}>
+                <div className="flex-1 flex items-center gap-3 px-4 lg:px-5">
                   <Search className="w-5 h-5 text-[#6C5CE7] shrink-0" aria-hidden="true" />
                   <label htmlFor="hero-search" className="sr-only">{t("home.searchLabel")}</label>
                   <input
@@ -403,13 +403,13 @@ export default function PublicHome() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
-                    className="flex-1 min-w-0 text-[#1E1B4B] placeholder:text-[#94A3B8] bg-transparent outline-none py-3 md:py-4 text-base md:text-lg"
+                    className="flex-1 min-w-0 text-[#1E1B4B] placeholder:text-[#94A3B8] bg-transparent outline-none py-3 lg:py-4 text-base lg:text-lg"
                     data-testid="input-search"
                   />
                 </div>
                 <Button 
                   type="submit"
-                  className="bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] hover:opacity-90 text-white rounded-full px-6 md:px-8 py-3 md:py-6 text-base md:text-lg shrink-0 shadow-lg shadow-purple-500/25 transition-all duration-300" 
+                  className="bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] hover:opacity-90 text-white rounded-xl lg:rounded-full px-6 py-3 text-sm lg:text-base shadow-lg shadow-purple-500/25 transition-all duration-300 whitespace-nowrap" 
                   data-testid="button-search"
                 >
                   {t("home.exploreAttractions")}
@@ -418,23 +418,23 @@ export default function PublicHome() {
             </form>
 
             {/* Featured Landing Pages */}
-            <div className="flex flex-wrap justify-center gap-3 mt-8">
+            <div className="flex flex-wrap justify-center gap-3 mt-8" dir={isRTL ? "rtl" : "ltr"}>
               {quickCategoryConfigs.map((cat) => (
                 <Link key={cat.titleKey} href={localePath(cat.href)}>
                   <motion.div
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.98 }}
-                    className="flex items-center gap-2 bg-white/90 backdrop-blur-xl px-5 py-3 rounded-full shadow-lg shadow-purple-500/10 border border-white/50 cursor-pointer group"
+                    className="flex items-center gap-2 bg-white/90 backdrop-blur-xl px-4 py-3 rounded-2xl shadow-lg shadow-purple-500/10 border border-white/50 cursor-pointer group max-w-[200px] sm:max-w-none"
                     data-testid={`quick-${cat.titleKey}`}
                   >
-                    <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${cat.color} flex items-center justify-center shadow-md`}>
+                    <div className={`w-9 h-9 shrink-0 rounded-full bg-gradient-to-br ${cat.color} flex items-center justify-center shadow-md`}>
                       <cat.icon className="w-4 h-4 text-white" />
                     </div>
-                    <div className="flex flex-col items-start">
-                      <span className="font-semibold text-[#1E1B4B] group-hover:text-[#6C5CE7] transition-colors leading-tight">{t(`home.${cat.titleKey}`)}</span>
-                      <span className="text-xs text-slate-400">{t(`home.${cat.badgeKey}`)}</span>
+                    <div className="flex flex-col items-start min-w-0">
+                      <span className="font-semibold text-[#1E1B4B] group-hover:text-[#6C5CE7] transition-colors leading-tight text-sm truncate max-w-full">{t(`home.${cat.titleKey}`)}</span>
+                      <span className="text-xs text-slate-400 truncate max-w-full">{t(`home.${cat.badgeKey}`)}</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#6C5CE7] group-hover:translate-x-0.5 transition-all ml-1" />
+                    <ChevronRight className={`w-4 h-4 shrink-0 text-slate-400 group-hover:text-[#6C5CE7] transition-all ${isRTL ? 'rotate-180 group-hover:-translate-x-0.5 me-1' : 'group-hover:translate-x-0.5 ms-1'}`} />
                   </motion.div>
                 </Link>
               ))}
@@ -507,8 +507,8 @@ export default function PublicHome() {
                       </div>
                       
                       {/* Content */}
-                      <div className="absolute bottom-0 left-0 right-0 p-5">
-                        <h3 className="text-white font-bold text-xl mb-1">{t(`home.${category.key}`)}</h3>
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <h3 className="text-white font-bold text-base sm:text-lg lg:text-xl mb-1 break-words hyphens-auto leading-tight">{t(`home.${category.key}`)}</h3>
                       </div>
                       
                       {/* Hover Arrow */}
