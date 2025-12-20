@@ -228,6 +228,7 @@ const famousCases = [
 ];
 
 export default function LandingDubaiLaws() {
+  const { isRTL } = useLocale();
   // Refs for scrolling
   const trafficRef = useRef<HTMLDivElement>(null);
   const behaviorRef = useRef<HTMLDivElement>(null);

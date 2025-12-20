@@ -94,6 +94,7 @@ const sportsActivities = [
 ];
 
 export default function LandingFreeDubai() {
+  const { isRTL } = useLocale();
   const beachesRef = useRef<HTMLDivElement>(null);
   const heritageRef = useRef<HTMLDivElement>(null);
   const skylineRef = useRef<HTMLDivElement>(null);

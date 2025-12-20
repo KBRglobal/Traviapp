@@ -865,8 +865,9 @@ function CTASection() {
 }
 
 export default function DistrictBusinessBay() {
+  const { isRTL } = useLocale();
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
       <PublicNav variant="transparent" />
       <HeroSection />
       <QuickNavSection />

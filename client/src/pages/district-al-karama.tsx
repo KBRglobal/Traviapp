@@ -692,8 +692,9 @@ function CTASection() {
 }
 
 export default function DistrictAlKarama() {
+  const { isRTL } = useLocale();
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
       <PublicNav />
       <HeroSection />
       <QuickNavSection />
