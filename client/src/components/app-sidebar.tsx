@@ -188,6 +188,12 @@ const managementItems: Array<{
     requiredPermission: "canAccessMediaLibrary",
   },
   {
+    title: "Image Engine",
+    url: "/admin/image-engine",
+    icon: Sparkles,
+    requiredPermission: "canAccessMediaLibrary",
+  },
+  {
     title: "Translations",
     url: "/admin/translations",
     icon: Languages,

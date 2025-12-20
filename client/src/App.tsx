@@ -105,6 +105,7 @@ const PublicContentViewer = lazy(() => import("@/pages/public-content-viewer"));
 const RssFeeds = lazy(() => import("@/pages/rss-feeds"));
 const AffiliateLinks = lazy(() => import("@/pages/affiliate-links"));
 const MediaLibrary = lazy(() => import("@/pages/media-library"));
+const ImageEngine = lazy(() => import("@/pages/admin-image-engine"));
 const Settings = lazy(() => import("@/pages/settings"));
 const AIArticleGenerator = lazy(() => import("@/pages/ai-article-generator"));
 const TopicBankPage = lazy(() => import("@/pages/topic-bank"));
@@ -197,6 +198,7 @@ function AdminRouter() {
         <Route path="/admin/tags" component={TagsPage} />
         <Route path="/admin/affiliate-links" component={AffiliateLinks} />
         <Route path="/admin/media" component={MediaLibrary} />
+        <Route path="/admin/image-engine" component={ImageEngine} />
         <Route path="/admin/settings" component={Settings} />
         <Route path="/admin/users" component={UsersPage} />
         <Route path="/admin/homepage-promotions" component={HomepagePromotions} />
