@@ -2,19 +2,16 @@ import { useRef, useState, useMemo } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Waves, MapPin, Camera, Sparkles, Sun, 
-  ChevronRight, Star, ArrowRight,
-  TreePalm, Building2, Music, Heart,
-  Wallet, Trophy, CheckCircle2, Bike,
-  Train, Palette,
-  Footprints, Eye, Compass, Globe,
+  Waves, MapPin, Camera, Sparkles, 
+  Star, ArrowRight,
+  TreePalm, Building2, Music,
+  Wallet, Bike, Train, Palette,
+  Compass, Globe,
   Filter, Calculator,
   PartyPopper, Play, Clock, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { 
   Accordion, 
@@ -199,7 +196,6 @@ const faqData = [
 
 export default function LandingFreeDubai() {
   const [activeCategory, setActiveCategory] = useState("all");
-  const [visitedPlaces, setVisitedPlaces] = useState<Set<string>>(new Set());
   const [tripDays, setTripDays] = useState([7]);
   const [familySize, setFamilySize] = useState([2]);
   
@@ -223,21 +219,6 @@ export default function LandingFreeDubai() {
     const dailySaving = 400;
     return dailySaving * tripDays[0] * familySize[0];
   }, [tripDays, familySize]);
-
-  // Progress calculation
-  const visitedCount = visitedPlaces.size;
-  const totalCount = allAttractions.length;
-  const progressPercent = Math.round((visitedCount / totalCount) * 100);
-
-  const toggleVisited = (id: string) => {
-    const newSet = new Set(visitedPlaces);
-    if (newSet.has(id)) {
-      newSet.delete(id);
-    } else {
-      newSet.add(id);
-    }
-    setVisitedPlaces(newSet);
-  };
 
   const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -594,33 +575,6 @@ export default function LandingFreeDubai() {
         </div>
       </section>
 
-      {/* ===== PROGRESS TRACKER (Sticky) ===== */}
-      {visitedCount > 0 && (
-        <section className="py-4 bg-white dark:bg-slate-900 sticky top-16 z-40 border-b border-slate-200 dark:border-slate-700 shadow-sm" role="status" aria-live="polite">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <Trophy className="w-5 h-5 text-amber-500" />
-                <span className="font-medium text-slate-900 dark:text-white">Your Progress:</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-32 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-amber-500 to-orange-500"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressPercent}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-bold text-amber-600" data-testid="text-progress-count">{visitedCount}/{totalCount}</span>
-                </div>
-              </div>
-              <Badge className="bg-amber-100 text-amber-700 border-amber-200" data-testid="badge-progress-status">
-                {progressPercent >= 100 ? "Dubai Master!" : progressPercent >= 50 ? "Explorer!" : "Getting Started"}
-              </Badge>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ===== FILTER & ATTRACTIONS GRID ===== */}
       <section ref={exploreRef} className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -658,7 +612,6 @@ export default function LandingFreeDubai() {
             >
               {filteredAttractions.map((attraction, index) => {
                 const CategoryIcon = getCategoryIcon(attraction.category);
-                const isVisited = visitedPlaces.has(attraction.id);
                 
                 return (
                   <motion.div
@@ -669,13 +622,8 @@ export default function LandingFreeDubai() {
                     className="group"
                   >
                     <div 
-                      className={`relative h-72 rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 ${
-                        isVisited 
-                          ? "ring-4 ring-emerald-500 ring-offset-2" 
-                          : "hover:shadow-2xl hover:-translate-y-1"
-                      } ${attraction.highlight ? "ring-2 ring-amber-400 ring-offset-2" : ""}`}
+                      className={`relative h-72 rounded-2xl overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 ${attraction.highlight ? "ring-2 ring-amber-400 ring-offset-2" : ""}`}
                       data-testid={`card-attraction-${attraction.id}`}
-                      onClick={() => toggleVisited(attraction.id)}
                     >
                       {/* Background Image */}
                       <img 
@@ -685,39 +633,24 @@ export default function LandingFreeDubai() {
                       />
                       
                       {/* Gradient Overlay */}
-                      <div className={`absolute inset-0 transition-all duration-300 ${
-                        isVisited 
-                          ? "bg-gradient-to-t from-emerald-900/90 via-emerald-900/40 to-emerald-900/20" 
-                          : "bg-gradient-to-t from-black/90 via-black/40 to-transparent"
-                      }`} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
                       
                       {/* Top Badges */}
-                      <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                        <div className="flex gap-2">
-                          <Badge className="bg-emerald-500 text-white border-0 shadow-lg">
-                            FREE
+                      <div className="absolute top-3 left-3 flex gap-2">
+                        <Badge className="bg-emerald-500 text-white border-0 shadow-lg">
+                          FREE
+                        </Badge>
+                        {attraction.highlight && (
+                          <Badge className="bg-amber-500 text-white border-0 shadow-lg">
+                            <Star className="w-3 h-3 mr-1 fill-white" />
+                            Top Pick
                           </Badge>
-                          {attraction.highlight && (
-                            <Badge className="bg-amber-500 text-white border-0 shadow-lg">
-                              <Star className="w-3 h-3 mr-1 fill-white" />
-                              Top Pick
-                            </Badge>
-                          )}
-                        </div>
-                        <div 
-                          className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-                            isVisited 
-                              ? "bg-emerald-500 border-emerald-500" 
-                              : "bg-white/20 border-white/50 backdrop-blur-sm"
-                          }`}
-                        >
-                          {isVisited && <CheckCircle2 className="w-5 h-5 text-white" />}
-                        </div>
+                        )}
                       </div>
                       
-                      {/* Category Icon */}
-                      <div className={`absolute top-3 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-gradient-to-br ${getCategoryColor(attraction.category)} flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg`}>
-                        <CategoryIcon className="w-6 h-6 text-white" />
+                      {/* Category Icon on Hover */}
+                      <div className={`absolute top-3 right-3 w-10 h-10 rounded-full bg-gradient-to-br ${getCategoryColor(attraction.category)} flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg`}>
+                        <CategoryIcon className="w-5 h-5 text-white" />
                       </div>
                       
                       {/* Bottom Content */}
@@ -744,15 +677,6 @@ export default function LandingFreeDubai() {
                           )}
                         </div>
                       </div>
-                      
-                      {/* Visited Overlay */}
-                      {isVisited && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="bg-emerald-500/90 backdrop-blur-sm rounded-full p-4">
-                            <CheckCircle2 className="w-12 h-12 text-white" />
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </motion.div>
                 );
@@ -816,10 +740,7 @@ export default function LandingFreeDubai() {
               Ready to Explore Dubai?
             </h2>
             <p className="text-xl text-white/70 mb-10 max-w-2xl mx-auto">
-              {visitedCount > 0 
-                ? `You've discovered ${visitedCount} places! Keep exploring to unlock all of Dubai's secrets.`
-                : "70+ free experiences await. Start your Dubai adventure today."
-              }
+              70+ free experiences await. Start your Dubai adventure today.
             </p>
             
             <div className="flex flex-wrap justify-center gap-4">
