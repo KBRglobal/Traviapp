@@ -11,6 +11,7 @@ import { PublicFooter } from "@/components/public-footer";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
 import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
+import traviLogoImg from "@assets/Logotype_for_Dark_Background_1766192985178.png";
 
 interface HomepagePromotion {
   id: string;
@@ -174,15 +175,27 @@ export default function PublicHome() {
 
           {/* Main Hero Content */}
           <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20">
-            {/* Giant TRAVI Letters with Dubai Images */}
-            <div className="text-center mb-8" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
-              <h1 className="text-[8rem] sm:text-[12rem] lg:text-[16rem] font-bold leading-none tracking-tight select-none inline-flex">
-                <span className="travi-letter-mask" style={{ backgroundImage: `url(${dubaiImages[0]})` }}>T</span>
-                <span className="travi-letter-mask" style={{ backgroundImage: `url(${dubaiImages[1]})` }}>R</span>
-                <span className="travi-letter-mask" style={{ backgroundImage: `url(${dubaiImages[2]})` }}>A</span>
-                <span className="travi-letter-mask" style={{ backgroundImage: `url(${dubaiImages[3]})` }}>V</span>
-                <span className="travi-letter-mask" style={{ backgroundImage: `url(${dubaiImages[4]})` }}>I</span>
-              </h1>
+            {/* Giant TRAVI Logo with Dubai Images Texture */}
+            <div className="text-center mb-8 flex justify-center" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
+              <div 
+                className="relative w-[90vw] max-w-[800px] h-[20vh] sm:h-[25vh] lg:h-[30vh]"
+                style={{
+                  backgroundImage: `url(${dubaiImages[0]}), url(${dubaiImages[1]}), url(${dubaiImages[2]}), url(${dubaiImages[3]}), url(${dubaiImages[4]})`,
+                  backgroundSize: '20% 100%',
+                  backgroundPosition: '0% 0%, 25% 0%, 50% 0%, 75% 0%, 100% 0%',
+                  backgroundRepeat: 'no-repeat',
+                  WebkitMaskImage: `url(${traviLogoImg})`,
+                  maskImage: `url(${traviLogoImg})`,
+                  WebkitMaskSize: 'contain',
+                  maskSize: 'contain',
+                  WebkitMaskPosition: 'center',
+                  maskPosition: 'center',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                }}
+                role="img"
+                aria-label="TRAVI - Your Dubai Travel Guide"
+              />
             </div>
 
             {/* Mascot */}
