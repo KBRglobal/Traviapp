@@ -58,6 +58,7 @@ import {
 } from "./security";
 import * as fs from "fs";
 import * as path from "path";
+import sharp from "sharp";
 import {
   generateHotelContent,
   generateAttractionContent,
@@ -97,6 +98,65 @@ function requireRole(role: UserRole | UserRole[]) {
 }
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+// WebP conversion settings
+const WEBP_QUALITY = 80;
+const SUPPORTED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+interface ConvertedImage {
+  buffer: Buffer;
+  filename: string;
+  mimeType: string;
+  width?: number;
+  height?: number;
+}
+
+async function convertToWebP(buffer: Buffer, originalFilename: string, mimeType: string): Promise<ConvertedImage> {
+  // Only convert supported image formats
+  if (!SUPPORTED_IMAGE_FORMATS.includes(mimeType)) {
+    return { buffer, filename: originalFilename, mimeType };
+  }
+
+  // Skip if already WebP
+  if (mimeType === 'image/webp') {
+    const metadata = await sharp(buffer).metadata();
+    return {
+      buffer,
+      filename: originalFilename,
+      mimeType,
+      width: metadata.width,
+      height: metadata.height,
+    };
+  }
+
+  try {
+    // Get image metadata for dimensions
+    const image = sharp(buffer);
+    const metadata = await image.metadata();
+
+    // Convert to WebP
+    const webpBuffer = await image
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+
+    // Generate new filename with .webp extension
+    const baseName = originalFilename.replace(/\.[^.]+$/, '');
+    const webpFilename = `${baseName}.webp`;
+
+    console.log(`[WebP] Converted ${originalFilename} (${(buffer.length / 1024).toFixed(1)}KB) -> ${webpFilename} (${(webpBuffer.length / 1024).toFixed(1)}KB)`);
+
+    return {
+      buffer: webpBuffer,
+      filename: webpFilename,
+      mimeType: 'image/webp',
+      width: metadata.width,
+      height: metadata.height,
+    };
+  } catch (error) {
+    console.error('[WebP] Conversion failed, using original:', error);
+    return { buffer, filename: originalFilename, mimeType };
+  }
+}
 
 let objectStorageClient: Client | null = null;
 
@@ -2325,20 +2385,27 @@ export async function registerRoutes(
   app.post("/api/media/upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.single("file"), validateMediaUpload, async (req, res) => {
     let localPath: string | null = null;
     let objectPath: string | null = null;
-    
+
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
+      // Convert images to WebP for optimization
+      const converted = await convertToWebP(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+
       const storageClient = getObjectStorageClient();
-      
-      const filename = `${Date.now()}-${req.file.originalname}`;
+
+      const filename = `${Date.now()}-${converted.filename}`;
       let url = `/uploads/${filename}`;
-      
+
       if (storageClient) {
         objectPath = `public/${filename}`;
-        await storageClient.uploadFromBytes(objectPath, req.file.buffer);
+        await storageClient.uploadFromBytes(objectPath, converted.buffer);
         // Note: Using simple URL path instead of signed URL (getSignedDownloadUrl doesn't exist)
         url = `/object-storage/${objectPath}`;
       } else {
@@ -2347,21 +2414,21 @@ export async function registerRoutes(
           fs.mkdirSync(uploadsDir, { recursive: true });
         }
         localPath = path.join(uploadsDir, filename);
-        fs.writeFileSync(localPath, req.file.buffer);
+        fs.writeFileSync(localPath, converted.buffer);
       }
 
       const mediaFile = await storage.createMediaFile({
         filename,
         originalFilename: req.file.originalname,
-        mimeType: req.file.mimetype,
-        size: req.file.size,
+        mimeType: converted.mimeType,
+        size: converted.buffer.length,
         url,
         altText: req.body.altText || null,
-        width: req.body.width ? parseInt(req.body.width) : null,
-        height: req.body.height ? parseInt(req.body.height) : null,
+        width: converted.width || (req.body.width ? parseInt(req.body.width) : null),
+        height: converted.height || (req.body.height ? parseInt(req.body.height) : null),
       });
 
-      await logAuditEvent(req, "media_upload", "media", mediaFile.id, `Uploaded media: ${mediaFile.originalFilename}`, undefined, { filename: mediaFile.originalFilename, mimeType: mediaFile.mimeType, size: mediaFile.size });
+      await logAuditEvent(req, "media_upload", "media", mediaFile.id, `Uploaded media: ${mediaFile.originalFilename}`, undefined, { filename: mediaFile.originalFilename, mimeType: mediaFile.mimeType, size: mediaFile.size, originalSize: req.file.size });
       res.status(201).json(mediaFile);
     } catch (error) {
       if (localPath && fs.existsSync(localPath)) {
