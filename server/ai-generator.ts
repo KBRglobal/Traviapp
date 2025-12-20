@@ -1671,13 +1671,35 @@ OUTPUT JSON STRUCTURE:
         "order": 4
       },
       {
+        "id": "quote_block",
+        "type": "quote",
+        "data": {
+          "text": "A compelling, memorable quote about the topic - could be from a local expert, traveler review, historical figure, or famous saying. Make it inspiring and relevant to the article content.",
+          "author": "Name of person quoted (optional)",
+          "source": "Title or context of source (optional)"
+        },
+        "order": 5
+      },
+      {
         "id": "main_content_3",
         "type": "text",
         "data": {
           "heading": "H2 for third section (if needed for structure)",
           "content": "200-300 words. Additional content matching your structure (e.g., comparison details, story continuation, more list items). Keep momentum. Use different transitional phrases than previous sections."
         },
-        "order": 5
+        "order": 6
+      },
+      {
+        "id": "experience_banner",
+        "type": "banner",
+        "data": {
+          "title": "EXPERIENCE DUBAI",
+          "subtitle": "Discover the magic",
+          "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920",
+          "ctaText": "Explore More",
+          "ctaLink": "/attractions"
+        },
+        "order": 7
       },
       {
         "id": "pro_tips",
@@ -1694,7 +1716,50 @@ OUTPUT JSON STRUCTURE:
             "Bonus hack tip 7 (e.g., 'Free parking after 6 PM in adjacent P2 garage, entrance on Al Wasl Road')"
           ]
         },
-        "order": 6
+        "order": 8
+      },
+      {
+        "id": "recommendations_block",
+        "type": "recommendations",
+        "data": {
+          "title": "Travi Recommends",
+          "subtitle": "Handpicked experiences to enhance your visit",
+          "items": [
+            {
+              "title": "Related Experience 1 (e.g., 'Book Burj Khalifa Sky Tickets')",
+              "description": "Brief compelling description of this recommended experience",
+              "image": "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=400",
+              "ctaText": "Book Now",
+              "ctaLink": "/attractions/burj-khalifa",
+              "price": "From AED 149"
+            },
+            {
+              "title": "Related Experience 2 (e.g., 'Desert Safari Adventure')",
+              "description": "Brief compelling description of this recommended experience",
+              "image": "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=400",
+              "ctaText": "Book Now",
+              "ctaLink": "/attractions/desert-safari",
+              "price": "From AED 199"
+            },
+            {
+              "title": "Related Experience 3 (e.g., 'Luxury Marina Dinner Cruise')",
+              "description": "Brief compelling description of this recommended experience",
+              "image": "https://images.unsplash.com/photo-1512100356356-de1b84283e18?w=400",
+              "ctaText": "Book Now",
+              "ctaLink": "/dining/marina-cruise",
+              "price": "From AED 299"
+            },
+            {
+              "title": "Related Experience 4 (e.g., 'Miracle Garden Entry Pass')",
+              "description": "Brief compelling description of this recommended experience",
+              "image": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400",
+              "ctaText": "Book Now",
+              "ctaLink": "/attractions/miracle-garden",
+              "price": "From AED 55"
+            }
+          ]
+        },
+        "order": 9
       },
       {
         "id": "practical_info",
@@ -1703,7 +1768,7 @@ OUTPUT JSON STRUCTURE:
           "heading": "Practical Information",
           "content": "150-200 words. Comprehensive practical details: full address, contact phone/email, website, exact operating hours, pricing tiers, payment methods, accessibility info, parking details, public transport access, what to bring, dress code, age restrictions, group booking info. Format as short paragraphs or bullets for scannability."
         },
-        "order": 7
+        "order": 10
       },
       {
         "id": "faq_block",
@@ -1718,21 +1783,53 @@ OUTPUT JSON STRUCTURE:
             {"question": "Do I need to book in advance?", "answer": "150-200 words covering walk-in vs booking, peak times requiring reservation, how far ahead to book, cancellation policy, where to book"},
             {"question": "What should I wear/bring to [topic]?", "answer": "150-200 words covering dress code, cultural considerations, weather prep, what's provided vs what to bring, prohibited items, bag policy"},
             {"question": "How long should I spend at [location]?", "answer": "150-200 words covering typical duration, rush visit vs thorough experience, what affects timing, combined with other activities"},
-            {"question": "Are there any restrictions or rules?", "answer": "150-200 words covering photography policy, food/drink rules, behavior expectations, accessibility limitations, what's not allowed"},
-            {"question": "What's included in the price?", "answer": "150-200 words covering what's included, what costs extra, package deals, worth-it assessment, comparison to alternatives"},
-            {"question": "Can I get a refund if I cancel?", "answer": "150-200 words covering cancellation policy, refund terms, modification options, travel insurance recommendation, no-show policy"}
+            {"question": "Are there any restrictions or rules?", "answer": "150-200 words covering photography policy, food/drink rules, behavior expectations, accessibility limitations, what's not allowed"}
           ]
         },
-        "order": 8
+        "order": 11
       },
       {
-        "id": "related_links",
-        "type": "text",
+        "id": "related_articles_block",
+        "type": "related_articles",
         "data": {
-          "heading": "Related Articles",
-          "content": "Short paragraph (50-80 words) with 3-5 internal links to related content. Use natural anchor text: 'For more Dubai attractions, see our guide to [link]top Dubai attractions[/link]. If you're interested in dining nearby, check out [link]best restaurants in [Area][/link].' Links should flow naturally in sentences."
+          "title": "Related Articles",
+          "subtitle": "Explore more Dubai travel guides and tips",
+          "articles": [
+            {
+              "title": "Related Article 1 Title",
+              "description": "Brief 1-2 sentence description of related article",
+              "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400",
+              "date": "25",
+              "category": "Dubai Guide",
+              "slug": "related-article-1-slug"
+            },
+            {
+              "title": "Related Article 2 Title",
+              "description": "Brief 1-2 sentence description of related article",
+              "image": "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400",
+              "date": "25",
+              "category": "Attractions",
+              "slug": "related-article-2-slug"
+            },
+            {
+              "title": "Related Article 3 Title",
+              "description": "Brief 1-2 sentence description of related article",
+              "image": "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=400",
+              "date": "25",
+              "category": "Tips",
+              "slug": "related-article-3-slug"
+            },
+            {
+              "title": "Related Article 4 Title",
+              "description": "Brief 1-2 sentence description of related article",
+              "image": "https://images.unsplash.com/photo-1546412414-e1885259563a?w=400",
+              "date": "25",
+              "category": "Hotels",
+              "slug": "related-article-4-slug"
+            }
+          ]
         },
-        "order": 9
+        "order": 12
       },
       {
         "id": "conclusion_cta",
@@ -1743,7 +1840,7 @@ OUTPUT JSON STRUCTURE:
           "buttonText": "Plan Your Visit" OR "Book Now" OR "Learn More",
           "buttonLink": "#" OR booking URL
         },
-        "order": 10
+        "order": 13
       }
     ],
     "seoSchema": {
