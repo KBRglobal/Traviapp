@@ -487,6 +487,68 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
     });
   }
 
+  // Add quote block if missing (insert after second text block if exists)
+  if (!blockTypes.has('quote')) {
+    const insertIndex = Math.min(4, normalizedBlocks.length);
+    normalizedBlocks.splice(insertIndex, 0, {
+      type: 'quote',
+      data: {
+        text: 'Dubai is a city that never stops surprising you. Every corner reveals a new wonder.',
+        author: 'Dubai Tourism',
+        source: ''
+      }
+    });
+  }
+
+  // Add banner block if missing
+  if (!blockTypes.has('banner')) {
+    const insertIndex = Math.min(7, normalizedBlocks.length);
+    normalizedBlocks.splice(insertIndex, 0, {
+      type: 'banner',
+      data: {
+        title: 'EXPERIENCE DUBAI',
+        subtitle: 'Discover the magic',
+        image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920',
+        ctaText: 'Explore More',
+        ctaLink: '/attractions'
+      }
+    });
+  }
+
+  // Add recommendations block if missing
+  if (!blockTypes.has('recommendations')) {
+    normalizedBlocks.push({
+      type: 'recommendations',
+      data: {
+        title: 'Travi Recommends',
+        subtitle: 'Handpicked experiences to enhance your Dubai visit',
+        items: [
+          { title: 'Burj Khalifa Sky Experience', description: 'See Dubai from the world\'s tallest building', image: 'https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=400', ctaText: 'Book Now', ctaLink: '/attractions/burj-khalifa', price: 'From AED 149' },
+          { title: 'Desert Safari Adventure', description: 'Experience the golden dunes at sunset', image: 'https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=400', ctaText: 'Book Now', ctaLink: '/attractions/desert-safari', price: 'From AED 199' },
+          { title: 'Dubai Marina Cruise', description: 'Luxury dinner cruise with skyline views', image: 'https://images.unsplash.com/photo-1512100356356-de1b84283e18?w=400', ctaText: 'Book Now', ctaLink: '/dining/marina-cruise', price: 'From AED 299' },
+          { title: 'Miracle Garden Entry', description: 'World\'s largest natural flower garden', image: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400', ctaText: 'Book Now', ctaLink: '/attractions/miracle-garden', price: 'From AED 55' }
+        ]
+      }
+    });
+  }
+
+  // Add related articles block if missing
+  if (!blockTypes.has('related_articles')) {
+    normalizedBlocks.push({
+      type: 'related_articles',
+      data: {
+        title: 'Related Articles',
+        subtitle: 'Explore more Dubai travel guides and tips',
+        articles: [
+          { title: 'Top 10 Things to Do in Dubai', description: 'Essential experiences for first-time visitors', image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400', date: '25', category: 'Dubai Guide', slug: 'top-things-to-do-dubai' },
+          { title: 'Dubai on a Budget', description: 'How to enjoy luxury for less', image: 'https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400', date: '25', category: 'Tips', slug: 'dubai-budget-guide' },
+          { title: 'Best Dubai Restaurants 2025', description: 'Where to eat from casual to fine dining', image: 'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=400', date: '25', category: 'Dining', slug: 'best-dubai-restaurants' },
+          { title: 'Dubai Hidden Gems', description: 'Secret spots the locals love', image: 'https://images.unsplash.com/photo-1546412414-e1885259563a?w=400', date: '25', category: 'Attractions', slug: 'dubai-hidden-gems' }
+        ]
+      }
+    });
+  }
+
   // Add id and order to all blocks before returning
   return normalizedBlocks.map((block, index) => ({
     ...block,
@@ -496,7 +558,7 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
 }
 
 function normalizeBlock(type: string, data: Record<string, unknown>): Omit<ContentBlock, 'id' | 'order'> | null {
-  const validTypes: ContentBlock['type'][] = ['hero', 'text', 'image', 'gallery', 'faq', 'cta', 'info_grid', 'highlights', 'room_cards', 'tips'];
+  const validTypes: ContentBlock['type'][] = ['hero', 'text', 'image', 'gallery', 'faq', 'cta', 'info_grid', 'highlights', 'room_cards', 'tips', 'quote', 'banner', 'recommendations', 'related_articles'];
 
   switch (type) {
     case 'hero':
@@ -562,6 +624,51 @@ function normalizeBlock(type: string, data: Record<string, unknown>): Omit<Conte
       return { type: 'gallery' as const, data };
     case 'info_grid':
       return { type: 'info_grid' as const, data };
+
+    case 'quote':
+      return { type: 'quote' as const, data };
+
+    case 'banner':
+      // Ensure banner has image
+      const bannerData = { ...data };
+      if (!bannerData.image) {
+        bannerData.image = 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920';
+      }
+      return { type: 'banner' as const, data: bannerData };
+
+    case 'recommendations':
+      // Ensure recommendations have items with images
+      let recItems = (data as any).items;
+      if (Array.isArray(recItems)) {
+        const defaultImages = [
+          'https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=400',
+          'https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=400',
+          'https://images.unsplash.com/photo-1512100356356-de1b84283e18?w=400',
+          'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400'
+        ];
+        recItems = recItems.map((item: any, index: number) => ({
+          ...item,
+          image: item.image || defaultImages[index % defaultImages.length]
+        }));
+      }
+      return { type: 'recommendations' as const, data: { ...data, items: recItems } };
+
+    case 'related_articles':
+      // Ensure related articles have images
+      let articles = (data as any).articles;
+      if (Array.isArray(articles)) {
+        const defaultArticleImages = [
+          'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400',
+          'https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400',
+          'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=400',
+          'https://images.unsplash.com/photo-1546412414-e1885259563a?w=400'
+        ];
+        articles = articles.map((article: any, index: number) => ({
+          ...article,
+          image: article.image || defaultArticleImages[index % defaultArticleImages.length]
+        }));
+      }
+      return { type: 'related_articles' as const, data: { ...data, articles } };
 
     default:
       // Check if type is valid, otherwise return text
