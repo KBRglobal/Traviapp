@@ -82,8 +82,8 @@ const typeConfig = {
     wordTarget: "~3000 words",
   },
   article: {
-    title: "Articles",
-    singular: "Article",
+    title: "News",
+    singular: "News Article",
     icon: FileText,
     basePath: "/admin/articles",
     wordTarget: "~1200-2000 words",

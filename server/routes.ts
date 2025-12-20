@@ -6145,9 +6145,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const category = req.query.category as string;
       const rating = req.query.rating as string;
       const approved = req.query.approved as string;
+      const source = req.query.source as string;
 
-      let query = db.select().from(aiGeneratedImages);
-      
+      const { and } = await import("drizzle-orm");
       const conditions: any[] = [];
       
       if (search) {
@@ -6173,17 +6173,23 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         conditions.push(eq(aiGeneratedImages.isApproved, true));
       }
 
-      const baseQuery = conditions.length > 0 
-        ? db.select().from(aiGeneratedImages).where(conditions.length === 1 ? conditions[0] : sql`${conditions.join(" AND ")}`)
-        : db.select().from(aiGeneratedImages);
+      if (source) {
+        conditions.push(eq(aiGeneratedImages.source, source as any));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
       
       const images = await db.select()
         .from(aiGeneratedImages)
+        .where(whereClause)
         .orderBy(desc(aiGeneratedImages.createdAt))
         .limit(limit)
         .offset(offset);
 
-      const [countResult] = await db.select({ count: sql`count(*)` }).from(aiGeneratedImages);
+      const countQuery = whereClause 
+        ? db.select({ count: sql`count(*)` }).from(aiGeneratedImages).where(whereClause)
+        : db.select({ count: sql`count(*)` }).from(aiGeneratedImages);
+      const [countResult] = await countQuery;
       const total = Number(countResult?.count || 0);
 
       res.json({
@@ -6423,6 +6429,319 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     } catch (error) {
       console.error("Error deleting collection:", error);
       res.status(500).json({ error: "Failed to delete collection" });
+    }
+  });
+
+  // ============================================================================
+  // FREEPIK API ENDPOINTS
+  // ============================================================================
+  
+  app.get("/api/freepik/search", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { q, page = "1", limit = "20" } = req.query;
+      
+      if (!q || typeof q !== "string") {
+        return res.status(400).json({ error: "Search query is required" });
+      }
+
+      const freepikApiKey = process.env.FREEPIK_API_KEY;
+      if (!freepikApiKey) {
+        return res.status(503).json({ 
+          error: "Freepik API key not configured",
+          message: "Please add FREEPIK_API_KEY to your secrets"
+        });
+      }
+
+      const pageNum = parseInt(page as string) || 1;
+      const limitNum = Math.min(parseInt(limit as string) || 20, 50);
+
+      const searchUrl = new URL("https://api.freepik.com/v1/resources");
+      searchUrl.searchParams.set("term", q);
+      searchUrl.searchParams.set("page", pageNum.toString());
+      searchUrl.searchParams.set("limit", limitNum.toString());
+      searchUrl.searchParams.set("filters[content_type][photo]", "1");
+
+      const response = await fetch(searchUrl.toString(), {
+        headers: {
+          "Accept-Language": "en-US",
+          "Accept": "application/json",
+          "x-freepik-api-key": freepikApiKey,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Freepik API error:", response.status, errorText);
+        return res.status(response.status).json({ error: "Freepik API error", details: errorText });
+      }
+
+      const data = await response.json();
+      
+      res.json({
+        results: (data.data || []).map((item: any) => ({
+          id: item.id,
+          title: item.title || "Untitled",
+          previewUrl: item.image?.source?.url || item.preview?.url || item.thumbnail?.url,
+          downloadUrl: item.image?.source?.url,
+          author: item.author,
+          width: item.image?.source?.size?.width,
+          height: item.image?.source?.size?.height,
+        })),
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: data.meta?.pagination?.total || 0,
+          totalPages: data.meta?.pagination?.last_page || 1,
+        },
+      });
+    } catch (error) {
+      console.error("Error searching Freepik:", error);
+      res.status(500).json({ error: "Failed to search Freepik" });
+    }
+  });
+
+  app.post("/api/freepik/import", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const { imageUrl, title, category, topic } = req.body;
+      
+      if (!imageUrl) {
+        return res.status(400).json({ error: "Image URL is required" });
+      }
+
+      const freepikApiKey = process.env.FREEPIK_API_KEY;
+      if (!freepikApiKey) {
+        return res.status(503).json({ 
+          error: "Freepik API key not configured",
+          message: "Please add FREEPIK_API_KEY to your secrets"
+        });
+      }
+
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        return res.status(400).json({ error: "Failed to fetch image from Freepik" });
+      }
+
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const filename = `freepik-${Date.now()}.jpg`;
+      let persistedUrl = imageUrl;
+
+      const storageClient = getObjectStorageClient();
+      if (storageClient) {
+        const objectPath = `public/images/${filename}`;
+        await storageClient.uploadFromBytes(objectPath, Buffer.from(imageBuffer));
+        persistedUrl = `/object-storage/${objectPath}`;
+      } else {
+        const uploadsDir = path.join(process.cwd(), "uploads");
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        fs.writeFileSync(path.join(uploadsDir, filename), Buffer.from(imageBuffer));
+        persistedUrl = `/uploads/${filename}`;
+      }
+
+      const { aiGeneratedImages } = await import("@shared/schema");
+      const [savedImage] = await db.insert(aiGeneratedImages).values({
+        filename,
+        url: persistedUrl,
+        topic: topic || title || "Freepik Import",
+        category: category || "general",
+        imageType: "hero",
+        source: "freepik" as const,
+        prompt: null,
+        keywords: [topic || title || "freepik", "stock", "dubai"],
+        altText: title || "Freepik stock image",
+        caption: title,
+        size: imageBuffer.byteLength,
+      }).returning();
+
+      res.json({ success: true, image: savedImage });
+    } catch (error) {
+      console.error("Error importing from Freepik:", error);
+      res.status(500).json({ error: "Failed to import image from Freepik" });
+    }
+  });
+
+  // Bulk upload to Image Engine library
+  app.post("/api/image-engine/bulk-upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.array("files", 50), async (req, res) => {
+    try {
+      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+      }
+
+      const { category, topic } = req.body;
+      const results: any[] = [];
+      const errors: any[] = [];
+      const storageClient = getObjectStorageClient();
+
+      for (const file of req.files) {
+        try {
+          const filename = `upload-${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+          let url: string;
+
+          if (storageClient) {
+            const objectPath = `public/images/${filename}`;
+            await storageClient.uploadFromBytes(objectPath, file.buffer);
+            url = `/object-storage/${objectPath}`;
+          } else {
+            const uploadsDir = path.join(process.cwd(), "uploads");
+            if (!fs.existsSync(uploadsDir)) {
+              fs.mkdirSync(uploadsDir, { recursive: true });
+            }
+            fs.writeFileSync(path.join(uploadsDir, filename), file.buffer);
+            url = `/uploads/${filename}`;
+          }
+
+          const { aiGeneratedImages } = await import("@shared/schema");
+          const [savedImage] = await db.insert(aiGeneratedImages).values({
+            filename,
+            url,
+            topic: topic || file.originalname.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
+            category: category || "general",
+            imageType: "hero",
+            source: "upload" as const,
+            prompt: null,
+            keywords: [topic || "upload", category || "general"],
+            altText: file.originalname.replace(/\.[^/.]+$/, ""),
+            size: file.size,
+          }).returning();
+
+          results.push(savedImage);
+        } catch (fileError) {
+          console.error("Error processing file:", file.originalname, fileError);
+          errors.push({ filename: file.originalname, error: "Failed to process" });
+        }
+      }
+
+      res.json({
+        success: true,
+        uploaded: results.length,
+        failed: errors.length,
+        images: results,
+        errors,
+      });
+    } catch (error) {
+      console.error("Error in bulk upload:", error);
+      res.status(500).json({ error: "Failed to process bulk upload" });
+    }
+  });
+
+  // ============================================================================
+  // IMAGE LIBRARY API ENDPOINTS (aliased routes for /api/images)
+  // ============================================================================
+  
+  // GET /api/images - List images from library
+  app.get("/api/images", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { aiGeneratedImages } = await import("@shared/schema");
+      const { desc, eq, and, sql } = await import("drizzle-orm");
+      
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const offset = (page - 1) * limit;
+      const source = req.query.source as string;
+      const category = req.query.category as string;
+
+      const conditions: any[] = [];
+      
+      if (source) {
+        conditions.push(eq(aiGeneratedImages.source, source as any));
+      }
+      
+      if (category) {
+        conditions.push(eq(aiGeneratedImages.category, category));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      
+      const images = await db.select()
+        .from(aiGeneratedImages)
+        .where(whereClause)
+        .orderBy(desc(aiGeneratedImages.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const countQuery = whereClause 
+        ? db.select({ count: sql`count(*)` }).from(aiGeneratedImages).where(whereClause)
+        : db.select({ count: sql`count(*)` }).from(aiGeneratedImages);
+      const [countResult] = await countQuery;
+      const total = Number(countResult?.count || 0);
+
+      res.json({
+        images,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching images:", error);
+      res.status(500).json({ error: "Failed to fetch images" });
+    }
+  });
+
+  // POST /api/images/bulk-upload - Bulk image upload endpoint
+  app.post("/api/images/bulk-upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.array("files", 50), async (req, res) => {
+    try {
+      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+      }
+
+      const { category, topic } = req.body;
+      const results: any[] = [];
+      const errors: any[] = [];
+      const storageClient = getObjectStorageClient();
+
+      for (const file of req.files) {
+        try {
+          const filename = `upload-${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+          let url: string;
+
+          if (storageClient) {
+            const objectPath = `public/images/${filename}`;
+            await storageClient.uploadFromBytes(objectPath, file.buffer);
+            url = `/object-storage/${objectPath}`;
+          } else {
+            const uploadsDir = path.join(process.cwd(), "uploads");
+            if (!fs.existsSync(uploadsDir)) {
+              fs.mkdirSync(uploadsDir, { recursive: true });
+            }
+            fs.writeFileSync(path.join(uploadsDir, filename), file.buffer);
+            url = `/uploads/${filename}`;
+          }
+
+          const { aiGeneratedImages } = await import("@shared/schema");
+          const [savedImage] = await db.insert(aiGeneratedImages).values({
+            filename,
+            url,
+            topic: topic || file.originalname.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
+            category: category || "general",
+            imageType: "hero",
+            source: "upload" as const,
+            prompt: null,
+            keywords: [topic || "upload", category || "general"],
+            altText: file.originalname.replace(/\.[^/.]+$/, ""),
+            size: file.size,
+          }).returning();
+
+          results.push(savedImage);
+        } catch (fileError) {
+          console.error("Error processing file:", file.originalname, fileError);
+          errors.push({ filename: file.originalname, error: "Failed to process" });
+        }
+      }
+
+      res.json({
+        success: true,
+        uploaded: results.length,
+        failed: errors.length,
+        images: results,
+        errors,
+      });
+    } catch (error) {
+      console.error("Error in bulk upload:", error);
+      res.status(500).json({ error: "Failed to process bulk upload" });
     }
   });
 

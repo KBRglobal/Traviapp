@@ -168,10 +168,10 @@ export default function PublicArticles() {
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold mb-1">
-                {searchQuery ? "Search Results" : "Latest Articles"}
+                {searchQuery ? "Search Results" : "Latest News"}
               </h2>
               <p className="text-muted-foreground">
-                {isLoading ? "Loading..." : `${filteredArticles.length} articles found`}
+                {isLoading ? "Loading..." : `${filteredArticles.length} news found`}
               </p>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function PublicArticles() {
               </div>
               <h3 className="text-xl font-semibold mb-2">No articles found</h3>
               <p className="text-muted-foreground mb-6">
-                {searchQuery ? "Try a different search term" : "Articles will appear here once published"}
+                {searchQuery ? "Try a different search term" : "News will appear here once published"}
               </p>
               {searchQuery && (
                 <Button 

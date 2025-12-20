@@ -191,7 +191,7 @@ export default function PublicArticle() {
           <Link href="/articles">
             <Button>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Articles
+              Back to News
             </Button>
           </Link>
         </div>
@@ -424,7 +424,7 @@ export default function PublicArticle() {
             <div className="flex items-end justify-between mb-10">
               <div>
                 <h2 className="text-3xl lg:text-4xl font-bold text-[#1E1B4B]">
-                  Related <span className="font-script text-[#6C5CE7]">Articles</span>
+                  Related <span className="font-script text-[#6C5CE7]">News</span>
                 </h2>
                 <p className="text-[#64748B] mt-2">Continue your Dubai discovery</p>
               </div>

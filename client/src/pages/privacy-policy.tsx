@@ -17,7 +17,7 @@ export default function PrivacyPolicy() {
             <div className="hidden md:flex items-center gap-8">
               <Link href="/hotels" className="text-foreground/80 hover:text-primary font-medium transition-colors">Hotels</Link>
               <Link href="/attractions" className="text-foreground/80 hover:text-primary font-medium transition-colors">Attractions</Link>
-              <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">Articles</Link>
+              <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">News</Link>
             </div>
 
             <div className="flex items-center gap-3">
@@ -37,7 +37,7 @@ export default function PrivacyPolicy() {
             <div className="flex flex-col gap-2">
               <Link href="/hotels" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Hotels</Link>
               <Link href="/attractions" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Attractions</Link>
-              <Link href="/articles" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Articles</Link>
+              <Link href="/articles" className="py-2 px-4 hover:bg-muted rounded-lg font-medium" onClick={() => setMobileMenuOpen(false)}>News</Link>
             </div>
           </div>
         )}
@@ -220,7 +220,7 @@ export default function PrivacyPolicy() {
             <div className="flex flex-wrap items-center justify-center gap-6 text-white/60 text-sm">
               <Link href="/hotels" className="hover:text-white transition-colors">Hotels</Link>
               <Link href="/attractions" className="hover:text-white transition-colors">Attractions</Link>
-              <Link href="/articles" className="hover:text-white transition-colors">Articles</Link>
+              <Link href="/articles" className="hover:text-white transition-colors">News</Link>
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
               <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             </div>

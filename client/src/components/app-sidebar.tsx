@@ -93,7 +93,7 @@ const contentItems = [
     icon: Train,
   },
   {
-    title: "Articles",
+    title: "News",
     url: "/admin/articles",
     icon: FileText,
   },

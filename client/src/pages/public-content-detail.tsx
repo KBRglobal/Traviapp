@@ -181,7 +181,7 @@ export default function PublicContentDetail() {
       case 'transport': return 'Transport';
       case 'hotel': return 'Hotels';
       case 'attraction': return 'Attractions';
-      case 'article': return 'Articles';
+      case 'article': return 'News';
       default: return type;
     }
   }
@@ -233,7 +233,7 @@ export default function PublicContentDetail() {
     { href: "/dining", label: "Dining", type: "dining" },
     { href: "/districts", label: "Districts", type: "district" },
     { href: "/transport", label: "Transport", type: "transport" },
-    { href: "/articles", label: "Articles", type: "article" },
+    { href: "/articles", label: "News", type: "article" },
   ];
 
   if (isLoading) {
@@ -285,7 +285,7 @@ export default function PublicContentDetail() {
                 <div className="hidden md:flex items-center gap-8">
                   <Link href="/hotels" className="text-foreground/80 hover:text-primary font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-2 py-1">Hotels</Link>
                   <Link href="/attractions" className="text-foreground/80 hover:text-primary font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-2 py-1">Attractions</Link>
-                  <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-2 py-1">Articles</Link>
+                  <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-2 py-1">News</Link>
                 </div>
               </div>
             </div>
@@ -551,7 +551,7 @@ export default function PublicContentDetail() {
               <div className="flex items-center gap-6 text-muted-foreground text-sm flex-wrap">
                 <Link href="/hotels" className="hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-1">Hotels</Link>
                 <Link href="/attractions" className="hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-1">Attractions</Link>
-                <Link href="/articles" className="hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-1">Articles</Link>
+                <Link href="/articles" className="hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md px-1">News</Link>
               </div>
             </nav>
             <div className="flex items-center gap-4 text-muted-foreground text-sm flex-wrap">

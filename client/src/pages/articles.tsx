@@ -60,7 +60,7 @@ export default function Articles() {
       <main>
         <CompactHero
           backgroundImage={heroImage}
-          title="Travel Stories"
+          title="Dubai News"
           subtitle="Expert insights, tips, and guides for your Dubai journey"
         />
 
@@ -82,7 +82,7 @@ export default function Articles() {
             ) : articles.length === 0 ? (
               <div className="text-center py-16">
                 <BookOpen className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-                <h2 className="text-2xl font-semibold text-foreground mb-2">No articles available yet</h2>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">No news available yet</h2>
                 <p className="text-muted-foreground max-w-md mx-auto">
                   We're crafting insightful travel stories. Check back soon for expert guides and tips.
                 </p>
@@ -117,7 +117,7 @@ export default function Articles() {
                           excerpt={article.metaDescription || undefined}
                           image={article.heroImage || placeholderImages[(index + 1) % 4]}
                           href={`/articles/${article.slug}`}
-                          category="Article"
+                          category="News"
                           categoryColor="text-[#02A65C]"
                           date={formatDate(article.createdAt)}
                           readTime="5 min read"
