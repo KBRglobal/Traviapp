@@ -1,62 +1,20 @@
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import { Link } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   Waves, MapPin, Camera, Sparkles, Sun, Bird, Clock, 
   ChevronRight, Star, Download, ArrowRight, 
-  TreePalm, Building2, Music, Heart, ThumbsUp, ThumbsDown,
-  Users, Wallet, Trophy, CheckCircle2, Play, Bike,
-  Ship, Train, X, FileText, Gift, Lock, ChevronLeft,
-  Smartphone, Zap
+  TreePalm, Building2, Music, Heart,
+  Users, Wallet, Trophy, CheckCircle2, Bike,
+  Ship, Train, Mountain, Palette, ShoppingBag,
+  Sunset, Footprints, Eye, Compass, Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
-
-// Selected preview attractions (teaser - not all)
-const previewBeaches = [
-  {
-    name: "JBR Beach",
-    subtitle: "Dubai's Crown Jewel",
-    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800",
-    features: ["Blue Flag Certified", "Free Showers", "24/7 Lifeguards"],
-    savings: "AED 150-500",
-  },
-  {
-    name: "Kite Beach",
-    subtitle: "The Active Paradise",
-    image: "https://images.unsplash.com/photo-1533827432537-70133748f5c8?w=800",
-    features: ["14km Running Track", "Beach Volleyball", "Burj Al Arab Views"],
-    savings: "AED 200+",
-  },
-];
-
-const previewAttractions = [
-  { name: "Dubai Fountain", icon: Music, desc: "World's largest fountain - 140m jets", savings: "AED 149-379" },
-  { name: "Dubai Marina Walk", icon: Building2, desc: "7km promenade with 200+ skyscrapers", savings: "AED 200+" },
-  { name: "Palm Boardwalk", icon: TreePalm, desc: "11km around Palm Jumeirah", savings: "AED 1,295" },
-  { name: "Heritage Village", icon: MapPin, desc: "Traditional Emirati village", savings: "Free" },
-];
-
-const lockedCategories = [
-  { title: "All 7 Beaches", count: "7 beaches", icon: Waves },
-  { title: "Skyline Views", count: "15+ spots", icon: Building2 },
-  { title: "Heritage & Culture", count: "12 sites", icon: MapPin },
-  { title: "Parks & Nature", count: "10 parks", icon: TreePalm },
-  { title: "Sports & Activities", count: "8 activities", icon: Bike },
-  { title: "Art & Entertainment", count: "10 galleries", icon: Camera },
-];
 
 // Hero stats
 const heroStats = [
@@ -66,121 +24,79 @@ const heroStats = [
   { icon: Camera, value: "50+", label: "Photo Spots" },
 ];
 
-// Itinerary preview
-const dayOnePreview = [
-  { time: "6:30 AM", activity: "Sunrise at Kite Beach", icon: Sun },
-  { time: "10:00 AM", activity: "Heritage Walk Al Fahidi", icon: MapPin },
-  { time: "6:00 PM", activity: "Dubai Fountain Show", icon: Music },
+// All Free Beaches
+const freeBeaches = [
+  { name: "JBR Beach", desc: "Blue Flag certified with free showers, changing rooms, and 24/7 lifeguards. Best sunset views.", savings: "AED 150-500" },
+  { name: "Kite Beach", desc: "14km running track, beach volleyball courts, Burj Al Arab views. Perfect for active visitors.", savings: "AED 200+" },
+  { name: "La Mer Beach", desc: "Trendy beachfront with street art, splash pads for kids, and Instagram-worthy spots.", savings: "AED 150+" },
+  { name: "Black Palace Beach", desc: "Secret hidden gem away from crowds. Crystal clear water, local favorite.", savings: "AED 200+" },
+  { name: "Jumeirah Public Beach", desc: "Clean, family-friendly with Burj Al Arab backdrop. Free parking nearby.", savings: "AED 100+" },
+  { name: "Al Mamzar Beach Park", desc: "5 beaches in one park. Calm lagoons, perfect for families with children.", savings: "AED 150+" },
+  { name: "Umm Suqeim Beach", desc: "Closest free beach to Burj Al Arab. Sunrise paradise for photographers.", savings: "AED 200+" },
 ];
 
-// Questionnaire questions data
-const question1Options = [
-  "I'm looking for an experience",
-  "I'm looking for comfort", 
-  "I'm looking for value",
-  "I'm looking for simplicity",
-  "I'm looking for luxury"
+// Heritage & Culture Sites
+const heritageSites = [
+  { name: "Al Fahidi Historical District", desc: "Wind-tower architecture from 1890s. Free walking tours, art galleries, traditional cafes." },
+  { name: "Heritage Village", desc: "Traditional Emirati village with pottery, weaving demonstrations. Free cultural shows." },
+  { name: "Bastakiya Quarter", desc: "Restored merchant houses, art galleries, and the famous XVA Art Hotel courtyard." },
+  { name: "Shindagha Heritage District", desc: "Birthplace of Dubai. Museums, spice souks, perfume house demonstrations." },
+  { name: "Grand Mosque", desc: "Stunning architecture with 45 domes. Free entry outside prayer times." },
+  { name: "Jumeirah Mosque", desc: "Most photographed mosque in Dubai. Free guided tours available." },
 ];
 
-const question2Options = [
-  "Choose quickly",
-  "Compare a lot",
-  "Get confused",
-  "Delay the decision",
-  "Let others decide"
+// Free Skyline Experiences
+const skylineSpots = [
+  { name: "Dubai Marina Walk", desc: "7km promenade with 200+ skyscrapers reflecting on water. Best at sunset." },
+  { name: "JLT Lake Walk", desc: "Hidden gem with less crowds. Multiple lakes, cafes, stunning views." },
+  { name: "Palm Boardwalk", desc: "11km walking path around Palm Jumeirah. Atlantis views guaranteed." },
+  { name: "Downtown Boulevard", desc: "Walk among the world's tallest buildings. Burj Khalifa up close." },
+  { name: "Business Bay Promenade", desc: "Water taxi views, modern architecture, quieter alternative to Marina." },
+  { name: "Creek Harbour Plaza", desc: "Future Dubai Creek Tower site. Stunning water and skyline views." },
 ];
 
-const question3Options = [
-  "Local, non-touristy places",
-  "Famous iconic things",
-  "Food and culinary",
-  "Shopping",
-  "Nature and walking",
-  "Culture and art"
+// Parks & Gardens
+const parksGardens = [
+  { name: "Al Barsha Pond Park", desc: "Running track, outdoor gym, lake with paddle boats. Totally free." },
+  { name: "Zabeel Park", desc: "47 hectares of greenery. Jogging tracks, cricket pitches, BBQ areas." },
+  { name: "Safa Park", desc: "Tennis courts, lake with ducks, playground. Perfect picnic spot." },
+  { name: "Creek Park", desc: "2.5km along Dubai Creek. Botanical garden, children's play areas." },
+  { name: "Mushrif Park", desc: "Wildlife sanctuary, international village, swimming pool. Nature escape." },
+  { name: "Al Qudra Lakes", desc: "Man-made desert oasis with flamingos and camels. Stargazing paradise." },
 ];
 
-const question4Options = [
-  "An organized list",
-  "By area",
-  "By style",
-  "By \"most popular\"",
-  "I prefer to discover on my own"
+// Free Shows & Entertainment
+const freeShows = [
+  { name: "Dubai Fountain Show", desc: "140m water jets choreographed to music. Every 30 min, 6pm-11pm." },
+  { name: "Global Village Entrance Area", desc: "Free cultural performances, fireworks on weekends. Outside paid zone." },
+  { name: "Dubai Mall Dancing Fountain", desc: "Indoor fountain show with lights. Multiple times daily." },
+  { name: "La Mer Street Performances", desc: "Live music, dancers, street artists on weekends." },
+  { name: "City Walk Art Installations", desc: "Interactive digital art, murals, sculptures. Self-guided tour." },
 ];
 
-const question6Options = [
-  "People I know",
-  "Lots of reviews",
-  "Official sources",
-  "Content creators",
-  "Gut feeling"
+// Art & Culture
+const artSpots = [
+  { name: "Alserkal Avenue", desc: "Contemporary art galleries, design studios, performance spaces. All free." },
+  { name: "Dubai Design District (d3)", desc: "Street art, design exhibitions, creative hub. Instagram heaven." },
+  { name: "Jameel Arts Centre", desc: "Free entry contemporary art museum on waterfront." },
+  { name: "XVA Gallery", desc: "Free art gallery in historic Al Fahidi. Courtyard cafe included." },
+  { name: "Etihad Museum Gardens", desc: "Historic site where UAE was founded. Gardens always free." },
 ];
 
-const question7Options = [
-  "Plan ahead",
-  "Mix planning and flow",
-  "Go with the flow completely",
-  "Changes based on mood"
-];
-
-const question8Options = [
-  "Emotion",
-  "Comfort",
-  "Efficiency",
-  "Uniqueness",
-  "Quiet"
-];
-
-const swipeCards = [
-  { id: 1, text: "\"Top 10\" lists" },
-  { id: 2, text: "Secret recommendations" },
-  { id: 3, text: "Crowded places" },
-  { id: 4, text: "Quiet places" },
-  { id: 5, text: "Budget experiences" },
-  { id: 6, text: "Premium experiences" },
-];
-
-const question10Options = [
-  "Crowds",
-  "Lack of authenticity",
-  "Wasting time",
-  "Prices",
-  "Too many options",
-  "Almost nothing"
-];
-
-const question11Options = [
-  "Love them a lot",
-  "Sometimes",
-  "Indifferent",
-  "Prefer to choose myself"
+// Sports & Activities
+const sportsActivities = [
+  { name: "Dubai Water Canal Jogging", desc: "12.5km lit path, 5 pedestrian bridges. Water features and fountains." },
+  { name: "Kite Beach Volleyball", desc: "Free beach volleyball courts. Just show up and play." },
+  { name: "Al Qudra Cycling Track", desc: "86km dedicated bike path through desert. Bring water!" },
+  { name: "JBR Outdoor Gym", desc: "Free outdoor fitness equipment along the beach." },
+  { name: "Palm Jumeirah Boardwalk Running", desc: "11km running paradise with Atlantis views." },
 ];
 
 export default function LandingFreeDubai() {
-  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState(0); // 0 = intro
-  const [formData, setFormData] = useState({
-    q1: "",
-    q2: "",
-    q3: [] as string[],
-    q4: "",
-    q5: 3,
-    q6: [] as string[],
-    q7: "",
-    q8: "",
-    q9: {} as Record<number, "like" | "dislike">,
-    q10: [] as string[],
-    q11: "",
-    q12: "",
-    email: "",
-    agreeTerms: false,
-    agreeMarketing: false,
-  });
-  const [currentSwipeCard, setCurrentSwipeCard] = useState(0);
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  
   const beachesRef = useRef<HTMLDivElement>(null);
-  const attractionsRef = useRef<HTMLDivElement>(null);
-  const itineraryRef = useRef<HTMLDivElement>(null);
+  const heritageRef = useRef<HTMLDivElement>(null);
+  const skylineRef = useRef<HTMLDivElement>(null);
+  const parksRef = useRef<HTMLDivElement>(null);
 
   useDocumentMeta({
     title: "70+ Free Things to Do in Dubai 2025 - Complete Guide | Save AED 2,500+ Every Week",
@@ -192,436 +108,12 @@ export default function LandingFreeDubai() {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const totalQuestions = 14; // intro + 12 questions + email/finish
-
-  const handleMultiSelect = (key: "q3" | "q6" | "q10", value: string, max: number) => {
-    setFormData(prev => {
-      const current = prev[key];
-      if (current.includes(value)) {
-        return { ...prev, [key]: current.filter(v => v !== value) };
-      } else if (current.length < max) {
-        return { ...prev, [key]: [...current, value] };
-      }
-      return prev;
-    });
-  };
-
-  const handleSwipe = (like: boolean) => {
-    const cardId = swipeCards[currentSwipeCard].id;
-    setFormData(prev => ({
-      ...prev,
-      q9: { ...prev.q9, [cardId]: like ? "like" : "dislike" }
-    }));
-    
-    if (currentSwipeCard < swipeCards.length - 1) {
-      setCurrentSwipeCard(prev => prev + 1);
-    } else {
-      // All cards swiped, move to next question
-      setCurrentQuestion(prev => prev + 1);
-    }
-  };
-
-  const handleSubmit = () => {
-    if (formData.agreeTerms && formData.email) {
-      setFormSubmitted(true);
-      console.log("Form submitted:", formData);
-    }
-  };
-
-  const canProceed = () => {
-    switch(currentQuestion) {
-      case 0: return true; // Intro
-      case 1: return !!formData.q1;
-      case 2: return !!formData.q2;
-      case 3: return formData.q3.length > 0 && formData.q3.length <= 2;
-      case 4: return !!formData.q4;
-      case 5: return true; // Slider always has value
-      case 6: return formData.q6.length > 0 && formData.q6.length <= 2;
-      case 7: return !!formData.q7;
-      case 8: return !!formData.q8;
-      case 9: return Object.keys(formData.q9).length === swipeCards.length;
-      case 10: return formData.q10.length > 0 && formData.q10.length <= 2;
-      case 11: return !!formData.q11;
-      case 12: return !!formData.q12;
-      case 13: return !!formData.email && formData.agreeTerms && formData.agreeMarketing;
-      default: return true;
-    }
-  };
-
-  const renderQuestion = () => {
-    switch(currentQuestion) {
-      case 0: // Intro
-        return (
-          <motion.div
-            key="intro"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="text-center py-8"
-          >
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center mx-auto mb-6 shadow-xl">
-              <FileText className="w-10 h-10 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
-              Before downloading, we'd love to ask a few quick questions
-            </h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-8">
-              No right or wrong answers - this takes less than a minute.
-            </p>
-            <Button
-              onClick={() => setCurrentQuestion(1)}
-              className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-10 py-6 text-lg rounded-full"
-            >
-              Let's Start
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </motion.div>
-        );
-
-      case 1: // Q1 - Looking for
-        return (
-          <motion.div key="q1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 1 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">What describes you best?</h3>
-            <div className="space-y-2">
-              {question1Options.map(option => (
-                <Button
-                  key={option}
-                  variant={formData.q1 === option ? "default" : "outline"}
-                  className={`w-full justify-start text-left py-4 h-auto ${formData.q1 === option ? "bg-emerald-500 text-white" : ""}`}
-                  onClick={() => setFormData({ ...formData, q1: option })}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        );
-
-      case 2: // Q2 - Many options
-        return (
-          <motion.div key="q2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 2 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">When there are many options, you usually:</h3>
-            <div className="space-y-2">
-              {question2Options.map(option => (
-                <Button
-                  key={option}
-                  variant={formData.q2 === option ? "default" : "outline"}
-                  className={`w-full justify-start text-left py-4 h-auto ${formData.q2 === option ? "bg-emerald-500 text-white" : ""}`}
-                  onClick={() => setFormData({ ...formData, q2: option })}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        );
-
-      case 3: // Q3 - Multi select (up to 2)
-        return (
-          <motion.div key="q3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 3 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">What attracts you most in general?</h3>
-            <p className="text-sm text-slate-500">Select up to 2</p>
-            <div className="grid grid-cols-2 gap-2">
-              {question3Options.map(option => (
-                <Button
-                  key={option}
-                  variant={formData.q3.includes(option) ? "default" : "outline"}
-                  className={`justify-start text-left py-3 h-auto text-sm ${formData.q3.includes(option) ? "bg-emerald-500 text-white" : ""}`}
-                  onClick={() => handleMultiSelect("q3", option, 2)}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        );
-
-      case 4: // Q4 - Recommendations
-        return (
-          <motion.div key="q4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 4 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">How do you prefer to receive recommendations?</h3>
-            <div className="space-y-2">
-              {question4Options.map(option => (
-                <Button
-                  key={option}
-                  variant={formData.q4 === option ? "default" : "outline"}
-                  className={`w-full justify-start text-left py-4 h-auto ${formData.q4 === option ? "bg-emerald-500 text-white" : ""}`}
-                  onClick={() => setFormData({ ...formData, q4: option })}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        );
-
-      case 5: // Q5 - Slider
-        return (
-          <motion.div key="q5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 5 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">How important is it to find free things?</h3>
-            <div className="px-4 py-8">
-              <Slider
-                value={[formData.q5]}
-                onValueChange={(v) => setFormData({ ...formData, q5: v[0] })}
-                min={1}
-                max={5}
-                step={1}
-                className="w-full"
-              />
-              <div className="flex justify-between mt-4 text-sm text-slate-500">
-                <span>Not important</span>
-                <span className="text-2xl font-bold text-emerald-500">{formData.q5}</span>
-                <span>Very important</span>
-              </div>
-            </div>
-          </motion.div>
-        );
-
-      case 6: // Q6 - Trust multi select
-        return (
-          <motion.div key="q6" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 6 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">What makes you trust a recommendation?</h3>
-            <p className="text-sm text-slate-500">Select up to 2</p>
-            <div className="grid grid-cols-2 gap-2">
-              {question6Options.map(option => (
-                <Button
-                  key={option}
-                  variant={formData.q6.includes(option) ? "default" : "outline"}
-                  className={`justify-start text-left py-3 h-auto text-sm ${formData.q6.includes(option) ? "bg-emerald-500 text-white" : ""}`}
-                  onClick={() => handleMultiSelect("q6", option, 2)}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        );
-
-      case 7: // Q7 - Planning style
-        return (
-          <motion.div key="q7" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 7 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">How do you usually manage your trips?</h3>
-            <div className="space-y-2">
-              {question7Options.map(option => (
-                <Button
-                  key={option}
-                  variant={formData.q7 === option ? "default" : "outline"}
-                  className={`w-full justify-start text-left py-4 h-auto ${formData.q7 === option ? "bg-emerald-500 text-white" : ""}`}
-                  onClick={() => setFormData({ ...formData, q7: option })}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        );
-
-      case 8: // Q8 - Experience priority
-        return (
-          <motion.div key="q8" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 8 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">What matters most to you in an experience?</h3>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {question8Options.map(option => (
-                <Button
-                  key={option}
-                  variant={formData.q8 === option ? "default" : "outline"}
-                  className={`py-6 h-auto text-center ${formData.q8 === option ? "bg-emerald-500 text-white" : ""}`}
-                  onClick={() => setFormData({ ...formData, q8: option })}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        );
-
-      case 9: // Q9 - Swipe cards
-        return (
-          <motion.div key="q9" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 9 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white text-center">Like or Dislike?</h3>
-            <p className="text-sm text-slate-500 text-center">Card {currentSwipeCard + 1} of {swipeCards.length}</p>
-            
-            <div className="relative h-48 flex items-center justify-center">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentSwipeCard}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-2xl p-8 text-center shadow-xl w-full max-w-xs"
-                >
-                  <p className="text-xl font-semibold text-slate-900 dark:text-white">
-                    {swipeCards[currentSwipeCard].text}
-                  </p>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            <div className="flex justify-center gap-8">
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-20 h-20 rounded-full border-2 border-red-300 hover:bg-red-50 hover:border-red-500"
-                onClick={() => handleSwipe(false)}
-              >
-                <ThumbsDown className="w-8 h-8 text-red-500" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-20 h-20 rounded-full border-2 border-emerald-300 hover:bg-emerald-50 hover:border-emerald-500"
-                onClick={() => handleSwipe(true)}
-              >
-                <ThumbsUp className="w-8 h-8 text-emerald-500" />
-              </Button>
-            </div>
-          </motion.div>
-        );
-
-      case 10: // Q10 - Annoying multi select
-        return (
-          <motion.div key="q10" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 10 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">What annoys you the most?</h3>
-            <p className="text-sm text-slate-500">Select up to 2</p>
-            <div className="grid grid-cols-2 gap-2">
-              {question10Options.map(option => (
-                <Button
-                  key={option}
-                  variant={formData.q10.includes(option) ? "default" : "outline"}
-                  className={`justify-start text-left py-3 h-auto text-sm ${formData.q10.includes(option) ? "bg-emerald-500 text-white" : ""}`}
-                  onClick={() => handleMultiSelect("q10", option, 2)}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        );
-
-      case 11: // Q11 - Personalized
-        return (
-          <motion.div key="q11" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Question 11 of 12</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">How much do you like personalized recommendations?</h3>
-            <div className="space-y-2">
-              {question11Options.map(option => (
-                <Button
-                  key={option}
-                  variant={formData.q11 === option ? "default" : "outline"}
-                  className={`w-full justify-start text-left py-4 h-auto ${formData.q11 === option ? "bg-emerald-500 text-white" : ""}`}
-                  onClick={() => setFormData({ ...formData, q11: option })}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        );
-
-      case 12: // Q12 - Final intuitive
-        return (
-          <motion.div key="q12" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Last Question!</p>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white text-center">Which one are you more?</h3>
-            <div className="grid grid-cols-1 gap-4">
-              <Button
-                variant={formData.q12 === "expect" ? "default" : "outline"}
-                className={`py-8 h-auto text-lg ${formData.q12 === "expect" ? "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white" : ""}`}
-                onClick={() => setFormData({ ...formData, q12: "expect" })}
-              >
-                I like to know what to expect
-              </Button>
-              <Button
-                variant={formData.q12 === "surprise" ? "default" : "outline"}
-                className={`py-8 h-auto text-lg ${formData.q12 === "surprise" ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" : ""}`}
-                onClick={() => setFormData({ ...formData, q12: "surprise" })}
-              >
-                I like to be surprised
-              </Button>
-            </div>
-          </motion.div>
-        );
-
-      case 13: // Email + Agreements
-        return (
-          <motion.div key="email" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-4">
-                <Smartphone className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">We're launching an app soon!</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Turn yourself into your own travel agent with AI learning. Plan trips yourself, get up to 100% cashback from agent commissions, and earn from choices you're already making.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email" className="text-base">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="you@example.com"
-                  className="mt-1 h-12 text-base"
-                />
-                <p className="text-xs text-slate-500 mt-1">We'll only use this for app launch updates</p>
-              </div>
-
-              <div className="space-y-3 pt-4 border-t">
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    id="terms"
-                    checked={formData.agreeTerms}
-                    onCheckedChange={(checked) => setFormData({ ...formData, agreeTerms: checked === true })}
-                    className="mt-1"
-                  />
-                  <label htmlFor="terms" className="text-sm text-slate-600 dark:text-slate-400 leading-tight">
-                    I agree to the <Link href="/terms" className="text-emerald-600 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-emerald-600 hover:underline">Data Usage Policy</Link>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    id="marketing"
-                    checked={formData.agreeMarketing}
-                    onCheckedChange={(checked) => setFormData({ ...formData, agreeMarketing: checked === true })}
-                    className="mt-1"
-                  />
-                  <label htmlFor="marketing" className="text-sm text-slate-600 dark:text-slate-400 leading-tight">
-                    I agree to receive email updates about the app launch and service
-                    <span className="text-red-500 ml-1">*</span>
-                    <br />
-                    <span className="text-xs text-slate-400">(You can unsubscribe anytime)</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white dark:from-slate-900 dark:via-slate-900 dark:to-slate-900">
       <PublicNav />
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-20 overflow-hidden">
+      <section className="relative pt-20 pb-16 overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-[10%] w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
           <div className="absolute top-40 right-[15%] w-[500px] h-[500px] bg-blue-400/15 rounded-full blur-3xl" />
@@ -638,7 +130,7 @@ export default function LandingFreeDubai() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <Badge className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white border-0 px-6 py-2.5 text-base mb-8">
                 <Trophy className="w-5 h-5 mr-2" />
-                2025 Ultimate Free Dubai Guide
+                2025 Complete Free Dubai Guide
               </Badge>
             </motion.div>
 
@@ -658,44 +150,17 @@ export default function LandingFreeDubai() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-8 max-w-3xl mx-auto"
+              className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-10 max-w-3xl mx-auto"
             >
-              Complete a quick survey and get instant access to our <strong className="text-emerald-600">complete 70+ locations guide</strong> with maps, tips, and metro routes.
+              The complete guide to <strong className="text-emerald-600">70+ free attractions</strong>, beaches, shows, and experiences in Dubai. Save thousands while seeing everything.
             </motion.p>
-
-            {/* CTA to Questionnaire */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20 rounded-2xl p-6 mb-10 max-w-xl mx-auto"
-            >
-              <div className="flex items-center gap-3 justify-center mb-3">
-                <Gift className="w-6 h-6 text-emerald-500" />
-                <span className="text-lg font-semibold text-slate-900 dark:text-white">
-                  Get the Complete Free PDF Guide
-                </span>
-              </div>
-              <p className="text-slate-600 dark:text-slate-400 mb-4 text-sm">
-                Answer a quick 1-minute survey and download the full guide with all 70+ free locations.
-              </p>
-              <Button 
-                size="lg"
-                onClick={() => setShowQuestionnaire(true)}
-                className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-8 py-6 text-lg rounded-full shadow-xl shadow-cyan-500/25 w-full sm:w-auto"
-                data-testid="button-start-survey"
-              >
-                <FileText className="w-5 h-5 mr-2" />
-                Start Survey & Get Free Guide
-              </Button>
-            </motion.div>
 
             {/* Stats */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto"
+              transition={{ delay: 0.3 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto mb-10"
             >
               {heroStats.map((stat, index) => (
                 <div key={index} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl p-4 rounded-xl shadow-lg border border-white/50 dark:border-slate-700/50">
@@ -707,94 +172,47 @@ export default function LandingFreeDubai() {
                 </div>
               ))}
             </motion.div>
+
+            {/* Quick Nav */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex flex-wrap justify-center gap-2"
+            >
+              <Button variant="outline" size="sm" onClick={() => scrollToSection(beachesRef)} className="rounded-full">
+                <Waves className="w-4 h-4 mr-1" /> Beaches
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => scrollToSection(heritageRef)} className="rounded-full">
+                <MapPin className="w-4 h-4 mr-1" /> Heritage
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => scrollToSection(skylineRef)} className="rounded-full">
+                <Building2 className="w-4 h-4 mr-1" /> Skyline
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => scrollToSection(parksRef)} className="rounded-full">
+                <TreePalm className="w-4 h-4 mr-1" /> Parks
+              </Button>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Preview Beaches Section */}
-      <section ref={beachesRef} className="py-16" data-testid="section-beaches">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10">
-            <Badge className="bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 border-0 mb-4">
-              <Waves className="w-4 h-4 mr-2" />
-              Preview: 2 of 7 Beaches
-            </Badge>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-3">
-              The FREE Beaches of Dubai
-            </h2>
-            <p className="text-base text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
-              Here's a taste. Complete the survey to unlock all 7 beaches with detailed tips.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4 mb-6">
-            {previewBeaches.map((beach, index) => (
-              <motion.div
-                key={beach.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className="group overflow-hidden border-0 shadow-xl">
-                  <div className="relative h-48 sm:h-56 overflow-hidden">
-                    <img src={beach.image} alt={beach.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <h3 className="text-xl font-bold text-white mb-0.5">{beach.name}</h3>
-                      <p className="text-cyan-200 text-sm">{beach.subtitle}</p>
-                    </div>
-                    <Badge className="absolute top-3 right-3 bg-emerald-500/90 text-white border-0 text-xs">FREE</Badge>
-                  </div>
-                  <CardContent className="p-4">
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {beach.features.map((f) => (
-                        <Badge key={f} variant="secondary" className="text-xs">{f}</Badge>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-1 text-emerald-600 font-semibold text-sm">
-                      <Wallet className="w-4 h-4" />
-                      Save {beach.savings}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Locked Content Teaser */}
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                <Lock className="w-5 h-5 text-slate-500" />
-              </div>
-              <div>
-                <p className="font-semibold text-slate-900 dark:text-white text-sm">5 more beaches waiting for you</p>
-                <p className="text-xs text-slate-500">Including secret Black Palace Beach</p>
-              </div>
-            </div>
-            <Button onClick={() => setShowQuestionnaire(true)} size="sm" className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-full w-full sm:w-auto">
-              Unlock Full Guide
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Flamingo Highlight */}
-      <section className="py-16 sm:py-24 bg-gradient-to-r from-pink-500 via-rose-500 to-orange-500" data-testid="section-flamingos">
+      {/* ===== FLAMINGOS SECTION ===== */}
+      <section className="py-16 sm:py-24 bg-gradient-to-r from-pink-500 via-rose-500 to-orange-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="text-white order-2 md:order-1">
               <Badge className="bg-white/20 text-white border-0 mb-4 px-3 py-1.5">
                 <Bird className="w-4 h-4 mr-2" />
-                Dubai's Hidden Gem
+                Wildlife Sanctuary
               </Badge>
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
                 500 Flamingos at Sunset
               </h2>
               <p className="text-base md:text-lg text-white/90 mb-6">
                 At Ras Al Khor Wildlife Sanctuary, watch over 500 Greater Flamingos in their 
-                natural habitat—completely free.
+                natural habitat—completely free. Three viewing hides with free binoculars, 
+                just 15 minutes from Downtown Dubai.
               </p>
               <div className="grid grid-cols-2 gap-2 mb-6">
                 {["Free Entry", "Free Binoculars", "Free Parking", "170+ Bird Species"].map((item) => (
@@ -804,13 +222,17 @@ export default function LandingFreeDubai() {
                   </div>
                 ))}
               </div>
-              <Button onClick={() => setShowQuestionnaire(true)} className="bg-white text-rose-600 hover:bg-white/90 px-6 py-5 rounded-full shadow-xl w-full sm:w-auto">
-                <Download className="w-5 h-5 mr-2" />
-                Get Full Location Guide
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Badge className="bg-white/30 text-white border-0">Best Time: Early Morning</Badge>
+                <Badge className="bg-white/30 text-white border-0">Metro: Creek</Badge>
+              </div>
             </div>
             <div className="relative order-1 md:order-2">
-              <img src="https://images.unsplash.com/photo-1497206365907-f5e630693df0?w=800" alt="Flamingos" className="rounded-2xl shadow-2xl" />
+              <img 
+                src="https://images.unsplash.com/photo-1497206365907-f5e630693df0?w=800" 
+                alt="Flamingos at Ras Al Khor Wildlife Sanctuary" 
+                className="rounded-2xl shadow-2xl w-full"
+              />
               <div className="absolute -bottom-4 -right-4 bg-white rounded-xl p-3 shadow-xl">
                 <div className="text-2xl font-bold text-rose-500">500+</div>
                 <div className="text-xs text-slate-500">Flamingos</div>
@@ -820,150 +242,484 @@ export default function LandingFreeDubai() {
         </div>
       </section>
 
-      {/* Dubai Fountain */}
-      <section className="py-16 sm:py-24 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600" data-testid="section-fountain">
+      {/* ===== DUBAI FOUNTAIN SECTION ===== */}
+      <section className="py-16 sm:py-24 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="relative">
-              <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800" alt="Dubai Fountain" className="rounded-2xl shadow-2xl" />
+              <img 
+                src="https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800" 
+                alt="Dubai Fountain at night with water jets" 
+                className="rounded-2xl shadow-2xl w-full"
+              />
               <div className="absolute -bottom-4 -left-4 bg-white rounded-xl p-3 shadow-xl">
-                <div className="text-2xl font-bold text-indigo-500">22K</div>
-                <div className="text-xs text-slate-500">Gallons/Show</div>
+                <div className="text-2xl font-bold text-indigo-500">140m</div>
+                <div className="text-xs text-slate-500">Water Height</div>
               </div>
             </div>
             <div className="text-white">
               <Badge className="bg-white/20 text-white border-0 mb-4 px-3 py-1.5">
                 <Music className="w-4 h-4 mr-2" />
-                World's Largest
+                World's Largest Fountain
               </Badge>
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
                 The Dubai Fountain
               </h2>
               <p className="text-base md:text-lg text-white/90 mb-6">
-                22,000 gallons of water shooting 140 meters high. Shows every 30 minutes from 6pm-11pm.
+                22,000 gallons of water shooting 140 meters high, choreographed to music from 
+                classical Arabic to modern pop. Shows run every 30 minutes from 6pm-11pm.
               </p>
               <div className="grid grid-cols-2 gap-2 mb-6">
-                {["140m Jets", "Every 30 min", "6pm-11pm", "Free Views"].map((item) => (
+                {["Every 30 Minutes", "6pm - 11pm Daily", "Free Lakeside Views", "22,000 Gallons/Show"].map((item) => (
                   <div key={item} className="flex items-center gap-2 bg-white/20 backdrop-blur-xl px-3 py-2 rounded-lg text-sm">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>{item}</span>
                   </div>
                 ))}
               </div>
-              <Button onClick={() => setShowQuestionnaire(true)} className="bg-white text-indigo-600 hover:bg-white/90 px-6 py-5 rounded-full shadow-xl w-full sm:w-auto">
-                <MapPin className="w-5 h-5 mr-2" />
-                Get Best Viewing Spots
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Badge className="bg-white/30 text-white border-0">Best Spot: Dubai Mall Terrace</Badge>
+                <Badge className="bg-white/30 text-white border-0">Metro: Burj Khalifa</Badge>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Abra Ride */}
-      <section className="py-16 sm:py-24 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500" data-testid="section-abra">
+      {/* ===== ABRA RIDE SECTION ===== */}
+      <section className="py-16 sm:py-24 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="text-white order-2 md:order-1">
               <Badge className="bg-white/20 text-white border-0 mb-4 px-3 py-1.5">
                 <Ship className="w-4 h-4 mr-2" />
-                World's Cheapest
+                Traditional Transport
               </Badge>
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
                 AED 1 Abra Ride
               </h2>
               <p className="text-base md:text-lg text-white/90 mb-6">
-                Cross Dubai Creek on a traditional wooden abra boat for just AED 1. Dubai's oldest transport.
+                Cross Dubai Creek on a traditional wooden abra boat for just AED 1. 
+                Dubai's oldest form of public transport, connecting Deira to Bur Dubai 
+                since the 1800s. The cheapest boat ride in the world.
               </p>
               <div className="grid grid-cols-2 gap-2 mb-6">
-                {["Only AED 1", "5am-Midnight", "No Booking", "Authentic"].map((item) => (
+                {["Only AED 1", "5am - Midnight", "No Booking Needed", "Authentic Experience"].map((item) => (
                   <div key={item} className="flex items-center gap-2 bg-white/20 backdrop-blur-xl px-3 py-2 rounded-lg text-sm">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>{item}</span>
                   </div>
                 ))}
               </div>
-              <Button onClick={() => setShowQuestionnaire(true)} className="bg-white text-amber-600 hover:bg-white/90 px-6 py-5 rounded-full shadow-xl w-full sm:w-auto">
-                <Download className="w-5 h-5 mr-2" />
-                Get Creek Tour Map
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Badge className="bg-white/30 text-white border-0">Route: Bur Dubai - Deira</Badge>
+                <Badge className="bg-white/30 text-white border-0">Metro: Al Fahidi</Badge>
+              </div>
             </div>
             <div className="relative order-1 md:order-2">
-              <img src="https://images.unsplash.com/photo-1534551767192-78b8dd45b51b?w=800" alt="Abra Boat" className="rounded-2xl shadow-2xl" />
+              <img 
+                src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800" 
+                alt="Traditional abra boats on Dubai Creek" 
+                className="rounded-2xl shadow-2xl w-full"
+              />
               <div className="absolute -bottom-4 -right-4 bg-white rounded-xl p-3 shadow-xl">
                 <div className="text-2xl font-bold text-amber-500">AED 1</div>
-                <div className="text-xs text-slate-500">Per Ride</div>
+                <div className="text-xs text-slate-500">Per Crossing</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Preview Attractions */}
-      <section ref={attractionsRef} className="py-16 bg-slate-50 dark:bg-slate-800/50" data-testid="section-attractions">
+      {/* ===== FREE BEACHES SECTION ===== */}
+      <section ref={beachesRef} className="py-16 sm:py-24 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10">
-            <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-0 mb-4">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Preview: 4 of 70+ Activities
+          <div className="text-center text-white mb-12">
+            <Badge className="bg-white/20 text-white border-0 mb-4 px-4 py-2">
+              <Waves className="w-5 h-5 mr-2" />
+              7 Free Public Beaches
             </Badge>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-3">
-              Free Skyline Experiences
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+              Dubai's Best Free Beaches
             </h2>
+            <p className="text-lg text-white/80 max-w-2xl mx-auto">
+              Crystal-clear waters, pristine sand, and world-class facilities—all completely free.
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            {previewAttractions.map((item, index) => (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {freeBeaches.map((beach, index) => (
               <motion.div
-                key={item.name}
+                key={beach.name}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.05 }}
               >
-                <Card className="h-full border-0 shadow-lg">
-                  <CardContent className="p-4 text-center">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-3 shadow">
-                      <item.icon className="w-6 h-6 text-white" />
+                <Card className="h-full bg-white/20 backdrop-blur-xl border-0 text-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-lg font-bold">{beach.name}</h3>
+                      <Badge className="bg-emerald-500 text-white border-0 text-xs shrink-0">FREE</Badge>
                     </div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{item.name}</h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 line-clamp-2">{item.desc}</p>
-                    <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0 text-xs">
-                      Save {item.savings}
-                    </Badge>
+                    <p className="text-sm text-white/80 mb-3">{beach.desc}</p>
+                    <div className="flex items-center gap-1 text-emerald-300 text-sm font-medium">
+                      <Wallet className="w-4 h-4" />
+                      Save {beach.savings}
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
 
-          {/* Locked Categories */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-lg">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 text-center flex items-center justify-center gap-2">
-              <Lock className="w-4 h-4" />
-              Full Guide Categories
-            </h3>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
-              {lockedCategories.map((cat) => (
-                <div key={cat.title} className="text-center p-3 bg-slate-50 dark:bg-slate-700 rounded-lg opacity-60">
-                  <cat.icon className="w-6 h-6 text-slate-400 mx-auto mb-1" />
-                  <div className="font-medium text-slate-600 dark:text-slate-300 text-xs">{cat.title}</div>
-                  <div className="text-xs text-slate-400">{cat.count}</div>
-                </div>
-              ))}
+      {/* ===== GOLD SOUK SECTION ===== */}
+      <section className="py-16 sm:py-24 bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="relative">
+              <img 
+                src="https://images.unsplash.com/photo-1548013146-72479768bada?w=800" 
+                alt="Gold jewelry display in Dubai Gold Souk" 
+                className="rounded-2xl shadow-2xl w-full"
+              />
+              <div className="absolute -bottom-4 -left-4 bg-white rounded-xl p-3 shadow-xl">
+                <div className="text-2xl font-bold text-amber-500">300+</div>
+                <div className="text-xs text-slate-500">Gold Shops</div>
+              </div>
             </div>
-            <div className="text-center">
-              <Button onClick={() => setShowQuestionnaire(true)} size="sm" className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-full">
-                <FileText className="w-4 h-4 mr-2" />
-                Complete Survey to Unlock
-              </Button>
+            <div className="text-white">
+              <Badge className="bg-white/20 text-white border-0 mb-4 px-3 py-1.5">
+                <ShoppingBag className="w-4 h-4 mr-2" />
+                Traditional Market
+              </Badge>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                Gold & Spice Souks
+              </h2>
+              <p className="text-base md:text-lg text-white/90 mb-6">
+                Walk through Dubai's legendary souks for free. The Gold Souk displays 
+                over 10 tons of gold, while the Spice Souk fills the air with saffron, 
+                cardamom, and frankincense. Window shopping is priceless.
+              </p>
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                {["Free to Walk", "10+ Tons of Gold", "No Entry Fee", "Traditional Haggling"].map((item) => (
+                  <div key={item} className="flex items-center gap-2 bg-white/20 backdrop-blur-xl px-3 py-2 rounded-lg text-sm">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Badge className="bg-white/30 text-white border-0">Area: Deira</Badge>
+                <Badge className="bg-white/30 text-white border-0">Metro: Al Ras</Badge>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
+      {/* ===== HERITAGE SITES SECTION ===== */}
+      <section ref={heritageRef} className="py-16 sm:py-24 bg-gradient-to-r from-stone-600 via-stone-700 to-stone-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center text-white mb-12">
+            <Badge className="bg-white/20 text-white border-0 mb-4 px-4 py-2">
+              <MapPin className="w-5 h-5 mr-2" />
+              Heritage & Culture
+            </Badge>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+              Old Dubai Walking Tour
+            </h2>
+            <p className="text-lg text-white/80 max-w-2xl mx-auto">
+              Step back in time through wind-tower houses, ancient souks, and museums—all free to explore.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {heritageSites.map((site, index) => (
+              <motion.div
+                key={site.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className="h-full bg-white/10 backdrop-blur-xl border-0 text-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-lg font-bold">{site.name}</h3>
+                      <Badge className="bg-emerald-500 text-white border-0 text-xs shrink-0">FREE</Badge>
+                    </div>
+                    <p className="text-sm text-white/80">{site.desc}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== DUBAI MARINA SECTION ===== */}
+      <section ref={skylineRef} className="py-16 sm:py-24 bg-gradient-to-r from-slate-800 via-slate-900 to-black">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="text-white order-2 md:order-1">
+              <Badge className="bg-white/20 text-white border-0 mb-4 px-3 py-1.5">
+                <Building2 className="w-4 h-4 mr-2" />
+                Free Walking Paths
+              </Badge>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                Dubai Marina Walk
+              </h2>
+              <p className="text-base md:text-lg text-white/90 mb-6">
+                7km promenade along the world's largest man-made marina. Walk among 
+                200+ skyscrapers, luxury yachts, and waterfront restaurants. Best views 
+                at sunset when the towers light up.
+              </p>
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                {["7km Promenade", "200+ Skyscrapers", "Yacht Views", "24/7 Access"].map((item) => (
+                  <div key={item} className="flex items-center gap-2 bg-white/20 backdrop-blur-xl px-3 py-2 rounded-lg text-sm">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Badge className="bg-white/30 text-white border-0">Metro: DMCC/Marina</Badge>
+              </div>
+            </div>
+            <div className="relative order-1 md:order-2">
+              <img 
+                src="https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800" 
+                alt="Dubai Marina skyline at night with illuminated towers" 
+                className="rounded-2xl shadow-2xl w-full"
+              />
+              <div className="absolute -bottom-4 -right-4 bg-white rounded-xl p-3 shadow-xl">
+                <div className="text-2xl font-bold text-slate-700">7km</div>
+                <div className="text-xs text-slate-500">Walk Path</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== SKYLINE SPOTS LIST ===== */}
+      <section className="py-16 bg-gradient-to-r from-blue-900 via-indigo-900 to-purple-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center text-white mb-10">
+            <h3 className="text-2xl md:text-3xl font-bold mb-4">More Free Skyline Experiences</h3>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {skylineSpots.map((spot, index) => (
+              <motion.div
+                key={spot.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className="h-full bg-white/10 backdrop-blur-xl border-0 text-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Eye className="w-5 h-5 text-cyan-400" />
+                      <h3 className="text-lg font-bold">{spot.name}</h3>
+                    </div>
+                    <p className="text-sm text-white/80">{spot.desc}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== PARKS SECTION ===== */}
+      <section ref={parksRef} className="py-16 sm:py-24 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center text-white mb-12">
+            <Badge className="bg-white/20 text-white border-0 mb-4 px-4 py-2">
+              <TreePalm className="w-5 h-5 mr-2" />
+              Parks & Nature
+            </Badge>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+              Green Oasis in the Desert
+            </h2>
+            <p className="text-lg text-white/80 max-w-2xl mx-auto">
+              Escape the city heat in Dubai's beautiful parks—all with free entry.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {parksGardens.map((park, index) => (
+              <motion.div
+                key={park.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className="h-full bg-white/20 backdrop-blur-xl border-0 text-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-lg font-bold">{park.name}</h3>
+                      <Badge className="bg-emerald-700 text-white border-0 text-xs shrink-0">FREE</Badge>
+                    </div>
+                    <p className="text-sm text-white/80">{park.desc}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== ART SECTION ===== */}
+      <section className="py-16 sm:py-24 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-violet-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="relative">
+              <img 
+                src="https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=800" 
+                alt="Contemporary art gallery interior" 
+                className="rounded-2xl shadow-2xl w-full"
+              />
+              <div className="absolute -bottom-4 -left-4 bg-white rounded-xl p-3 shadow-xl">
+                <div className="text-2xl font-bold text-purple-500">50+</div>
+                <div className="text-xs text-slate-500">Free Galleries</div>
+              </div>
+            </div>
+            <div className="text-white">
+              <Badge className="bg-white/20 text-white border-0 mb-4 px-3 py-1.5">
+                <Palette className="w-4 h-4 mr-2" />
+                Art & Culture
+              </Badge>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                Free Art Galleries
+              </h2>
+              <p className="text-base md:text-lg text-white/90 mb-6">
+                Dubai's thriving art scene offers free access to world-class galleries. 
+                From Alserkal Avenue's contemporary spaces to d3's design studios.
+              </p>
+              <div className="space-y-2">
+                {artSpots.map((spot) => (
+                  <div key={spot.name} className="flex items-start gap-2 bg-white/20 backdrop-blur-xl px-3 py-2 rounded-lg text-sm">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-medium">{spot.name}</span>
+                      <span className="text-white/70"> - {spot.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== FREE SHOWS SECTION ===== */}
+      <section className="py-16 sm:py-24 bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center text-white mb-12">
+            <Badge className="bg-white/20 text-white border-0 mb-4 px-4 py-2">
+              <Sparkles className="w-5 h-5 mr-2" />
+              Free Entertainment
+            </Badge>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+              Free Shows & Performances
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {freeShows.map((show, index) => (
+              <motion.div
+                key={show.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className="h-full bg-white/20 backdrop-blur-xl border-0 text-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Music className="w-5 h-5 text-yellow-300" />
+                      <h3 className="text-lg font-bold">{show.name}</h3>
+                    </div>
+                    <p className="text-sm text-white/80">{show.desc}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== SPORTS SECTION ===== */}
+      <section className="py-16 sm:py-24 bg-gradient-to-r from-lime-500 via-green-500 to-emerald-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center text-white mb-12">
+            <Badge className="bg-white/20 text-white border-0 mb-4 px-4 py-2">
+              <Bike className="w-5 h-5 mr-2" />
+              Free Sports & Activities
+            </Badge>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+              Stay Active for Free
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sportsActivities.map((activity, index) => (
+              <motion.div
+                key={activity.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className="h-full bg-white/20 backdrop-blur-xl border-0 text-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Footprints className="w-5 h-5 text-white" />
+                      <h3 className="text-lg font-bold">{activity.name}</h3>
+                    </div>
+                    <p className="text-sm text-white/80">{activity.desc}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== TRANSPORTATION SECTION ===== */}
+      <section className="py-16 sm:py-24 bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-white">
+          <Train className="w-16 h-16 mx-auto mb-6" />
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
+            Getting Around Dubai Cheap
+          </h2>
+          <p className="text-lg text-white/90 mb-10 max-w-2xl mx-auto">
+            Dubai's public transport is world-class and affordable. Get everywhere on a budget.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+            {[
+              { label: "Metro", cost: "AED 3-7.5" },
+              { label: "Abra", cost: "AED 1" },
+              { label: "Bus", cost: "AED 3-5" },
+              { label: "Trolley", cost: "FREE" },
+            ].map((item) => (
+              <div key={item.label} className="bg-white/20 backdrop-blur-xl rounded-xl p-4">
+                <div className="text-3xl font-bold">{item.cost}</div>
+                <div className="text-sm text-white/80">{item.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== FINAL CTA ===== */}
       <section className="py-16">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <Card className="border-0 shadow-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden relative">
             <div className="absolute inset-0 overflow-hidden">
               <div className="absolute -top-20 -right-20 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl" />
@@ -971,139 +727,33 @@ export default function LandingFreeDubai() {
             </div>
             
             <CardContent className="relative p-8 sm:p-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center mx-auto mb-5 shadow-xl">
-                <FileText className="w-8 h-8 text-white" />
-              </div>
+              <Globe className="w-16 h-16 text-emerald-400 mx-auto mb-5" />
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
-                Get Your Complete Free Guide
+                Now You Know Dubai's Secrets
               </h2>
               <p className="text-base text-slate-300 max-w-lg mx-auto mb-6">
-                Complete a quick 1-minute survey and instantly download the full PDF with all 70+ locations and maps.
+                70+ free experiences, 7 beaches, unlimited memories. Share this guide with 
+                fellow travelers and help them save thousands.
               </p>
               
-              <Button 
-                size="lg"
-                onClick={() => setShowQuestionnaire(true)}
-                className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-10 py-6 text-lg rounded-full shadow-xl shadow-cyan-500/25 w-full sm:w-auto"
-                data-testid="button-final-cta"
-              >
-                <Gift className="w-5 h-5 mr-2" />
-                Start Survey & Get Free Guide
-              </Button>
-              
-              <div className="flex flex-wrap justify-center gap-4 mt-6 text-xs text-slate-400">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  70+ Locations
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  Printable Maps
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  Instant Download
-                </div>
+              <div className="flex flex-wrap justify-center gap-4">
+                <Link href="/districts">
+                  <Button size="lg" className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-8 py-6 rounded-full">
+                    <Compass className="w-5 h-5 mr-2" />
+                    Explore Districts
+                  </Button>
+                </Link>
+                <Link href="/dubai/laws-for-tourists">
+                  <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 py-6 rounded-full">
+                    <MapPin className="w-5 h-5 mr-2" />
+                    Know the Laws
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
         </div>
       </section>
-
-      {/* Questionnaire Dialog - Mobile Optimized */}
-      <Dialog open={showQuestionnaire} onOpenChange={setShowQuestionnaire}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0">
-          {formSubmitted ? (
-            <div className="text-center py-10 px-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center mx-auto mb-6">
-                <Download className="w-10 h-10 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Your Guide is Ready!</h2>
-              <p className="text-slate-600 dark:text-slate-400 mb-6">Thank you for completing the survey.</p>
-              <Button className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-8 py-6 text-lg rounded-full w-full">
-                <Download className="w-5 h-5 mr-2" />
-                Download PDF Guide
-              </Button>
-              <p className="text-sm text-slate-500 mt-4">We've also sent a copy to {formData.email}</p>
-            </div>
-          ) : (
-            <div className="flex flex-col h-full">
-              {/* Header */}
-              <div className="sticky top-0 bg-white dark:bg-slate-900 border-b px-4 py-3 flex items-center justify-between z-10">
-                <div className="flex items-center gap-2">
-                  {currentQuestion > 0 && currentQuestion !== 9 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setCurrentQuestion(prev => prev - 1)}
-                      className="h-8 w-8"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </Button>
-                  )}
-                  {currentQuestion > 0 && (
-                    <span className="text-sm text-slate-500">{currentQuestion} / 13</span>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowQuestionnaire(false)}
-                  className="h-8 w-8"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-
-              {/* Progress bar */}
-              {currentQuestion > 0 && (
-                <div className="h-1 bg-slate-200 dark:bg-slate-700">
-                  <div 
-                    className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-300"
-                    style={{ width: `${(currentQuestion / totalQuestions) * 100}%` }}
-                  />
-                </div>
-              )}
-
-              {/* Content */}
-              <div className="flex-1 p-5">
-                <AnimatePresence mode="wait">
-                  {renderQuestion()}
-                </AnimatePresence>
-              </div>
-
-              {/* Footer with Next button */}
-              {currentQuestion > 0 && currentQuestion !== 9 && (
-                <div className="sticky bottom-0 bg-white dark:bg-slate-900 border-t p-4">
-                  <Button
-                    onClick={() => {
-                      if (currentQuestion === 13) {
-                        handleSubmit();
-                      } else {
-                        setCurrentQuestion(prev => prev + 1);
-                      }
-                    }}
-                    disabled={!canProceed()}
-                    className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-white py-6 rounded-full text-lg"
-                  >
-                    {currentQuestion === 13 ? (
-                      <>
-                        <Download className="w-5 h-5 mr-2" />
-                        Download Guide
-                      </>
-                    ) : (
-                      <>
-                        Continue
-                        <ArrowRight className="w-5 h-5 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <PublicFooter />
     </div>
