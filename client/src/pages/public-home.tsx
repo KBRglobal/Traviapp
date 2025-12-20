@@ -397,7 +397,7 @@ export default function PublicHome() {
                   <input
                     id="hero-search"
                     type="search"
-                    placeholder={t("home.searchPlaceholder") || "Where do you want to go?"}
+                    placeholder={t("nav.searchPlaceholder") || "Where do you want to go?"}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
