@@ -34,7 +34,9 @@ interface GalleryBlockData {
 }
 
 interface FaqBlockData {
+  title?: string;
   questions?: { question: string; answer: string }[];
+  faqs?: { question: string; answer: string }[]; // RSS format uses 'faqs'
   // Editor format: single Q&A
   question?: string;
   answer?: string;
@@ -43,6 +45,7 @@ interface FaqBlockData {
 interface CtaBlockData {
   title?: string;
   description?: string;
+  content?: string; // RSS format uses 'content' instead of 'description'
   buttonText?: string;
   buttonLink?: string;
 }
@@ -178,14 +181,21 @@ function GalleryBlock({ data }: { data: GalleryBlockData }) {
 }
 
 function FaqBlock({ data }: { data: FaqBlockData }) {
-  // Support both formats: array of Q&As (questions) or single Q&A (question/answer)
-  if (data.questions?.length) {
-    // Original format: array of questions
+  // Support all formats: questions array, faqs array (RSS), or single Q&A
+  const faqItems = data.questions?.length 
+    ? data.questions 
+    : data.faqs?.length 
+      ? data.faqs 
+      : null;
+  
+  if (faqItems) {
     return (
       <Card className="p-6" data-testid="block-faq">
-        <h2 className="font-heading text-xl font-semibold mb-4">Frequently Asked Questions</h2>
+        <h2 className="font-heading text-xl font-semibold mb-4">
+          {data.title || "Frequently Asked Questions"}
+        </h2>
         <Accordion type="single" collapsible className="w-full">
-          {data.questions.map((item, index) => (
+          {faqItems.map((item, index) => (
             <AccordionItem key={index} value={`faq-${index}`}>
               <AccordionTrigger className="text-left font-medium">
                 {item.question}
@@ -224,6 +234,9 @@ function FaqBlock({ data }: { data: FaqBlockData }) {
 function CtaBlock({ data }: { data: CtaBlockData }) {
   if (!data.title && !data.buttonText) return null;
   
+  // Support both 'description' and 'content' (RSS format)
+  const descText = data.description || data.content;
+  
   return (
     <Card 
       className="p-8 bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20"
@@ -233,8 +246,8 @@ function CtaBlock({ data }: { data: CtaBlockData }) {
         {data.title && (
           <h2 className="font-heading text-2xl font-bold mb-3">{data.title}</h2>
         )}
-        {data.description && (
-          <p className="text-muted-foreground mb-6">{data.description}</p>
+        {descText && (
+          <p className="text-muted-foreground mb-6">{descText}</p>
         )}
         {data.buttonText && (
           <Link href={data.buttonLink || "#"}>

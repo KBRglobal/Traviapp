@@ -3521,14 +3521,17 @@ Format the response as JSON with the following structure:
         return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
       }
 
-      const { title, summary, sourceUrl, sourceText, inputType = "title_only" } = req.body;
+      const { title, topic, summary, sourceUrl, sourceText, inputType = "title_only" } = req.body;
 
-      if (!title) {
+      // Accept either 'title' or 'topic' for flexibility
+      const articleTitle = title || topic;
+      
+      if (!articleTitle) {
         return res.status(400).json({ error: "Title is required" });
       }
 
       // Build context based on input type
-      let contextInfo = `Title: "${title}"`;
+      let contextInfo = `Title: "${articleTitle}"`;
       if (summary) contextInfo += `\nSummary: ${summary}`;
       if (sourceText) contextInfo += `\nSource text: ${sourceText}`;
       if (sourceUrl) contextInfo += `\nSource URL: ${sourceUrl}`;
