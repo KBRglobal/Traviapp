@@ -722,7 +722,50 @@ async function findOrCreateArticleImage(
     const results = freepikData.data || [];
     
     if (results.length === 0) {
-      console.log(`[Image Finder] No Freepik results found for: ${searchQuery}`);
+      console.log(`[Image Finder] No Freepik results found for: ${searchQuery}, trying AI generation...`);
+      
+      // Fallback to AI image generation
+      try {
+        const aiImages = await generateContentImages({
+          contentType: 'article',
+          title: topic,
+          description: `Dubai travel article about ${topic}`,
+          style: 'photorealistic',
+          generateHero: true,
+          generateContentImages: false,
+        });
+        
+        if (aiImages && aiImages.length > 0) {
+          const aiImage = aiImages[0];
+          console.log(`[Image Finder] AI generated image: ${aiImage.url}`);
+          
+          // Store the AI generated image
+          const [savedImage] = await db.insert(aiGeneratedImages).values({
+            filename: aiImage.filename,
+            url: aiImage.url,
+            topic: topic,
+            category: category || "general",
+            imageType: "hero",
+            source: "openai" as const,
+            prompt: `Dubai travel image for: ${topic}`,
+            keywords: keywords.slice(0, 10),
+            altText: aiImage.alt || `${topic} - Dubai Travel`,
+            caption: aiImage.caption || topic,
+            size: 0,
+            usageCount: 1,
+          }).returning();
+          
+          return {
+            url: aiImage.url,
+            altText: aiImage.alt || `${topic} - Dubai Travel`,
+            imageId: savedImage.id,
+            source: 'library' as const
+          };
+        }
+      } catch (aiError) {
+        console.error(`[Image Finder] AI image generation failed:`, aiError);
+      }
+      
       return null;
     }
     
@@ -3658,7 +3701,47 @@ Return valid JSON only.`;
       });
 
       const generatedArticle = JSON.parse(response.choices[0].message.content || "{}");
-      res.json(generatedArticle);
+      
+      // Fetch image from Freepik or AI after article generation
+      let heroImage = null;
+      try {
+        const keywords = generatedArticle.meta?.keywords || [];
+        const category = generatedArticle.analysis?.category?.charAt(0) || "F";
+        const categoryMap: Record<string, string> = {
+          "A": "attractions",
+          "B": "hotels", 
+          "C": "food",
+          "D": "transport",
+          "E": "events",
+          "F": "tips",
+          "G": "news",
+          "H": "shopping",
+        };
+        const mappedCategory = categoryMap[category] || "general";
+        
+        console.log(`[AI Article] Fetching image for: "${articleTitle}", category: ${mappedCategory}`);
+        
+        const imageResult = await findOrCreateArticleImage(articleTitle, keywords, mappedCategory);
+        if (imageResult) {
+          heroImage = {
+            url: imageResult.url,
+            alt: imageResult.altText,
+            source: imageResult.source,
+            imageId: imageResult.imageId
+          };
+          console.log(`[AI Article] Found image from ${imageResult.source}: ${imageResult.url}`);
+        } else {
+          console.log(`[AI Article] No image found for article`);
+        }
+      } catch (imageError) {
+        console.error("[AI Article] Error fetching image:", imageError);
+      }
+      
+      // Add image to response
+      res.json({
+        ...generatedArticle,
+        heroImage
+      });
     } catch (error) {
       console.error("Error generating AI article:", error);
       res.status(500).json({ error: "Failed to generate article" });

@@ -86,6 +86,12 @@ interface GeneratedArticle {
     alternativeIntros: string[];
     alternativeCta: string;
   };
+  heroImage?: {
+    url: string;
+    alt: string;
+    source: 'library' | 'freepik';
+    imageId: string;
+  } | null;
 }
 
 const inputTypeOptions = [
@@ -150,8 +156,9 @@ export default function AIArticleGenerator() {
         {
           type: "hero",
           data: {
-            heading: editedData.article.h1,
-            subheading: editedData.article.intro,
+            title: editedData.article.h1,
+            subtitle: editedData.article.intro,
+            image: editedData.heroImage?.url || null,
           },
         },
         ...editedData.article.sections.map((section) => ({
@@ -161,20 +168,43 @@ export default function AIArticleGenerator() {
             content: section.body,
           },
         })),
+        ...(editedData.article.quickFacts?.length ? [{
+          type: "highlights",
+          data: {
+            title: "Quick Facts",
+            items: editedData.article.quickFacts.map(f => `${f.label}: ${f.value}`),
+          },
+        }] : []),
         ...(editedData.article.proTips?.length ? [{
           type: "tips",
           data: {
-            heading: "Pro Tips",
-            items: editedData.article.proTips,
+            title: "Pro Tips",
+            tips: editedData.article.proTips,
+          },
+        }] : []),
+        ...(editedData.article.goodToKnow?.length ? [{
+          type: "tips",
+          data: {
+            title: "Good to Know",
+            tips: editedData.article.goodToKnow,
           },
         }] : []),
         ...(editedData.article.faq?.length ? [{
           type: "faq",
           data: {
-            heading: "Frequently Asked Questions",
-            items: editedData.article.faq.map(f => ({ question: f.q, answer: f.a })),
+            title: "Frequently Asked Questions",
+            faqs: editedData.article.faq.map(f => ({ question: f.q, answer: f.a })),
           },
         }] : []),
+        {
+          type: "cta",
+          data: {
+            title: "Plan Your Trip",
+            content: "Ready to experience Dubai? Start planning your adventure today!",
+            buttonText: "Explore More",
+            buttonLink: "/articles",
+          },
+        },
       ];
       
       const categoryMap: Record<string, string> = {
@@ -200,6 +230,8 @@ export default function AIArticleGenerator() {
         ogTitle: editedData.meta.ogTitle,
         ogDescription: editedData.meta.ogDescription,
         keywords: editedData.meta.keywords,
+        heroImage: editedData.heroImage?.url || null,
+        heroImageAlt: editedData.heroImage?.alt || editedData.article.h1,
         blocks,
         article: {
           category: mappedCategory,
