@@ -36,34 +36,36 @@ const worldLandmarks = [
   "https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=600&h=800&fit=crop", // Tokyo Tower, Japan
 ];
 
-// Playful mascot messages when trying to catch it
-const mascotMessages = [
-  "You can't catch me!",
-  "Too slow!",
-  "Nice try!",
-  "Almost got me!",
-  "I'm too fast!",
-  "Keep trying!",
-  "Hehe, missed!",
-  "Catch me if you can!",
-  "Not today!",
-  "So close!",
+// Mascot message keys for translation
+const mascotMessageKeys = [
+  "mascotCantCatch",
+  "mascotTooSlow",
+  "mascotNiceTry",
+  "mascotAlmost",
+  "mascotTooFast",
+  "mascotKeepTrying",
+  "mascotMissed",
+  "mascotCatchMe",
+  "mascotNotToday",
+  "mascotSoClose",
 ];
 
-const categories = [
-  { title: "Attractions", titleAr: "معالم سياحية", icon: Camera, href: "/attractions", color: "from-purple-500 to-pink-500", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=500&fit=crop" },
-  { title: "Hotels", titleAr: "فنادق", icon: Building2, href: "/hotels", color: "from-blue-500 to-cyan-500", image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400&h=500&fit=crop" },
-  { title: "Dining", titleAr: "مطاعم", icon: Utensils, href: "/dining", color: "from-orange-500 to-amber-500", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=500&fit=crop" },
-  { title: "Districts", titleAr: "أحياء", icon: MapPin, href: "/districts", color: "from-emerald-500 to-teal-500", image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400&h=500&fit=crop" },
-  { title: "Events", titleAr: "فعاليات", icon: Sparkles, href: "/events", color: "from-rose-500 to-pink-500", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=500&fit=crop" },
-  { title: "Articles", titleAr: "مقالات", icon: Compass, href: "/articles", color: "from-indigo-500 to-purple-500", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=500&fit=crop" },
+// Category keys for translation lookup
+const categoryConfigs = [
+  { key: "categoryAttractions", icon: Camera, href: "/attractions", color: "from-purple-500 to-pink-500", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=500&fit=crop" },
+  { key: "categoryHotels", icon: Building2, href: "/hotels", color: "from-blue-500 to-cyan-500", image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400&h=500&fit=crop" },
+  { key: "categoryDining", icon: Utensils, href: "/dining", color: "from-orange-500 to-amber-500", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=500&fit=crop" },
+  { key: "categoryDistricts", icon: MapPin, href: "/districts", color: "from-emerald-500 to-teal-500", image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400&h=500&fit=crop" },
+  { key: "categoryEvents", icon: Sparkles, href: "/events", color: "from-rose-500 to-pink-500", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=500&fit=crop" },
+  { key: "categoryArticles", icon: Compass, href: "/articles", color: "from-indigo-500 to-purple-500", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=500&fit=crop" },
 ];
 
-const featuredDistricts = [
-  { name: "Downtown Dubai", tagline: "Iconic Burj Khalifa", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop", slug: "downtown-dubai", stats: { attractions: 12, hotels: 25 } },
-  { name: "Dubai Marina", tagline: "Waterfront Living", image: "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=600&h=400&fit=crop", slug: "dubai-marina", stats: { attractions: 8, hotels: 18 } },
-  { name: "Palm Jumeirah", tagline: "The Eighth Wonder", image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=600&h=400&fit=crop", slug: "palm-jumeirah", stats: { attractions: 6, hotels: 12 } },
-  { name: "Old Dubai", tagline: "Heritage & Souks", image: "https://images.unsplash.com/photo-1534551767192-78b8dd45b51b?w=600&h=400&fit=crop", slug: "old-dubai", stats: { attractions: 10, hotels: 15 } },
+// Featured districts config - uses translation keys for names/taglines
+const featuredDistrictConfigs = [
+  { nameKey: "districtDowntown", taglineKey: "districtDowntownTagline", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop", slug: "downtown-dubai", stats: { attractions: 12, hotels: 25 } },
+  { nameKey: "districtMarina", taglineKey: "districtMarinaTagline", image: "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=600&h=400&fit=crop", slug: "dubai-marina", stats: { attractions: 8, hotels: 18 } },
+  { nameKey: "districtPalm", taglineKey: "districtPalmTagline", image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=600&h=400&fit=crop", slug: "palm-jumeirah", stats: { attractions: 6, hotels: 12 } },
+  { nameKey: "districtOld", taglineKey: "districtOldTagline", image: "https://images.unsplash.com/photo-1534551767192-78b8dd45b51b?w=600&h=400&fit=crop", slug: "old-dubai", stats: { attractions: 10, hotels: 15 } },
 ];
 
 const CloudSVG = ({ className = "", size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) => {
@@ -111,11 +113,11 @@ const staggerContainer = {
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
 };
 
-// Featured landing pages - premium content shortcuts
-const quickCategories = [
-  { title: "70+ Free Things", icon: Sparkles, href: "/dubai/free-things-to-do", color: "from-emerald-500 to-cyan-500", badge: "Top Guide" },
-  { title: "Off-Plan Investment", icon: Building2, href: "/dubai-off-plan-properties", color: "from-purple-500 to-pink-500", badge: "Investors" },
-  { title: "Laws & Fines", icon: Scale, href: "/dubai/laws-for-tourists", color: "from-red-500 to-amber-500", badge: "Must Read" },
+// Featured landing pages - keys for translation
+const quickCategoryConfigs = [
+  { titleKey: "freeThings", icon: Sparkles, href: "/dubai/free-things-to-do", color: "from-emerald-500 to-cyan-500", badgeKey: "topGuide" },
+  { titleKey: "offPlanInvestment", icon: Building2, href: "/dubai-off-plan-properties", color: "from-purple-500 to-pink-500", badgeKey: "investors" },
+  { titleKey: "lawsFines", icon: Scale, href: "/dubai/laws-for-tourists", color: "from-red-500 to-amber-500", badgeKey: "mustRead" },
 ];
 
 export default function PublicHome() {
@@ -161,9 +163,9 @@ export default function PublicHome() {
     setMascotPosition({ x: newX, y: newY });
     setMascotEscaped(true);
     
-    // Random message
-    const randomMessage = mascotMessages[Math.floor(Math.random() * mascotMessages.length)];
-    setMascotMessage(randomMessage);
+    // Random message key
+    const randomMessageKey = mascotMessageKeys[Math.floor(Math.random() * mascotMessageKeys.length)];
+    setMascotMessage(randomMessageKey);
     setShowMascotMessage(true);
     
     // Hide message after delay, but keep mascot in escaped position longer
@@ -235,7 +237,7 @@ export default function PublicHome() {
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      setLocation(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setLocation(localePath(`/search?q=${encodeURIComponent(searchQuery.trim())}`));
     }
   };
 
@@ -245,12 +247,12 @@ export default function PublicHome() {
     }
   };
 
-  const getContentPath = (content: Content) => `/${content.type}s/${content.slug}`;
+  const getContentPath = (content: Content) => localePath(`/${content.type}s/${content.slug}`);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-white via-slate-50 to-white">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md">
-        Skip to main content
+        {t("home.skipToMain")}
       </a>
 
       <PublicNav variant="transparent" />
@@ -311,7 +313,7 @@ export default function PublicHome() {
                   maskRepeat: 'no-repeat',
                 }}
                 role="img"
-                aria-label="TRAVI - Your World Travel Guide"
+                aria-label={t("home.traviAriaLabel")}
               >
                 {/* Animated flowing image strip - seamless loop */}
                 <div 
@@ -364,14 +366,14 @@ export default function PublicHome() {
                   transition={{ duration: 0.2 }}
                   className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-purple-100 whitespace-nowrap z-20"
                 >
-                  <span className="text-sm font-medium text-[#6C5CE7]">{mascotMessage}</span>
+                  <span className="text-sm font-medium text-[#6C5CE7]">{t(`home.${mascotMessage}`)}</span>
                   <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white/95" />
                 </motion.div>
                 
                 {/* Mascot image */}
                 <img 
                   src={mascotImg} 
-                  alt="Travi mascot - friendly duck with sunglasses" 
+                  alt={t("home.mascotAlt")} 
                   className="w-32 h-32 sm:w-40 sm:h-40 drop-shadow-lg pointer-events-none"
                 />
               </motion.div>
@@ -393,11 +395,11 @@ export default function PublicHome() {
               <div className="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-full shadow-2xl shadow-purple-500/10 p-3 md:p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 border border-white/50">
                 <div className="flex-1 flex items-center gap-3 px-4 md:px-5">
                   <Search className="w-5 h-5 text-[#6C5CE7] shrink-0" aria-hidden="true" />
-                  <label htmlFor="hero-search" className="sr-only">Search Dubai experiences</label>
+                  <label htmlFor="hero-search" className="sr-only">{t("home.searchLabel")}</label>
                   <input
                     id="hero-search"
                     type="search"
-                    placeholder={t("nav.searchPlaceholder") || "Where do you want to go?"}
+                    placeholder={t("nav.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
@@ -417,20 +419,20 @@ export default function PublicHome() {
 
             {/* Featured Landing Pages */}
             <div className="flex flex-wrap justify-center gap-3 mt-8">
-              {quickCategories.map((cat) => (
-                <Link key={cat.title} href={localePath(cat.href)}>
+              {quickCategoryConfigs.map((cat) => (
+                <Link key={cat.titleKey} href={localePath(cat.href)}>
                   <motion.div
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.98 }}
                     className="flex items-center gap-2 bg-white/90 backdrop-blur-xl px-5 py-3 rounded-full shadow-lg shadow-purple-500/10 border border-white/50 cursor-pointer group"
-                    data-testid={`quick-${cat.title.toLowerCase().replace(/\+/g, 'plus').replace(/\s+/g, '-')}`}
+                    data-testid={`quick-${cat.titleKey}`}
                   >
                     <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${cat.color} flex items-center justify-center shadow-md`}>
                       <cat.icon className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex flex-col items-start">
-                      <span className="font-semibold text-[#1E1B4B] group-hover:text-[#6C5CE7] transition-colors leading-tight">{cat.title}</span>
-                      <span className="text-xs text-slate-400">{cat.badge}</span>
+                      <span className="font-semibold text-[#1E1B4B] group-hover:text-[#6C5CE7] transition-colors leading-tight">{t(`home.${cat.titleKey}`)}</span>
+                      <span className="text-xs text-slate-400">{t(`home.${cat.badgeKey}`)}</span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#6C5CE7] group-hover:translate-x-0.5 transition-all ml-1" />
                   </motion.div>
@@ -465,13 +467,13 @@ export default function PublicHome() {
             >
               <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-[#6C5CE7] border-0 mb-4 px-4 py-1.5">
                 <Compass className="w-4 h-4 mr-2" />
-                Explore Dubai
+                {t("home.exploreDubai")}
               </Badge>
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#1E1B4B] mb-4 tracking-tight">
-                Your Adventure Starts Here
+                {t("home.adventureStartsHere")}
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                Discover the best of Dubai across every category
+                {t("home.discoverBestOfDubai")}
               </p>
             </motion.div>
 
@@ -482,14 +484,14 @@ export default function PublicHome() {
               variants={staggerContainer}
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6"
             >
-              {categories.map((category, index) => (
-                <motion.div key={category.title} variants={fadeInUp}>
-                  <Link href={localePath(category.href)} data-testid={`category-${category.title.toLowerCase()}`}>
+              {categoryConfigs.map((category, index) => (
+                <motion.div key={category.key} variants={fadeInUp}>
+                  <Link href={localePath(category.href)} data-testid={`category-${category.key}`}>
                     <div className="group relative overflow-hidden rounded-3xl aspect-[3/4] cursor-pointer">
                       {/* Background Image */}
                       <img
                         src={category.image}
-                        alt={category.title}
+                        alt={t(`home.${category.key}`)}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
                       
@@ -506,8 +508,7 @@ export default function PublicHome() {
                       
                       {/* Content */}
                       <div className="absolute bottom-0 left-0 right-0 p-5">
-                        <h3 className="text-white font-bold text-xl mb-1">{category.title}</h3>
-                        <p className="text-white/70 text-sm">{category.titleAr}</p>
+                        <h3 className="text-white font-bold text-xl mb-1">{t(`home.${category.key}`)}</h3>
                       </div>
                       
                       {/* Hover Arrow */}
@@ -538,18 +539,18 @@ export default function PublicHome() {
               <div>
                 <Badge className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-600 border-0 mb-4 px-4 py-1.5">
                   <MapPin className="w-4 h-4 mr-2" />
-                  21 Districts
+                  {t("home.districts21")}
                 </Badge>
                 <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] mb-2 tracking-tight">
-                  Iconic Neighborhoods
+                  {t("home.iconicNeighborhoods")}
                 </h2>
                 <p className="text-lg text-slate-500 max-w-xl">
-                  Each district tells a unique story of Dubai's remarkable transformation
+                  {t("home.districtStory")}
                 </p>
               </div>
-              <Link href="/districts">
+              <Link href={localePath("/districts")}>
                 <Button variant="outline" className="border-2 border-[#6C5CE7] text-[#6C5CE7] rounded-full px-6 gap-2 hover:bg-[#6C5CE7] hover:text-white transition-all duration-300" data-testid="button-view-all-districts">
-                  Explore All Districts <ArrowRight className="w-4 h-4" />
+                  {t("home.exploreAllDistricts")} <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
             </motion.div>
@@ -561,15 +562,15 @@ export default function PublicHome() {
               variants={staggerContainer}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
             >
-              {featuredDistricts.map((district, index) => (
+              {featuredDistrictConfigs.map((district, index) => (
                 <motion.div key={district.slug} variants={fadeInUp}>
-                  <Link href={`/districts/${district.slug}`} data-testid={`district-${district.slug}`}>
+                  <Link href={localePath(`/districts/${district.slug}`)} data-testid={`district-${district.slug}`}>
                     <div className="group relative overflow-hidden rounded-3xl cursor-pointer bg-white shadow-lg shadow-slate-200/50 hover:shadow-xl hover:shadow-purple-200/30 transition-all duration-500">
                       {/* Image */}
                       <div className="relative aspect-[4/3] overflow-hidden">
                         <img
                           src={district.image}
-                          alt={district.name}
+                          alt={t(`home.${district.nameKey}`)}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -588,9 +589,9 @@ export default function PublicHome() {
                       {/* Content */}
                       <div className="p-5">
                         <h3 className="text-xl font-bold text-[#1E1B4B] mb-1 group-hover:text-[#6C5CE7] transition-colors">
-                          {district.name}
+                          {t(`home.${district.nameKey}`)}
                         </h3>
-                        <p className="text-slate-500 text-sm">{district.tagline}</p>
+                        <p className="text-slate-500 text-sm">{t(`home.${district.taglineKey}`)}</p>
                       </div>
                     </div>
                   </Link>
@@ -613,7 +614,7 @@ export default function PublicHome() {
               >
                 <Badge className="bg-gradient-to-r from-pink-100 to-rose-100 text-pink-600 border-0 mb-4 px-4 py-1.5">
                   <Heart className="w-4 h-4 mr-2" />
-                  Hand-Picked
+                  {t("home.handPicked")}
                 </Badge>
                 <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] mb-4 tracking-tight">
                   {t("home.exploreAttractions")}
@@ -652,7 +653,7 @@ export default function PublicHome() {
                             {content.title}
                           </h3>
                           <span className="inline-flex items-center gap-1 text-white/80 text-sm opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                            Explore <ArrowRight className="w-4 h-4" />
+                            {t("home.explore")} <ArrowRight className="w-4 h-4" />
                           </span>
                         </div>
                       </div>
@@ -693,10 +694,10 @@ export default function PublicHome() {
                 <div>
                   <Badge className="bg-gradient-to-r from-rose-100 to-orange-100 text-rose-600 border-0 mb-4 px-4 py-1.5">
                     <Star className="w-4 h-4 mr-2" />
-                    Hot Right Now
+                    {t("home.hotRightNow")}
                   </Badge>
                   <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] tracking-tight">
-                    Trending in Dubai
+                    {t("home.trendingInDubai")}
                   </h2>
                 </div>
                 <Link href={localePath("/articles")}>
@@ -726,7 +727,7 @@ export default function PublicHome() {
                         
                         <div className="absolute top-4 right-4">
                           <Badge className="bg-gradient-to-r from-rose-500 to-orange-500 text-white border-0 text-xs font-semibold shadow-lg">
-                            <Star className="w-3 h-3 mr-1" /> Hot
+                            <Star className="w-3 h-3 mr-1" /> {t("home.hot")}
                           </Badge>
                         </div>
 
@@ -767,14 +768,13 @@ export default function PublicHome() {
             >
               <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 mb-6 px-5 py-2 text-sm shadow-lg">
                 <Building2 className="w-4 h-4 mr-2" />
-                Investment Hub
+                {t("home.investmentHub")}
               </Badge>
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight">
-                Dubai Off-Plan Properties
+                {t("home.dubaiOffPlan")}
               </h2>
               <p className="text-xl text-white/70 max-w-3xl mx-auto leading-relaxed">
-                Invest in Dubai real estate with cryptocurrency (BTC/USDT/ETH) or cash. 
-                Entry from AED 420K with 15-30% ROI potential.
+                {t("home.investDescription")}
               </p>
             </motion.div>
 
@@ -786,19 +786,19 @@ export default function PublicHome() {
               className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12"
             >
               {[
-                { title: "Property Hub", desc: "1,577+ Active Projects", icon: Building2, color: "amber", href: "/dubai-off-plan-properties" },
-                { title: "ROI Calculator", desc: "Calculate Returns", icon: TrendingUp, color: "emerald", href: "/tools-roi-calculator" },
-                { title: "Comparisons", desc: "11 Analysis Guides", icon: Users, color: "purple", href: "/compare-off-plan-vs-ready" },
-                { title: "Glossary", desc: "25+ Terms Explained", icon: MapPin, color: "pink", href: "/glossary" },
+                { titleKey: "propertyHub", descKey: "activeProjects", icon: Building2, color: "amber", href: "/dubai-off-plan-properties" },
+                { titleKey: "roiCalculator", descKey: "calculateReturns", icon: TrendingUp, color: "emerald", href: "/tools-roi-calculator" },
+                { titleKey: "comparisons", descKey: "analysisGuides", icon: Users, color: "purple", href: "/compare-off-plan-vs-ready" },
+                { titleKey: "glossary", descKey: "termsExplained", icon: MapPin, color: "pink", href: "/glossary" },
               ].map((item, index) => (
-                <motion.div key={item.title} variants={fadeInUp}>
-                  <Link href={item.href} data-testid={`link-${item.title.toLowerCase().replace(' ', '-')}`}>
+                <motion.div key={item.titleKey} variants={fadeInUp}>
+                  <Link href={localePath(item.href)} data-testid={`link-${item.titleKey}`}>
                     <div className="group bg-white/10 backdrop-blur-xl rounded-2xl p-6 cursor-pointer border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300">
                       <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color === 'amber' ? 'from-amber-400 to-orange-500' : item.color === 'emerald' ? 'from-emerald-400 to-teal-500' : item.color === 'purple' ? 'from-purple-400 to-indigo-500' : 'from-pink-400 to-rose-500'} flex items-center justify-center mb-4 shadow-lg`}>
                         <item.icon className="w-6 h-6 text-white" />
                       </div>
-                      <h3 className="font-semibold text-white text-lg mb-1">{item.title}</h3>
-                      <p className="text-sm text-white/60">{item.desc}</p>
+                      <h3 className="font-semibold text-white text-lg mb-1">{t(`home.${item.titleKey}`)}</h3>
+                      <p className="text-sm text-white/60">{t(`home.${item.descKey}`)}</p>
                     </div>
                   </Link>
                 </motion.div>
@@ -812,9 +812,9 @@ export default function PublicHome() {
               variants={fadeInUp}
               className="text-center"
             >
-              <Link href="/dubai-off-plan-properties">
+              <Link href={localePath("/dubai-off-plan-properties")}>
                 <Button size="lg" className="bg-gradient-to-r from-amber-400 to-orange-500 hover:opacity-90 text-white rounded-full px-10 py-7 text-lg shadow-xl shadow-amber-500/30" data-testid="button-explore-offplan">
-                  Explore Investment Opportunities <ArrowRight className="w-5 h-5 ml-2" />
+                  {t("home.exploreInvestment")} <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
             </motion.div>
@@ -847,14 +847,14 @@ export default function PublicHome() {
             >
               <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-5 py-2 mb-6 shadow-sm">
                 <Sparkles className="w-5 h-5 text-[#EC4899]" />
-                <span className="text-sm font-medium text-[#1E1B4B]">Join the Cloud Club</span>
+                <span className="text-sm font-medium text-[#1E1B4B]">{t("home.joinTravelers")}</span>
               </div>
               
               <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] mb-4 tracking-tight">
-                Stay in the Loop
+                {t("home.stayUpdated")}
               </h2>
               <p className="text-xl text-slate-500 mb-10">
-                Get exclusive Dubai travel tips, deals, and inspiration delivered to your inbox
+                {t("home.newsletterDesc")}
               </p>
 
               <form onSubmit={(e) => { e.preventDefault(); }} className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
@@ -862,7 +862,7 @@ export default function PublicHome() {
                   <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder={t("home.emailAddress")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-14 pr-5 py-5 rounded-full border-0 shadow-xl shadow-slate-200/50 text-[#1E1B4B] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#6C5CE7] bg-white/90 backdrop-blur-sm"
@@ -874,12 +874,12 @@ export default function PublicHome() {
                   className="bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] hover:opacity-90 text-white rounded-full px-8 py-5 text-lg shadow-lg shadow-purple-500/25"
                   data-testid="button-newsletter-subscribe"
                 >
-                  Subscribe
+                  {t("home.subscribeNow")}
                 </Button>
               </form>
 
               <p className="text-sm text-slate-400 mt-6">
-                No spam, unsubscribe anytime
+                {t("home.newsletterTitle")}
               </p>
             </motion.div>
           </div>
