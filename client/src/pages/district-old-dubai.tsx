@@ -34,7 +34,11 @@ const subDistricts = [
   { name: "Al Fahidi", side: "south", vibe: "1890s preserved heritage quarter", famous: "Wind-tower architecture, galleries" },
   { name: "Al Shindagha", side: "south", vibe: "Heritage waterfront", famous: "8+ museums, Creek views" },
   { name: "Bur Dubai Souk", side: "south", vibe: "Covered arcaded souk", famous: "Fabrics, textiles, pashminas" },
-  { name: "Al Karama", side: "south", vibe: "Budget shopping haven", famous: "Shawarma, cheap electronics" },
+  { name: "Textile Souk", side: "south", vibe: "Traditional covered market", famous: "300+ shops, fabrics, tailoring" },
+  { name: "Meena Bazaar", side: "south", vibe: "Indian shopping district", famous: "Gold, textiles, wedding outfits" },
+  { name: "Al Satwa", side: "south", vibe: "Authentic Arab food quarter", famous: "Ravi Restaurant, Al Mallah, karak" },
+  { name: "Al Seef", side: "south", vibe: "Heritage meets modern", famous: "1.8km waterfront, 50+ restaurants" },
+  { name: "Al Karama", side: "south", vibe: "Budget shopping & food haven", famous: "200+ restaurants, textiles" },
   { name: "Oud Metha", side: "south", vibe: "Mixed residential/commercial", famous: "Wafi Mall, Dubai Frame nearby" },
   { name: "Dubai Creek", side: "waterway", vibe: "Historic trading route", famous: "AED 1 abra rides, dhow cruises" }
 ];
@@ -86,14 +90,14 @@ const attractions = [
   },
   {
     id: "al-shindagha",
-    name: "Al Shindagha Museums",
-    tagline: "Deep Dive into Dubai's History",
-    description: "Waterfront heritage district with 8+ museums covering Dubai's pre-oil history, pearl diving, and Bedouin culture.",
-    duration: "Half day",
-    bestTime: "Morning",
-    priceRange: "Free-AED 5",
-    mustSee: false,
-    tips: ["Visit Dubai Museum (Al Fahidi Fort)", "Pearl Diving Museum is fascinating", "Camel Museum fun for kids"]
+    name: "Al Shindagha Heritage District",
+    tagline: "Complete Pre-Oil Dubai Experience",
+    description: "Fully restored heritage district with 8+ museums: Dubai Museum, Perfume House, Historical Documents, Pearl Diving, Poetry House, Traditional Architecture, Camel Museum. Walking paths along Creek waterfront.",
+    duration: "Half day (4-5 hours)",
+    bestTime: "Morning 9am-12pm",
+    priceRange: "Most museums free, some AED 5-10",
+    mustSee: true,
+    tips: ["Start at Dubai Museum (Al Fahidi Fort)", "Pearl Diving Museum is a hidden gem", "Perfume House offers workshops"]
   },
   {
     id: "dhow-cruise",
@@ -105,6 +109,39 @@ const attractions = [
     priceRange: "AED 75-150",
     mustSee: false,
     tips: ["Book online for best rates", "Dress smart casual", "Great for couples"]
+  },
+  {
+    id: "al-seef",
+    name: "Al Seef Waterfront",
+    tagline: "Heritage Meets Modern",
+    description: "1.8 km waterfront promenade by Meraas, combining restored 1950s architecture with modern dining. 50+ restaurants, Creek views, abra access.",
+    duration: "2-3 hours",
+    bestTime: "Sunset 6-11pm",
+    priceRange: "Free entry, dining AED 40-100",
+    mustSee: true,
+    tips: ["Walk full promenade (heritage to modern)", "Book waterfront tables ahead", "Visit at sunset for photos"]
+  },
+  {
+    id: "textile-souk",
+    name: "Textile Souk (Fabric Souk)",
+    tagline: "Dubai's Oldest Traditional Market",
+    description: "300+ shops in covered alleys operating since 1960s. Floor-to-ceiling fabric rolls — silk, cotton, linen from India, Pakistan, China. Custom tailoring 24-48 hours.",
+    duration: "1-2 hours",
+    bestTime: "Morning or evening",
+    priceRange: "Fabrics AED 15-120/meter",
+    mustSee: false,
+    tips: ["Compare prices across 4-5 shops", "Negotiate (expect 20-30% off)", "Great for wedding outfits"]
+  },
+  {
+    id: "meena-bazaar",
+    name: "Meena Bazaar",
+    tagline: "Indian Shopping Heart",
+    description: "200+ shops near Al Fahidi Metro. Historic Indian district since 1970s — gold jewelry (22K), textiles, saris, wedding outfits, spices.",
+    duration: "1-2 hours",
+    bestTime: "Weekday mornings",
+    priceRange: "Varies widely",
+    mustSee: false,
+    tips: ["Bring cash (many shops card-free)", "Negotiate gold labor charges", "Best for wedding shopping"]
   }
 ];
 
@@ -119,17 +156,21 @@ const hotels = [
 const restaurants = [
   { name: "Arabian Tea House", cuisine: "Emirati", location: "Al Fahidi", specialty: "Traditional breakfast, balaleet", price: "AED 60-100" },
   { name: "Local House Restaurant", cuisine: "Emirati", location: "Al Fahidi", specialty: "Harees, machboos, luqaimat", price: "AED 70-120" },
-  { name: "Ravi Restaurant", cuisine: "Pakistani", location: "Near Karama", specialty: "Mutton karahi, dal makhani", price: "AED 15-30" },
-  { name: "Al Mallah", cuisine: "Lebanese", location: "Al Dhiyafah Road", specialty: "Legendary shawarma, falafel", price: "AED 20-40" },
+  { name: "Ravi Restaurant", cuisine: "Pakistani", location: "Al Satwa", specialty: "Mutton karahi, dal (Est. 1978, 24/7)", price: "AED 12-25" },
+  { name: "Al Mallah", cuisine: "Lebanese", location: "Al Satwa", specialty: "Legendary shawarma, juices (until 3am)", price: "AED 10-25" },
+  { name: "Zaroob", cuisine: "Emirati", location: "Al Satwa", specialty: "Regag bread, machboos, luqaimat", price: "AED 20-40" },
   { name: "Shabestan", cuisine: "Persian", location: "Radisson Blu Deira", specialty: "Kebabs, saffron rice", price: "AED 150-250" },
-  { name: "Saravana Bhavan", cuisine: "South Indian", location: "Karama", specialty: "Dosas, idli, thalis", price: "AED 30-50" }
+  { name: "Saravana Bhavan", cuisine: "South Indian", location: "Al Karama", specialty: "Dosas, idli, thalis", price: "AED 30-50" },
+  { name: "Logma", cuisine: "Modern Emirati", location: "Al Seef", specialty: "Contemporary Emirati dishes", price: "AED 40-80" },
+  { name: "Al Fanar", cuisine: "Traditional Emirati", location: "Al Seef", specialty: "Heritage setting, regag", price: "AED 50-90" }
 ];
 
 const souks = [
-  { name: "Gold Souk", specialty: "Gold jewelry, diamonds", bestTime: "Evening 5-10pm", bargain: true },
-  { name: "Spice Souk", specialty: "Spices, dried fruits, saffron", bestTime: "Morning 9am-12pm", bargain: true },
+  { name: "Gold Souk", specialty: "Gold jewelry, diamonds (22K/24K)", bestTime: "Evening 5-10pm", bargain: true },
+  { name: "Spice Souk", specialty: "Saffron, frankincense, dried fruits", bestTime: "Morning 9am-12pm", bargain: true },
   { name: "Perfume Souk", specialty: "Oud, attar, Arabic perfumes", bestTime: "Afternoon", bargain: true },
-  { name: "Textile Souk", specialty: "Fabrics, silk, pashminas", bestTime: "Anytime", bargain: true },
+  { name: "Textile Souk", specialty: "300+ shops, fabrics from AED 15/m, tailoring", bestTime: "Anytime", bargain: true },
+  { name: "Meena Bazaar", specialty: "Indian gold, saris, wedding outfits, 200+ shops", bestTime: "Weekday mornings", bargain: true },
   { name: "Bur Dubai Souk", specialty: "Textiles, clothes, souvenirs", bestTime: "Morning", bargain: true }
 ];
 
@@ -228,7 +269,7 @@ function HeroSection() {
             >
               Explore Old Dubai <ArrowRight className="w-5 h-5" />
             </Button>
-            <Link href="/dubai/districts">
+            <Link href="/districts">
               <Button size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/10 gap-2" data-testid="button-all-districts-old">
                 All Districts
               </Button>
@@ -916,7 +957,7 @@ function CTASection() {
             heart of Dubai that existed long before the skyscrapers.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/dubai/districts">
+            <Link href="/districts">
               <Button 
                 size="lg" 
                 className="bg-white text-amber-600 hover:bg-white/90 gap-2"

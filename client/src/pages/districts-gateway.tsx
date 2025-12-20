@@ -1,13 +1,16 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
 import { 
-  MapPin, Building2, Waves, Mountain, Star, ArrowRight, 
-  Sparkles, Camera, Users, Heart, ShoppingBag, Utensils 
+  MapPin, Building2, Star, ArrowRight, 
+  Sparkles, Camera, Utensils,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
+import useEmblaCarousel from "embla-carousel-react";
 
 // District data
 const districts = [
@@ -141,6 +144,84 @@ const districts = [
     stats: { attractions: 4, hotels: 15, restaurants: 300 },
     bestFor: ["Families", "Budget-conscious", "Shopping"],
   },
+  {
+    id: "difc",
+    name: "DIFC",
+    nameAr: "مركز دبي المالي العالمي",
+    tagline: "Financial Hub & Fine Dining",
+    description: "Middle East's Wall Street — 110 acres of finance, Gate Avenue dining, and contemporary art galleries.",
+    highlights: ["Gate Avenue", "Art Galleries", "English Common Law", "Zuma/LPM"],
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
+    gradient: "from-slate-500 via-slate-600 to-gray-700",
+    available: true,
+    stats: { attractions: 3, hotels: 2, restaurants: 50 },
+    bestFor: ["Business", "Fine dining", "Art lovers"],
+  },
+  {
+    id: "dubai-hills-estate",
+    name: "Dubai Hills Estate",
+    nameAr: "دبي هيلز استيت",
+    tagline: "Golf, Mall & Family Living",
+    description: "Emaar's 2,700-acre master-planned community with championship golf, mega mall, and 18 km Central Park.",
+    highlights: ["Golf Course", "Dubai Hills Mall", "Central Park", "Schools"],
+    image: "https://images.unsplash.com/photo-1545558014-8692077e9b5c?w=800&h=600&fit=crop",
+    gradient: "from-emerald-500 via-green-500 to-teal-500",
+    available: true,
+    stats: { attractions: 3, hotels: 2, restaurants: 100 },
+    bestFor: ["Families", "Golf", "Suburban living"],
+  },
+  {
+    id: "jvc",
+    name: "JVC (Jumeirah Village Circle)",
+    nameAr: "قرية جميرا الدائرية",
+    tagline: "Budget Living & Family Hub",
+    description: "Dubai's best value neighborhood — 40-50% cheaper than Marina with modern apartments and community feel.",
+    highlights: ["Circle Mall", "Affordable Rent", "Family-Friendly", "Central"],
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
+    gradient: "from-orange-500 via-amber-500 to-yellow-500",
+    available: true,
+    stats: { attractions: 2, hotels: 3, restaurants: 80 },
+    bestFor: ["Budget-conscious", "Families", "Young professionals"],
+  },
+  {
+    id: "bluewaters-island",
+    name: "Bluewaters Island",
+    nameAr: "جزيرة بلووترز",
+    tagline: "Beach, Dining & Ain Dubai",
+    description: "Compact island destination with Caesars Palace, 50+ restaurants, beach access, and Marina views.",
+    highlights: ["Ain Dubai (Closed)", "Caesars Palace", "The Wharf Dining", "Beach"],
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
+    gradient: "from-blue-500 via-cyan-500 to-teal-500",
+    available: true,
+    stats: { attractions: 3, hotels: 2, restaurants: 50 },
+    bestFor: ["Beach lovers", "Foodies", "Couples"],
+  },
+  {
+    id: "international-city",
+    name: "International City",
+    nameAr: "المدينة العالمية",
+    tagline: "Budget Living & Dragon Mart",
+    description: "Dubai's most affordable neighborhood — 10 themed clusters, 120K+ residents, and Dragon Mart nearby.",
+    highlights: ["Dragon Mart", "Lowest Rents", "10 Clusters", "Multicultural"],
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
+    gradient: "from-red-500 via-rose-500 to-pink-500",
+    available: true,
+    stats: { attractions: 1, hotels: 0, restaurants: 200 },
+    bestFor: ["Budget-conscious", "Long-term residents", "Wholesale shopping"],
+  },
+  {
+    id: "al-karama",
+    name: "Al Karama",
+    nameAr: "الكرامة",
+    tagline: "Authentic Food & Budget Shopping",
+    description: "Dubai's most authentic neighborhood — 200+ restaurants, textiles, custom tailoring, 2 km from Burj Khalifa.",
+    highlights: ["200+ Restaurants", "Textiles & Tailoring", "ADCB Metro", "AED 10 Meals"],
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
+    gradient: "from-orange-500 via-amber-500 to-yellow-500",
+    available: true,
+    stats: { attractions: 3, hotels: 20, restaurants: 200 },
+    bestFor: ["Food lovers", "Budget-conscious", "Authentic experience"],
+  },
 ];
 
 const containerVariants = {
@@ -155,86 +236,6 @@ const itemVariants = {
   hidden: { opacity: 0, y: 30 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
 };
-
-// Featured district card (larger, more detailed)
-function FeaturedDistrictCard({ district }: { district: typeof districts[0] }) {
-  return (
-    <motion.div
-      variants={itemVariants}
-      className="relative group rounded-3xl overflow-hidden"
-      data-testid={`card-district-featured-${district.id}`}
-    >
-      <Link href={`/dubai/districts/${district.id}`}>
-        <div className="relative aspect-[16/10] md:aspect-[21/9]">
-          {/* Background Image */}
-          <img
-            src={district.image}
-            alt={district.name}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-          
-          {/* Gradient Overlay */}
-          <div className={`absolute inset-0 bg-gradient-to-r ${district.gradient} opacity-60 mix-blend-multiply`} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-          
-          {/* Floating Badges */}
-          <div className="absolute top-6 left-6 flex flex-wrap gap-2">
-            <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 text-sm">
-              <Star className="w-3 h-3 mr-1" /> Featured District
-            </Badge>
-          </div>
-          
-          {/* Content */}
-          <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
-            <div className="max-w-3xl">
-              <p className="text-white/70 text-sm font-medium mb-2">{district.nameAr}</p>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight">
-                {district.name}
-              </h2>
-              <p className="text-xl md:text-2xl text-white/90 font-medium mb-4">{district.tagline}</p>
-              <p className="text-white/80 text-lg max-w-2xl mb-6 hidden md:block">
-                {district.description}
-              </p>
-              
-              {/* Highlights Pills */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                {district.highlights.map((highlight) => (
-                  <span
-                    key={highlight}
-                    className="px-4 py-2 rounded-full bg-white/15 backdrop-blur-sm text-white text-sm font-medium border border-white/20"
-                  >
-                    {highlight}
-                  </span>
-                ))}
-              </div>
-              
-              {/* Stats & CTA */}
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="flex gap-6 text-white/80 text-sm">
-                  <span className="flex items-center gap-2">
-                    <Camera className="w-4 h-4" /> {district.stats.attractions} Attractions
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4" /> {district.stats.hotels} Hotels
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <Utensils className="w-4 h-4" /> {district.stats.restaurants}+ Restaurants
-                  </span>
-                </div>
-                <Button 
-                  className="bg-white text-gray-900 hover:bg-white/90 gap-2 font-semibold"
-                  data-testid={`button-explore-${district.id}`}
-                >
-                  Explore District <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
 
 // Regular district card
 function DistrictCard({ district, index }: { district: typeof districts[0]; index: number }) {
@@ -286,7 +287,7 @@ function DistrictCard({ district, index }: { district: typeof districts[0]; inde
           </div>
           
           {isAvailable ? (
-            <Link href={`/dubai/districts/${district.id}`}>
+            <Link href={`/districts/${district.id}`}>
               <Button 
                 variant="outline" 
                 className="w-full border-white/30 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20"
@@ -311,8 +312,39 @@ function DistrictCard({ district, index }: { district: typeof districts[0]; inde
 }
 
 export default function DistrictsGateway() {
-  const featuredDistrict = districts[0]; // Downtown Dubai
-  const otherDistricts = districts.slice(1);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  
+  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
+  const scrollTo = useCallback((index: number) => emblaApi && emblaApi.scrollTo(index), [emblaApi]);
+  
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+  
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    setScrollSnaps(emblaApi.scrollSnapList());
+    emblaApi.on("select", onSelect);
+    return () => { emblaApi.off("select", onSelect); };
+  }, [emblaApi, onSelect]);
+  
+  // Auto-play carousel every 5 seconds
+  useEffect(() => {
+    if (!emblaApi) return;
+    const interval = setInterval(() => {
+      emblaApi.scrollNext();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [emblaApi]);
+  
+  // Featured districts for carousel (top 6)
+  const featuredDistricts = districts.slice(0, 6);
+  const otherDistricts = districts.slice(6);
   
   return (
     <div className="min-h-screen bg-background">
@@ -376,23 +408,15 @@ export default function DistrictsGateway() {
                 size="lg" 
                 className="bg-white text-[#6443F4] hover:bg-white/90 gap-2 text-lg px-8 py-6 font-semibold"
                 data-testid="button-explore-all"
+                onClick={() => document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' })}
               >
                 <Sparkles className="w-5 h-5" />
                 Explore All Districts
               </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="border-white/30 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20 gap-2 text-lg px-8 py-6"
-                data-testid="button-plan-trip"
-              >
-                <Heart className="w-5 h-5" />
-                Plan Your Trip
-              </Button>
             </div>
           </motion.div>
           
-          {/* Stats */}
+          {/* Stats - Dynamically calculated */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -400,10 +424,10 @@ export default function DistrictsGateway() {
             className="flex flex-wrap justify-center gap-8 md:gap-16 mt-16"
           >
             {[
-              { icon: MapPin, value: "12+", label: "Districts" },
-              { icon: Camera, value: "100+", label: "Attractions" },
-              { icon: Building2, value: "200+", label: "Hotels" },
-              { icon: Users, value: "15M+", label: "Annual Visitors" },
+              { icon: MapPin, value: `${districts.length}`, label: "Districts" },
+              { icon: Camera, value: `${districts.reduce((sum, d) => sum + d.stats.attractions, 0)}+`, label: "Attractions" },
+              { icon: Building2, value: `${districts.reduce((sum, d) => sum + d.stats.hotels, 0)}+`, label: "Hotels" },
+              { icon: Utensils, value: `${districts.reduce((sum, d) => sum + d.stats.restaurants, 0)}+`, label: "Restaurants" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <stat.icon className="w-6 h-6 text-white/60 mx-auto mb-2" />
@@ -418,17 +442,119 @@ export default function DistrictsGateway() {
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
       </section>
       
-      {/* Featured District */}
-      <section className="py-12 px-6">
+      {/* Featured Districts Carousel */}
+      <section id="featured" className="py-12 px-6">
         <div className="max-w-7xl mx-auto">
           <motion.div
-            initial="hidden"
-            whileInView="visible"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            variants={containerVariants}
+            className="text-center mb-8"
           >
-            <FeaturedDistrictCard district={featuredDistrict} />
+            <Badge className="bg-[#6443F4]/10 text-[#6443F4] border-[#6443F4]/30 mb-4">
+              <Star className="w-3 h-3 mr-1" /> Featured Districts
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-2">Top Destinations</h2>
+            <p className="text-muted-foreground">Swipe or use arrows to explore</p>
           </motion.div>
+          
+          {/* Carousel */}
+          <div className="relative">
+            {/* Navigation Arrows */}
+            <Button
+              size="icon"
+              variant="outline"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 bg-background/90 backdrop-blur border-border hidden md:flex"
+              onClick={scrollPrev}
+              data-testid="button-carousel-prev"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="outline"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 bg-background/90 backdrop-blur border-border hidden md:flex"
+              onClick={scrollNext}
+              data-testid="button-carousel-next"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+            
+            {/* Embla Carousel */}
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex gap-4">
+                {featuredDistricts.map((district, index) => (
+                  <div 
+                    key={district.id} 
+                    className="flex-[0_0_85%] sm:flex-[0_0_45%] md:flex-[0_0_calc(33.33%-16px)] min-w-0"
+                  >
+                    <Link href={`/districts/${district.id}`}>
+                      <div 
+                        className="relative rounded-2xl overflow-hidden group cursor-pointer"
+                        data-testid={`carousel-card-${district.id}`}
+                      >
+                        <div className="aspect-[4/5] relative">
+                          <img
+                            src={district.image}
+                            alt={district.name}
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <div className={`absolute inset-0 bg-gradient-to-br ${district.gradient} opacity-50 mix-blend-multiply`} />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                          
+                          {/* Content */}
+                          <div className="absolute bottom-0 left-0 right-0 p-5">
+                            <p className="text-white/60 text-xs font-medium mb-1">{district.nameAr}</p>
+                            <h3 className="text-2xl font-bold text-white mb-1">{district.name}</h3>
+                            <p className="text-white/80 text-sm mb-3">{district.tagline}</p>
+                            
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                              {district.bestFor.slice(0, 2).map((item) => (
+                                <span
+                                  key={item}
+                                  className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs"
+                                >
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                            
+                            <div className="flex items-center gap-3 text-white/70 text-xs">
+                              <span className="flex items-center gap-1">
+                                <Camera className="w-3 h-3" /> {district.stats.attractions}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Building2 className="w-3 h-3" /> {district.stats.hotels}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Utensils className="w-3 h-3" /> {district.stats.restaurants}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Dots Navigation */}
+            <div className="flex justify-center gap-2 mt-6">
+              {scrollSnaps.map((_, index) => (
+                <button
+                  key={index}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                    index === selectedIndex 
+                      ? "bg-[#6443F4] w-8" 
+                      : "bg-[#6443F4]/30 hover:bg-[#6443F4]/50"
+                  }`}
+                  onClick={() => scrollTo(index)}
+                  data-testid={`carousel-dot-${index}`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </section>
       
@@ -483,7 +609,7 @@ export default function DistrictsGateway() {
               <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
                 Start with Downtown Dubai - the heart of the city where dreams touch the sky.
               </p>
-              <Link href="/dubai/districts/downtown-dubai">
+              <Link href="/districts/downtown-dubai">
                 <Button 
                   size="lg"
                   className="bg-white text-[#6443F4] hover:bg-white/90 gap-2 text-lg px-10 py-6 font-semibold"

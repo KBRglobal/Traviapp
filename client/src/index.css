@@ -559,6 +559,16 @@
   -webkit-text-fill-color: transparent;
 }
 
+/* Animated flowing logo texture */
+@keyframes logo-flow {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-logo-flow {
+  animation: logo-flow 60s linear infinite;
+}
+
 /* Orange/Gold Button Style */
 .btn-gold {
   background: linear-gradient(135deg, #F59E0B 0%, #FACC15 100%);

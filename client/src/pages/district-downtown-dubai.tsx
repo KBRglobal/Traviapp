@@ -198,7 +198,7 @@ function HeroSection() {
           <div className="flex items-center gap-2 text-white/60 text-sm mb-6">
             <Link href="/" className="hover:text-white transition-colors" data-testid="link-breadcrumb-home">Home</Link>
             <span>/</span>
-            <Link href="/dubai/districts" className="hover:text-white transition-colors" data-testid="link-breadcrumb-districts">Districts</Link>
+            <Link href="/districts" className="hover:text-white transition-colors" data-testid="link-breadcrumb-districts">Districts</Link>
             <span>/</span>
             <span className="text-white">Downtown Dubai</span>
           </div>
@@ -958,7 +958,7 @@ function CTASection() {
                 <Calendar className="w-5 h-5" />
                 Plan Your Visit
               </Button>
-              <Link href="/dubai/districts">
+              <Link href="/districts">
                 <Button 
                   size="lg"
                   variant="outline"
