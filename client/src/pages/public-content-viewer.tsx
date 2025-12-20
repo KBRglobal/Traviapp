@@ -3,7 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Loader2, MapPin, Clock, Star, Users, DollarSign, Calendar, Building, Utensils, Tag } from "lucide-react";
 import posthog from "posthog-js";
-import type { Content, Attraction, Hotel, Dining, District, Transport, Article, HighlightItem, RoomTypeItem, FaqItem, ContentCluster } from "@shared/schema";
+import type { Content, Attraction, Hotel, Dining, District, Transport, Article, HighlightItem, RoomTypeItem, FaqItem, ContentCluster, ContentWithRelations } from "@shared/schema";
+import { PublicNav } from "@/components/public-nav";
+import { PublicFooter } from "@/components/public-footer";
+import { ArticleHero, ArticleBody, TraviRecommends, RelatedArticles, NewsletterSignup } from "@/components/article";
 
 type ContentWithExtensions = Content & {
   attraction?: Attraction | null;
@@ -271,22 +274,6 @@ function HotelMeta({ hotel }: { hotel: Hotel }) {
   );
 }
 
-function ArticleMeta({ article, publishedAt }: { article: Article; publishedAt?: Date | null }) {
-  return (
-    <div className="flex items-center gap-4 py-4 text-muted-foreground">
-      {article.category && (
-        <span className="bg-primary/10 px-3 py-1 rounded-full text-sm">{article.category}</span>
-      )}
-      {publishedAt && (
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
-          <span>{new Date(publishedAt).toLocaleDateString()}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function DiningMeta({ dining }: { dining: Dining }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-y">
@@ -357,6 +344,80 @@ function DistrictMeta({ district }: { district: District }) {
   );
 }
 
+function ArticleDetailView({ content }: { content: ContentWithExtensions }) {
+  const { data: allArticles = [] } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/contents?type=article&status=published"],
+  });
+
+  const { data: recommendations = [] } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/contents?status=published&limit=8"],
+  });
+
+  const heroImage = content.heroImage || "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=800&fit=crop";
+  const keywords = content.secondaryKeywords || content.lsiKeywords || [];
+  const category = content.article?.category;
+  const blocks = content.blocks || [];
+
+  const relatedArticles = allArticles
+    .filter((a) => a.id !== content.id)
+    .map((a) => ({
+      id: a.id,
+      title: a.title,
+      slug: a.slug,
+      heroImage: a.heroImage,
+      metaDescription: a.metaDescription,
+      publishedAt: a.publishedAt,
+      category: a.article?.category || undefined,
+    }));
+
+  const recommendationItems = recommendations
+    .filter((r) => r.id !== content.id && r.type !== "article")
+    .slice(0, 4)
+    .map((r) => ({
+      id: r.id,
+      title: r.title,
+      slug: r.slug,
+      type: r.type,
+      heroImage: r.heroImage,
+      metaDescription: r.metaDescription,
+    }));
+
+  return (
+    <div className="min-h-screen bg-background" data-testid="article-detail-view">
+      <PublicNav variant="transparent" />
+
+      <ArticleHero
+        title={content.title}
+        heroImage={heroImage}
+        heroImageAlt={content.heroImageAlt || undefined}
+        category={category || undefined}
+        publishedAt={content.publishedAt}
+        keywords={keywords}
+      />
+
+      <ArticleBody
+        blocks={blocks}
+        metaDescription={content.metaDescription || undefined}
+      />
+
+      {recommendationItems.length > 0 && (
+        <TraviRecommends recommendations={recommendationItems} />
+      )}
+
+      {relatedArticles.length > 0 && (
+        <RelatedArticles
+          articles={relatedArticles}
+          currentArticleId={content.id}
+        />
+      )}
+
+      <NewsletterSignup />
+
+      <PublicFooter />
+    </div>
+  );
+}
+
 export default function PublicContentViewer() {
   const [, params] = useRoute("/:type/:slug");
   const slug = params?.slug;
@@ -418,7 +479,7 @@ export default function PublicContentViewer() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" data-testid="loading-state">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -426,13 +487,17 @@ export default function PublicContentViewer() {
 
   if (error || !content) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" data-testid="error-state">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Content Not Found</h1>
           <p className="text-muted-foreground">The page you're looking for doesn't exist.</p>
         </div>
       </div>
     );
+  }
+
+  if (content.type === "article") {
+    return <ArticleDetailView content={content} />;
   }
 
   const blocks = content.blocks || [];
@@ -463,7 +528,6 @@ export default function PublicContentViewer() {
           {content.hotel && <HotelMeta hotel={content.hotel} />}
           {content.dining && <DiningMeta dining={content.dining} />}
           {content.district && <DistrictMeta district={content.district} />}
-          {content.article && <ArticleMeta article={content.article} publishedAt={content.publishedAt} />}
 
           {content.metaDescription && (
             <p className="text-xl text-muted-foreground my-6">{content.metaDescription}</p>
