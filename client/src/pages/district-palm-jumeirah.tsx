@@ -97,7 +97,7 @@ function HeroSection() {
               <Sparkles className="w-5 h-5" />
               Plan Your Visit
             </Button>
-            <Link href="/dubai/districts">
+            <Link href="/districts">
               <Button 
                 size="lg" 
                 variant="outline" 
@@ -861,7 +861,7 @@ function CTASection() {
             is Dubai's most iconic destination.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/dubai/districts">
+            <Link href="/districts">
               <Button 
                 size="lg" 
                 className="bg-white text-orange-600 hover:bg-white/90 gap-2"

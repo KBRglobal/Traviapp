@@ -92,6 +92,7 @@ const DistrictDubaiHills = lazy(() => import("@/pages/district-dubai-hills"));
 const DistrictJVC = lazy(() => import("@/pages/district-jvc"));
 const DistrictBluewaters = lazy(() => import("@/pages/district-bluewaters-island"));
 const DistrictInternationalCity = lazy(() => import("@/pages/district-international-city"));
+const DistrictAlKarama = lazy(() => import("@/pages/district-al-karama"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -317,22 +318,23 @@ const publicRoutes = [
   { path: "/case-study-retirement-planning", component: CaseStudyRetirementPlanning },
   { path: "/glossary", component: GlossaryHub },
   // District pages
-  { path: "/dubai/districts", component: DistrictsGateway },
-  { path: "/dubai/districts/downtown-dubai", component: DistrictDowntownDubai },
-  { path: "/dubai/districts/dubai-marina", component: DistrictDubaiMarina },
-  { path: "/dubai/districts/jbr-jumeirah-beach-residence", component: DistrictJBR },
-  { path: "/dubai/districts/palm-jumeirah", component: DistrictPalmJumeirah },
-  { path: "/dubai/districts/jumeirah", component: DistrictJumeirah },
-  { path: "/dubai/districts/business-bay", component: DistrictBusinessBay },
-  { path: "/dubai/districts/old-dubai", component: DistrictOldDubai },
-  { path: "/dubai/districts/dubai-creek-harbour", component: DistrictDubaiCreekHarbour },
-  { path: "/dubai/districts/dubai-south", component: DistrictDubaiSouth },
-  { path: "/dubai/districts/al-barsha", component: DistrictAlBarsha },
-  { path: "/dubai/districts/difc", component: DistrictDIFC },
-  { path: "/dubai/districts/dubai-hills-estate", component: DistrictDubaiHills },
-  { path: "/dubai/districts/jvc", component: DistrictJVC },
-  { path: "/dubai/districts/bluewaters-island", component: DistrictBluewaters },
-  { path: "/dubai/districts/international-city", component: DistrictInternationalCity },
+  { path: "/districts", component: DistrictsGateway },
+  { path: "/districts/downtown-dubai", component: DistrictDowntownDubai },
+  { path: "/districts/dubai-marina", component: DistrictDubaiMarina },
+  { path: "/districts/jbr-jumeirah-beach-residence", component: DistrictJBR },
+  { path: "/districts/palm-jumeirah", component: DistrictPalmJumeirah },
+  { path: "/districts/jumeirah", component: DistrictJumeirah },
+  { path: "/districts/business-bay", component: DistrictBusinessBay },
+  { path: "/districts/old-dubai", component: DistrictOldDubai },
+  { path: "/districts/dubai-creek-harbour", component: DistrictDubaiCreekHarbour },
+  { path: "/districts/dubai-south", component: DistrictDubaiSouth },
+  { path: "/districts/al-barsha", component: DistrictAlBarsha },
+  { path: "/districts/difc", component: DistrictDIFC },
+  { path: "/districts/dubai-hills-estate", component: DistrictDubaiHills },
+  { path: "/districts/jvc", component: DistrictJVC },
+  { path: "/districts/bluewaters-island", component: DistrictBluewaters },
+  { path: "/districts/international-city", component: DistrictInternationalCity },
+  { path: "/districts/al-karama", component: DistrictAlKarama },
 ];
 
 // Locale codes for URL prefixes (16 languages, English is default without prefix)

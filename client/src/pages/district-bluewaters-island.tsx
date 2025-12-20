@@ -120,7 +120,7 @@ function HeroSection() {
             >
               Explore Bluewaters <ArrowRight className="w-5 h-5" />
             </Button>
-            <Link href="/dubai/districts">
+            <Link href="/districts">
               <Button size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/10 gap-2" data-testid="button-all-districts-bluewaters">
                 All Districts
               </Button>
@@ -488,7 +488,7 @@ function CTASection() {
             Beach, dining, and waterfront vibes — all within walking distance of JBR and Dubai Marina.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/dubai/districts">
+            <Link href="/districts">
               <Button 
                 size="lg" 
                 className="bg-white text-blue-600 hover:bg-white/90 gap-2"

@@ -1,8 +1,9 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 import { 
-  MapPin, Building2, Waves, Mountain, Star, ArrowRight, 
-  Sparkles, Camera, Users, Heart, ShoppingBag, Utensils 
+  MapPin, Building2, Star, ArrowRight, 
+  Sparkles, Camera, ShoppingBag, Utensils 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -206,6 +207,19 @@ const districts = [
     stats: { attractions: 1, hotels: 0, restaurants: 200 },
     bestFor: ["Budget-conscious", "Long-term residents", "Wholesale shopping"],
   },
+  {
+    id: "al-karama",
+    name: "Al Karama",
+    nameAr: "الكرامة",
+    tagline: "Authentic Food & Budget Shopping",
+    description: "Dubai's most authentic neighborhood — 200+ restaurants, textiles, custom tailoring, 2 km from Burj Khalifa.",
+    highlights: ["200+ Restaurants", "Textiles & Tailoring", "ADCB Metro", "AED 10 Meals"],
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
+    gradient: "from-orange-500 via-amber-500 to-yellow-500",
+    available: true,
+    stats: { attractions: 3, hotels: 20, restaurants: 200 },
+    bestFor: ["Food lovers", "Budget-conscious", "Authentic experience"],
+  },
 ];
 
 const containerVariants = {
@@ -229,7 +243,7 @@ function FeaturedDistrictCard({ district }: { district: typeof districts[0] }) {
       className="relative group rounded-3xl overflow-hidden"
       data-testid={`card-district-featured-${district.id}`}
     >
-      <Link href={`/dubai/districts/${district.id}`}>
+      <Link href={`/districts/${district.id}`}>
         <div className="relative aspect-[16/10] md:aspect-[21/9]">
           {/* Background Image */}
           <img
@@ -351,7 +365,7 @@ function DistrictCard({ district, index }: { district: typeof districts[0]; inde
           </div>
           
           {isAvailable ? (
-            <Link href={`/dubai/districts/${district.id}`}>
+            <Link href={`/districts/${district.id}`}>
               <Button 
                 variant="outline" 
                 className="w-full border-white/30 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20"
@@ -376,8 +390,18 @@ function DistrictCard({ district, index }: { district: typeof districts[0]; inde
 }
 
 export default function DistrictsGateway() {
-  const featuredDistrict = districts[0]; // Downtown Dubai
-  const otherDistricts = districts.slice(1);
+  const [featuredIndex, setFeaturedIndex] = useState(0);
+  
+  // Rotate featured district every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFeaturedIndex((prev) => (prev + 1) % districts.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  const featuredDistrict = districts[featuredIndex];
+  const otherDistricts = districts.filter((_, i) => i !== featuredIndex);
   
   return (
     <div className="min-h-screen bg-background">
@@ -441,23 +465,15 @@ export default function DistrictsGateway() {
                 size="lg" 
                 className="bg-white text-[#6443F4] hover:bg-white/90 gap-2 text-lg px-8 py-6 font-semibold"
                 data-testid="button-explore-all"
+                onClick={() => document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' })}
               >
                 <Sparkles className="w-5 h-5" />
                 Explore All Districts
               </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="border-white/30 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20 gap-2 text-lg px-8 py-6"
-                data-testid="button-plan-trip"
-              >
-                <Heart className="w-5 h-5" />
-                Plan Your Trip
-              </Button>
             </div>
           </motion.div>
           
-          {/* Stats */}
+          {/* Stats - Dynamically calculated */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -465,10 +481,10 @@ export default function DistrictsGateway() {
             className="flex flex-wrap justify-center gap-8 md:gap-16 mt-16"
           >
             {[
-              { icon: MapPin, value: "12+", label: "Districts" },
-              { icon: Camera, value: "100+", label: "Attractions" },
-              { icon: Building2, value: "200+", label: "Hotels" },
-              { icon: Users, value: "15M+", label: "Annual Visitors" },
+              { icon: MapPin, value: `${districts.length}`, label: "Districts" },
+              { icon: Camera, value: `${districts.reduce((sum, d) => sum + d.stats.attractions, 0)}+`, label: "Attractions" },
+              { icon: Building2, value: `${districts.reduce((sum, d) => sum + d.stats.hotels, 0)}+`, label: "Hotels" },
+              { icon: Utensils, value: `${districts.reduce((sum, d) => sum + d.stats.restaurants, 0)}+`, label: "Restaurants" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <stat.icon className="w-6 h-6 text-white/60 mx-auto mb-2" />
@@ -484,7 +500,7 @@ export default function DistrictsGateway() {
       </section>
       
       {/* Featured District */}
-      <section className="py-12 px-6">
+      <section id="featured" className="py-12 px-6">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial="hidden"
@@ -548,7 +564,7 @@ export default function DistrictsGateway() {
               <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
                 Start with Downtown Dubai - the heart of the city where dreams touch the sky.
               </p>
-              <Link href="/dubai/districts/downtown-dubai">
+              <Link href="/districts/downtown-dubai">
                 <Button 
                   size="lg"
                   className="bg-white text-[#6443F4] hover:bg-white/90 gap-2 text-lg px-10 py-6 font-semibold"
