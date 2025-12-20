@@ -1,22 +1,26 @@
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { SUPPORTED_LOCALES, type Locale, type ContentBlock } from "@shared/schema";
 
 // ============================================================================
 // TRANSLATION PROVIDERS - COST OPTIMIZED (December 2025)
 // ============================================================================
-// CRITICAL: DeepL Pro charged $100 for 4 uses! Switch to GPT-4o-mini as PRIMARY
+// CRITICAL: DeepL Pro charged $100 for 4 uses! Use Claude or GPT instead
 //
-// Cost comparison per 1M characters:
-// - DeepL Pro: $25+ (AVOID - too expensive!)
+// Cost comparison per 1M tokens (~250K characters):
+// - DeepL Pro: $25+/M chars (AVOID - way too expensive!)
 // - DeepL Free: $0 (500K chars/month limit)
-// - GPT-4o-mini: ~$0.22 (based on ~4 chars per token, $0.15/$0.60 per 1M tokens)
+// - GPT-4o-mini: $0.15/$0.60 (cheapest, good quality)
+// - Claude Haiku 3.5: $0.80/$4.00 (RECOMMENDED - excellent quality, still 10x cheaper than DeepL)
+// - Claude Sonnet 4: $3.00/$15.00 (premium quality)
 //
 // STRATEGY:
-// 1. PRIMARY: GPT-4o-mini (100x cheaper than DeepL Pro)
-// 2. OPTIONAL: DeepL Free tier only (if enabled and within limit)
-// 3. NEVER fall back to DeepL Pro API
+// 1. DEFAULT: Claude Haiku 3.5 (best quality/cost ratio for translations)
+// 2. BUDGET: GPT-4o-mini (cheapest option)
+// 3. OPTIONAL: DeepL Free tier only (500K chars/month limit)
+// 4. NEVER fall back to DeepL Pro API
 
-type TranslationProvider = 'gpt' | 'deepl_free_only' | 'auto';
+type TranslationProvider = 'claude' | 'gpt' | 'deepl_free_only' | 'auto';
 
 // DeepL supported language codes (official codes)
 const DEEPL_SUPPORTED_LANGUAGES: Record<string, string> = {
@@ -60,7 +64,7 @@ function getDeepLLanguageCode(locale: string): string {
   return DEEPL_SUPPORTED_LANGUAGES[locale] || locale.toUpperCase();
 }
 
-// Initialize OpenAI client for fallback translations
+// Initialize OpenAI client
 function getOpenAIClient(): OpenAI | null {
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
@@ -68,6 +72,84 @@ function getOpenAIClient(): OpenAI | null {
     apiKey,
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
   });
+}
+
+// Initialize Anthropic client for Claude translations (RECOMMENDED)
+function getAnthropicClient(): Anthropic | null {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.log("[Translation] Anthropic API key not configured, will use GPT-4o-mini");
+    return null;
+  }
+  return new Anthropic({ apiKey });
+}
+
+// Translate using Claude Haiku 3.5 (RECOMMENDED - best quality/cost ratio)
+async function translateWithClaude(
+  text: string,
+  sourceLocale: string,
+  targetLocale: string,
+  contentType: string = "body"
+): Promise<{ text: string; success: boolean; error?: string }> {
+  const anthropic = getAnthropicClient();
+  if (!anthropic) {
+    return { text: '', success: false, error: 'Anthropic API key not configured' };
+  }
+
+  const targetLocaleInfo = SUPPORTED_LOCALES.find((l) => l.code === targetLocale);
+  const targetLanguageName = targetLocaleInfo?.name || targetLocale;
+
+  const contentTypeInstructions: Record<string, string> = {
+    title: "This is a title/heading. Keep it concise, impactful, and SEO-friendly.",
+    description: "This is a meta description for SEO. Keep it under 160 characters, compelling.",
+    meta: "This is meta content for SEO. Optimize for search engines while being natural.",
+    body: "This is body content. Maintain the tone, style, and formatting of the original.",
+  };
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-20250514", // Claude Haiku - fast, cheap, excellent quality
+      max_tokens: 4096,
+      messages: [
+        {
+          role: "user",
+          content: `You are an expert tourism content translator specializing in Dubai travel content.
+
+CRITICAL RULES:
+1. Translate naturally using LOCAL expressions that tourists from the target language actually use
+2. Keep proper nouns in their original form: "Burj Khalifa", "Dubai Mall", "Palm Jumeirah"
+3. Preserve all HTML tags, markdown formatting, and special characters exactly
+4. Use culturally appropriate marketing tone for the target audience
+5. For RTL languages (Arabic, Hebrew): ensure proper text flow
+
+CULTURAL ADAPTATIONS:
+- Russian: Emphasize luxury, exclusivity, VIP experiences
+- Arabic: Emphasize halal options, prayer facilities, modest dress code
+- Chinese: Highlight shopping, photo spots, famous landmarks
+- Japanese: Focus on cleanliness, efficiency, unique experiences
+- German: Emphasize quality, precision, practical information
+
+Translate the following ${contentType} from ${sourceLocale} to ${targetLanguageName} (${targetLocale}).
+
+${contentTypeInstructions[contentType] || contentTypeInstructions.body}
+
+Text to translate:
+${text}
+
+Return ONLY the translated text, no explanations.`
+        }
+      ]
+    });
+
+    const textContent = response.content.find(c => c.type === 'text');
+    const translatedText = textContent ? textContent.text.trim() : '';
+
+    console.log(`[Translation] Claude Haiku translated ${text.length} chars to ${targetLocale}`);
+    return { text: translatedText, success: true };
+  } catch (error) {
+    console.error('[Translation] Claude error:', error);
+    return { text: '', success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 }
 
 // Translate using DeepL API
@@ -173,15 +255,16 @@ interface ContentTranslation {
 }
 
 // Translate a single piece of text
-// PRIMARY: GPT-4o-mini (~$0.22/M chars) - 100x cheaper than DeepL Pro
+// DEFAULT: Claude Haiku 3.5 (excellent quality, 10x cheaper than DeepL Pro)
+// BUDGET: GPT-4o-mini (cheapest option)
 // OPTIONAL: DeepL Free tier only (500K chars/month limit)
 export async function translateText(
   request: TranslationRequest,
   options?: { provider?: TranslationProvider }
 ): Promise<TranslationResult> {
   const { text, sourceLocale, targetLocale, contentType = "body" } = request;
-  // DEFAULT TO GPT (100x cheaper than DeepL Pro)
-  const provider = options?.provider || 'gpt';
+  // DEFAULT TO CLAUDE (best quality/cost ratio)
+  const provider = options?.provider || 'claude';
 
   if (!text || text.trim() === "") {
     return { translatedText: "", locale: targetLocale, success: true };
@@ -196,9 +279,7 @@ export async function translateText(
 
   // Only use DeepL if explicitly requested AND it's free tier only
   // NEVER use DeepL Pro - it charged $100 for 4 uses!
-  const useDeepLFree = provider === 'deepl_free_only' && isDeepLSupported(targetLocale) && process.env.DEEPL_API_KEY;
-
-  if (useDeepLFree) {
+  if (provider === 'deepl_free_only' && isDeepLSupported(targetLocale) && process.env.DEEPL_API_KEY) {
     console.log(`[Translation] Trying DeepL FREE tier for ${sourceLocale} -> ${targetLocale}`);
     const deeplResult = await translateWithDeepL(text, sourceLocale, targetLocale);
 
@@ -209,13 +290,25 @@ export async function translateText(
         success: true,
       };
     }
-
-    // DeepL failed (probably free tier limit exceeded) - use GPT
-    console.warn(`[Translation] DeepL free tier failed: ${deeplResult.error}, using GPT-4o-mini`);
+    // DeepL failed - continue to Claude/GPT
+    console.warn(`[Translation] DeepL free tier failed: ${deeplResult.error}`);
   }
 
-  // PRIMARY: GPT-4o-mini (100x cheaper than DeepL Pro!)
-  // Cost: ~$0.22 per million characters vs DeepL Pro's $25+
+  // Try Claude Haiku first (RECOMMENDED - excellent quality, $0.80-$4.00/M tokens)
+  if (provider === 'claude' || provider === 'auto') {
+    const claudeResult = await translateWithClaude(text, sourceLocale, targetLocale, contentType);
+    if (claudeResult.success) {
+      return {
+        translatedText: claudeResult.text,
+        locale: targetLocale,
+        success: true,
+      };
+    }
+    // Claude failed - fall back to GPT
+    console.warn(`[Translation] Claude failed: ${claudeResult.error}, falling back to GPT-4o-mini`);
+  }
+
+  // FALLBACK: GPT-4o-mini (cheapest option: $0.15-$0.60/M tokens)
   console.log(`[Translation] Using GPT-4o-mini for ${sourceLocale} -> ${targetLocale} (cost: ~$0.22/M chars)`);
 
   const contentTypeInstructions = {

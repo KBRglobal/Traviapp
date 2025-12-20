@@ -22,22 +22,23 @@ const SUPPORTED_LANGUAGES = [
 interface TranslateRequest {
   text: string | string[];
   targetLang: string;
-  provider?: 'gpt' | 'deepl_free_only';
+  provider?: 'claude' | 'gpt' | 'deepl_free_only';
 }
 
 /**
  * POST /api/translate
- * Body: { text: string | string[], targetLang: string, provider?: 'gpt' | 'deepl_free_only' }
+ * Body: { text: string | string[], targetLang: string, provider?: 'claude' | 'gpt' | 'deepl_free_only' }
  * Returns: { translations: string[] }
  *
  * COST INFO:
- * - GPT-4o-mini: ~$0.22 per million characters (DEFAULT)
+ * - Claude Haiku 3.5: ~$1-2 per million characters (DEFAULT - best quality)
+ * - GPT-4o-mini: ~$0.22 per million characters (cheapest)
  * - DeepL Free: $0 but 500K chars/month limit
- * - DeepL Pro: $25+/M chars (NEVER USED - too expensive!)
+ * - DeepL Pro: $25+/M chars (DISABLED - too expensive!)
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { text, targetLang, provider = 'gpt' } = req.body as TranslateRequest;
+    const { text, targetLang, provider = 'claude' } = req.body as TranslateRequest;
 
     if (!text || !targetLang) {
       return res.status(400).json({ error: 'text and targetLang are required' });
@@ -69,13 +70,17 @@ router.post('/', async (req: Request, res: Response) => {
       })
     );
 
+    const costNotes: Record<string, string> = {
+      claude: 'Using Claude Haiku 3.5 (~$1-2/M chars) - best quality',
+      gpt: 'Using GPT-4o-mini (~$0.22/M chars) - cheapest',
+      deepl_free_only: 'Using DeepL Free tier (500K chars/month limit)',
+    };
+
     res.json({
       translations,
       targetLang,
       provider: provider,
-      costNote: provider === 'gpt'
-        ? 'Using GPT-4o-mini (~$0.22/M chars)'
-        : 'Using DeepL Free tier (500K chars/month limit)',
+      costNote: costNotes[provider] || costNotes.claude,
     });
 
   } catch (error) {
@@ -91,16 +96,24 @@ router.post('/', async (req: Request, res: Response) => {
 router.get('/languages', (req: Request, res: Response) => {
   res.json({
     supported: SUPPORTED_LANGUAGES,
-    defaultProvider: 'gpt',
+    defaultProvider: 'claude',
     providers: {
+      claude: {
+        name: 'Claude Haiku 3.5',
+        cost: '~$1-2 per million characters',
+        quality: 'Excellent - best for nuanced translations',
+        default: true,
+      },
       gpt: {
         name: 'GPT-4o-mini',
         cost: '~$0.22 per million characters',
-        default: true,
+        quality: 'Good - cheapest option',
+        default: false,
       },
       deepl_free_only: {
         name: 'DeepL Free',
         cost: '$0 (500K chars/month limit)',
+        quality: 'Excellent - but limited',
         default: false,
       },
     },
@@ -117,6 +130,7 @@ router.get('/cost-estimate', (req: Request, res: Response) => {
   const languages = parseInt(req.query.languages as string) || 17;
 
   const totalChars = charCount * languages;
+  const claudeCost = (totalChars / 1000000) * 1.5; // ~$1.5/M chars average
   const gptCost = (totalChars / 1000000) * 0.22;
   const deeplProCost = (totalChars / 1000000) * 25;
 
@@ -125,16 +139,21 @@ router.get('/cost-estimate', (req: Request, res: Response) => {
     languages,
     totalChars,
     costs: {
+      'claude-haiku': {
+        cost: `$${claudeCost.toFixed(2)}`,
+        note: 'RECOMMENDED - best quality, 15x cheaper than DeepL',
+      },
       'gpt-4o-mini': {
         cost: `$${gptCost.toFixed(2)}`,
-        note: 'Recommended - 100x cheaper',
+        note: 'Budget option - 100x cheaper than DeepL',
       },
       'deepl-pro': {
         cost: `$${deeplProCost.toFixed(2)}`,
         note: 'DISABLED - too expensive!',
       },
     },
-    savings: `$${(deeplProCost - gptCost).toFixed(2)} saved by using GPT-4o-mini`,
+    recommendation: 'Claude Haiku for quality, GPT-4o-mini for budget',
+    savings: `$${(deeplProCost - claudeCost).toFixed(2)} saved by using Claude Haiku`,
   });
 });
 
