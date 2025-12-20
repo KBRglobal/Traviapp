@@ -65,6 +65,14 @@ Content follows a status progression: draft → in_review → approved → sched
 - **OpenAI API**: Content generation and enhancement features
 - Requires `OPENAI_API_KEY` environment variable
 
+### Multi-Language SEO System
+- **DeepL API**: Automatic content translation to 17 languages
+- Requires `DEEPL_API_KEY` environment variable
+- **Supported languages**: English (default), Arabic, Hindi, Chinese, Russian, Urdu, French, German, Persian, Bengali, Filipino, Spanish, Turkish, Italian, Japanese, Korean, Hebrew
+- **URL structure**: English uses no prefix (/hotels), other languages use prefix (/fr/hotels, /ar/hotels)
+- **RTL support**: Arabic, Hebrew, Persian, Urdu with comprehensive CSS rules
+- **SEO features**: hreflang tags, multi-language sitemaps (sitemap-en.xml, sitemap-fr.xml, etc.), canonical URLs
+
 ### RSS Feed Integration
 - Built-in XML parser for fetching and parsing RSS feeds
 - Supports automatic article generation from feed items
