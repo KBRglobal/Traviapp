@@ -1662,13 +1662,33 @@ OUTPUT JSON STRUCTURE:
         "order": 3
       },
       {
+        "id": "image_1",
+        "type": "image",
+        "data": {
+          "searchQuery": "Specific search query for Freepik/stock image relevant to this section (e.g., 'Dubai Marina yacht sunset view', 'Burj Khalifa observation deck visitors')",
+          "alt": "Descriptive alt text for SEO with location context (under 125 chars)",
+          "caption": "Engaging caption describing what's shown and adding value for reader"
+        },
+        "order": 4
+      },
+      {
         "id": "main_content_2",
         "type": "text",
         "data": {
           "heading": "H2 for second major section",
           "content": "250-350 words. Develop the topic further. Add depth with examples, comparisons, or detailed descriptions. Include secondary keyword naturally. Vary paragraph length (mix 2-3 sentence paragraphs with 5-6 sentence ones). Add another internal link."
         },
-        "order": 4
+        "order": 5
+      },
+      {
+        "id": "image_2",
+        "type": "image",
+        "data": {
+          "searchQuery": "Specific search query for second image relevant to content (e.g., 'traditional Dubai souk market spices', 'Dubai Metro station interior modern')",
+          "alt": "Descriptive alt text with specific subject and Dubai location",
+          "caption": "Caption providing context or helpful information about the image"
+        },
+        "order": 6
       },
       {
         "id": "main_content_3",
@@ -1677,7 +1697,17 @@ OUTPUT JSON STRUCTURE:
           "heading": "H2 for third section (if needed for structure)",
           "content": "200-300 words. Additional content matching your structure (e.g., comparison details, story continuation, more list items). Keep momentum. Use different transitional phrases than previous sections."
         },
-        "order": 5
+        "order": 7
+      },
+      {
+        "id": "image_3",
+        "type": "image",
+        "data": {
+          "searchQuery": "Third image search query matching article topic (e.g., 'Dubai beach sunset palm trees', 'Dubai hotel luxury pool view')",
+          "alt": "Alt text describing the visual with location specifics",
+          "caption": "Caption adding practical info or emotional appeal"
+        },
+        "order": 8
       },
       {
         "id": "pro_tips",
@@ -1694,7 +1724,7 @@ OUTPUT JSON STRUCTURE:
             "Bonus hack tip 7 (e.g., 'Free parking after 6 PM in adjacent P2 garage, entrance on Al Wasl Road')"
           ]
         },
-        "order": 6
+        "order": 9
       },
       {
         "id": "practical_info",
@@ -1703,7 +1733,7 @@ OUTPUT JSON STRUCTURE:
           "heading": "Practical Information",
           "content": "150-200 words. Comprehensive practical details: full address, contact phone/email, website, exact operating hours, pricing tiers, payment methods, accessibility info, parking details, public transport access, what to bring, dress code, age restrictions, group booking info. Format as short paragraphs or bullets for scannability."
         },
-        "order": 7
+        "order": 10
       },
       {
         "id": "faq_block",
@@ -1723,7 +1753,7 @@ OUTPUT JSON STRUCTURE:
             {"question": "Can I get a refund if I cancel?", "answer": "150-200 words covering cancellation policy, refund terms, modification options, travel insurance recommendation, no-show policy"}
           ]
         },
-        "order": 8
+        "order": 11
       },
       {
         "id": "related_links",
@@ -1732,7 +1762,7 @@ OUTPUT JSON STRUCTURE:
           "heading": "Related Articles",
           "content": "Short paragraph (50-80 words) with 3-5 internal links to related content. Use natural anchor text: 'For more Dubai attractions, see our guide to [link]top Dubai attractions[/link]. If you're interested in dining nearby, check out [link]best restaurants in [Area][/link].' Links should flow naturally in sentences."
         },
-        "order": 9
+        "order": 12
       },
       {
         "id": "conclusion_cta",
@@ -1743,7 +1773,7 @@ OUTPUT JSON STRUCTURE:
           "buttonText": "Plan Your Visit" OR "Book Now" OR "Learn More",
           "buttonLink": "#" OR booking URL
         },
-        "order": 10
+        "order": 13
       }
     ],
     "seoSchema": {
@@ -3756,14 +3786,22 @@ REQUIREMENTS (VERY IMPORTANT):
 MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
 1. hero block - with compelling title, subtitle, overlayText
 2. text block - "Introduction" (250-350 words, engaging hook)
-3. text block - Main content section 1 (300-400 words)
-4. text block - Main content section 2 (300-400 words)
-5. text block - Main content section 3 (250-350 words)
-6. highlights block - with 6 key takeaways (REQUIRED)
-7. text block - "Practical Information" (200-250 words)
-8. tips block - with 7 detailed, actionable expert tips (this is REQUIRED, do NOT skip)
-9. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
-10. cta block - with relevant call to action
+3. highlights block - Quick Facts (location, price, hours, booking, etc.)
+4. text block - Main content section 1 (300-400 words)
+5. image block - with searchQuery for Freepik, alt text, and caption (REQUIRED for visual engagement)
+6. text block - Main content section 2 (300-400 words)
+7. image block - second image with different searchQuery relevant to content (REQUIRED)
+8. text block - Main content section 3 (250-350 words)
+9. image block - third image with relevant searchQuery (REQUIRED)
+10. tips block - with 7 detailed, actionable expert tips (this is REQUIRED, do NOT skip)
+11. text block - "Practical Information" (200-250 words)
+12. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
+13. cta block - with relevant call to action
+
+IMAGE BLOCKS ARE MANDATORY - Each image block must include:
+- searchQuery: Specific search term for finding relevant stock images (e.g., "Dubai Marina waterfront sunset", "Burj Khalifa observation deck")
+- alt: SEO-optimized alt text describing the image with Dubai location context
+- caption: Engaging caption that adds value for the reader
 
 ALSO REQUIRED in article object:
 - 5 quick facts

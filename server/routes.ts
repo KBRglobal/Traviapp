@@ -866,6 +866,68 @@ async function findOrCreateArticleImage(
   }
 }
 
+// Process image blocks in generated content - fetch images from Freepik/AI based on searchQuery
+async function processImageBlocks(blocks: ContentBlock[], category: string = "general"): Promise<ContentBlock[]> {
+  console.log(`[Image Processor] Processing ${blocks.length} blocks for images...`);
+  
+  const processedBlocks: ContentBlock[] = [];
+  
+  for (const block of blocks) {
+    if (block.type === 'image' && block.data) {
+      const searchQuery = block.data.searchQuery || block.data.query || block.data.alt || 'dubai travel';
+      console.log(`[Image Processor] Fetching image for: "${searchQuery}"`);
+      
+      try {
+        // Use existing image finder function
+        const imageResult = await findOrCreateArticleImage(searchQuery, [searchQuery, category], category);
+        
+        if (imageResult) {
+          processedBlocks.push({
+            ...block,
+            data: {
+              ...block.data,
+              url: imageResult.url,
+              imageUrl: imageResult.url,
+              alt: block.data.alt || imageResult.altText,
+              imageId: imageResult.imageId,
+            }
+          });
+          console.log(`[Image Processor] Image fetched: ${imageResult.url}`);
+        } else {
+          // Fallback to Unsplash placeholder
+          const unsplashQuery = encodeURIComponent(searchQuery.replace(/dubai/gi, '').trim() || 'travel');
+          processedBlocks.push({
+            ...block,
+            data: {
+              ...block.data,
+              url: `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&q=80`,
+              imageUrl: `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&q=80`,
+              alt: block.data.alt || `${searchQuery} - Dubai`,
+            }
+          });
+          console.log(`[Image Processor] Using fallback Unsplash image`);
+        }
+      } catch (error) {
+        console.error(`[Image Processor] Error fetching image:`, error);
+        // Keep block as-is with placeholder
+        processedBlocks.push({
+          ...block,
+          data: {
+            ...block.data,
+            url: `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&q=80`,
+            imageUrl: `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&q=80`,
+          }
+        });
+      }
+    } else {
+      processedBlocks.push(block);
+    }
+  }
+  
+  console.log(`[Image Processor] Finished processing, ${processedBlocks.length} blocks returned`);
+  return processedBlocks;
+}
+
 // RTL languages that need special handling
 const RTL_LOCALES = ["ar", "fa", "ur"];
 
@@ -4013,7 +4075,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const { topic, category } = req.body;
+      const { topic, category, fetchImages } = req.body;
       if (!topic || typeof topic !== "string" || topic.trim().length === 0) {
         return res.status(400).json({ error: "Article topic is required" });
       }
@@ -4021,6 +4083,15 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       const result = await generateArticleContent(topic.trim(), category);
       if (!result) {
         return res.status(500).json({ error: "Failed to generate article content" });
+      }
+
+      // Process image blocks to fetch real images from Freepik/AI if requested
+      if (fetchImages !== false && result.content?.blocks) {
+        console.log(`[Article Generator] Processing image blocks for: ${topic}`);
+        result.content.blocks = await processImageBlocks(
+          result.content.blocks as ContentBlock[], 
+          result.article?.category || category || "general"
+        );
       }
 
       res.json(result);
