@@ -76,6 +76,7 @@ import {
 } from "./ai-generator";
 import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-queue";
 import { registerEnterpriseRoutes } from "./enterprise-routes";
+import { registerImageLogicRoutes } from "./image-logic-routes";
 import { cache, cacheKeys } from "./cache";
 
 // Permission checking utilities (imported from security.ts for route-level checks)
@@ -5782,6 +5783,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // ENTERPRISE ROUTES (Teams, Workflows, Notifications, etc.)
   // ============================================================================
   registerEnterpriseRoutes(app);
+
+  // ============================================================================
+  // IMAGE LOGIC ROUTES (Smart image selection system)
+  // ============================================================================
+  registerImageLogicRoutes(app);
 
   // ============================================================================
   // SECURE ERROR HANDLER (no stack traces to client)
