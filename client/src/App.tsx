@@ -311,6 +311,18 @@ const publicRoutes = [
   { path: "/case-study-off-plan-launch", component: CaseStudyOffPlanLaunch },
   { path: "/case-study-retirement-planning", component: CaseStudyRetirementPlanning },
   { path: "/glossary", component: GlossaryHub },
+  // District pages
+  { path: "/dubai/districts", component: DistrictsGateway },
+  { path: "/dubai/districts/downtown-dubai", component: DistrictDowntownDubai },
+  { path: "/dubai/districts/dubai-marina", component: DistrictDubaiMarina },
+  { path: "/dubai/districts/jbr-jumeirah-beach-residence", component: DistrictJBR },
+  { path: "/dubai/districts/palm-jumeirah", component: DistrictPalmJumeirah },
+  { path: "/dubai/districts/jumeirah", component: DistrictJumeirah },
+  { path: "/dubai/districts/business-bay", component: DistrictBusinessBay },
+  { path: "/dubai/districts/old-dubai", component: DistrictOldDubai },
+  { path: "/dubai/districts/dubai-creek-harbour", component: DistrictDubaiCreekHarbour },
+  { path: "/dubai/districts/dubai-south", component: DistrictDubaiSouth },
+  { path: "/dubai/districts/al-barsha", component: DistrictAlBarsha },
 ];
 
 // Locale codes for URL prefixes (16 languages, English is default without prefix)
