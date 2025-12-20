@@ -1260,12 +1260,13 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
 
         // STEP 2: Create all content blocks with validated data
         // Provide BOTH formats to ensure compatibility with editor AND renderer
-        const blocks: ContentBlock[] = [];
+        let blocks: ContentBlock[] = [];
         let blockOrder = 0;
+        const timestamp = Date.now();
 
         // Hero block - uses 'image' for renderer
         blocks.push({
-          id: `hero-${Date.now()}-${blockOrder}`,
+          id: `hero-${timestamp}-${blockOrder}`,
           type: "hero",
           data: {
             title: mergedData.title || cluster.topic,
@@ -1276,41 +1277,102 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
           order: blockOrder++
         });
 
-        // Main content block
-        blocks.push({
-          id: `text-${Date.now()}-${blockOrder}`,
-          type: "text",
-          data: { heading: '', content: mergedData.content },
-          order: blockOrder++
-        });
+        // Split main content into 3 sections for interspersed images
+        const mainContent = mergedData.content || '';
+        const paragraphs = mainContent.split(/\n\n+/).filter((p: string) => p.trim().length > 0);
+        const sectionSize = Math.ceil(paragraphs.length / 3);
+        
+        const section1 = paragraphs.slice(0, sectionSize).join('\n\n');
+        const section2 = paragraphs.slice(sectionSize, sectionSize * 2).join('\n\n');
+        const section3 = paragraphs.slice(sectionSize * 2).join('\n\n');
 
         // Highlights block - provide BOTH formats for compatibility
         blocks.push({
-          id: `highlights-${Date.now()}-${blockOrder}`,
+          id: `highlights-${timestamp}-${blockOrder}`,
           type: "highlights",
           data: { 
             title: "Quick Facts",
-            content: mergedData.quickFacts.join('\n'), // Editor format
-            items: mergedData.quickFacts // Renderer format
+            content: mergedData.quickFacts.join('\n'),
+            items: mergedData.quickFacts
+          },
+          order: blockOrder++
+        });
+
+        // Content section 1
+        blocks.push({
+          id: `text-${timestamp}-${blockOrder}`,
+          type: "text",
+          data: { heading: '', content: section1 },
+          order: blockOrder++
+        });
+
+        // Image block 1
+        blocks.push({
+          id: `image-${timestamp}-${blockOrder}`,
+          type: "image",
+          data: { 
+            searchQuery: `Dubai ${category} tourism ${(mergedData.secondaryKeywords || [])[0] || 'travel'}`,
+            alt: `Dubai ${category} - ${mergedData.title}`,
+            caption: `Explore the best of Dubai ${category}`
+          },
+          order: blockOrder++
+        });
+
+        // Content section 2
+        blocks.push({
+          id: `text-${timestamp}-${blockOrder}`,
+          type: "text",
+          data: { heading: '', content: section2 },
+          order: blockOrder++
+        });
+
+        // Image block 2
+        blocks.push({
+          id: `image-${timestamp}-${blockOrder}`,
+          type: "image",
+          data: { 
+            searchQuery: `Dubai ${(mergedData.secondaryKeywords || [])[1] || 'attractions'} experience`,
+            alt: `Dubai travel experience - ${mergedData.title}`,
+            caption: `Discover Dubai's unique experiences`
+          },
+          order: blockOrder++
+        });
+
+        // Content section 3
+        blocks.push({
+          id: `text-${timestamp}-${blockOrder}`,
+          type: "text",
+          data: { heading: '', content: section3 },
+          order: blockOrder++
+        });
+
+        // Image block 3
+        blocks.push({
+          id: `image-${timestamp}-${blockOrder}`,
+          type: "image",
+          data: { 
+            searchQuery: `Dubai ${(mergedData.secondaryKeywords || [])[2] || 'landmarks'} skyline`,
+            alt: `Dubai skyline and landmarks - ${mergedData.title}`,
+            caption: `The stunning Dubai skyline`
           },
           order: blockOrder++
         });
 
         // Tips block - provide BOTH formats for compatibility
         blocks.push({
-          id: `tips-${Date.now()}-${blockOrder}`,
+          id: `tips-${timestamp}-${blockOrder}`,
           type: "tips",
           data: { 
             title: "Pro Tips",
-            content: mergedData.proTips.join('\n'), // Editor format
-            tips: mergedData.proTips // Renderer format
+            content: mergedData.proTips.join('\n'),
+            tips: mergedData.proTips
           },
           order: blockOrder++
         });
 
         // FAQ block - single block with questions array (for proper heading/accordion display)
         blocks.push({
-          id: `faq-${Date.now()}-${blockOrder}`,
+          id: `faq-${timestamp}-${blockOrder}`,
           type: "faq",
           data: {
             title: "Frequently Asked Questions",
@@ -1324,7 +1386,7 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
 
         // CTA block
         blocks.push({
-          id: `cta-${Date.now()}-${blockOrder}`,
+          id: `cta-${timestamp}-${blockOrder}`,
           type: "cta",
           data: {
             title: "Plan Your Visit",
@@ -1334,6 +1396,10 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
           },
           order: blockOrder++
         });
+
+        // Process image blocks to fetch real images from Freepik/AI
+        console.log(`[RSS Auto-Process] Fetching images for ${blocks.filter(b => b.type === 'image').length} image blocks...`);
+        blocks = await processImageBlocks(blocks, category);
 
         const content = await storage.createContent({
           title: mergedData.title || cluster.topic,

@@ -1,24 +1,25 @@
 import { z } from "zod";
 
 // Zod schema for validating AI-generated article content
+// Note: Minimum requirements lowered to accommodate RSS-sourced news articles which tend to be shorter
 export const ArticleResponseSchema = z.object({
-  title: z.string().min(30).max(80).describe("SEO headline 50-65 chars, keyword first"),
-  metaDescription: z.string().min(100).max(180).describe("Meta description 150-160 chars"),
+  title: z.string().min(20).max(100).describe("SEO headline, keyword first"),
+  metaDescription: z.string().min(50).max(200).describe("Meta description 100-160 chars"),
   category: z.string(),
   urgencyLevel: z.enum(["urgent", "relevant", "evergreen"]),
   targetAudience: z.array(z.string()).min(1),
-  content: z.string().min(3000).describe("Full HTML article content, minimum 800 words"),
-  quickFacts: z.array(z.string()).min(5).max(7).describe("5-7 key facts"),
-  proTips: z.array(z.string()).min(5).max(7).describe("5-7 insider tips"),
+  content: z.string().min(1000).describe("Full HTML article content, minimum 400 words"),
+  quickFacts: z.array(z.string()).min(3).max(7).describe("3-7 key facts"),
+  proTips: z.array(z.string()).min(3).max(7).describe("3-7 insider tips"),
   warnings: z.array(z.string()).default([]),
   faqs: z.array(z.object({
-    question: z.string().min(20),
-    answer: z.string().min(50)
-  })).min(5).max(7).describe("5-7 FAQs"),
+    question: z.string().min(10),
+    answer: z.string().min(30)
+  })).min(3).max(7).describe("3-7 FAQs"),
   sources: z.array(z.string()).default([]),
   primaryKeyword: z.string().min(3),
-  secondaryKeywords: z.array(z.string()).min(3).max(10),
-  imageSearchTerms: z.array(z.string()).min(3).max(5).describe("Keywords for Freepik image search")
+  secondaryKeywords: z.array(z.string()).min(2).max(10),
+  imageSearchTerms: z.array(z.string()).min(2).max(5).describe("Keywords for Freepik image search")
 });
 
 export type ArticleResponse = z.infer<typeof ArticleResponseSchema>;
@@ -52,9 +53,9 @@ export function validateArticleResponse(response: unknown): ValidationResult {
     const textContent = parsed.data.content.replace(/<[^>]*>/g, '');
     result.wordCount = textContent.split(/\s+/).filter(w => w.length > 0).length;
 
-    // Check minimum word count
-    if (result.wordCount < 800) {
-      result.errors.push(`Word count ${result.wordCount} is below minimum 800 words`);
+    // Check minimum word count (lowered to 400 for RSS-sourced news articles)
+    if (result.wordCount < 400) {
+      result.errors.push(`Word count ${result.wordCount} is below minimum 400 words`);
       return result;
     }
 
@@ -77,21 +78,19 @@ ERRORS FOUND:
 ${errors.map(e => `- ${e}`).join('\n')}
 
 REQUIREMENTS REMINDER:
-1. Article content MUST be at least 800 words (count: ${JSON.stringify(originalResponse).length} chars is NOT enough)
-2. You MUST provide exactly 5-7 quickFacts
-3. You MUST provide exactly 5-7 proTips
-4. You MUST provide exactly 5-7 FAQs with detailed questions and answers
-5. You MUST provide 3-5 imageSearchTerms for finding relevant Freepik images
-6. Title must be 50-65 characters
-7. Meta description must be 150-160 characters
+1. Article content MUST be at least 400 words (minimum 1000 characters)
+2. You MUST provide 3-7 quickFacts
+3. You MUST provide 3-7 proTips
+4. You MUST provide 3-7 FAQs with questions (min 10 chars) and answers (min 30 chars)
+5. You MUST provide 2-5 imageSearchTerms for finding relevant Freepik images
+6. Title must be 20-100 characters
+7. Meta description must be 50-200 characters
 
 EXPAND YOUR CONTENT:
 - Add more detailed paragraphs with specific information
-- Include background context and history
-- Add comparisons with similar attractions/places
-- Include practical visitor information
-- Describe the experience in sensory detail
-- Add related recommendations
+- Include background context and practical details
+- Include visitor information if applicable
+- Describe the experience in detail
 
 Please provide the COMPLETE response again with ALL required fields properly filled.`;
 }
