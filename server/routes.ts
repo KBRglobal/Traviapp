@@ -74,6 +74,7 @@ import {
   type GeneratedImage,
   type ImageGenerationOptions
 } from "./ai-generator";
+import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-queue";
 
 // Permission checking utilities (imported from security.ts for route-level checks)
 type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
@@ -4975,6 +4976,79 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     } catch (error) {
       console.error("Error fetching blocked IPs:", error);
       res.status(500).json({ error: "Failed to fetch blocked IPs" });
+    }
+  });
+
+  // ============================================================================
+  // JOB QUEUE ENDPOINTS
+  // ============================================================================
+
+  // Get job queue statistics
+  app.get("/api/admin/jobs/stats", requirePermission("canPublish"), (req, res) => {
+    try {
+      const stats = jobQueue.getStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching job stats:", error);
+      res.status(500).json({ error: "Failed to fetch job statistics" });
+    }
+  });
+
+  // Get jobs by status
+  app.get("/api/admin/jobs", requirePermission("canPublish"), (req, res) => {
+    try {
+      const { status = 'pending' } = req.query;
+      const validStatuses = ['pending', 'processing', 'completed', 'failed'];
+      if (!validStatuses.includes(status as string)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      const jobs = jobQueue.getJobsByStatus(status as any);
+      res.json({ jobs, total: jobs.length });
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      res.status(500).json({ error: "Failed to fetch jobs" });
+    }
+  });
+
+  // Get single job status
+  app.get("/api/admin/jobs/:id", requirePermission("canPublish"), (req, res) => {
+    try {
+      const job = jobQueue.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      console.error("Error fetching job:", error);
+      res.status(500).json({ error: "Failed to fetch job" });
+    }
+  });
+
+  // Cancel a pending job
+  app.delete("/api/admin/jobs/:id", requirePermission("canPublish"), (req, res) => {
+    try {
+      const cancelled = jobQueue.cancelJob(req.params.id);
+      if (!cancelled) {
+        return res.status(400).json({ error: "Cannot cancel job (not pending or not found)" });
+      }
+      res.json({ success: true, message: "Job cancelled" });
+    } catch (error) {
+      console.error("Error cancelling job:", error);
+      res.status(500).json({ error: "Failed to cancel job" });
+    }
+  });
+
+  // Retry a failed job
+  app.post("/api/admin/jobs/:id/retry", requirePermission("canPublish"), (req, res) => {
+    try {
+      const retried = jobQueue.retryJob(req.params.id);
+      if (!retried) {
+        return res.status(400).json({ error: "Cannot retry job (not failed or not found)" });
+      }
+      res.json({ success: true, message: "Job queued for retry" });
+    } catch (error) {
+      console.error("Error retrying job:", error);
+      res.status(500).json({ error: "Failed to retry job" });
     }
   });
 
