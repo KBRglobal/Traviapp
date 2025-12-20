@@ -2009,6 +2009,289 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== Topic Clusters API (RSS Aggregation) ====================
+  
+  // Get all topic clusters
+  app.get("/api/topic-clusters", requireAuth, async (req, res) => {
+    try {
+      const { status } = req.query;
+      const clusters = await storage.getTopicClusters(status ? { status: status as string } : undefined);
+      
+      // Get items for each cluster
+      const clustersWithItems = await Promise.all(
+        clusters.map(async (cluster) => {
+          const items = await storage.getTopicClusterItems(cluster.id);
+          return { ...cluster, items };
+        })
+      );
+      
+      res.json(clustersWithItems);
+    } catch (error) {
+      console.error("Error fetching topic clusters:", error);
+      res.status(500).json({ error: "Failed to fetch topic clusters" });
+    }
+  });
+
+  // Add articles to aggregation queue (smart dedup + clustering)
+  const rssAggregateSchema = z.object({
+    items: z.array(z.object({
+      title: z.string().min(1),
+      description: z.string().optional(),
+      link: z.string().url().optional(),
+      pubDate: z.string().optional(),
+      rssFeedId: z.string().optional(),
+    })).min(1).max(100),
+  });
+
+  app.post("/api/rss-aggregate", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const parsed = rssAggregateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid data", details: parsed.error.errors });
+      }
+
+      const { items } = parsed.data;
+      const clustered: { clusterId: string; topic: string; itemCount: number }[] = [];
+      const newClusters: { clusterId: string; topic: string }[] = [];
+      const skippedDuplicates: string[] = [];
+
+      for (const item of items) {
+        // Check if this exact article was already processed (fingerprint check)
+        const fingerprint = generateFingerprint(item.title, item.link);
+        const existingFp = await storage.getContentFingerprintByHash(fingerprint);
+        if (existingFp) {
+          skippedDuplicates.push(item.title);
+          continue;
+        }
+
+        // Find or create a topic cluster for this article
+        let cluster = await storage.findSimilarCluster(item.title);
+        
+        if (!cluster) {
+          // Create new cluster
+          cluster = await storage.createTopicCluster({
+            topic: item.title,
+            status: "pending",
+            articleCount: 0,
+          });
+          newClusters.push({ clusterId: cluster.id, topic: cluster.topic });
+        }
+
+        // Add item to cluster
+        const clusterItem = await storage.createTopicClusterItem({
+          clusterId: cluster.id,
+          sourceTitle: item.title,
+          sourceDescription: item.description || null,
+          sourceUrl: item.link || null,
+          rssFeedId: item.rssFeedId || null,
+          pubDate: item.pubDate ? new Date(item.pubDate) : null,
+        });
+
+        // Record fingerprint immediately to prevent re-adding the same item
+        try {
+          await storage.createContentFingerprint({
+            contentId: null, // Not yet merged into content
+            fingerprint: fingerprint,
+            sourceUrl: item.link || null,
+            sourceTitle: item.title,
+            rssFeedId: item.rssFeedId || null,
+          });
+        } catch (e) {
+          // Fingerprint might already exist in rare edge case
+        }
+
+        // Update cluster article count
+        const clusterItems = await storage.getTopicClusterItems(cluster.id);
+        await storage.updateTopicCluster(cluster.id, {
+          articleCount: clusterItems.length,
+          similarityScore: clusterItems.length > 1 ? Math.min(90, 50 + clusterItems.length * 10) : 50,
+        });
+
+        const existing = clustered.find(c => c.clusterId === cluster!.id);
+        if (existing) {
+          existing.itemCount++;
+        } else {
+          clustered.push({ clusterId: cluster.id, topic: cluster.topic, itemCount: 1 });
+        }
+      }
+
+      res.status(201).json({
+        message: `Processed ${items.length} articles`,
+        clustered,
+        newClusters,
+        skippedDuplicates,
+        summary: {
+          totalProcessed: items.length,
+          clustersAffected: clustered.length,
+          newClustersCreated: newClusters.length,
+          duplicatesSkipped: skippedDuplicates.length,
+        }
+      });
+    } catch (error) {
+      console.error("Error aggregating RSS items:", error);
+      res.status(500).json({ error: "Failed to aggregate RSS items" });
+    }
+  });
+
+  // AI-powered merge cluster into single article
+  app.post("/api/topic-clusters/:id/merge", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const cluster = await storage.getTopicCluster(req.params.id);
+      if (!cluster) {
+        return res.status(404).json({ error: "Topic cluster not found" });
+      }
+
+      const items = await storage.getTopicClusterItems(cluster.id);
+      if (items.length === 0) {
+        return res.status(400).json({ error: "No items in cluster to merge" });
+      }
+
+      // Prepare sources for AI merging
+      const sources = items.map(item => ({
+        title: item.sourceTitle,
+        description: item.sourceDescription || '',
+        url: item.sourceUrl || '',
+        date: item.pubDate?.toISOString() || '',
+      }));
+
+      // Use OpenAI to merge the articles
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(503).json({ error: "OpenAI API not configured. Please set OPENAI_API_KEY." });
+      }
+
+      const prompt = `You are a professional journalist. Merge the following ${sources.length} news articles about the same topic into ONE comprehensive article.
+
+SOURCES:
+${sources.map((s, i) => `[Source ${i + 1}] ${s.title}\n${s.description}\nURL: ${s.url}\nDate: ${s.date}`).join('\n\n')}
+
+Create a comprehensive merged article with:
+1. A clear, SEO-friendly title
+2. A comprehensive summary (2-3 paragraphs) that includes all unique information from all sources
+3. Key facts and details from all sources
+4. Proper attribution to sources where relevant
+
+Respond in JSON format:
+{
+  "title": "Merged article title",
+  "metaDescription": "SEO meta description (150-160 chars)",
+  "content": "Full merged article content in HTML format with paragraphs",
+  "keyPoints": ["Key point 1", "Key point 2", ...],
+  "sources": ["Source 1 name", "Source 2 name", ...]
+}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      });
+
+      const mergedData = JSON.parse(completion.choices[0].message.content || "{}");
+
+      // Create merged content
+      const slug = mergedData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .substring(0, 80);
+
+      const content = await storage.createContent({
+        title: mergedData.title,
+        slug: `${slug}-${Date.now()}`,
+        type: "article",
+        status: "draft",
+        metaDescription: mergedData.metaDescription || null,
+        blocks: [
+          {
+            id: `text-${Date.now()}-0`,
+            type: "text",
+            data: {
+              heading: mergedData.title,
+              content: mergedData.content || "",
+            },
+            order: 0,
+          },
+          ...(mergedData.keyPoints?.length > 0 ? [{
+            id: `highlights-${Date.now()}-1`,
+            type: "highlights",
+            data: {
+              heading: "Key Points",
+              items: mergedData.keyPoints,
+            },
+            order: 1,
+          }] : []),
+        ],
+      });
+
+      // Create article entry
+      await storage.createArticle({
+        contentId: content.id,
+        category: "news",
+      });
+
+      // Create fingerprints for all source items
+      for (const item of items) {
+        if (item.sourceUrl) {
+          const fp = generateFingerprint(item.sourceTitle, item.sourceUrl);
+          try {
+            await storage.createContentFingerprint({
+              contentId: content.id,
+              fingerprint: fp,
+              sourceUrl: item.sourceUrl,
+              sourceTitle: item.sourceTitle,
+              rssFeedId: item.rssFeedId || null,
+            });
+          } catch (e) {
+            // Fingerprint might already exist
+          }
+        }
+        await storage.updateTopicClusterItem(item.id, { isUsedInMerge: true });
+      }
+
+      // Update cluster status
+      await storage.updateTopicCluster(cluster.id, {
+        status: "merged",
+        mergedContentId: content.id,
+      });
+
+      res.status(201).json({
+        message: `Successfully merged ${items.length} articles`,
+        content,
+        mergedFrom: items.length,
+        sources: mergedData.sources || [],
+      });
+    } catch (error) {
+      console.error("Error merging cluster:", error);
+      res.status(500).json({ error: "Failed to merge articles" });
+    }
+  });
+
+  // Dismiss a cluster (mark as not needing merge)
+  app.post("/api/topic-clusters/:id/dismiss", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const cluster = await storage.updateTopicCluster(req.params.id, { status: "dismissed" });
+      if (!cluster) {
+        return res.status(404).json({ error: "Topic cluster not found" });
+      }
+      res.json({ message: "Cluster dismissed", cluster });
+    } catch (error) {
+      console.error("Error dismissing cluster:", error);
+      res.status(500).json({ error: "Failed to dismiss cluster" });
+    }
+  });
+
+  // Delete a topic cluster
+  app.delete("/api/topic-clusters/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
+    try {
+      await storage.deleteTopicCluster(req.params.id);
+      res.json({ message: "Cluster deleted" });
+    } catch (error) {
+      console.error("Error deleting cluster:", error);
+      res.status(500).json({ error: "Failed to delete cluster" });
+    }
+  });
+
   app.get("/api/affiliate-links", requireAuth, async (req, res) => {
     try {
       const { contentId } = req.query;

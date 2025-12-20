@@ -26,6 +26,8 @@ import {
   tags,
   contentTags,
   otpCodes,
+  topicClusters,
+  topicClusterItems,
   type User,
   type InsertUser,
   type UpsertUser,
@@ -85,6 +87,10 @@ import {
   type InsertContentTag,
   type OtpCode,
   type InsertOtpCode,
+  type TopicCluster,
+  type InsertTopicCluster,
+  type TopicClusterItem,
+  type InsertTopicClusterItem,
   homepagePromotions,
   newsletterCampaigns,
   campaignEvents,
@@ -203,6 +209,17 @@ export interface IStorage {
   getContentFingerprintsByFeedId(rssFeedId: string): Promise<ContentFingerprint[]>;
   createContentFingerprint(fingerprint: InsertContentFingerprint): Promise<ContentFingerprint>;
   checkDuplicateFingerprints(fingerprints: string[]): Promise<ContentFingerprint[]>;
+
+  // Topic Clusters for RSS aggregation
+  getTopicClusters(filters?: { status?: string }): Promise<TopicCluster[]>;
+  getTopicCluster(id: string): Promise<TopicCluster | undefined>;
+  createTopicCluster(cluster: InsertTopicCluster): Promise<TopicCluster>;
+  updateTopicCluster(id: string, data: Partial<InsertTopicCluster>): Promise<TopicCluster | undefined>;
+  deleteTopicCluster(id: string): Promise<boolean>;
+  getTopicClusterItems(clusterId: string): Promise<TopicClusterItem[]>;
+  createTopicClusterItem(item: InsertTopicClusterItem): Promise<TopicClusterItem>;
+  updateTopicClusterItem(id: string, data: Partial<InsertTopicClusterItem>): Promise<TopicClusterItem | undefined>;
+  findSimilarCluster(topic: string): Promise<TopicCluster | undefined>;
 
   getScheduledContentToPublish(): Promise<Content[]>;
   publishScheduledContent(id: string): Promise<Content | undefined>;
@@ -970,6 +987,88 @@ export class DatabaseStorage implements IStorage {
       .from(contentFingerprints)
       .where(sql`${contentFingerprints.fingerprint} = ANY(${fingerprints})`);
     return results;
+  }
+
+  // Topic Clusters for RSS aggregation
+  async getTopicClusters(filters?: { status?: string }): Promise<TopicCluster[]> {
+    if (filters?.status) {
+      return await db.select().from(topicClusters)
+        .where(eq(topicClusters.status, filters.status as any))
+        .orderBy(desc(topicClusters.createdAt));
+    }
+    return await db.select().from(topicClusters).orderBy(desc(topicClusters.createdAt));
+  }
+
+  async getTopicCluster(id: string): Promise<TopicCluster | undefined> {
+    const [cluster] = await db.select().from(topicClusters).where(eq(topicClusters.id, id));
+    return cluster;
+  }
+
+  async createTopicCluster(cluster: InsertTopicCluster): Promise<TopicCluster> {
+    const [created] = await db.insert(topicClusters).values(cluster as any).returning();
+    return created;
+  }
+
+  async updateTopicCluster(id: string, data: Partial<InsertTopicCluster>): Promise<TopicCluster | undefined> {
+    const [updated] = await db
+      .update(topicClusters)
+      .set({ ...data, updatedAt: new Date() } as any)
+      .where(eq(topicClusters.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTopicCluster(id: string): Promise<boolean> {
+    await db.delete(topicClusters).where(eq(topicClusters.id, id));
+    return true;
+  }
+
+  async getTopicClusterItems(clusterId: string): Promise<TopicClusterItem[]> {
+    return await db.select().from(topicClusterItems).where(eq(topicClusterItems.clusterId, clusterId));
+  }
+
+  async createTopicClusterItem(item: InsertTopicClusterItem): Promise<TopicClusterItem> {
+    const [created] = await db.insert(topicClusterItems).values(item as any).returning();
+    return created;
+  }
+
+  async updateTopicClusterItem(id: string, data: Partial<InsertTopicClusterItem>): Promise<TopicClusterItem | undefined> {
+    const [updated] = await db
+      .update(topicClusterItems)
+      .set(data as any)
+      .where(eq(topicClusterItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async findSimilarCluster(topic: string): Promise<TopicCluster | undefined> {
+    // Basic text similarity search - find clusters with similar topics
+    const topicLower = topic.toLowerCase().trim();
+    const words = topicLower.split(/\s+/).filter(w => w.length > 3).slice(0, 5);
+    if (words.length === 0) return undefined;
+    
+    const clusters = await db.select().from(topicClusters).where(eq(topicClusters.status, "pending"));
+    
+    // Find cluster with highest word overlap
+    let bestMatch: TopicCluster | undefined;
+    let bestScore = 0;
+    
+    for (const cluster of clusters) {
+      const clusterWords = cluster.topic.toLowerCase().split(/\s+/);
+      let matchCount = 0;
+      for (const word of words) {
+        if (clusterWords.some(cw => cw.includes(word) || word.includes(cw))) {
+          matchCount++;
+        }
+      }
+      const score = matchCount / Math.max(words.length, 1);
+      if (score > 0.5 && score > bestScore) {
+        bestScore = score;
+        bestMatch = cluster;
+      }
+    }
+    
+    return bestMatch;
   }
 
   async getScheduledContentToPublish(): Promise<Content[]> {

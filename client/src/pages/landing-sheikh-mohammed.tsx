@@ -698,34 +698,126 @@ export default function LandingSheikhMohammed() {
         </div>
       </section>
 
-      {/* Dubai 2040 Vision */}
-      <section className="py-20">
+      {/* Dubai 2040 Vision - Comprehensive Section */}
+      <section className="py-20 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <Badge className="mb-4 border-0 text-white" style={{ backgroundColor: uaeColors.gold }}>
               <Target className="w-4 h-4 mr-1" />
-              Dubai 2040
+              Dubai 2040 Urban Master Plan
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-              Urban Master Plan
+              Building the World's Best City
             </h2>
-            <p className="text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
-              "We aspire to make Dubai the world's best city to live in, work in and visit. The comprehensive plan we approved for the city embodies our vision for a sustainable, pioneering, and prosperous future for generations to come."
+            <p className="text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-2">
+              Launched by Sheikh Mohammed in March 2021, the Dubai 2040 Urban Master Plan embodies a persevering pursuit towards immense ambitions, 
+              aiming to make excellence and distinction the enduring goals of the present and future of the Emirate.
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-500 italic max-w-2xl mx-auto">
+              "We aspire to make Dubai the world's best city to live in, work in and visit."
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 text-center">
-            <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-lg">
-              <div className="text-4xl font-bold mb-2" style={{ color: uaeColors.gold }}>60%</div>
-              <p className="text-slate-600 dark:text-slate-400">Nature reserves and recreation</p>
+          {/* Key Outcomes Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg text-center">
+              <div className="text-3xl font-bold mb-1" style={{ color: uaeColors.gold }}>5.8M</div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Population by 2040</p>
+              <p className="text-xs text-slate-400">(from 3.3M today)</p>
             </div>
-            <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-lg">
-              <div className="text-4xl font-bold mb-2" style={{ color: uaeColors.gold }}>400%</div>
-              <p className="text-slate-600 dark:text-slate-400">Increase in public beaches</p>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg text-center">
+              <div className="text-3xl font-bold mb-1" style={{ color: uaeColors.gold }}>60%</div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Nature Reserves</p>
+              <p className="text-xs text-slate-400">& Natural Areas</p>
             </div>
-            <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-lg">
-              <div className="text-4xl font-bold mb-2" style={{ color: uaeColors.gold }}>5.8M</div>
-              <p className="text-slate-600 dark:text-slate-400">Population by 2040</p>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg text-center">
+              <div className="text-3xl font-bold mb-1" style={{ color: uaeColors.gold }}>+400%</div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Public Beaches</p>
+              <p className="text-xs text-slate-400">Length Increase</p>
+            </div>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg text-center">
+              <div className="text-3xl font-bold mb-1" style={{ color: uaeColors.gold }}>+134%</div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Tourism Areas</p>
+              <p className="text-xs text-slate-400">& Hospitality</p>
+            </div>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg text-center">
+              <div className="text-3xl font-bold mb-1" style={{ color: uaeColors.gold }}>5</div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Urban Centers</p>
+              <p className="text-xs text-slate-400">Development Hubs</p>
+            </div>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg text-center">
+              <div className="text-3xl font-bold mb-1" style={{ color: uaeColors.gold }}>+105%</div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Green Spaces</p>
+              <p className="text-xs text-slate-400">& Recreation</p>
+            </div>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg text-center">
+              <div className="text-3xl font-bold mb-1" style={{ color: uaeColors.gold }}>55%</div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Near Transit</p>
+              <p className="text-xs text-slate-400">Within 800m</p>
+            </div>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg text-center">
+              <div className="text-3xl font-bold mb-1" style={{ color: uaeColors.gold }}>+25%</div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Health & Education</p>
+              <p className="text-xs text-slate-400">Facility Space</p>
+            </div>
+          </div>
+
+          {/* Strategic Goals */}
+          <div className="mb-12">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white text-center mb-6">8 Strategic Goals</h3>
+            <div className="grid md:grid-cols-4 gap-4">
+              {[
+                { num: "01", title: "Optimize Resources", desc: "Spatial and infrastructure utilization" },
+                { num: "02", title: "Vibrant Communities", desc: "Planning healthy neighborhoods" },
+                { num: "03", title: "Green Spaces", desc: "Doubling leisure areas" },
+                { num: "04", title: "Sustainable Mobility", desc: "Flexible transport means" },
+                { num: "05", title: "Economic Growth", desc: "Fostering business activity" },
+                { num: "06", title: "Environment", desc: "Enhancing sustainability" },
+                { num: "07", title: "Heritage", desc: "Safeguarding culture" },
+                { num: "08", title: "Governance", desc: "Comprehensive planning law" },
+              ].map((goal) => (
+                <div key={goal.num} className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div className="text-xs font-bold mb-1" style={{ color: uaeColors.gold }}>{goal.num}</div>
+                  <div className="font-semibold text-sm text-slate-900 dark:text-white">{goal.title}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">{goal.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Major Projects */}
+          <div className="bg-slate-900 dark:bg-slate-950 rounded-2xl p-8 text-white">
+            <h3 className="text-xl font-bold text-center mb-6">Key Projects & Initiatives</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              {[
+                { title: "Metro Blue Line", status: "In Progress", desc: "Major transit expansion project" },
+                { title: "Hatta Development", status: "AED 3.6B", desc: "Mountain tourism destination" },
+                { title: "Therme Dubai", status: "AED 2B", desc: "Wellbeing resort project" },
+                { title: "Jebel Ali Beach", status: "Approved", desc: "Beach development project" },
+                { title: "5 Urban Centers", status: "Planning", desc: "Strategic growth hubs" },
+                { title: "Dubai Social Agenda 33", status: "Active", desc: "Community development" },
+              ].map((project, i) => (
+                <div key={i} className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="font-semibold text-sm">{project.title}</span>
+                    <Badge className="text-xs border-0" style={{ backgroundColor: uaeColors.gold }}>{project.status}</Badge>
+                  </div>
+                  <p className="text-xs text-slate-400">{project.desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="text-center mt-6">
+              <a 
+                href="https://dubai2040.ae/en/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm hover:underline"
+                style={{ color: uaeColors.gold }}
+                data-testid="link-dubai2040"
+              >
+                Visit Official Dubai 2040 Website
+                <ChevronRight className="w-4 h-4" />
+              </a>
             </div>
           </div>
         </div>
@@ -808,6 +900,15 @@ export default function LandingSheikhMohammed() {
               data-testid="link-source-gallery"
             >
               Official Image Gallery
+            </a>
+            <a 
+              href="https://dubai2040.ae/en/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500 transition-colors"
+              data-testid="link-source-dubai2040"
+            >
+              Dubai 2040 Urban Master Plan
             </a>
           </div>
           <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-6">

@@ -519,6 +519,50 @@ export const localeEnum = pgEnum("locale", [
 
 export const translationStatusEnum = pgEnum("translation_status", ["pending", "in_progress", "completed", "needs_review"]);
 
+// Topic Cluster status enum - for RSS aggregation
+export const topicClusterStatusEnum = pgEnum("topic_cluster_status", ["pending", "merged", "dismissed"]);
+
+// Topic Clusters table - for aggregating similar articles from multiple sources
+export const topicClusters = pgTable("topic_clusters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  topic: text("topic").notNull(), // AI-identified topic
+  status: topicClusterStatusEnum("status").notNull().default("pending"),
+  mergedContentId: varchar("merged_content_id").references(() => contents.id, { onDelete: "set null" }),
+  similarityScore: integer("similarity_score"), // 0-100 confidence score
+  articleCount: integer("article_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Topic Cluster Items - articles belonging to a cluster
+export const topicClusterItems = pgTable("topic_cluster_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clusterId: varchar("cluster_id").notNull().references(() => topicClusters.id, { onDelete: "cascade" }),
+  contentId: varchar("content_id").references(() => contents.id, { onDelete: "cascade" }),
+  rssFeedId: varchar("rss_feed_id").references(() => rssFeeds.id, { onDelete: "set null" }),
+  sourceUrl: text("source_url"),
+  sourceTitle: text("source_title").notNull(),
+  sourceDescription: text("source_description"),
+  pubDate: timestamp("pub_date"),
+  isUsedInMerge: boolean("is_used_in_merge").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTopicClusterSchema = createInsertSchema(topicClusters).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTopicCluster = z.infer<typeof insertTopicClusterSchema>;
+export type TopicCluster = typeof topicClusters.$inferSelect;
+
+export const insertTopicClusterItemSchema = createInsertSchema(topicClusterItems).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTopicClusterItem = z.infer<typeof insertTopicClusterItemSchema>;
+export type TopicClusterItem = typeof topicClusterItems.$inferSelect;
+
 // Content Fingerprints table - for RSS deduplication
 export const contentFingerprints = pgTable("content_fingerprints", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
