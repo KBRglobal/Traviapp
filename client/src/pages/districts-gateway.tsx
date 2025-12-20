@@ -1,14 +1,16 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   MapPin, Building2, Star, ArrowRight, 
-  Sparkles, Camera, ShoppingBag, Utensils 
+  Sparkles, Camera, Utensils,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
+import useEmblaCarousel from "embla-carousel-react";
 
 // District data
 const districts = [
@@ -235,86 +237,6 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
 };
 
-// Featured district card (larger, more detailed)
-function FeaturedDistrictCard({ district }: { district: typeof districts[0] }) {
-  return (
-    <motion.div
-      variants={itemVariants}
-      className="relative group rounded-3xl overflow-hidden"
-      data-testid={`card-district-featured-${district.id}`}
-    >
-      <Link href={`/districts/${district.id}`}>
-        <div className="relative aspect-[16/10] md:aspect-[21/9]">
-          {/* Background Image */}
-          <img
-            src={district.image}
-            alt={district.name}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-          
-          {/* Gradient Overlay */}
-          <div className={`absolute inset-0 bg-gradient-to-r ${district.gradient} opacity-60 mix-blend-multiply`} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-          
-          {/* Floating Badges */}
-          <div className="absolute top-6 left-6 flex flex-wrap gap-2">
-            <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 text-sm">
-              <Star className="w-3 h-3 mr-1" /> Featured District
-            </Badge>
-          </div>
-          
-          {/* Content */}
-          <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
-            <div className="max-w-3xl">
-              <p className="text-white/70 text-sm font-medium mb-2">{district.nameAr}</p>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight">
-                {district.name}
-              </h2>
-              <p className="text-xl md:text-2xl text-white/90 font-medium mb-4">{district.tagline}</p>
-              <p className="text-white/80 text-lg max-w-2xl mb-6 hidden md:block">
-                {district.description}
-              </p>
-              
-              {/* Highlights Pills */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                {district.highlights.map((highlight) => (
-                  <span
-                    key={highlight}
-                    className="px-4 py-2 rounded-full bg-white/15 backdrop-blur-sm text-white text-sm font-medium border border-white/20"
-                  >
-                    {highlight}
-                  </span>
-                ))}
-              </div>
-              
-              {/* Stats & CTA */}
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="flex gap-6 text-white/80 text-sm">
-                  <span className="flex items-center gap-2">
-                    <Camera className="w-4 h-4" /> {district.stats.attractions} Attractions
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4" /> {district.stats.hotels} Hotels
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <Utensils className="w-4 h-4" /> {district.stats.restaurants}+ Restaurants
-                  </span>
-                </div>
-                <Button 
-                  className="bg-white text-gray-900 hover:bg-white/90 gap-2 font-semibold"
-                  data-testid={`button-explore-${district.id}`}
-                >
-                  Explore District <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
-
 // Regular district card
 function DistrictCard({ district, index }: { district: typeof districts[0]; index: number }) {
   const isAvailable = district.available;
@@ -390,18 +312,39 @@ function DistrictCard({ district, index }: { district: typeof districts[0]; inde
 }
 
 export default function DistrictsGateway() {
-  const [featuredIndex, setFeaturedIndex] = useState(0);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
   
-  // Rotate featured district every 5 seconds
+  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
+  const scrollTo = useCallback((index: number) => emblaApi && emblaApi.scrollTo(index), [emblaApi]);
+  
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+  
   useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    setScrollSnaps(emblaApi.scrollSnapList());
+    emblaApi.on("select", onSelect);
+    return () => { emblaApi.off("select", onSelect); };
+  }, [emblaApi, onSelect]);
+  
+  // Auto-play carousel every 5 seconds
+  useEffect(() => {
+    if (!emblaApi) return;
     const interval = setInterval(() => {
-      setFeaturedIndex((prev) => (prev + 1) % districts.length);
+      emblaApi.scrollNext();
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [emblaApi]);
   
-  const featuredDistrict = districts[featuredIndex];
-  const otherDistricts = districts.filter((_, i) => i !== featuredIndex);
+  // Featured districts for carousel (top 6)
+  const featuredDistricts = districts.slice(0, 6);
+  const otherDistricts = districts.slice(6);
   
   return (
     <div className="min-h-screen bg-background">
@@ -499,17 +442,119 @@ export default function DistrictsGateway() {
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
       </section>
       
-      {/* Featured District */}
+      {/* Featured Districts Carousel */}
       <section id="featured" className="py-12 px-6">
         <div className="max-w-7xl mx-auto">
           <motion.div
-            initial="hidden"
-            whileInView="visible"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            variants={containerVariants}
+            className="text-center mb-8"
           >
-            <FeaturedDistrictCard district={featuredDistrict} />
+            <Badge className="bg-[#6443F4]/10 text-[#6443F4] border-[#6443F4]/30 mb-4">
+              <Star className="w-3 h-3 mr-1" /> Featured Districts
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-2">Top Destinations</h2>
+            <p className="text-muted-foreground">Swipe or use arrows to explore</p>
           </motion.div>
+          
+          {/* Carousel */}
+          <div className="relative">
+            {/* Navigation Arrows */}
+            <Button
+              size="icon"
+              variant="outline"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 bg-background/90 backdrop-blur border-border hidden md:flex"
+              onClick={scrollPrev}
+              data-testid="button-carousel-prev"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="outline"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 bg-background/90 backdrop-blur border-border hidden md:flex"
+              onClick={scrollNext}
+              data-testid="button-carousel-next"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+            
+            {/* Embla Carousel */}
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex gap-4">
+                {featuredDistricts.map((district, index) => (
+                  <div 
+                    key={district.id} 
+                    className="flex-[0_0_85%] sm:flex-[0_0_45%] md:flex-[0_0_calc(33.33%-16px)] min-w-0"
+                  >
+                    <Link href={`/districts/${district.id}`}>
+                      <div 
+                        className="relative rounded-2xl overflow-hidden group cursor-pointer"
+                        data-testid={`carousel-card-${district.id}`}
+                      >
+                        <div className="aspect-[4/5] relative">
+                          <img
+                            src={district.image}
+                            alt={district.name}
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <div className={`absolute inset-0 bg-gradient-to-br ${district.gradient} opacity-50 mix-blend-multiply`} />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                          
+                          {/* Content */}
+                          <div className="absolute bottom-0 left-0 right-0 p-5">
+                            <p className="text-white/60 text-xs font-medium mb-1">{district.nameAr}</p>
+                            <h3 className="text-2xl font-bold text-white mb-1">{district.name}</h3>
+                            <p className="text-white/80 text-sm mb-3">{district.tagline}</p>
+                            
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                              {district.bestFor.slice(0, 2).map((item) => (
+                                <span
+                                  key={item}
+                                  className="px-2 py-1 rounded-full bg-white/10 text-white/80 text-xs"
+                                >
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                            
+                            <div className="flex items-center gap-3 text-white/70 text-xs">
+                              <span className="flex items-center gap-1">
+                                <Camera className="w-3 h-3" /> {district.stats.attractions}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Building2 className="w-3 h-3" /> {district.stats.hotels}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Utensils className="w-3 h-3" /> {district.stats.restaurants}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Dots Navigation */}
+            <div className="flex justify-center gap-2 mt-6">
+              {scrollSnaps.map((_, index) => (
+                <button
+                  key={index}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                    index === selectedIndex 
+                      ? "bg-[#6443F4] w-8" 
+                      : "bg-[#6443F4]/30 hover:bg-[#6443F4]/50"
+                  }`}
+                  onClick={() => scrollTo(index)}
+                  data-testid={`carousel-dot-${index}`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </section>
       

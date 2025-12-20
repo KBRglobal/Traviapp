@@ -507,6 +507,72 @@ export default function PublicHome() {
           </div>
         </section>
 
+        {/* DISCOVER DUBAI DISTRICTS SECTION */}
+        <section className="py-20 bg-gradient-to-br from-[#6443F4] via-[#8B5CF6] to-[#F94498] relative overflow-hidden" data-testid="section-districts">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920')] bg-cover bg-center" />
+          </div>
+          
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="text-center mb-12">
+              <Badge className="bg-white/20 text-white border-white/30 mb-4">
+                <MapPin className="w-3 h-3 mr-1" />
+                21 Districts to Explore
+              </Badge>
+              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">
+                Discover Dubai's Districts
+              </h2>
+              <p className="text-xl text-white/80 max-w-2xl mx-auto">
+                From iconic Downtown to historic Old Dubai, explore neighborhoods that define the city's diverse character.
+              </p>
+            </div>
+
+            {/* Featured Districts Carousel */}
+            <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide mb-8">
+              {[
+                { name: "Downtown Dubai", tagline: "Iconic Burj Khalifa", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", slug: "downtown-dubai" },
+                { name: "Dubai Marina", tagline: "Waterfront Living", image: "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=400&h=300&fit=crop", slug: "dubai-marina" },
+                { name: "Palm Jumeirah", tagline: "The Eighth Wonder", image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=400&h=300&fit=crop", slug: "palm-jumeirah" },
+                { name: "Old Dubai", tagline: "Heritage & Souks", image: "https://images.unsplash.com/photo-1534551767192-78b8dd45b51b?w=400&h=300&fit=crop", slug: "old-dubai" },
+                { name: "DIFC", tagline: "Financial Hub", image: "https://images.unsplash.com/photo-1546412414-e1885259563a?w=400&h=300&fit=crop", slug: "difc" },
+                { name: "JBR Beach", tagline: "Beach Paradise", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", slug: "jbr-jumeirah-beach-residence" },
+              ].map((district, index) => (
+                <Link 
+                  key={district.slug} 
+                  href={`/districts/${district.slug}`}
+                  className="flex-shrink-0 snap-start"
+                  data-testid={`district-card-${district.slug}`}
+                >
+                  <div className="w-64 rounded-xl overflow-hidden bg-white/10 backdrop-blur border border-white/20 hover-elevate cursor-pointer">
+                    <div className="relative h-36">
+                      <img 
+                        src={district.image} 
+                        alt={district.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-white text-lg">{district.name}</h3>
+                      <p className="text-white/70 text-sm">{district.tagline}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            <div className="text-center">
+              <Link href="/districts">
+                <Button size="lg" className="bg-white text-[#6443F4] hover:bg-white/90 rounded-full px-8 gap-2" data-testid="button-explore-districts">
+                  Explore All 21 Districts
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* REGION NOTICE - Dubai Only Banner */}
         <section className="py-8 bg-gradient-to-r from-[#6C5CE7]/10 via-[#A855F7]/10 to-[#EC4899]/10 border-y border-[#6C5CE7]/20">
           <div className="max-w-4xl mx-auto px-6 text-center">
