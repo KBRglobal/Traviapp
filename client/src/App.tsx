@@ -87,6 +87,11 @@ const DistrictOldDubai = lazy(() => import("@/pages/district-old-dubai"));
 const DistrictDubaiCreekHarbour = lazy(() => import("@/pages/district-dubai-creek-harbour"));
 const DistrictDubaiSouth = lazy(() => import("@/pages/district-dubai-south"));
 const DistrictAlBarsha = lazy(() => import("@/pages/district-al-barsha"));
+const DistrictDIFC = lazy(() => import("@/pages/district-difc"));
+const DistrictDubaiHills = lazy(() => import("@/pages/district-dubai-hills"));
+const DistrictJVC = lazy(() => import("@/pages/district-jvc"));
+const DistrictBluewaters = lazy(() => import("@/pages/district-bluewaters-island"));
+const DistrictInternationalCity = lazy(() => import("@/pages/district-international-city"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -323,6 +328,11 @@ const publicRoutes = [
   { path: "/dubai/districts/dubai-creek-harbour", component: DistrictDubaiCreekHarbour },
   { path: "/dubai/districts/dubai-south", component: DistrictDubaiSouth },
   { path: "/dubai/districts/al-barsha", component: DistrictAlBarsha },
+  { path: "/dubai/districts/difc", component: DistrictDIFC },
+  { path: "/dubai/districts/dubai-hills-estate", component: DistrictDubaiHills },
+  { path: "/dubai/districts/jvc", component: DistrictJVC },
+  { path: "/dubai/districts/bluewaters-island", component: DistrictBluewaters },
+  { path: "/dubai/districts/international-city", component: DistrictInternationalCity },
 ];
 
 // Locale codes for URL prefixes (16 languages, English is default without prefix)
