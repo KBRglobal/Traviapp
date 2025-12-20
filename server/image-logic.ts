@@ -1190,6 +1190,173 @@ export async function selectImagesForContent(
 }
 
 // ============================================================================
+// FREEPIK TO MEDIA LIBRARY INTEGRATION
+// ============================================================================
+
+export interface DownloadToMediaLibraryResult {
+  success: boolean;
+  mediaFile?: {
+    id: string;
+    filename: string;
+    url: string;
+    altText: string;
+  };
+  error?: string;
+}
+
+/**
+ * Download an image from Freepik (or any URL) and save to Media Library
+ * Converts to WebP and stores with proper metadata
+ */
+export async function downloadToMediaLibrary(
+  imageUrl: string,
+  options: {
+    altText: string;
+    originalFilename?: string;
+    source?: 'freepik' | 'ai' | 'external';
+    contentId?: string;
+  }
+): Promise<DownloadToMediaLibraryResult> {
+  try {
+    // 1. Download the image
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      return { success: false, error: `Failed to download image: ${response.status}` };
+    }
+
+    const imageBuffer = Buffer.from(await response.arrayBuffer());
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+
+    // 2. Generate filename
+    const timestamp = Date.now();
+    const sourcePrefix = options.source || 'external';
+    const originalName = options.originalFilename || `image-${timestamp}`;
+    const filename = `${sourcePrefix}-${originalName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${timestamp}.webp`;
+
+    // 3. Convert to WebP (import sharp if needed)
+    let finalBuffer = imageBuffer;
+    let mimeType = contentType;
+    let width = 0;
+    let height = 0;
+
+    try {
+      const sharp = (await import('sharp')).default;
+      const processed = sharp(imageBuffer).webp({ quality: 85 });
+      const metadata = await processed.metadata();
+      finalBuffer = await processed.toBuffer();
+      mimeType = 'image/webp';
+      width = metadata.width || 0;
+      height = metadata.height || 0;
+    } catch (sharpError) {
+      console.warn('[ImageLogic] Sharp processing failed, using original:', sharpError);
+    }
+
+    // 4. Save to storage (object storage or local)
+    const objectStorageUrl = process.env.OBJECT_STORAGE_URL;
+    let fileUrl: string;
+
+    if (objectStorageUrl) {
+      // Upload to object storage
+      const uploadResponse = await fetch(`${objectStorageUrl}/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': mimeType },
+        body: finalBuffer,
+      });
+      if (uploadResponse.ok) {
+        const result = await uploadResponse.json();
+        fileUrl = result.url || `${objectStorageUrl}/${filename}`;
+      } else {
+        fileUrl = `/api/media/public/${filename}`;
+      }
+    } else {
+      // Save locally
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      await fs.mkdir(uploadsDir, { recursive: true });
+      await fs.writeFile(path.join(uploadsDir, filename), finalBuffer);
+      fileUrl = `/api/media/public/${filename}`;
+    }
+
+    // 5. Create media file record
+    const mediaFileId = `media_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+
+    return {
+      success: true,
+      mediaFile: {
+        id: mediaFileId,
+        filename,
+        url: fileUrl,
+        altText: options.altText,
+      },
+    };
+  } catch (error) {
+    console.error('[ImageLogic] Download to media library failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Search Freepik and optionally auto-download to Media Library
+ */
+export async function searchAndDownloadFreepik(
+  query: string,
+  options?: {
+    autoDownload?: boolean;
+    downloadCount?: number;
+    altTextPrefix?: string;
+    contentId?: string;
+    apiKey?: string;
+  }
+): Promise<{
+  searchResults: FreepikSearchResult[];
+  downloadedMedia: DownloadToMediaLibraryResult[];
+}> {
+  const apiKey = options?.apiKey || process.env.FREEPIK_API_KEY;
+
+  // Create a basic brief for the search
+  const brief: ImageSearchBrief = {
+    slotId: 'search',
+    role: 'hero',
+    primaryQuery: query,
+    alternativeQueries: [],
+    mustInclude: [],
+    mustExclude: [],
+    style: {
+      angle: 'wide',
+      mood: 'professional',
+      timeOfDay: 'day',
+    },
+  };
+
+  const searchResult = await searchFreepik(brief, apiKey);
+  const downloadedMedia: DownloadToMediaLibraryResult[] = [];
+
+  if (options?.autoDownload && searchResult.results.length > 0) {
+    const downloadCount = options.downloadCount || 1;
+    const toDownload = searchResult.results.slice(0, downloadCount);
+
+    for (const result of toDownload) {
+      const downloaded = await downloadToMediaLibrary(result.url, {
+        altText: options.altTextPrefix ? `${options.altTextPrefix} - ${result.title}` : result.title,
+        originalFilename: result.title,
+        source: 'freepik',
+        contentId: options.contentId,
+      });
+      downloadedMedia.push(downloaded);
+    }
+  }
+
+  return {
+    searchResults: searchResult.results,
+    downloadedMedia,
+  };
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -1203,5 +1370,7 @@ export const imageLogic = {
   searchFreepik,
   generateAiImagePrompt,
   selectImagesForContent,
+  downloadToMediaLibrary,
+  searchAndDownloadFreepik,
   SEO_THRESHOLD,
 };

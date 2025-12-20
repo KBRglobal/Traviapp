@@ -160,7 +160,7 @@ export default function Dashboard() {
                 {recentContent.map((content) => (
                   <Link
                     key={content.id}
-                    href={`/${content.type}s/${content.id}`}
+                    href={`/admin/${content.type}s/${content.id}`}
                     className="flex items-center gap-4 p-2 -mx-2 rounded-md hover-elevate active-elevate-2"
                     data-testid={`link-content-${content.id}`}
                   >

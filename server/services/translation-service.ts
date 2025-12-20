@@ -1,9 +1,58 @@
 import OpenAI from "openai";
 import { SUPPORTED_LOCALES, type Locale, type ContentBlock } from "@shared/schema";
 
-// Initialize OpenAI client for cost-effective translations
-// Switched from Claude Sonnet 4 ($15/M input, $75/M output) to GPT-4o-mini ($0.15/M input, $0.60/M output)
-// Savings: ~95% reduction in translation costs
+// ============================================================================
+// TRANSLATION PROVIDERS
+// ============================================================================
+// Multi-provider translation system for best quality/cost balance:
+// - DeepL: Premium quality, best for European languages ($20/M chars) - USE BY DEFAULT
+// - GPT-4o-mini: Cost-effective fallback ($0.15/M input) - for unsupported languages
+
+type TranslationProvider = 'deepl' | 'gpt' | 'auto';
+
+// DeepL supported language codes (official codes)
+const DEEPL_SUPPORTED_LANGUAGES: Record<string, string> = {
+  'en': 'EN',
+  'de': 'DE',
+  'fr': 'FR',
+  'es': 'ES',
+  'it': 'IT',
+  'nl': 'NL',
+  'pl': 'PL',
+  'pt': 'PT-BR',
+  'ru': 'RU',
+  'ja': 'JA',
+  'zh': 'ZH',
+  'ko': 'KO',
+  'ar': 'AR',
+  'tr': 'TR',
+  'uk': 'UK',
+  'id': 'ID',
+  'sv': 'SV',
+  'da': 'DA',
+  'fi': 'FI',
+  'nb': 'NB',
+  'el': 'EL',
+  'cs': 'CS',
+  'ro': 'RO',
+  'hu': 'HU',
+  'sk': 'SK',
+  'bg': 'BG',
+  'lt': 'LT',
+  'lv': 'LV',
+  'sl': 'SL',
+  'et': 'ET',
+};
+
+function isDeepLSupported(locale: string): boolean {
+  return locale in DEEPL_SUPPORTED_LANGUAGES;
+}
+
+function getDeepLLanguageCode(locale: string): string {
+  return DEEPL_SUPPORTED_LANGUAGES[locale] || locale.toUpperCase();
+}
+
+// Initialize OpenAI client for fallback translations
 function getOpenAIClient(): OpenAI | null {
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
@@ -11,6 +60,74 @@ function getOpenAIClient(): OpenAI | null {
     apiKey,
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
   });
+}
+
+// Translate using DeepL API
+async function translateWithDeepL(
+  text: string,
+  sourceLocale: string,
+  targetLocale: string
+): Promise<{ text: string; success: boolean; error?: string }> {
+  const apiKey = process.env.DEEPL_API_KEY;
+  if (!apiKey) {
+    return { text: '', success: false, error: 'DeepL API key not configured' };
+  }
+
+  try {
+    const sourceCode = getDeepLLanguageCode(sourceLocale);
+    const targetCode = getDeepLLanguageCode(targetLocale);
+
+    const response = await fetch('https://api-free.deepl.com/v2/translate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `DeepL-Auth-Key ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: [text],
+        source_lang: sourceCode,
+        target_lang: targetCode,
+        preserve_formatting: true,
+        tag_handling: 'html',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[DeepL] API error: ${response.status} - ${errorText}`);
+
+      // If free API limit exceeded, try pro API
+      if (response.status === 456 || response.status === 429) {
+        const proResponse = await fetch('https://api.deepl.com/v2/translate', {
+          method: 'POST',
+          headers: {
+            'Authorization': `DeepL-Auth-Key ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: [text],
+            source_lang: sourceCode,
+            target_lang: targetCode,
+            preserve_formatting: true,
+            tag_handling: 'html',
+          }),
+        });
+
+        if (proResponse.ok) {
+          const data = await proResponse.json();
+          return { text: data.translations[0].text, success: true };
+        }
+      }
+
+      return { text: '', success: false, error: `DeepL API error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    return { text: data.translations[0].text, success: true };
+  } catch (error) {
+    console.error('[DeepL] Translation error:', error);
+    return { text: '', success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 }
 
 // Translation prompts optimized for Dubai tourism content
@@ -59,8 +176,13 @@ interface ContentTranslation {
 }
 
 // Translate a single piece of text
-export async function translateText(request: TranslationRequest): Promise<TranslationResult> {
+// Uses DeepL for supported languages (higher quality), falls back to GPT-4o-mini
+export async function translateText(
+  request: TranslationRequest,
+  options?: { provider?: TranslationProvider }
+): Promise<TranslationResult> {
   const { text, sourceLocale, targetLocale, contentType = "body" } = request;
+  const provider = options?.provider || 'auto';
 
   if (!text || text.trim() === "") {
     return { translatedText: "", locale: targetLocale, success: true };
@@ -72,6 +194,28 @@ export async function translateText(request: TranslationRequest): Promise<Transl
 
   const targetLocaleInfo = SUPPORTED_LOCALES.find((l) => l.code === targetLocale);
   const targetLanguageName = targetLocaleInfo?.name || targetLocale;
+
+  // Try DeepL first for supported languages (better quality)
+  const useDeepL = provider === 'deepl' || (provider === 'auto' && isDeepLSupported(targetLocale) && process.env.DEEPL_API_KEY);
+
+  if (useDeepL) {
+    console.log(`[Translation] Using DeepL for ${sourceLocale} -> ${targetLocale}`);
+    const deeplResult = await translateWithDeepL(text, sourceLocale, targetLocale);
+
+    if (deeplResult.success) {
+      return {
+        translatedText: deeplResult.text,
+        locale: targetLocale,
+        success: true,
+      };
+    }
+
+    // Log the error but continue to fallback
+    console.warn(`[Translation] DeepL failed for ${targetLocale}: ${deeplResult.error}, falling back to GPT`);
+  }
+
+  // Fallback to GPT-4o-mini (or primary if DeepL not available)
+  console.log(`[Translation] Using GPT-4o-mini for ${sourceLocale} -> ${targetLocale}`);
 
   const contentTypeInstructions = {
     title: "This is a title/heading. Keep it concise, impactful, and SEO-friendly.",
@@ -93,7 +237,7 @@ export async function translateText(request: TranslationRequest): Promise<Transl
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",  // Cost-effective: $0.15/M input, $0.60/M output (vs Claude Sonnet $15/$75)
+      model: "gpt-4o-mini",  // Cost-effective fallback
       max_tokens: 4096,
       messages: [
         {
@@ -110,7 +254,7 @@ Text to translate:
 ${text}`,
         },
       ],
-      temperature: 0.3,  // Lower temperature for more consistent translations
+      temperature: 0.3,
     });
 
     const translatedText = response.choices[0]?.message?.content?.trim() || "";

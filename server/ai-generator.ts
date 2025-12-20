@@ -3999,45 +3999,52 @@ export async function generateArticleContent(
       ? `The article category should be "${category}".` 
       : "Determine the most appropriate category based on the topic.";
 
-    const modelConfig = getModelConfig('standard'); // Articles = standard (GPT-4o-mini for cost savings)
+    // Use GPT-4o for articles to ensure proper word count (mini often produces shorter content)
     const response = await openai.chat.completions.create({
-      model: modelConfig.model,
+      model: "gpt-4o",  // Using GPT-4o for articles to ensure 1200+ word count
+      max_tokens: 16000,
       messages: [
         { role: "system", content: ARTICLE_SYSTEM_PROMPT },
-        { 
-          role: "user", 
+        {
+          role: "user",
           content: `Generate a comprehensive article about: "${topic}"
 
 ${categoryInstruction}
 
-REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1500-2500 words across all text blocks
-- Choose the most appropriate writing personality (A-E) for this topic
-- Choose the most appropriate article structure (1-6) for this topic
-- Write engaging, SEO-optimized content valuable for Dubai travelers
+⚠️ CRITICAL WORD COUNT REQUIREMENT ⚠️
+MINIMUM TOTAL: 1,200 words | TARGET: 1,500-2,000 words
+Articles under 1,200 words will be REJECTED. Write DETAILED, COMPREHENSIVE content.
 
-MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
+Each text block MUST meet these MINIMUM word counts:
+- Introduction: AT LEAST 300 words (hook readers, establish context, preview content)
+- Main Section 1: AT LEAST 350 words (deep dive, specific examples, data points)
+- Main Section 2: AT LEAST 350 words (comprehensive coverage, practical details)
+- Main Section 3: AT LEAST 300 words (additional insights, local perspective)
+- Practical Information: AT LEAST 250 words (actionable guidance)
+
+MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array):
 1. hero block - with compelling title, subtitle, overlayText
-2. text block - "Introduction" (250-350 words, engaging hook)
-3. text block - Main content section 1 (300-400 words)
-4. text block - Main content section 2 (300-400 words)
-5. text block - Main content section 3 (250-350 words)
+2. text block - "Introduction" (300+ words, engaging hook with context)
+3. text block - Main content section 1 (350+ words, detailed exploration)
+4. text block - Main content section 2 (350+ words, practical insights)
+5. text block - Main content section 3 (300+ words, local tips and perspective)
 6. highlights block - with 6 key takeaways (REQUIRED)
-7. text block - "Practical Information" (200-250 words)
-8. tips block - with 7 detailed, actionable expert tips (this is REQUIRED, do NOT skip)
-9. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
+7. text block - "Practical Information" (250+ words, concrete guidance)
+8. tips block - with 7 detailed, actionable expert tips (each tip 30-50 words)
+9. faq block - with 8 FAQ items, each answer 150-200 words (this is REQUIRED)
 10. cta block - with relevant call to action
 
 ALSO REQUIRED in article object:
 - 5 quick facts
-- 7 pro tips
+- 7 pro tips (each 40-60 words with specific actionable advice)
 - Relevant warnings
-- 8 FAQ items with detailed 100-200 word answers
+- 8 FAQ items with detailed 150-200 word answers
 - 4 related topics for internal linking
 - 4 image descriptions with SEO alt text and captions
 - Comprehensive Article JSON-LD schema
 
-DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
+REMEMBER: Write LONG, DETAILED paragraphs. Each section should thoroughly cover its topic.
+DO NOT produce short, superficial content. Quality AND quantity are required.
 Output valid JSON only, no markdown code blocks.`
         }
       ],
@@ -4046,14 +4053,39 @@ Output valid JSON only, no markdown code blocks.`
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
-    
+
+    // Calculate actual word count
+    let wordCount = 0;
     if (result.content?.blocks) {
-      result.content.blocks = result.content.blocks.map((block: ContentBlock, index: number) => ({
-        ...block,
-        id: block.id || generateBlockId(),
-        order: index
-      }));
+      result.content.blocks = result.content.blocks.map((block: ContentBlock, index: number) => {
+        // Count words in text blocks
+        if (block.type === 'text' && block.data?.content) {
+          wordCount += (block.data.content as string).split(/\s+/).filter(Boolean).length;
+        }
+        if (block.type === 'faq' && block.data?.faqs) {
+          for (const faq of block.data.faqs as any[]) {
+            wordCount += (faq.question + ' ' + faq.answer).split(/\s+/).filter(Boolean).length;
+          }
+        }
+        if (block.type === 'tips' && block.data?.tips) {
+          for (const tip of block.data.tips as string[]) {
+            wordCount += tip.split(/\s+/).filter(Boolean).length;
+          }
+        }
+        return {
+          ...block,
+          id: block.id || generateBlockId(),
+          order: index
+        };
+      });
     }
+
+    // Store word count in result
+    if (result.content) {
+      result.content.wordCount = wordCount;
+    }
+
+    console.log(`Generated article "${topic}" with ${wordCount} words`);
 
     return result as GeneratedArticleContent;
   } catch (error) {

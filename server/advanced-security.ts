@@ -366,12 +366,46 @@ interface AuditLogEntry {
   severity: "info" | "warning" | "error" | "critical";
 }
 
-// In-memory audit log (use database in production)
+// Helper functions to map audit entry fields to database enum values
+// Valid actionTypes: create, update, delete, publish, unpublish, submit_for_review, approve, reject, login, logout, user_create, user_update, user_delete, role_change, settings_change, media_upload, media_delete, restore
+function mapActionToAuditType(action: string): "create" | "update" | "delete" | "publish" | "unpublish" | "login" | "logout" | "settings_change" | "role_change" | "media_upload" | "media_delete" | "restore" {
+  const actionLower = action.toLowerCase();
+  if (actionLower.includes('create') || actionLower.includes('add')) return 'create';
+  if (actionLower.includes('update') || actionLower.includes('edit') || actionLower.includes('modify')) return 'update';
+  if (actionLower.includes('delete') || actionLower.includes('remove')) return 'delete';
+  if (actionLower.includes('publish')) return 'publish';
+  if (actionLower.includes('unpublish')) return 'unpublish';
+  if (actionLower.includes('login')) return 'login';
+  if (actionLower.includes('logout')) return 'logout';
+  if (actionLower.includes('settings') || actionLower.includes('config')) return 'settings_change';
+  if (actionLower.includes('permission') || actionLower.includes('role')) return 'role_change';
+  if (actionLower.includes('upload') || actionLower.includes('media_upload')) return 'media_upload';
+  if (actionLower.includes('media_delete')) return 'media_delete';
+  if (actionLower.includes('restore')) return 'restore';
+  return 'update';  // Default to update instead of non-existent 'other'
+}
+
+// Valid entityTypes: content, user, media, settings, rss_feed, affiliate_link, translation, session, tag, cluster, campaign, newsletter_subscriber
+function mapEntityToType(resource?: string): "content" | "user" | "media" | "settings" | "translation" | "campaign" | "session" | "tag" | "cluster" {
+  if (!resource) return 'session';  // Default to session for system events
+  const resourceLower = resource.toLowerCase();
+  if (resourceLower.includes('content') || resourceLower.includes('article') || resourceLower.includes('hotel') || resourceLower.includes('attraction')) return 'content';
+  if (resourceLower.includes('user')) return 'user';
+  if (resourceLower.includes('media') || resourceLower.includes('image')) return 'media';
+  if (resourceLower.includes('settings') || resourceLower.includes('config')) return 'settings';
+  if (resourceLower.includes('translation') || resourceLower.includes('locale')) return 'translation';
+  if (resourceLower.includes('campaign') || resourceLower.includes('newsletter')) return 'campaign';
+  if (resourceLower.includes('tag')) return 'tag';
+  if (resourceLower.includes('cluster')) return 'cluster';
+  return 'content';  // Default to content
+}
+
+// Hybrid audit log: in-memory for fast queries + database for persistence
 const auditLogStore: Array<AuditLogEntry & { id: string; timestamp: Date }> = [];
 
 export const auditLogger = {
   /**
-   * Log an audit event
+   * Log an audit event to both memory and database
    */
   async log(entry: AuditLogEntry): Promise<string> {
     const id = `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -382,15 +416,33 @@ export const auditLogger = {
       timestamp: new Date(),
     };
 
+    // Add to in-memory store for fast access
     auditLogStore.push(fullEntry);
 
-    // Keep only last 50000 entries
+    // Keep only last 50000 entries in memory
     if (auditLogStore.length > 50000) {
       auditLogStore.splice(0, auditLogStore.length - 50000);
     }
 
-    // In production, also write to database:
-    // await db.insert(auditLogs).values(fullEntry);
+    // Write to database for persistence
+    try {
+      const resourceStr = entry.targetId || entry.targetType || '';
+      await db.insert(auditLogs).values({
+        userId: entry.userId || null,
+        userName: entry.userId ? `User ${entry.userId}` : 'System',
+        userRole: 'admin',
+        actionType: mapActionToAuditType(entry.action),
+        entityType: mapEntityToType(resourceStr),
+        entityId: resourceStr || null,
+        description: `${entry.action}${entry.details ? ': ' + JSON.stringify(entry.details) : ''}`,
+        beforeState: null,
+        afterState: entry.details || null,
+        ipAddress: entry.ipAddress || null,
+        userAgent: entry.userAgent || null,
+      });
+    } catch (dbError) {
+      console.error('[AuditLog] Failed to write to database:', dbError);
+    }
 
     // For critical events, send alert
     if (entry.severity === "critical") {

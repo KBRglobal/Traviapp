@@ -515,11 +515,115 @@ export function registerImageLogicRoutes(app: Express) {
           aiPromptGeneration: true,
           seoScoring: true,
           publishValidation: true,
+          mediaLibraryIntegration: true,
         },
       });
     } catch (error) {
       console.error("[ImageLogic] Error fetching config:", error);
       res.status(500).json({ error: "Failed to fetch config" });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // POST /api/image-logic/download-to-library
+  // Download an image from URL and save to Media Library
+  // -------------------------------------------------------------------------
+  app.post("/api/image-logic/download-to-library", async (req: Request, res: Response) => {
+    try {
+      const { imageUrl, altText, originalFilename, source, contentId } = req.body;
+
+      if (!imageUrl || !altText) {
+        return res.status(400).json({
+          error: "Missing required fields: imageUrl, altText",
+        });
+      }
+
+      const result = await imageLogic.downloadToMediaLibrary(imageUrl, {
+        altText,
+        originalFilename,
+        source: source || 'external',
+        contentId,
+      });
+
+      if (!result.success) {
+        return res.status(500).json({
+          error: "Failed to download image",
+          message: result.error,
+        });
+      }
+
+      // Save to database using storage
+      const storage = (await import("./storage")).storage;
+      const mediaFile = await storage.createMediaFile({
+        filename: result.mediaFile!.filename,
+        originalFilename: originalFilename || result.mediaFile!.filename,
+        mimeType: 'image/webp',
+        size: 0,  // Will be updated
+        url: result.mediaFile!.url,
+        altText: result.mediaFile!.altText,
+        width: null,
+        height: null,
+      });
+
+      res.json({
+        success: true,
+        mediaFile,
+      });
+    } catch (error) {
+      console.error("[ImageLogic] Error downloading to library:", error);
+      res.status(500).json({ error: "Failed to download to media library" });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // POST /api/image-logic/search-and-download
+  // Search Freepik and optionally auto-download to Media Library
+  // -------------------------------------------------------------------------
+  app.post("/api/image-logic/search-and-download", async (req: Request, res: Response) => {
+    try {
+      const { query, autoDownload, downloadCount, altTextPrefix, contentId } = req.body;
+
+      if (!query) {
+        return res.status(400).json({
+          error: "Missing required field: query",
+        });
+      }
+
+      const result = await imageLogic.searchAndDownloadFreepik(query, {
+        autoDownload,
+        downloadCount,
+        altTextPrefix,
+        contentId,
+      });
+
+      // If auto-download was successful, save to database
+      if (autoDownload && result.downloadedMedia.length > 0) {
+        const storage = (await import("./storage")).storage;
+
+        for (const download of result.downloadedMedia) {
+          if (download.success && download.mediaFile) {
+            await storage.createMediaFile({
+              filename: download.mediaFile.filename,
+              originalFilename: download.mediaFile.filename,
+              mimeType: 'image/webp',
+              size: 0,
+              url: download.mediaFile.url,
+              altText: download.mediaFile.altText,
+              width: null,
+              height: null,
+            });
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        searchResults: result.searchResults,
+        downloadedMedia: result.downloadedMedia,
+      });
+    } catch (error) {
+      console.error("[ImageLogic] Error in search-and-download:", error);
+      res.status(500).json({ error: "Failed to search and download" });
     }
   });
 
