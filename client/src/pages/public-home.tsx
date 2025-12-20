@@ -158,26 +158,26 @@ export default function PublicHome() {
           {/* Main Hero Content */}
           <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20">
             {/* Giant TRAVI Letters with Dubai Images - Always LTR for logo */}
-            <div className="text-center mb-8" dir="ltr">
-              <h1 className="text-[8rem] sm:text-[12rem] lg:text-[16rem] font-bold leading-none tracking-tight select-none">
+            <div className="text-center mb-8" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
+              <h1 className="text-[8rem] sm:text-[12rem] lg:text-[16rem] font-bold leading-none tracking-tight select-none inline-flex">
                 <span
-                  className="travi-letter-mask inline-block"
+                  className="travi-letter-mask"
                   style={{ backgroundImage: `url(${dubaiImages[0]})` }}
                 >T</span>
                 <span
-                  className="travi-letter-mask inline-block"
+                  className="travi-letter-mask"
                   style={{ backgroundImage: `url(${dubaiImages[1]})` }}
                 >R</span>
                 <span
-                  className="travi-letter-mask inline-block"
+                  className="travi-letter-mask"
                   style={{ backgroundImage: `url(${dubaiImages[2]})` }}
                 >A</span>
                 <span
-                  className="travi-letter-mask inline-block"
+                  className="travi-letter-mask"
                   style={{ backgroundImage: `url(${dubaiImages[3]})` }}
                 >V</span>
                 <span
-                  className="travi-letter-mask inline-block"
+                  className="travi-letter-mask"
                   style={{ backgroundImage: `url(${dubaiImages[4]})` }}
                 >I</span>
               </h1>
