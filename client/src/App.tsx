@@ -115,6 +115,7 @@ const Analytics = lazy(() => import("@/pages/analytics"));
 const AuditLogs = lazy(() => import("@/pages/audit-logs"));
 const NewsletterSubscribers = lazy(() => import("@/pages/newsletter-subscribers"));
 const Campaigns = lazy(() => import("@/pages/campaigns"));
+const TranslationsPage = lazy(() => import("@/pages/translations"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Login = lazy(() => import("@/pages/login"));
 const AccessDenied = lazy(() => import("@/pages/access-denied"));
@@ -201,6 +202,7 @@ function AdminRouter() {
         <Route path="/admin/audit-logs" component={AuditLogs} />
         <Route path="/admin/newsletter" component={NewsletterSubscribers} />
         <Route path="/admin/campaigns" component={Campaigns} />
+        <Route path="/admin/translations" component={TranslationsPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
