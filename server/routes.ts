@@ -1658,11 +1658,21 @@ export async function registerRoutes(
   });
 
   // Auto-translate content to all languages
+  // IMPORTANT: Only translates PUBLISHED content to save translation costs
   app.post("/api/contents/:id/translate-all", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const content = await storage.getContent(req.params.id);
       if (!content) {
         return res.status(404).json({ error: "Content not found" });
+      }
+
+      // CRITICAL: Only translate published content to avoid wasting money on drafts
+      if (content.status !== "published") {
+        return res.status(400).json({
+          error: "Cannot translate unpublished content",
+          message: "Only published content can be translated. Please publish the content first to save translation costs.",
+          currentStatus: content.status
+        });
       }
 
       const { tiers } = req.body; // Optional: only translate to specific tiers (1-7)
