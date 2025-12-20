@@ -168,6 +168,36 @@ export const DUBAI_KEYWORDS: Record<string, KeywordCategory> = {
       { topic: "Al Karama", keywords: ["karama", "shopping", "local", "markets"], priority: 2 },
     ]
   },
+  offplan_real_estate: {
+    name: "Off-Plan Real Estate",
+    nameHe: "נדל\"ן אוף פלאן",
+    topics: [
+      // Core Off-Plan Keywords
+      { topic: "Off Plan Properties Dubai", keywords: ["off plan properties dubai", "off plan dubai", "dubai off plan", "new developments"], priority: 1 },
+      { topic: "Off Plan Villas Dubai", keywords: ["off plan villas dubai", "villa projects", "townhouse off plan"], priority: 1 },
+      { topic: "Off Plan Apartments Dubai", keywords: ["off plan apartments dubai", "apartment projects", "residential units"], priority: 2 },
+      { topic: "Payment Plans Dubai", keywords: ["payment plan", "installment plan", "post handover payment plan"], priority: 1 },
+      // Top Developers
+      { topic: "Emaar Properties", keywords: ["emaar", "emaar properties", "downtown developer", "dubai hills"], priority: 1 },
+      { topic: "Damac Properties", keywords: ["damac", "damac properties", "luxury developer", "damac hills"], priority: 1 },
+      { topic: "Nakheel", keywords: ["nakheel", "palm developer", "island projects", "waterfront"], priority: 2 },
+      { topic: "Sobha Realty", keywords: ["sobha realty", "sobha hartland", "quality developer"], priority: 2 },
+      // Prime Investment Areas
+      { topic: "Dubai Hills Estate", keywords: ["dubai hills estate", "dubai hills", "golf course", "community"], priority: 1 },
+      { topic: "Dubai Creek Harbour", keywords: ["dubai creek harbour", "creek tower", "waterfront", "emaar"], priority: 1 },
+      { topic: "Mohammed bin Rashid City", keywords: ["mbr city", "meydan", "crystal lagoon", "luxury community"], priority: 2 },
+      { topic: "JVC Off Plan", keywords: ["jumeirah village circle", "jvc", "affordable off plan", "family area"], priority: 2 },
+      // Investment Essentials
+      { topic: "Dubai Golden Visa", keywords: ["golden visa", "investment visa", "property visa", "residency"], priority: 1 },
+      { topic: "Freehold Property Dubai", keywords: ["freehold", "foreign ownership", "freehold areas"], priority: 1 },
+      { topic: "Rental Yield Dubai", keywords: ["rental yield", "roi", "guaranteed returns", "investment returns"], priority: 2 },
+      { topic: "DLD Fees", keywords: ["dld fees", "registration fees", "transfer fees", "4 percent"], priority: 3 },
+      // Property Types
+      { topic: "Luxury Off Plan Dubai", keywords: ["luxury off plan dubai", "premium properties", "high-end", "ultra luxury"], priority: 1 },
+      { topic: "Waterfront Properties Dubai", keywords: ["waterfront", "beach access", "sea view", "marina view"], priority: 2 },
+      { topic: "Golf Course Properties", keywords: ["golf course view", "golf community", "emirates hills"], priority: 3 },
+    ]
+  },
 };
 
 export const IMAGE_TYPES = [

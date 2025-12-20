@@ -161,7 +161,7 @@ export default function AdminImageEngine() {
     });
   };
 
-  const categories = keywordsData?.categories ? Object.keys(keywordsData.categories) : [];
+  const categories = keywordsData?.categories ? Object.keys(keywordsData.categories).filter((c): c is string => typeof c === "string") : [];
   const topics = selectedCategory && keywordsData?.categories?.[selectedCategory]?.topics || [];
   const filteredTopics = topicSearch 
     ? (searchResults || keywordsData?.allTopics?.filter(t => 
@@ -297,7 +297,7 @@ export default function AdminImageEngine() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(keywordsData?.imageTypes || ["hero", "thumbnail", "gallery", "banner"]).map((type) => (
+                      {(keywordsData?.imageTypes || ["hero", "thumbnail", "gallery", "banner"]).filter((t): t is string => typeof t === "string").map((type) => (
                         <SelectItem key={type} value={type}>
                           {type.charAt(0).toUpperCase() + type.slice(1)}
                         </SelectItem>

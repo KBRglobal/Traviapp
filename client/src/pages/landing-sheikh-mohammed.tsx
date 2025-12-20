@@ -30,13 +30,16 @@ const uaeColors = {
 };
 
 const biographyTimeline = [
-  { year: "1949", event: "Born in Al Shindagha, Dubai", detail: "Third son of Sheikh Rashid bin Saeed Al Maktoum" },
-  { year: "1955", event: "Began formal education", detail: "Al Ahmedia School, later Al Shaab School" },
-  { year: "1966", event: "Studies in England", detail: "Bell School of Languages, Cambridge University" },
-  { year: "1968", event: "Head of Dubai Police", detail: "Appointed at age 19, first major public role" },
-  { year: "1971", event: "First UAE Minister of Defence", detail: "When UAE was formed on December 2, 1971" },
-  { year: "1995", event: "Crown Prince of Dubai", detail: "Designated heir to the Emirate" },
-  { year: "2006", event: "Ruler of Dubai", detail: "Vice President and Prime Minister of UAE" },
+  { year: "1949", event: "Born in Al Shindagha, Dubai", detail: "July 15 - Third son of Sheikh Rashid bin Saeed Al Maktoum and Sheikha Latifa bint Hamdan Al Nahyan. Grew up in Al Shindagha family home with over 100 household members." },
+  { year: "1955", event: "Began formal education", detail: "Started at Al Ahmedia School after private tutoring in Arabic and Islamic studies from age 4. Later attended Al Shaab School and Dubai Secondary School." },
+  { year: "1966", event: "Studies in England", detail: "Attended Bell Educational Trust's English Language School in UK, followed by Mons Officer Cadet School in Aldershot where he graduated with sword of honour as top Commonwealth student." },
+  { year: "1968", event: "Head of Dubai Police & Security", detail: "Appointed November 1, at age 20, becoming the youngest head of public security. First major public role in governance." },
+  { year: "1971", event: "First UAE Minister of Defence", detail: "On December 2, 1971, when UAE was formed, became Minister of Defence. Built the federal Union Defence Force." },
+  { year: "1973", event: "Crisis Negotiator", detail: "Successfully negotiated with hijackers of JAL Flight 404 and KLM Flight 861 at Dubai Airport, demonstrating leadership under pressure." },
+  { year: "1995", event: "Crown Prince of Dubai", detail: "Officially designated as heir to the Emirate of Dubai on January 3, 1995." },
+  { year: "2006", event: "Ruler of Dubai", detail: "On January 4, became Ruler of Dubai following his brother Sheikh Maktoum. Named Vice President and Prime Minister of UAE the next day." },
+  { year: "2012", event: "World Endurance Champion", detail: "Won FEI World Endurance Championship riding Madji Du Pont over 160km, showcasing his passion for equestrianism." },
+  { year: "2021", event: "Mars Mission Success", detail: "UAE's Hope Probe successfully entered Mars orbit on February 9, making UAE the 5th nation to reach Mars - a vision Sheikh Mohammed championed." },
 ];
 
 const heroStats = [
@@ -754,6 +757,63 @@ export default function LandingSheikhMohammed() {
               </Button>
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Sources & References */}
+      <section className="py-12 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-6">
+            <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              Sources & References
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
+              This page presents publicly available information about His Highness Sheikh Mohammed bin Rashid Al Maktoum.
+              For the most accurate and up-to-date information, please visit the official sources below.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 text-sm">
+            <a 
+              href="https://sheikhmohammed.ae" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500 transition-colors"
+              data-testid="link-source-official"
+            >
+              Official Website - sheikhmohammed.ae
+            </a>
+            <a 
+              href="https://en.wikipedia.org/wiki/Mohammed_bin_Rashid_Al_Maktoum" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500 transition-colors"
+              data-testid="link-source-wikipedia"
+            >
+              Wikipedia
+            </a>
+            <a 
+              href="https://uaecabinet.ae/en/biography" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500 transition-colors"
+              data-testid="link-source-cabinet"
+            >
+              UAE Cabinet Official Biography
+            </a>
+            <a 
+              href="https://sheikhmohammed.ae/en-us/imagegallery" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500 transition-colors"
+              data-testid="link-source-gallery"
+            >
+              Official Image Gallery
+            </a>
+          </div>
+          <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-6">
+            Images used on this page are licensed stock photographs representing Dubai landmarks and heritage.
+            For official photographs of Sheikh Mohammed, please visit the official gallery linked above.
+          </p>
         </div>
       </section>
 
