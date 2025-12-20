@@ -35,6 +35,9 @@ interface GalleryBlockData {
 
 interface FaqBlockData {
   questions?: { question: string; answer: string }[];
+  // Editor format: single Q&A
+  question?: string;
+  answer?: string;
 }
 
 interface CtaBlockData {
@@ -51,6 +54,7 @@ interface InfoGridBlockData {
 interface HighlightsBlockData {
   title?: string;
   items?: string[];
+  content?: string; // Editor format: newline-separated string
 }
 
 interface RoomCardsBlockData {
@@ -67,6 +71,7 @@ interface RoomCardsBlockData {
 interface TipsBlockData {
   title?: string;
   tips?: string[];
+  content?: string; // Editor format: newline-separated string
 }
 
 function HeroBlock({ data }: { data: HeroBlockData }) {
@@ -172,25 +177,47 @@ function GalleryBlock({ data }: { data: GalleryBlockData }) {
 }
 
 function FaqBlock({ data }: { data: FaqBlockData }) {
-  if (!data.questions?.length) return null;
+  // Support both formats: array of Q&As (questions) or single Q&A (question/answer)
+  if (data.questions?.length) {
+    // Original format: array of questions
+    return (
+      <Card className="p-6" data-testid="block-faq">
+        <h2 className="font-heading text-xl font-semibold mb-4">Frequently Asked Questions</h2>
+        <Accordion type="single" collapsible className="w-full">
+          {data.questions.map((item, index) => (
+            <AccordionItem key={index} value={`faq-${index}`}>
+              <AccordionTrigger className="text-left font-medium">
+                {item.question}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                {item.answer}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </Card>
+    );
+  }
   
-  return (
-    <Card className="p-6" data-testid="block-faq">
-      <h2 className="font-heading text-xl font-semibold mb-4">Frequently Asked Questions</h2>
-      <Accordion type="single" collapsible className="w-full">
-        {data.questions.map((item, index) => (
-          <AccordionItem key={index} value={`faq-${index}`}>
+  // Editor format: single Q&A block
+  if (data.question && data.answer) {
+    return (
+      <Card className="p-4" data-testid="block-faq">
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="faq-single">
             <AccordionTrigger className="text-left font-medium">
-              {item.question}
+              {data.question}
             </AccordionTrigger>
             <AccordionContent className="text-muted-foreground">
-              {item.answer}
+              {data.answer}
             </AccordionContent>
           </AccordionItem>
-        ))}
-      </Accordion>
-    </Card>
-  );
+        </Accordion>
+      </Card>
+    );
+  }
+  
+  return null;
 }
 
 function CtaBlock({ data }: { data: CtaBlockData }) {
@@ -245,7 +272,14 @@ function InfoGridBlock({ data }: { data: InfoGridBlockData }) {
 }
 
 function HighlightsBlock({ data }: { data: HighlightsBlockData }) {
-  if (!data.items?.length) return null;
+  // Support both formats: array (items) or newline-separated string (content)
+  const items = data.items?.length 
+    ? data.items 
+    : data.content 
+      ? data.content.split('\n').filter(item => item.trim())
+      : [];
+  
+  if (!items.length) return null;
   
   return (
     <Card className="p-6" data-testid="block-highlights">
@@ -253,7 +287,7 @@ function HighlightsBlock({ data }: { data: HighlightsBlockData }) {
         <h2 className="font-heading text-xl font-semibold mb-4">{data.title}</h2>
       )}
       <ul className="space-y-3" role="list">
-        {data.items.map((item, index) => (
+        {items.map((item, index) => (
           <li key={index} className="flex items-start gap-3" role="listitem">
             <Star className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
             <span className="text-muted-foreground">{item}</span>
@@ -319,7 +353,14 @@ function RoomCardsBlock({ data }: { data: RoomCardsBlockData }) {
 }
 
 function TipsBlock({ data }: { data: TipsBlockData }) {
-  if (!data.tips?.length) return null;
+  // Support both formats: array (tips) or newline-separated string (content)
+  const tips = data.tips?.length 
+    ? data.tips 
+    : data.content 
+      ? data.content.split('\n').filter(tip => tip.trim())
+      : [];
+  
+  if (!tips.length) return null;
   
   return (
     <Card className="p-6 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" data-testid="block-tips">
@@ -332,7 +373,7 @@ function TipsBlock({ data }: { data: TipsBlockData }) {
             {data.title || "Pro Tips"}
           </h2>
           <ul className="space-y-2" role="list">
-            {data.tips.map((tip, index) => (
+            {tips.map((tip, index) => (
               <li key={index} className="text-muted-foreground text-sm" role="listitem">
                 {tip}
               </li>

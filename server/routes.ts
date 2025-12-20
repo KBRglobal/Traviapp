@@ -1132,24 +1132,24 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
         }
 
         // STEP 2: Create all content blocks with validated data
+        // Provide BOTH formats to ensure compatibility with editor AND renderer
         const blocks: ContentBlock[] = [];
         let blockOrder = 0;
 
-        // Hero block with image
+        // Hero block - uses 'image' for renderer
         blocks.push({
           id: `hero-${Date.now()}-${blockOrder}`,
           type: "hero",
           data: {
             title: mergedData.title || cluster.topic,
             subtitle: mergedData.metaDescription || '',
-            overlayText: '',
-            imageUrl: heroImageUrl || '',
-            imageAlt: heroImageAlt || ''
+            image: heroImageUrl || '',
+            alt: heroImageAlt || ''
           },
           order: blockOrder++
         });
 
-        // Main content block (always present - validated)
+        // Main content block
         blocks.push({
           id: `text-${Date.now()}-${blockOrder}`,
           type: "text",
@@ -1157,38 +1157,40 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
           order: blockOrder++
         });
 
-        // Quick facts block (always present - validated 5+ items)
+        // Highlights block - provide BOTH formats for compatibility
         blocks.push({
           id: `highlights-${Date.now()}-${blockOrder}`,
           type: "highlights",
           data: { 
-            title: "Quick Facts", 
-            items: mergedData.quickFacts 
+            title: "Quick Facts",
+            content: mergedData.quickFacts.join('\n'), // Editor format
+            items: mergedData.quickFacts // Renderer format
           },
           order: blockOrder++
         });
 
-        // Pro tips block (always present - validated 5+ items)
+        // Tips block - provide BOTH formats for compatibility
         blocks.push({
           id: `tips-${Date.now()}-${blockOrder}`,
           type: "tips",
           data: { 
-            title: "Pro Tips", 
-            tips: mergedData.proTips 
+            title: "Pro Tips",
+            content: mergedData.proTips.join('\n'), // Editor format
+            tips: mergedData.proTips // Renderer format
           },
           order: blockOrder++
         });
 
-        // FAQ block (always present - validated 5+ items)
+        // FAQ block - single block with questions array (for proper heading/accordion display)
         blocks.push({
           id: `faq-${Date.now()}-${blockOrder}`,
           type: "faq",
           data: {
             title: "Frequently Asked Questions",
-            faqs: mergedData.faqs.map((faq) => ({
+            questions: mergedData.faqs.map((faq) => ({
               question: faq.question,
               answer: faq.answer
-            })),
+            }))
           },
           order: blockOrder++
         });
