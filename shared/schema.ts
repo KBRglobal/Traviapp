@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, pgEnum, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -167,7 +167,13 @@ export const contents = pgTable("contents", {
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_contents_status").on(table.status),
+  index("IDX_contents_type").on(table.type),
+  index("IDX_contents_type_status").on(table.type, table.status),
+  index("IDX_contents_author").on(table.authorId),
+  index("IDX_contents_published_at").on(table.publishedAt),
+]);
 
 // Attractions specific data
 export const attractions = pgTable("attractions", {
@@ -485,9 +491,11 @@ export const translations = pgTable("translations", {
   reviewedBy: varchar("reviewed_by"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  uniqueContentLocale: sql`UNIQUE (${table.contentId}, ${table.locale})`,
-}));
+}, (table) => [
+  uniqueIndex("IDX_translations_content_locale").on(table.contentId, table.locale),
+  index("IDX_translations_locale").on(table.locale),
+  index("IDX_translations_status").on(table.status),
+]);
 
 // Homepage Promotions table - for curating homepage sections
 export const homepageSectionEnum = pgEnum("homepage_section", ["featured", "attractions", "hotels", "articles", "trending"]);
