@@ -1,8 +1,17 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { SUPPORTED_LOCALES, type Locale, type ContentBlock } from "@shared/schema";
 
-// Initialize Anthropic client
-const anthropic = new Anthropic();
+// Initialize OpenAI client for cost-effective translations
+// Switched from Claude Sonnet 4 ($15/M input, $75/M output) to GPT-4o-mini ($0.15/M input, $0.60/M output)
+// Savings: ~95% reduction in translation costs
+function getOpenAIClient(): OpenAI | null {
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  return new OpenAI({
+    apiKey,
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
+  });
+}
 
 // Translation prompts optimized for Dubai tourism content
 const TRANSLATION_SYSTEM_PROMPT = `You are an expert tourism content translator specializing in Dubai travel content.
@@ -73,11 +82,24 @@ export async function translateText(request: TranslationRequest): Promise<Transl
   };
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+    const openai = getOpenAIClient();
+    if (!openai) {
+      return {
+        translatedText: "",
+        locale: targetLocale,
+        success: false,
+        error: "OpenAI client not initialized - check API key",
+      };
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",  // Cost-effective: $0.15/M input, $0.60/M output (vs Claude Sonnet $15/$75)
       max_tokens: 4096,
-      system: TRANSLATION_SYSTEM_PROMPT,
       messages: [
+        {
+          role: "system",
+          content: TRANSLATION_SYSTEM_PROMPT,
+        },
         {
           role: "user",
           content: `Translate the following ${contentType} from ${sourceLocale} to ${targetLanguageName} (${targetLocale}).
@@ -88,10 +110,10 @@ Text to translate:
 ${text}`,
         },
       ],
+      temperature: 0.3,  // Lower temperature for more consistent translations
     });
 
-    const translatedText =
-      response.content[0].type === "text" ? response.content[0].text : "";
+    const translatedText = response.choices[0]?.message?.content?.trim() || "";
 
     return {
       translatedText: translatedText.trim(),

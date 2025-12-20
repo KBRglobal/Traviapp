@@ -16,10 +16,50 @@ function getOpenAIClient(): OpenAI | null {
   if (!apiKey) {
     return null;
   }
-  return new OpenAI({ 
+  return new OpenAI({
     apiKey,
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
   });
+}
+
+// ============================================================================
+// AI MODEL COST OPTIMIZATION
+// ============================================================================
+// Tiered model selection for cost optimization:
+// - GPT-4o: Premium content generation (hotels, complex articles) - $2.50/$10 per 1M tokens
+// - GPT-4o-mini: Standard tasks (prompts, SEO, translations, simple content) - $0.15/$0.60 per 1M tokens
+// Estimated savings: 80-95% on non-premium tasks
+
+type ContentTier = 'premium' | 'standard';
+
+interface ModelConfig {
+  model: string;
+  maxTokens: number;
+  temperature: number;
+}
+
+const MODEL_CONFIGS: Record<ContentTier, ModelConfig> = {
+  premium: {
+    model: "gpt-4o",           // For complex, high-value content
+    maxTokens: 16000,
+    temperature: 0.7,
+  },
+  standard: {
+    model: "gpt-4o-mini",      // 95% cheaper for routine tasks
+    maxTokens: 8000,
+    temperature: 0.7,
+  },
+};
+
+// Determine tier based on content type
+function getContentTier(contentType: string): ContentTier {
+  // Premium: Complex, high-value content that needs best quality
+  const premiumTypes = ['hotel', 'attraction', 'itinerary'];
+  return premiumTypes.includes(contentType.toLowerCase()) ? 'premium' : 'standard';
+}
+
+function getModelConfig(tier: ContentTier): ModelConfig {
+  return MODEL_CONFIGS[tier];
 }
 
 function generateBlockId(): string {
@@ -153,7 +193,7 @@ export async function generateImagePrompt(
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",  // Optimized: Image prompts don't need GPT-4o (saves 95%)
       messages: [
         {
           role: "system",
@@ -3694,9 +3734,10 @@ export async function generateHotelContent(hotelName: string): Promise<Generated
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('premium'); // Hotels = premium content
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: HOTEL_SYSTEM_PROMPT },
         { 
@@ -3758,9 +3799,10 @@ export async function generateAttractionContent(attractionName: string): Promise
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('premium'); // Attractions = premium content
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: ATTRACTION_SYSTEM_PROMPT },
         { 
@@ -3834,8 +3876,9 @@ export async function generateArticleContent(
       ? `The article category should be "${category}".` 
       : "Determine the most appropriate category based on the topic.";
 
+    const modelConfig = getModelConfig('standard'); // Articles = standard (GPT-4o-mini for cost savings)
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: ARTICLE_SYSTEM_PROMPT },
         { 
@@ -3904,9 +3947,10 @@ export async function generateDiningContent(
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('standard'); // Dining = standard (GPT-4o-mini for cost savings)
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: DINING_SYSTEM_PROMPT },
         { 
@@ -3974,9 +4018,10 @@ export async function generateDistrictContent(
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('standard'); // Districts = standard (GPT-4o-mini for cost savings)
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: DISTRICT_SYSTEM_PROMPT },
         { 
@@ -4045,9 +4090,10 @@ export async function generateTransportContent(
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('standard'); // Transport = standard (GPT-4o-mini for cost savings)
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: TRANSPORT_SYSTEM_PROMPT },
         { 
@@ -4115,9 +4161,10 @@ export async function generateEventContent(
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('standard'); // Events = standard (GPT-4o-mini for cost savings)
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: EVENT_SYSTEM_PROMPT },
         { 
@@ -4188,12 +4235,13 @@ export async function generateItineraryContent(
   }
 
   try {
-    const tripTypeInstruction = tripType 
-      ? `This is a "${tripType}" trip (e.g., family, romantic, adventure, luxury, budget).` 
+    const tripTypeInstruction = tripType
+      ? `This is a "${tripType}" trip (e.g., family, romantic, adventure, luxury, budget).`
       : "Create a general-purpose itinerary suitable for most travelers.";
 
+    const modelConfig = getModelConfig('premium'); // Itineraries = premium (complex multi-day planning)
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: ITINERARY_SYSTEM_PROMPT },
         { 
@@ -4303,8 +4351,9 @@ export async function analyzeSeoScore(
 
     const wordCount = blocksText.split(/\s+/).filter(Boolean).length;
 
+    // SEO analysis uses GPT-4o-mini (95% cost savings, sufficient for scoring)
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -4396,8 +4445,9 @@ export async function improveContentForSeo(
   if (!openai) return null;
 
   try {
+    // SEO improvement uses GPT-4o-mini (95% cost savings)
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
