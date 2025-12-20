@@ -430,7 +430,7 @@ export const contentVersions = pgTable("content_versions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Supported locales enum - Dubai/UAE focused languages
+// Supported locales enum - Dubai/UAE focused languages (17 languages)
 export const localeEnum = pgEnum("locale", [
   // 🔴 TIER 1 - Core Markets (Must Have)
   "en",  // English - primary business language
@@ -438,19 +438,24 @@ export const localeEnum = pgEnum("locale", [
   "hi",  // Hindi - 38% of population (Indians)
 
   // 🟡 TIER 2 - High ROI Markets
-  "ur",  // Urdu - Pakistanis (12% of population)
-  "ru",  // Russian - wealthy investors
-  "fa",  // Farsi/Persian - Iranian business community
   "zh",  // Chinese Simplified - growing investors
+  "ru",  // Russian - wealthy investors
+  "ur",  // Urdu - Pakistanis (12% of population)
+  "fr",  // French - tourists & investors
 
-  // 🟢 TIER 3 - Niche European Markets
-  "fr",  // French - French, Moroccans, Algerians, Tunisians
-  "de",  // German - German/Austrian/Swiss investors
-  "it",  // Italian - wealthy Italian community
+  // 🟢 TIER 3 - Growing Markets
+  "de",  // German - European tourists
+  "fa",  // Farsi/Persian - Iranian business community
+  "bn",  // Bengali - large expat community
+  "fil", // Filipino - large expat community
 
-  // ⚪ TIER 4 - Optional
-  "es",  // Spanish - Latin American speakers
-  "tr",  // Turkish - Turkish community
+  // ⚪ TIER 4 - Niche Markets
+  "es",  // Spanish
+  "tr",  // Turkish
+  "it",  // Italian
+  "ja",  // Japanese - luxury market
+  "ko",  // Korean - growing tourism
+  "he",  // Hebrew - Israeli investors
 ]);
 
 export const translationStatusEnum = pgEnum("translation_status", ["pending", "in_progress", "completed", "needs_review"]);
@@ -1070,19 +1075,19 @@ export const insertContentViewSchema = createInsertSchema(contentViews).omit({
 export type InsertContentView = z.infer<typeof insertContentViewSchema>;
 export type ContentView = typeof contentViews.$inferSelect;
 
-// Dubai/UAE focused languages (12 languages)
+// Dubai/UAE focused languages (17 languages)
 export type Locale =
-  | "en" | "ar" | "hi"           // Tier 1 - Core
-  | "ur" | "ru" | "fa" | "zh"    // Tier 2 - High ROI
-  | "fr" | "de" | "it"           // Tier 3 - European
-  | "es" | "tr";                 // Tier 4 - Optional
+  | "en" | "ar" | "hi"                    // Tier 1 - Core
+  | "zh" | "ru" | "ur" | "fr"             // Tier 2 - High ROI
+  | "de" | "fa" | "bn" | "fil"            // Tier 3 - Growing
+  | "es" | "tr" | "it" | "ja" | "ko" | "he";  // Tier 4 - Niche
 
 export type TranslationStatus = "pending" | "in_progress" | "completed" | "needs_review";
 
 // RTL languages (right-to-left)
-export const RTL_LOCALES: Locale[] = ["ar", "fa", "ur"];
+export const RTL_LOCALES: Locale[] = ["ar", "fa", "ur", "he"];
 
-// 12 Supported Languages for Dubai/UAE Market
+// 17 Supported Languages for Dubai/UAE Market
 export const SUPPORTED_LOCALES: { code: Locale; name: string; nativeName: string; region: string; tier: number }[] = [
   // 🔴 TIER 1 - Core Markets (Must Have)
   { code: "en", name: "English", nativeName: "English", region: "Global", tier: 1 },
@@ -1090,19 +1095,24 @@ export const SUPPORTED_LOCALES: { code: Locale; name: string; nativeName: string
   { code: "hi", name: "Hindi", nativeName: "हिन्दी", region: "South Asia", tier: 1 },
 
   // 🟡 TIER 2 - High ROI Markets
-  { code: "ur", name: "Urdu", nativeName: "اردو", region: "South Asia", tier: 2 },
-  { code: "ru", name: "Russian", nativeName: "Русский", region: "CIS", tier: 2 },
-  { code: "fa", name: "Persian", nativeName: "فارسی", region: "Middle East", tier: 2 },
   { code: "zh", name: "Chinese", nativeName: "简体中文", region: "East Asia", tier: 2 },
+  { code: "ru", name: "Russian", nativeName: "Русский", region: "CIS", tier: 2 },
+  { code: "ur", name: "Urdu", nativeName: "اردو", region: "South Asia", tier: 2 },
+  { code: "fr", name: "French", nativeName: "Français", region: "Europe", tier: 2 },
 
-  // 🟢 TIER 3 - European Niche Markets
-  { code: "fr", name: "French", nativeName: "Français", region: "Europe", tier: 3 },
+  // 🟢 TIER 3 - Growing Markets
   { code: "de", name: "German", nativeName: "Deutsch", region: "Europe", tier: 3 },
-  { code: "it", name: "Italian", nativeName: "Italiano", region: "Europe", tier: 3 },
+  { code: "fa", name: "Persian", nativeName: "فارسی", region: "Middle East", tier: 3 },
+  { code: "bn", name: "Bengali", nativeName: "বাংলা", region: "South Asia", tier: 3 },
+  { code: "fil", name: "Filipino", nativeName: "Filipino", region: "Southeast Asia", tier: 3 },
 
-  // ⚪ TIER 4 - Optional
+  // ⚪ TIER 4 - Niche Markets
   { code: "es", name: "Spanish", nativeName: "Español", region: "Americas", tier: 4 },
   { code: "tr", name: "Turkish", nativeName: "Türkçe", region: "Middle East", tier: 4 },
+  { code: "it", name: "Italian", nativeName: "Italiano", region: "Europe", tier: 4 },
+  { code: "ja", name: "Japanese", nativeName: "日本語", region: "East Asia", tier: 4 },
+  { code: "ko", name: "Korean", nativeName: "한국어", region: "East Asia", tier: 4 },
+  { code: "he", name: "Hebrew", nativeName: "עברית", region: "Middle East", tier: 4 },
 ];
 
 // Telegram Bot User Profiles - for premium personalized experience

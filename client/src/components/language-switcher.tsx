@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useLocation } from "wouter";
 import { Globe, Check, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { SUPPORTED_LOCALES, RTL_LOCALES, type Locale } from "@shared/schema";
-import { changeLanguage, getCurrentLocale } from "@/lib/i18n/config";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 
 interface LanguageSwitcherProps {
   variant?: "default" | "compact" | "icon-only";
@@ -21,7 +21,7 @@ interface LanguageSwitcherProps {
   className?: string;
 }
 
-// Get flag emoji from locale code (12 Dubai/UAE focused languages)
+// Get flag emoji from locale code (17 Dubai/UAE focused languages)
 const getFlag = (locale: Locale): string => {
   const flagMap: Record<string, string> = {
     // Tier 1 - Core
@@ -29,20 +29,36 @@ const getFlag = (locale: Locale): string => {
     ar: "🇦🇪",   // Arabic (UAE flag)
     hi: "🇮🇳",   // Hindi (India)
     // Tier 2 - High ROI
-    ur: "🇵🇰",   // Urdu (Pakistan)
-    ru: "🇷🇺",   // Russian
-    fa: "🇮🇷",   // Persian (Iran)
     zh: "🇨🇳",   // Chinese
-    // Tier 3 - European
+    ru: "🇷🇺",   // Russian
+    ur: "🇵🇰",   // Urdu (Pakistan)
     fr: "🇫🇷",   // French
+    // Tier 3 - Growing
     de: "🇩🇪",   // German
-    it: "🇮🇹",   // Italian
-    // Tier 4 - Optional
+    fa: "🇮🇷",   // Persian (Iran)
+    bn: "🇧🇩",   // Bengali (Bangladesh)
+    fil: "🇵🇭",  // Filipino (Philippines)
+    // Tier 4 - Niche
     es: "🇪🇸",   // Spanish
     tr: "🇹🇷",   // Turkish
+    it: "🇮🇹",   // Italian
+    ja: "🇯🇵",   // Japanese
+    ko: "🇰🇷",   // Korean
+    he: "🇮🇱",   // Hebrew (Israel)
   };
   return flagMap[locale] || "🌐";
 };
+
+// Extract path without locale prefix
+function getPathWithoutLocale(path: string): string {
+  const segments = path.split("/").filter(Boolean);
+  const locales = SUPPORTED_LOCALES.map((l) => l.code);
+
+  if (segments.length > 0 && locales.includes(segments[0] as Locale)) {
+    return "/" + segments.slice(1).join("/") || "/";
+  }
+  return path;
+}
 
 export function LanguageSwitcher({
   variant = "default",
@@ -51,9 +67,9 @@ export function LanguageSwitcher({
   tierFilter,
   className = "",
 }: LanguageSwitcherProps) {
-  const { i18n } = useTranslation();
+  const [location, setLocation] = useLocation();
+  const { locale: currentLocale } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
-  const currentLocale = getCurrentLocale();
 
   // Filter locales based on tier if specified
   let locales = SUPPORTED_LOCALES;
@@ -75,29 +91,30 @@ export function LanguageSwitcher({
 
   const currentLocaleInfo = SUPPORTED_LOCALES.find((l) => l.code === currentLocale);
 
-  const handleLanguageChange = async (locale: Locale) => {
-    await changeLanguage(locale);
+  const handleLanguageChange = (newLocale: Locale) => {
     setIsOpen(false);
 
-    // Update URL with new locale
-    const currentPath = window.location.pathname;
-    const pathParts = currentPath.split("/").filter(Boolean);
+    // Get path without current locale prefix
+    const basePath = getPathWithoutLocale(location);
 
-    // Check if current path already has a locale prefix
-    const hasLocalePrefix = SUPPORTED_LOCALES.some((l) => l.code === pathParts[0]);
-
+    // Create new URL with new locale prefix
     let newPath: string;
-    if (hasLocalePrefix) {
-      // Replace existing locale
-      pathParts[0] = locale;
-      newPath = "/" + pathParts.join("/");
+    if (newLocale === "en") {
+      // English is default - no prefix
+      newPath = basePath || "/";
     } else {
-      // Add locale prefix
-      newPath = `/${locale}${currentPath}`;
+      newPath = `/${newLocale}${basePath === "/" ? "" : basePath}`;
     }
 
-    // Use replaceState to update URL without reload
-    window.history.replaceState({}, "", newPath);
+    // Save locale preference
+    localStorage.setItem("i18nextLng", newLocale);
+
+    // Update document direction for RTL languages
+    document.documentElement.lang = newLocale;
+    document.documentElement.dir = RTL_LOCALES.includes(newLocale) ? "rtl" : "ltr";
+
+    // Navigate to new URL
+    setLocation(newPath);
   };
 
   if (variant === "icon-only") {
@@ -221,12 +238,30 @@ export function LanguageSelectorMobile({
 }: {
   className?: string;
 }) {
-  const currentLocale = getCurrentLocale();
+  const [location, setLocation] = useLocation();
+  const { locale: currentLocale } = useLocale();
+
+  const handleChange = (newLocale: Locale) => {
+    const basePath = getPathWithoutLocale(location);
+
+    let newPath: string;
+    if (newLocale === "en") {
+      newPath = basePath || "/";
+    } else {
+      newPath = `/${newLocale}${basePath === "/" ? "" : basePath}`;
+    }
+
+    localStorage.setItem("i18nextLng", newLocale);
+    document.documentElement.lang = newLocale;
+    document.documentElement.dir = RTL_LOCALES.includes(newLocale) ? "rtl" : "ltr";
+
+    setLocation(newPath);
+  };
 
   return (
     <select
       value={currentLocale}
-      onChange={(e) => changeLanguage(e.target.value as Locale)}
+      onChange={(e) => handleChange(e.target.value as Locale)}
       className={`bg-transparent border rounded px-2 py-1 text-sm ${className}`}
     >
       {SUPPORTED_LOCALES.map((locale) => (

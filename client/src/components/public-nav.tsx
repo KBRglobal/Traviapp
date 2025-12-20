@@ -4,6 +4,7 @@ import { Menu, X, Search } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher, LanguageSelectorMobile } from "./language-switcher";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 
 interface PublicNavProps {
   className?: string;
@@ -13,14 +14,15 @@ interface PublicNavProps {
 export function PublicNav({ className = "", variant = "default" }: PublicNavProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location] = useLocation();
+  const { t, locale, localePath, isRTL } = useLocale();
 
   const navLinks = [
-    { href: "/attractions", label: "Attractions", testId: "link-attractions" },
-    { href: "/hotels", label: "Hotels", testId: "link-hotels" },
-    { href: "/articles", label: "News", testId: "link-news" },
-    { href: "/districts", label: "Districts", testId: "link-districts" },
-    { href: "/dining", label: "Dining", testId: "link-dining" },
-    { href: "/dubai-off-plan-properties", label: "Off-Plan", testId: "link-off-plan" },
+    { href: "/attractions", labelKey: "nav.attractions", testId: "link-attractions" },
+    { href: "/hotels", labelKey: "nav.hotels", testId: "link-hotels" },
+    { href: "/articles", labelKey: "nav.articles", testId: "link-news" },
+    { href: "/districts", labelKey: "nav.districts", testId: "link-districts" },
+    { href: "/dining", labelKey: "nav.dining", testId: "link-dining" },
+    { href: "/dubai-off-plan-properties", labelKey: "nav.realEstate", testId: "link-off-plan" },
   ];
 
   const isTransparent = variant === "transparent";
@@ -47,13 +49,13 @@ export function PublicNav({ className = "", variant = "default" }: PublicNavProp
 
             <div className="hidden lg:flex items-center gap-10" role="navigation" aria-label="Primary">
               {navLinks.map((link) => (
-                <Link 
+                <Link
                   key={link.href}
-                  href={link.href} 
+                  href={localePath(link.href)}
                   className={`text-sm font-medium tracking-wide uppercase transition-colors ${
-                    isActive(link.href)
-                      ? isTransparent 
-                        ? "text-white border-b-2 border-white pb-1" 
+                    isActive(link.href) || isActive(localePath(link.href))
+                      ? isTransparent
+                        ? "text-white border-b-2 border-white pb-1"
                         : "text-primary border-b-2 border-primary pb-1"
                       : isTransparent
                         ? "text-white/90 hover:text-white"
@@ -61,7 +63,7 @@ export function PublicNav({ className = "", variant = "default" }: PublicNavProp
                   }`}
                   data-testid={link.testId}
                 >
-                  {link.label}
+                  {t(link.labelKey)}
                 </Link>
               ))}
             </div>
@@ -114,22 +116,22 @@ export function PublicNav({ className = "", variant = "default" }: PublicNavProp
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
-                  href={link.href}
+                  href={localePath(link.href)}
                   className={`py-3 px-4 rounded-lg text-sm font-medium uppercase tracking-wide transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isActive(link.href)
+                    isActive(link.href) || isActive(localePath(link.href))
                       ? "bg-primary/10 text-primary"
                       : "text-foreground/70 hover:bg-muted hover:text-foreground"
                   }`}
                   data-testid={`${link.testId}-mobile`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {link.label}
+                  {t(link.labelKey)}
                 </Link>
               ))}
 
               {/* Language Switcher - Mobile */}
               <div className="mt-4 pt-4 border-t border-border/40">
-                <span className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wide">Language</span>
+                <span className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("nav.menu")}</span>
                 <div className="px-4 mt-2">
                   <LanguageSelectorMobile className="w-full" />
                 </div>
