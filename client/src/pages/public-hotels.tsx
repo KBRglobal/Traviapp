@@ -13,6 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { LazyImage } from "@/components/ui/lazy-image";
+import { FavoriteButton } from "@/components/ui/favorite-button";
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&h=600&fit=crop",

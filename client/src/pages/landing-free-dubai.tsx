@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { 

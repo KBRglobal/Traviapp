@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ContentWithRelations } from "@shared/schema";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { LazyImage } from "@/components/ui/lazy-image";
+import { FavoriteButton } from "@/components/ui/favorite-button";
 
 const categories = [
   { id: "all", name: "All Events" },

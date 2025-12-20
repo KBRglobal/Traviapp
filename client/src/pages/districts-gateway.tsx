@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
 import { 

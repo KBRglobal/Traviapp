@@ -14,6 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { LazyImage } from "@/components/ui/lazy-image";
+import { FavoriteButton } from "@/components/ui/favorite-button";
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
@@ -35,12 +38,20 @@ function ArticleCard({ content, index, t, localePath }: { content: ContentWithRe
         data-testid={`card-article-${content.slug}`}
       >
         <div className="relative aspect-video overflow-hidden">
-          <img
+          <LazyImage
             src={imageUrl}
             alt={content.heroImageAlt || content.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <FavoriteButton
+            id={String(content.id)}
+            type="article"
+            title={content.title}
+            image={imageUrl}
+            slug={content.slug}
+            className="absolute top-2 right-2 bg-white/80 hover:bg-white"
+          />
         </div>
 
         <div className="p-4">
@@ -119,6 +130,10 @@ export default function PublicArticles() {
   return (
     <div className="bg-background min-h-screen flex flex-col" dir={isRTL ? "rtl" : "ltr"}>
       <PublicNav />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <Breadcrumbs />
+      </div>
 
       <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">

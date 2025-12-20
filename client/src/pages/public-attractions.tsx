@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
   Search, MapPin, Star, Users, Sparkles, Moon,
-  Heart, Gem, Compass, Mountain, Building2, Ship,
+  Gem, Compass, Mountain, Building2, Ship,
   Camera, TreePine, Waves, ChevronRight, ArrowRight,
   Clock, Sun, Bookmark, Map, Zap
 } from "lucide-react";
@@ -15,6 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { LazyImage } from "@/components/ui/lazy-image";
+import { FavoriteButton } from "@/components/ui/favorite-button";
 
 const EXPERIENCE_TYPES = [
   { 
