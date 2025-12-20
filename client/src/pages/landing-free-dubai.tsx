@@ -131,62 +131,62 @@ interface Attraction {
 }
 
 const allAttractions: Attraction[] = [
-  // Beaches
+  // Beaches - all with images
   { id: "jbr", name: "JBR Beach", desc: "Blue Flag certified with free showers, changing rooms, and 24/7 lifeguards.", category: "beaches", savings: "AED 150-500", metro: "JBR Tram", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400", highlight: true },
   { id: "kite", name: "Kite Beach", desc: "14km running track, beach volleyball courts, Burj Al Arab views.", category: "beaches", savings: "AED 200+", metro: "Mall of Emirates", image: "https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?w=400", highlight: true },
-  { id: "lamer", name: "La Mer Beach", desc: "Trendy beachfront with street art, splash pads for kids.", category: "beaches", savings: "AED 150+", metro: "Healthcare City" },
-  { id: "black", name: "Black Palace Beach", desc: "Secret hidden gem away from crowds. Crystal clear water.", category: "beaches", savings: "AED 200+" },
-  { id: "jumeirah", name: "Jumeirah Public Beach", desc: "Clean, family-friendly with Burj Al Arab backdrop.", category: "beaches", savings: "AED 100+" },
-  { id: "mamzar", name: "Al Mamzar Beach Park", desc: "5 beaches in one park. Calm lagoons, perfect for families.", category: "beaches", savings: "AED 150+" },
-  { id: "umm", name: "Umm Suqeim Beach", desc: "Closest free beach to Burj Al Arab. Sunrise paradise.", category: "beaches", savings: "AED 200+" },
+  { id: "lamer", name: "La Mer Beach", desc: "Trendy beachfront with street art, splash pads for kids.", category: "beaches", savings: "AED 150+", metro: "Healthcare City", image: "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=400" },
+  { id: "black", name: "Black Palace Beach", desc: "Secret hidden gem away from crowds. Crystal clear water.", category: "beaches", savings: "AED 200+", image: "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=400" },
+  { id: "jumeirah", name: "Jumeirah Public Beach", desc: "Clean, family-friendly with Burj Al Arab backdrop.", category: "beaches", savings: "AED 100+", image: "https://images.unsplash.com/photo-1468413253725-0d5181091126?w=400" },
+  { id: "mamzar", name: "Al Mamzar Beach Park", desc: "5 beaches in one park. Calm lagoons, perfect for families.", category: "beaches", savings: "AED 150+", image: "https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=400" },
+  { id: "umm", name: "Umm Suqeim Beach", desc: "Closest free beach to Burj Al Arab. Sunrise paradise.", category: "beaches", savings: "AED 200+", image: "https://images.unsplash.com/photo-1520942702018-0862200e6873?w=400" },
   
-  // Heritage
+  // Heritage - all with images
   { id: "fahidi", name: "Al Fahidi Historical", desc: "Wind-tower architecture from 1890s. Free walking tours.", category: "heritage", image: "https://images.unsplash.com/photo-1548230626-fbceb8b71a88?w=400", highlight: true },
-  { id: "heritage", name: "Heritage Village", desc: "Traditional Emirati village with pottery demonstrations.", category: "heritage" },
-  { id: "bastakiya", name: "Bastakiya Quarter", desc: "Restored merchant houses and art galleries.", category: "heritage" },
-  { id: "shindagha", name: "Shindagha District", desc: "Birthplace of Dubai. Spice souks and perfume houses.", category: "heritage" },
-  { id: "grand", name: "Grand Mosque", desc: "Stunning architecture with 45 domes.", category: "heritage" },
-  { id: "jumeirah-mosque", name: "Jumeirah Mosque", desc: "Most photographed mosque in Dubai.", category: "heritage" },
+  { id: "heritage", name: "Heritage Village", desc: "Traditional Emirati village with pottery demonstrations.", category: "heritage", image: "https://images.unsplash.com/photo-1512632578888-169bbbc64f33?w=400" },
+  { id: "bastakiya", name: "Bastakiya Quarter", desc: "Restored merchant houses and art galleries.", category: "heritage", image: "https://images.unsplash.com/photo-1597659840241-37e2b9c2f55f?w=400" },
+  { id: "shindagha", name: "Shindagha District", desc: "Birthplace of Dubai. Spice souks and perfume houses.", category: "heritage", image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400" },
+  { id: "grand", name: "Grand Mosque", desc: "Stunning architecture with 45 domes.", category: "heritage", image: "https://images.unsplash.com/photo-1564769625905-50e93615e769?w=400" },
+  { id: "jumeirah-mosque", name: "Jumeirah Mosque", desc: "Most photographed mosque in Dubai.", category: "heritage", image: "https://images.unsplash.com/photo-1542423037-f31f0c11e2a6?w=400" },
   { id: "gold-souk", name: "Gold & Spice Souks", desc: "10+ tons of gold on display. Free window shopping.", category: "heritage", image: "https://images.unsplash.com/photo-1569288063643-5d29ad64df09?w=400", highlight: true },
-  { id: "abra", name: "AED 1 Abra Ride", desc: "World's cheapest boat ride across Dubai Creek.", category: "heritage", savings: "AED 49", highlight: true },
+  { id: "abra", name: "AED 1 Abra Ride", desc: "World's cheapest boat ride across Dubai Creek.", category: "heritage", savings: "AED 49", image: "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=400", highlight: true },
   
-  // Parks
-  { id: "barsha", name: "Al Barsha Pond Park", desc: "Running track, outdoor gym, lake with paddle boats.", category: "parks" },
-  { id: "zabeel", name: "Zabeel Park", desc: "47 hectares of greenery. Jogging tracks, BBQ areas.", category: "parks" },
-  { id: "safa", name: "Safa Park", desc: "Tennis courts, lake with ducks, playground.", category: "parks" },
-  { id: "creek", name: "Creek Park", desc: "2.5km along Dubai Creek. Botanical garden.", category: "parks" },
-  { id: "mushrif", name: "Mushrif Park", desc: "Wildlife sanctuary, international village.", category: "parks" },
+  // Parks - all with images
+  { id: "barsha", name: "Al Barsha Pond Park", desc: "Running track, outdoor gym, lake with paddle boats.", category: "parks", image: "https://images.unsplash.com/photo-1568515387631-8b650bbcdb90?w=400" },
+  { id: "zabeel", name: "Zabeel Park", desc: "47 hectares of greenery. Jogging tracks, BBQ areas.", category: "parks", image: "https://images.unsplash.com/photo-1500964757637-c85e8a162699?w=400" },
+  { id: "safa", name: "Safa Park", desc: "Tennis courts, lake with ducks, playground.", category: "parks", image: "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400" },
+  { id: "creek", name: "Creek Park", desc: "2.5km along Dubai Creek. Botanical garden.", category: "parks", image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400" },
+  { id: "mushrif", name: "Mushrif Park", desc: "Wildlife sanctuary, international village.", category: "parks", image: "https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=400" },
   { id: "qudra", name: "Al Qudra Lakes", desc: "Desert oasis with flamingos and camels. Stargazing paradise.", category: "parks", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400", highlight: true },
-  { id: "raskhor", name: "Ras Al Khor Sanctuary", desc: "500+ Greater Flamingos in natural habitat.", category: "parks", highlight: true },
+  { id: "raskhor", name: "Ras Al Khor Sanctuary", desc: "500+ Greater Flamingos in natural habitat.", category: "parks", image: "https://images.unsplash.com/photo-1497206365907-f5e630693df0?w=400", highlight: true },
   
-  // Shows
+  // Shows - all with images
   { id: "fountain", name: "Dubai Fountain Show", desc: "140m water jets choreographed to music. Every 30 min.", category: "shows", savings: "AED 149-379", image: "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=400", highlight: true },
-  { id: "global", name: "Global Village Shows", desc: "Free cultural performances, fireworks on weekends.", category: "shows" },
-  { id: "mall-fountain", name: "Mall Dancing Fountain", desc: "Indoor fountain show with lights.", category: "shows" },
-  { id: "lamer-shows", name: "La Mer Performances", desc: "Live music, dancers, street artists on weekends.", category: "shows" },
-  { id: "citywalk", name: "City Walk Art", desc: "Interactive digital art, murals, sculptures.", category: "shows" },
+  { id: "global", name: "Global Village Shows", desc: "Free cultural performances, fireworks on weekends.", category: "shows", image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400" },
+  { id: "mall-fountain", name: "Mall Dancing Fountain", desc: "Indoor fountain show with lights.", category: "shows", image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400" },
+  { id: "lamer-shows", name: "La Mer Performances", desc: "Live music, dancers, street artists on weekends.", category: "shows", image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400" },
+  { id: "citywalk", name: "City Walk Art", desc: "Interactive digital art, murals, sculptures.", category: "shows", image: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=400" },
   
-  // Art
+  // Art - all with images
   { id: "alserkal", name: "Alserkal Avenue", desc: "Contemporary art galleries, design studios.", category: "art", image: "https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=400", highlight: true },
-  { id: "d3", name: "Dubai Design District", desc: "Street art, design exhibitions, creative hub.", category: "art" },
-  { id: "jameel", name: "Jameel Arts Centre", desc: "Free entry contemporary art museum.", category: "art" },
-  { id: "xva", name: "XVA Gallery", desc: "Free art gallery in historic Al Fahidi.", category: "art" },
-  { id: "etihad", name: "Etihad Museum Gardens", desc: "Historic site where UAE was founded.", category: "art" },
+  { id: "d3", name: "Dubai Design District", desc: "Street art, design exhibitions, creative hub.", category: "art", image: "https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=400" },
+  { id: "jameel", name: "Jameel Arts Centre", desc: "Free entry contemporary art museum.", category: "art", image: "https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=400" },
+  { id: "xva", name: "XVA Gallery", desc: "Free art gallery in historic Al Fahidi.", category: "art", image: "https://images.unsplash.com/photo-1577720643272-265f09367456?w=400" },
+  { id: "etihad", name: "Etihad Museum Gardens", desc: "Historic site where UAE was founded.", category: "art", image: "https://images.unsplash.com/photo-1575223970966-76ae61ee7838?w=400" },
   
-  // Sports
-  { id: "canal-jog", name: "Dubai Water Canal", desc: "12.5km lit path, 5 pedestrian bridges.", category: "sports" },
-  { id: "volleyball", name: "Beach Volleyball", desc: "Free courts at Kite Beach. Just show up.", category: "sports" },
-  { id: "cycling", name: "Al Qudra Cycling", desc: "86km dedicated bike path through desert.", category: "sports", highlight: true },
-  { id: "jbr-gym", name: "JBR Outdoor Gym", desc: "Free outdoor fitness equipment.", category: "sports" },
-  { id: "palm-run", name: "Palm Boardwalk", desc: "11km running paradise with Atlantis views.", category: "sports", highlight: true },
+  // Sports - all with images
+  { id: "canal-jog", name: "Dubai Water Canal", desc: "12.5km lit path, 5 pedestrian bridges.", category: "sports", image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400" },
+  { id: "volleyball", name: "Beach Volleyball", desc: "Free courts at Kite Beach. Just show up.", category: "sports", image: "https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400" },
+  { id: "cycling", name: "Al Qudra Cycling", desc: "86km dedicated bike path through desert.", category: "sports", image: "https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=400", highlight: true },
+  { id: "jbr-gym", name: "JBR Outdoor Gym", desc: "Free outdoor fitness equipment.", category: "sports", image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400" },
+  { id: "palm-run", name: "Palm Boardwalk", desc: "11km running paradise with Atlantis views.", category: "sports", image: "https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=400", highlight: true },
   
-  // Skyline
+  // Skyline - all with images
   { id: "marina", name: "Dubai Marina Walk", desc: "7km promenade with 200+ skyscrapers.", category: "skyline", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400", highlight: true },
-  { id: "jlt", name: "JLT Lake Walk", desc: "Hidden gem with less crowds. Multiple lakes.", category: "skyline" },
-  { id: "palm", name: "Palm Boardwalk", desc: "11km walking path. Atlantis views guaranteed.", category: "skyline", savings: "AED 1,295" },
-  { id: "downtown", name: "Downtown Boulevard", desc: "Walk among world's tallest buildings.", category: "skyline" },
-  { id: "businessbay", name: "Business Bay", desc: "Water taxi views, modern architecture.", category: "skyline" },
-  { id: "creekh", name: "Creek Harbour Plaza", desc: "Future Dubai Creek Tower site. Stunning views.", category: "skyline" },
+  { id: "jlt", name: "JLT Lake Walk", desc: "Hidden gem with less crowds. Multiple lakes.", category: "skyline", image: "https://images.unsplash.com/photo-1546412414-e1885259563a?w=400" },
+  { id: "palm", name: "Palm Boardwalk", desc: "11km walking path. Atlantis views guaranteed.", category: "skyline", savings: "AED 1,295", image: "https://images.unsplash.com/photo-1580129958866-22f6a938db70?w=400" },
+  { id: "downtown", name: "Downtown Boulevard", desc: "Walk among world's tallest buildings.", category: "skyline", image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400" },
+  { id: "businessbay", name: "Business Bay", desc: "Water taxi views, modern architecture.", category: "skyline", image: "https://images.unsplash.com/photo-1583001809873-a128495da465?w=400" },
+  { id: "creekh", name: "Creek Harbour Plaza", desc: "Future Dubai Creek Tower site. Stunning views.", category: "skyline", image: "https://images.unsplash.com/photo-1547721064-da6cfb341d50?w=400" },
 ];
 
 // FAQ Data
@@ -647,14 +647,14 @@ export default function LandingFreeDubai() {
             </div>
           </div>
 
-          {/* Attractions Grid */}
+          {/* Attractions Grid - Visual Cards */}
           <AnimatePresence mode="wait">
             <motion.div
               key={activeCategory}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             >
               {filteredAttractions.map((attraction, index) => {
                 const CategoryIcon = getCategoryIcon(attraction.category);
@@ -666,73 +666,94 @@ export default function LandingFreeDubai() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.02 }}
+                    className="group"
                   >
-                    <Card 
-                      className={`h-full overflow-hidden transition-all duration-300 ${
+                    <div 
+                      className={`relative h-72 rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 ${
                         isVisited 
-                          ? "ring-2 ring-emerald-500 bg-emerald-50 dark:bg-emerald-900/20" 
-                          : "hover:shadow-lg"
-                      } ${attraction.highlight ? "ring-2 ring-amber-400" : ""}`}
+                          ? "ring-4 ring-emerald-500 ring-offset-2" 
+                          : "hover:shadow-2xl hover:-translate-y-1"
+                      } ${attraction.highlight ? "ring-2 ring-amber-400 ring-offset-2" : ""}`}
                       data-testid={`card-attraction-${attraction.id}`}
+                      onClick={() => toggleVisited(attraction.id)}
                     >
-                      {attraction.image && (
-                        <div className="relative h-32 overflow-hidden">
-                          <img 
-                            src={attraction.image} 
-                            alt={attraction.name}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                          <Badge className="absolute bottom-2 left-2 bg-emerald-500 text-white border-0 text-xs">
+                      {/* Background Image */}
+                      <img 
+                        src={attraction.image || `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400`} 
+                        alt={attraction.name}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      
+                      {/* Gradient Overlay */}
+                      <div className={`absolute inset-0 transition-all duration-300 ${
+                        isVisited 
+                          ? "bg-gradient-to-t from-emerald-900/90 via-emerald-900/40 to-emerald-900/20" 
+                          : "bg-gradient-to-t from-black/90 via-black/40 to-transparent"
+                      }`} />
+                      
+                      {/* Top Badges */}
+                      <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                        <div className="flex gap-2">
+                          <Badge className="bg-emerald-500 text-white border-0 shadow-lg">
                             FREE
                           </Badge>
+                          {attraction.highlight && (
+                            <Badge className="bg-amber-500 text-white border-0 shadow-lg">
+                              <Star className="w-3 h-3 mr-1 fill-white" />
+                              Top Pick
+                            </Badge>
+                          )}
                         </div>
-                      )}
-                      <CardContent className={attraction.image ? "p-4" : "p-4"}>
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {!attraction.image && (
-                              <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${getCategoryColor(attraction.category)} flex items-center justify-center shrink-0`}>
-                                <CategoryIcon className="w-4 h-4 text-white" />
-                              </div>
-                            )}
-                            <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                              {attraction.name}
-                            </h3>
-                          </div>
-                          <Checkbox
-                            checked={isVisited}
-                            onCheckedChange={() => toggleVisited(attraction.id)}
-                            className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
-                            data-testid={`checkbox-${attraction.id}`}
-                          />
+                        <div 
+                          className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                            isVisited 
+                              ? "bg-emerald-500 border-emerald-500" 
+                              : "bg-white/20 border-white/50 backdrop-blur-sm"
+                          }`}
+                        >
+                          {isVisited && <CheckCircle2 className="w-5 h-5 text-white" />}
                         </div>
-                        
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-3 line-clamp-2">
+                      </div>
+                      
+                      {/* Category Icon */}
+                      <div className={`absolute top-3 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-gradient-to-br ${getCategoryColor(attraction.category)} flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg`}>
+                        <CategoryIcon className="w-6 h-6 text-white" />
+                      </div>
+                      
+                      {/* Bottom Content */}
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <h3 className="font-bold text-white text-lg mb-1 drop-shadow-lg">
+                          {attraction.name}
+                        </h3>
+                        <p className="text-white/80 text-sm line-clamp-2 mb-3 drop-shadow-md">
                           {attraction.desc}
                         </p>
                         
-                        <div className="flex flex-wrap gap-1">
-                          {!attraction.image && (
-                            <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
-                              FREE
-                            </Badge>
-                          )}
+                        <div className="flex flex-wrap gap-2">
                           {attraction.savings && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm">
                               <Wallet className="w-3 h-3 mr-1" />
                               Save {attraction.savings}
                             </Badge>
                           )}
                           {attraction.metro && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm">
                               <Train className="w-3 h-3 mr-1" />
                               {attraction.metro}
                             </Badge>
                           )}
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                      
+                      {/* Visited Overlay */}
+                      {isVisited && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="bg-emerald-500/90 backdrop-blur-sm rounded-full p-4">
+                            <CheckCircle2 className="w-12 h-12 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 );
               })}
