@@ -598,7 +598,11 @@ export async function registerRoutes(
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
-  
+
+  // Sitemap and robots.txt routes
+  const sitemapRoutes = (await import("./routes/sitemap")).default;
+  app.use(sitemapRoutes);
+
   // Setup Replit Auth FIRST (so CSRF can use req.isAuthenticated)
   await setupAuth(app);
   

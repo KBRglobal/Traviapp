@@ -12,6 +12,7 @@ import { useAnalytics } from "@/hooks/use-analytics";
 import { initGA } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
 import { LocaleProvider } from "@/lib/i18n/LocaleRouter";
+import { FavoritesProvider } from "@/hooks/use-favorites";
 
 // Lazy load all pages for better performance
 const ComingSoon = lazy(() => import("@/pages/coming-soon"));
@@ -392,16 +393,18 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <LocaleProvider>
-        <TooltipProvider>
-          <Suspense fallback={<PageLoader />}>
-            {isAdminRoute ? (
-              <AdminLayout />
-            ) : (
-              <PublicRouter />
-            )}
-          </Suspense>
-          <Toaster />
-        </TooltipProvider>
+        <FavoritesProvider>
+          <TooltipProvider>
+            <Suspense fallback={<PageLoader />}>
+              {isAdminRoute ? (
+                <AdminLayout />
+              ) : (
+                <PublicRouter />
+              )}
+            </Suspense>
+            <Toaster />
+          </TooltipProvider>
+        </FavoritesProvider>
       </LocaleProvider>
     </QueryClientProvider>
   );
