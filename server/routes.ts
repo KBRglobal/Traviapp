@@ -49,6 +49,12 @@ import {
   validateAnalyticsRequest,
   secureErrorHandler,
   auditLogReadOnly,
+  securityHeaders,
+  ipBlockMiddleware,
+  recordFailedAttempt,
+  logAuditEvent as logSecurityEvent,
+  getAuditLogs,
+  getBlockedIps,
 } from "./security";
 import * as fs from "fs";
 import * as path from "path";
@@ -756,9 +762,15 @@ export async function registerRoutes(
   const sitemapRoutes = (await import("./routes/sitemap")).default;
   app.use(sitemapRoutes);
 
+  // Security headers for all responses (CSP, X-Frame-Options, etc.)
+  app.use(securityHeaders);
+
+  // IP blocking for suspicious activity
+  app.use("/api", ipBlockMiddleware);
+
   // Setup Replit Auth FIRST (so CSRF can use req.isAuthenticated)
   await setupAuth(app);
-  
+
   // Global CSRF protection for admin write endpoints (AFTER setupAuth)
   app.use("/api", csrfProtection);
   
@@ -775,6 +787,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Username and password are required" });
       }
       
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
       // Check for admin from environment first
       if (ADMIN_PASSWORD_HASH && username === ADMIN_USERNAME) {
         const isAdminPassword = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
@@ -791,13 +805,13 @@ export async function registerRoutes(
               isActive: true,
             });
           }
-          
+
           // Set up session
           const sessionUser = {
             claims: { sub: adminUser.id },
             id: adminUser.id,
           };
-          
+
           req.login(sessionUser, (err: any) => {
             if (err) {
               console.error("Login session error:", err);
@@ -808,6 +822,18 @@ export async function registerRoutes(
                 console.error("Session save error:", saveErr);
                 return res.status(500).json({ error: "Failed to save session" });
               }
+
+              // Log successful login
+              logSecurityEvent({
+                action: 'login',
+                resourceType: 'auth',
+                userId: adminUser!.id,
+                userEmail: adminUser!.username || undefined,
+                ip,
+                userAgent: req.get('User-Agent'),
+                details: { method: 'password', role: adminUser!.role },
+              });
+
               res.json({ success: true, user: adminUser });
             });
           });
@@ -818,15 +844,18 @@ export async function registerRoutes(
       // Check database for user
       const user = await storage.getUserByUsername(username);
       if (!user || !user.passwordHash) {
+        recordFailedAttempt(ip);
         return res.status(401).json({ error: "Invalid username or password" });
       }
-      
+
       if (!user.isActive) {
+        recordFailedAttempt(ip);
         return res.status(401).json({ error: "Account is deactivated" });
       }
-      
+
       const passwordMatch = await bcrypt.compare(password, user.passwordHash);
       if (!passwordMatch) {
+        recordFailedAttempt(ip);
         return res.status(401).json({ error: "Invalid username or password" });
       }
       
@@ -846,6 +875,18 @@ export async function registerRoutes(
             console.error("Session save error:", saveErr);
             return res.status(500).json({ error: "Failed to save session" });
           }
+
+          // Log successful login
+          logSecurityEvent({
+            action: 'login',
+            resourceType: 'auth',
+            userId: user.id,
+            userEmail: user.username || undefined,
+            ip,
+            userAgent: req.get('User-Agent'),
+            details: { method: 'password', role: user.role },
+          });
+
           res.json({ success: true, user });
         });
       });
@@ -1784,12 +1825,12 @@ export async function registerRoutes(
     try {
       const existingContent = await storage.getContent(req.params.id);
       await storage.deleteContent(req.params.id);
-      
+
       // Audit log content deletion
       if (existingContent) {
         await logAuditEvent(req, "delete", "content", req.params.id, `Deleted: ${existingContent.title}`, { title: existingContent.title, type: existingContent.type });
       }
-      
+
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting content:", error);
@@ -4835,6 +4876,38 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       } else {
         res.status(500).send("Tracking error");
       }
+    }
+  });
+
+  // ============================================================================
+  // ADMIN SECURITY ENDPOINTS
+  // ============================================================================
+
+  // Get audit logs (admin only)
+  app.get("/api/admin/audit-logs", requirePermission("canPublish"), auditLogReadOnly, (req, res) => {
+    try {
+      const { action, resourceType, userId, limit = 100 } = req.query;
+      const logs = getAuditLogs({
+        action: action as string,
+        resourceType: resourceType as string,
+        userId: userId as string,
+        limit: parseInt(limit as string) || 100,
+      });
+      res.json({ logs, total: logs.length });
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ error: "Failed to fetch audit logs" });
+    }
+  });
+
+  // Get blocked IPs (admin only)
+  app.get("/api/admin/blocked-ips", requirePermission("canPublish"), (req, res) => {
+    try {
+      const blockedIps = getBlockedIps();
+      res.json({ blockedIps, total: blockedIps.length });
+    } catch (error) {
+      console.error("Error fetching blocked IPs:", error);
+      res.status(500).json({ error: "Failed to fetch blocked IPs" });
     }
   });
 

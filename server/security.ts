@@ -422,3 +422,229 @@ export function auditLogReadOnly(req: Request, res: Response, next: NextFunction
   }
   next();
 }
+
+// ============================================================================
+// AUDIT LOGGING - Track all critical operations
+// ============================================================================
+export interface AuditLogEntry {
+  timestamp: string;
+  action: 'create' | 'update' | 'delete' | 'publish' | 'login' | 'logout' | 'translate' | 'ai_generate';
+  resourceType: string;
+  resourceId?: string;
+  userId?: string;
+  userEmail?: string;
+  ip: string;
+  userAgent?: string;
+  details?: Record<string, unknown>;
+}
+
+const auditLogStore: AuditLogEntry[] = [];
+const MAX_AUDIT_LOGS = 10000; // Keep last 10k entries in memory
+
+export function logAuditEvent(entry: Omit<AuditLogEntry, 'timestamp'>) {
+  const logEntry: AuditLogEntry = {
+    ...entry,
+    timestamp: new Date().toISOString(),
+  };
+
+  auditLogStore.push(logEntry);
+
+  // Trim old entries
+  if (auditLogStore.length > MAX_AUDIT_LOGS) {
+    auditLogStore.splice(0, auditLogStore.length - MAX_AUDIT_LOGS);
+  }
+
+  // Console log for persistence (can be picked up by logging services)
+  console.log('[AUDIT]', JSON.stringify(logEntry));
+}
+
+export function getAuditLogs(options?: {
+  action?: string;
+  resourceType?: string;
+  userId?: string;
+  limit?: number;
+}): AuditLogEntry[] {
+  let logs = [...auditLogStore];
+
+  if (options?.action) {
+    logs = logs.filter(l => l.action === options.action);
+  }
+  if (options?.resourceType) {
+    logs = logs.filter(l => l.resourceType === options.resourceType);
+  }
+  if (options?.userId) {
+    logs = logs.filter(l => l.userId === options.userId);
+  }
+
+  // Return newest first
+  logs.reverse();
+
+  return options?.limit ? logs.slice(0, options.limit) : logs;
+}
+
+// Middleware to auto-log requests
+export function auditLogMiddleware(action: AuditLogEntry['action'], resourceType: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user as any;
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
+    // Store original json method to intercept response
+    const originalJson = res.json.bind(res);
+    res.json = function(data: any) {
+      // Only log successful operations
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        logAuditEvent({
+          action,
+          resourceType,
+          resourceId: req.params.id || data?.id,
+          userId: user?.claims?.sub,
+          userEmail: user?.claims?.email,
+          ip,
+          userAgent: req.get('User-Agent'),
+          details: {
+            method: req.method,
+            path: req.path,
+            statusCode: res.statusCode,
+          },
+        });
+      }
+      return originalJson(data);
+    };
+
+    next();
+  };
+}
+
+// ============================================================================
+// CONTENT SECURITY POLICY HEADERS
+// ============================================================================
+export function securityHeaders(req: Request, res: Response, next: NextFunction) {
+  // Content Security Policy
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob: https: http:",
+    "connect-src 'self' https://*.replit.dev https://api.deepl.com https://api.openai.com https://images.unsplash.com wss:",
+    "frame-ancestors 'self'",
+    "form-action 'self'",
+    "base-uri 'self'",
+  ].join('; '));
+
+  // Additional security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  next();
+}
+
+// ============================================================================
+// IP BLOCKING - Track and block suspicious IPs
+// ============================================================================
+interface SuspiciousIpEntry {
+  failedAttempts: number;
+  blockedUntil?: number;
+  lastAttempt: number;
+}
+
+const suspiciousIps = new Map<string, SuspiciousIpEntry>();
+const BLOCK_THRESHOLD = 10; // Block after 10 failed attempts
+const BLOCK_DURATION = 30 * 60 * 1000; // 30 minutes
+const ATTEMPT_WINDOW = 15 * 60 * 1000; // 15 minutes
+
+// Clean up old entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  suspiciousIps.forEach((entry, ip) => {
+    if (entry.blockedUntil && entry.blockedUntil < now) {
+      suspiciousIps.delete(ip);
+    } else if (now - entry.lastAttempt > ATTEMPT_WINDOW * 2) {
+      suspiciousIps.delete(ip);
+    }
+  });
+}, 10 * 60 * 1000);
+
+export function recordFailedAttempt(ip: string) {
+  const now = Date.now();
+  const entry = suspiciousIps.get(ip) || { failedAttempts: 0, lastAttempt: now };
+
+  // Reset if last attempt was too long ago
+  if (now - entry.lastAttempt > ATTEMPT_WINDOW) {
+    entry.failedAttempts = 0;
+  }
+
+  entry.failedAttempts++;
+  entry.lastAttempt = now;
+
+  // Block if threshold exceeded
+  if (entry.failedAttempts >= BLOCK_THRESHOLD) {
+    entry.blockedUntil = now + BLOCK_DURATION;
+    console.warn(`[SECURITY] IP blocked: ${ip} after ${entry.failedAttempts} failed attempts`);
+
+    logAuditEvent({
+      action: 'login',
+      resourceType: 'security',
+      ip,
+      details: {
+        event: 'ip_blocked',
+        failedAttempts: entry.failedAttempts,
+        blockedUntil: new Date(entry.blockedUntil).toISOString(),
+      },
+    });
+  }
+
+  suspiciousIps.set(ip, entry);
+}
+
+export function isIpBlocked(ip: string): boolean {
+  const entry = suspiciousIps.get(ip);
+  if (!entry?.blockedUntil) return false;
+
+  if (entry.blockedUntil < Date.now()) {
+    suspiciousIps.delete(ip);
+    return false;
+  }
+
+  return true;
+}
+
+export function ipBlockMiddleware(req: Request, res: Response, next: NextFunction) {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
+  if (isIpBlocked(ip)) {
+    const entry = suspiciousIps.get(ip);
+    const retryAfter = entry?.blockedUntil ? Math.ceil((entry.blockedUntil - Date.now()) / 1000) : 1800;
+
+    res.setHeader('Retry-After', retryAfter);
+    return res.status(403).json({
+      error: 'IP temporarily blocked due to suspicious activity',
+      retryAfter,
+    });
+  }
+
+  next();
+}
+
+// ============================================================================
+// PUBLIC API - List of blocked IPs (for admin)
+// ============================================================================
+export function getBlockedIps(): Array<{ ip: string; blockedUntil: string; failedAttempts: number }> {
+  const result: Array<{ ip: string; blockedUntil: string; failedAttempts: number }> = [];
+  const now = Date.now();
+
+  suspiciousIps.forEach((entry, ip) => {
+    if (entry.blockedUntil && entry.blockedUntil > now) {
+      result.push({
+        ip,
+        blockedUntil: new Date(entry.blockedUntil).toISOString(),
+        failedAttempts: entry.failedAttempts,
+      });
+    }
+  });
+
+  return result;
+}
