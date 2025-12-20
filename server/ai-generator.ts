@@ -229,8 +229,95 @@ Return ONLY the prompt text, no additional explanation.`
   }
 }
 
-// Generate image using DALL-E
-export async function generateImage(
+// ============================================================================
+// IMAGE GENERATION PROVIDERS
+// ============================================================================
+// Multi-provider image generation for cost optimization:
+// - DALL-E 3: $0.080/image (HD) - Best for complex scenes
+// - Flux 1.1 Pro: ~$0.03/image via Replicate (67% savings) - Great for photorealistic
+
+type ImageProvider = 'dalle3' | 'flux' | 'auto';
+
+interface ImageGenerationConfig {
+  provider: ImageProvider;
+  size: '1024x1024' | '1792x1024' | '1024x1792';
+  quality: 'standard' | 'hd';
+  style: 'vivid' | 'natural';
+}
+
+// Get Replicate client for Flux
+async function generateWithFlux(
+  prompt: string,
+  aspectRatio: '16:9' | '1:1' | '9:16' = '16:9'
+): Promise<string | null> {
+  const replicateApiKey = process.env.REPLICATE_API_KEY;
+  if (!replicateApiKey) {
+    console.log("Replicate API key not configured, falling back to DALL-E");
+    return null;
+  }
+
+  try {
+    // Using Replicate's HTTP API for Flux 1.1 Pro
+    const response = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${replicateApiKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'wait'  // Wait for result synchronously
+      },
+      body: JSON.stringify({
+        version: "black-forest-labs/flux-1.1-pro",
+        input: {
+          prompt: prompt,
+          aspect_ratio: aspectRatio,
+          output_format: "jpg",
+          output_quality: 90,
+          safety_tolerance: 2,
+          prompt_upsampling: true
+        }
+      })
+    });
+
+    if (!response.ok) {
+      console.error("Flux API error:", await response.text());
+      return null;
+    }
+
+    const result = await response.json();
+
+    // If using 'wait' header, output should be ready
+    if (result.output) {
+      return Array.isArray(result.output) ? result.output[0] : result.output;
+    }
+
+    // If not ready, poll for result (max 60 seconds)
+    if (result.urls?.get) {
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const pollResponse = await fetch(result.urls.get, {
+          headers: { 'Authorization': `Bearer ${replicateApiKey}` }
+        });
+        const pollResult = await pollResponse.json();
+
+        if (pollResult.status === 'succeeded' && pollResult.output) {
+          return Array.isArray(pollResult.output) ? pollResult.output[0] : pollResult.output;
+        }
+        if (pollResult.status === 'failed') {
+          console.error("Flux generation failed:", pollResult.error);
+          return null;
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error generating with Flux:", error);
+    return null;
+  }
+}
+
+// Generate image using DALL-E 3
+async function generateWithDalle(
   prompt: string,
   options: {
     size?: '1024x1024' | '1792x1024' | '1024x1792';
@@ -246,7 +333,7 @@ export async function generateImage(
       model: "dall-e-3",
       prompt: prompt,
       n: 1,
-      size: options.size || '1792x1024', // Wide for hero images
+      size: options.size || '1792x1024',
       quality: options.quality || 'hd',
       style: options.style || 'natural',
     });
@@ -256,6 +343,40 @@ export async function generateImage(
     console.error("Error generating image with DALL-E:", error);
     return null;
   }
+}
+
+// Main image generation with provider selection
+export async function generateImage(
+  prompt: string,
+  options: {
+    size?: '1024x1024' | '1792x1024' | '1024x1792';
+    quality?: 'standard' | 'hd';
+    style?: 'vivid' | 'natural';
+    provider?: ImageProvider;
+    imageType?: 'hero' | 'content';
+  } = {}
+): Promise<string | null> {
+  // Auto-select provider based on image type for cost optimization
+  // Hero images: Flux (67% cheaper, excellent for photorealistic Dubai scenes)
+  // Content images: DALL-E (better for specific detailed scenes)
+  const provider = options.provider || (options.imageType === 'hero' ? 'flux' : 'dalle3');
+
+  if (provider === 'flux' || provider === 'auto') {
+    // Map size to aspect ratio for Flux
+    const aspectRatio = options.size === '1792x1024' ? '16:9' :
+                        options.size === '1024x1792' ? '9:16' : '1:1';
+
+    const fluxResult = await generateWithFlux(prompt, aspectRatio);
+    if (fluxResult) return fluxResult;
+
+    // Fallback to DALL-E if Flux fails
+    if (provider === 'auto') {
+      console.log("Flux failed, falling back to DALL-E");
+      return generateWithDalle(prompt, options);
+    }
+  }
+
+  return generateWithDalle(prompt, options);
 }
 
 // Generate all images for content
@@ -279,6 +400,7 @@ export async function generateContentImages(
         size: '1792x1024',
         quality: 'hd',
         style: 'natural',
+        imageType: 'hero',  // Uses Flux for 67% cost savings
       });
 
       if (heroUrl) {
@@ -308,6 +430,7 @@ export async function generateContentImages(
           size: '1024x1024',
           quality: 'standard',
           style: 'natural',
+          imageType: 'content',  // Uses DALL-E for detailed scenes
         });
 
         if (contentUrl) {

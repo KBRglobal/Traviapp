@@ -358,3 +358,236 @@ export function getTranslationProgress(
     percentage: Math.round((completed / total) * 100),
   };
 }
+
+// ============================================================================
+// BATCH TRANSLATION API (50% cost savings)
+// ============================================================================
+// OpenAI Batch API allows sending many requests at once with 24-hour turnaround
+// at 50% discount. Perfect for bulk translation of content.
+
+interface BatchTranslationJob {
+  id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  requests: Array<{
+    customId: string;
+    text: string;
+    sourceLocale: Locale;
+    targetLocale: Locale;
+    contentType: "title" | "description" | "body" | "meta";
+  }>;
+  results?: Map<string, string>;
+  createdAt: Date;
+  completedAt?: Date;
+  batchId?: string;  // OpenAI batch ID
+}
+
+// In-memory store for batch jobs (in production, persist to database)
+const batchJobs: Map<string, BatchTranslationJob> = new Map();
+
+export const batchTranslation = {
+  /**
+   * Create a batch translation job for multiple texts
+   * Returns a job ID that can be used to check status and retrieve results
+   */
+  async createBatchJob(
+    requests: Array<{
+      text: string;
+      sourceLocale: Locale;
+      targetLocale: Locale;
+      contentType?: "title" | "description" | "body" | "meta";
+    }>
+  ): Promise<string> {
+    const openai = getOpenAIClient();
+    if (!openai) {
+      throw new Error("OpenAI client not configured");
+    }
+
+    const jobId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create batch request file (JSONL format)
+    const batchRequests = requests.map((req, index) => {
+      const targetLocaleInfo = SUPPORTED_LOCALES.find((l) => l.code === req.targetLocale);
+      const targetLanguageName = targetLocaleInfo?.name || req.targetLocale;
+      const contentType = req.contentType || "body";
+
+      const contentTypeInstructions: Record<string, string> = {
+        title: "This is a title/heading. Keep it concise, impactful, and SEO-friendly.",
+        description: "This is a meta description for SEO. Keep it under 160 characters, compelling, and include key search terms.",
+        meta: "This is meta content for SEO. Optimize for search engines while being natural.",
+        body: "This is body content. Maintain the tone, style, and formatting of the original.",
+      };
+
+      return {
+        custom_id: `req_${index}`,
+        method: "POST",
+        url: "/v1/chat/completions",
+        body: {
+          model: "gpt-4o-mini",
+          max_tokens: 4096,
+          messages: [
+            { role: "system", content: TRANSLATION_SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: `Translate the following ${contentType} from ${req.sourceLocale} to ${targetLanguageName} (${req.targetLocale}).
+
+${contentTypeInstructions[contentType]}
+
+Text to translate:
+${req.text}`,
+            },
+          ],
+          temperature: 0.3,
+        },
+      };
+    });
+
+    try {
+      // Convert to JSONL
+      const jsonlContent = batchRequests.map(r => JSON.stringify(r)).join('\n');
+      const jsonlBlob = new Blob([jsonlContent], { type: 'application/jsonl' });
+
+      // Upload file to OpenAI
+      const file = await openai.files.create({
+        file: jsonlBlob as any,
+        purpose: 'batch',
+      });
+
+      // Create batch
+      const batch = await openai.batches.create({
+        input_file_id: file.id,
+        endpoint: '/v1/chat/completions',
+        completion_window: '24h',
+      });
+
+      // Store job
+      const job: BatchTranslationJob = {
+        id: jobId,
+        status: 'processing',
+        requests: requests.map((req, index) => ({
+          customId: `req_${index}`,
+          text: req.text,
+          sourceLocale: req.sourceLocale,
+          targetLocale: req.targetLocale,
+          contentType: req.contentType || "body",
+        })),
+        createdAt: new Date(),
+        batchId: batch.id,
+      };
+
+      batchJobs.set(jobId, job);
+      return jobId;
+    } catch (error) {
+      console.error("Error creating batch translation job:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Check status of a batch translation job
+   */
+  async getJobStatus(jobId: string): Promise<BatchTranslationJob | null> {
+    const job = batchJobs.get(jobId);
+    if (!job) return null;
+
+    if (job.status === 'processing' && job.batchId) {
+      const openai = getOpenAIClient();
+      if (!openai) return job;
+
+      try {
+        const batch = await openai.batches.retrieve(job.batchId);
+
+        if (batch.status === 'completed') {
+          // Download results
+          if (batch.output_file_id) {
+            const outputFile = await openai.files.content(batch.output_file_id);
+            const outputContent = await outputFile.text();
+
+            // Parse JSONL results
+            const results = new Map<string, string>();
+            for (const line of outputContent.split('\n').filter(Boolean)) {
+              const result = JSON.parse(line);
+              const translation = result.response?.body?.choices?.[0]?.message?.content?.trim();
+              if (translation) {
+                results.set(result.custom_id, translation);
+              }
+            }
+
+            job.status = 'completed';
+            job.results = results;
+            job.completedAt = new Date();
+          }
+        } else if (batch.status === 'failed' || batch.status === 'expired' || batch.status === 'cancelled') {
+          job.status = 'failed';
+        }
+      } catch (error) {
+        console.error("Error checking batch status:", error);
+      }
+    }
+
+    return job;
+  },
+
+  /**
+   * Get results from a completed batch job
+   */
+  async getResults(jobId: string): Promise<Map<string, string> | null> {
+    const job = await this.getJobStatus(jobId);
+    if (!job || job.status !== 'completed') return null;
+    return job.results || null;
+  },
+
+  /**
+   * Translate content to all languages using batch API (50% cheaper, 24h turnaround)
+   * Returns job ID for tracking
+   */
+  async translateContentBatch(
+    content: {
+      title?: string;
+      metaTitle?: string;
+      metaDescription?: string;
+    },
+    sourceLocale: Locale = "en",
+    targetTiers?: number[]
+  ): Promise<string> {
+    let targetLocales = SUPPORTED_LOCALES.filter((l) => l.code !== sourceLocale);
+    if (targetTiers && targetTiers.length > 0) {
+      targetLocales = targetLocales.filter((l) => targetTiers.includes(l.tier));
+    }
+
+    const requests: Array<{
+      text: string;
+      sourceLocale: Locale;
+      targetLocale: Locale;
+      contentType: "title" | "description" | "body" | "meta";
+    }> = [];
+
+    for (const locale of targetLocales) {
+      if (content.title) {
+        requests.push({
+          text: content.title,
+          sourceLocale,
+          targetLocale: locale.code,
+          contentType: "title",
+        });
+      }
+      if (content.metaTitle) {
+        requests.push({
+          text: content.metaTitle,
+          sourceLocale,
+          targetLocale: locale.code,
+          contentType: "meta",
+        });
+      }
+      if (content.metaDescription) {
+        requests.push({
+          text: content.metaDescription,
+          sourceLocale,
+          targetLocale: locale.code,
+          contentType: "description",
+        });
+      }
+    }
+
+    return this.createBatchJob(requests);
+  },
+};
