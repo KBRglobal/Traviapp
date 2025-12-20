@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { 
-  Building2, Home, TrendingUp, DollarSign, 
+import {
+  Building2, Home, TrendingUp, DollarSign,
   Shield, Clock, CheckCircle2, ChevronDown,
   Mail, User, ArrowRight, Landmark, ChevronLeft,
   Sparkles, Bitcoin, Banknote, Building, CalendarDays,
@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -325,12 +326,16 @@ const FAQ_ITEMS = [
 ];
 
 // Interactive Lead Wizard Component
-function LeadWizard({ 
-  open, 
-  onOpenChange 
-}: { 
-  open: boolean; 
+function LeadWizard({
+  open,
+  onOpenChange,
+  t,
+  isRTL,
+}: {
+  open: boolean;
   onOpenChange: (open: boolean) => void;
+  t: (key: string) => string;
+  isRTL: boolean;
 }) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -841,18 +846,19 @@ function LeadWizard({
 }
 
 export default function PublicOffPlan() {
+  const { t, isRTL, localePath } = useLocale();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [showFullIntro, setShowFullIntro] = useState(false);
 
   useDocumentMeta({
-    title: "Buy Off-Plan Dubai: Crypto & Cash Payment Plans 2025",
-    description: "Dubai off-plan properties from AED 450K. Pay with crypto (BTC, USDT, ETH) or cash. Flexible 3-5 year plans, 15-30% capital gains. Expert guidance.",
+    title: t("offPlan.metaTitle"),
+    description: t("offPlan.metaDescription"),
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background" dir={isRTL ? "rtl" : "ltr"}>
       <PublicNav />
-      <LeadWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      <LeadWizard open={wizardOpen} onOpenChange={setWizardOpen} t={t} isRTL={isRTL} />
 
       {/* Hero Section */}
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
@@ -867,55 +873,55 @@ export default function PublicOffPlan() {
         
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-20">
           <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm mb-6 text-sm px-4 py-1.5">
-            Powered by Off-Plan Specialists
+            {t("offPlan.poweredBy")}
           </Badge>
-          
+
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-4 tracking-tight">
-            Dubai Off-Plan Properties
+            {t("offPlan.heroTitle")}
           </h1>
-          
+
           <h2 className="text-xl sm:text-2xl md:text-3xl text-white/90 mb-6 font-light max-w-3xl mx-auto">
-            Invest Early, Pay Less, Gain More
+            {t("offPlan.heroSubtitle")}
           </h2>
 
           <div className="flex items-center justify-center gap-3 mb-8 flex-wrap">
             <Badge variant="outline" className="bg-white/10 text-white border-white/30 backdrop-blur-sm px-4 py-2">
-              <Banknote className="w-4 h-4 mr-2" /> Cash
+              <Banknote className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} /> {t("offPlan.paymentCash")}
             </Badge>
             <Badge variant="outline" className="bg-white/10 text-white border-white/30 backdrop-blur-sm px-4 py-2">
-              <CreditCard className="w-4 h-4 mr-2" /> Bank Transfer
+              <CreditCard className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} /> {t("offPlan.paymentBankTransfer")}
             </Badge>
             <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/30 backdrop-blur-sm px-4 py-2">
-              <Bitcoin className="w-4 h-4 mr-2" /> BTC / USDT / ETH
+              <Bitcoin className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} /> {t("offPlan.paymentCrypto")}
             </Badge>
           </div>
           
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             className="text-lg px-8 py-6 rounded-full shadow-2xl"
             onClick={() => setWizardOpen(true)}
             data-testid="button-hero-wizard"
           >
-            <Building2 className="w-5 h-5 mr-2" />
-            Find My Perfect Property
+            <Building2 className={`w-5 h-5 ${isRTL ? "ml-2" : "mr-2"}`} />
+            {t("offPlan.findProperty")}
           </Button>
-          
+
           <div className="flex flex-wrap justify-center gap-4 mt-8 text-white/80 text-sm">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-green-400" />
-              From AED 450K
+              {t("offPlan.fromPrice")}
             </span>
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-green-400" />
-              Pay over 3-5 years
+              {t("offPlan.paymentYears")}
             </span>
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-green-400" />
-              Crypto accepted
+              {t("offPlan.cryptoAccepted")}
             </span>
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-green-400" />
-              15-30% capital gains
+              {t("offPlan.capitalGains")}
             </span>
           </div>
         </div>
