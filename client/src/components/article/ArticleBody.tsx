@@ -1,10 +1,27 @@
 import { ChevronDown, Lightbulb, Star, AlertCircle, CheckCircle } from "lucide-react";
+import { marked } from "marked";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+
+// Configure marked for safe rendering
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+});
+
+// Helper to convert markdown to HTML
+function parseMarkdown(content: string): string {
+  if (!content) return "";
+  // Check if content already contains HTML tags
+  if (/<[a-z][\s\S]*>/i.test(content)) {
+    return content;
+  }
+  return marked.parse(content) as string;
+}
 
 interface FaqItem {
   question: string;
@@ -24,6 +41,8 @@ interface ArticleBodyProps {
 }
 
 function renderTextBlock(data: Record<string, any>, index: number) {
+  const htmlContent = parseMarkdown(data.content || "");
+  
   return (
     <div key={index} className="py-6" data-testid={`text-block-${index}`}>
       {data.title && (
@@ -34,12 +53,14 @@ function renderTextBlock(data: Record<string, any>, index: number) {
       <div
         className="prose prose-lg max-w-none dark:prose-invert 
                    prose-headings:font-bold prose-headings:text-foreground
+                   prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4
+                   prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
                    prose-p:text-muted-foreground prose-p:leading-relaxed
                    prose-a:text-[#6443F4] prose-a:no-underline hover:prose-a:underline
                    prose-strong:text-foreground prose-strong:font-semibold
                    prose-ul:text-muted-foreground prose-ol:text-muted-foreground
                    prose-li:marker:text-[#FF9327]"
-        dangerouslySetInnerHTML={{ __html: data.content || "" }}
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     </div>
   );
