@@ -2,10 +2,9 @@ import { useRef } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { 
-  ChevronRight, Clock, Building2, ShoppingBag, Utensils, 
-  Dumbbell, Car, Pill, Home, Briefcase, Coffee, 
-  Moon, Sun, Store, CreditCard, Fuel, Shirt,
-  MapPin, Phone, Star, CheckCircle2, Sparkles
+  ChevronRight, Building2, ShoppingBag, Utensils, 
+  Dumbbell, Pill, Home, Briefcase, Moon, Store, Fuel, Shirt,
+  MapPin, CheckCircle2, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

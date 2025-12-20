@@ -2,10 +2,9 @@ import { useRef } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { 
-  ChevronRight, Star, Crown, Building2, Plane, Globe, 
+  ChevronRight, Crown, Building2, Globe, 
   Heart, GraduationCap, Users, Rocket, BookOpen, HandHeart,
-  Award, TrendingUp, MapPin, Clock, Shield, Scale, 
-  Home, Lightbulb, Target, Medal, Palmtree
+  TrendingUp, MapPin, Home, Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
