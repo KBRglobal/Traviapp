@@ -12,9 +12,6 @@ import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
 import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
 import traviLogoImg from "@assets/Logotype_for_Dark_Background_1766192985178.png";
-import swirlGreenImg from "@assets/2_1766192998146.png";
-import swirlPurpleImg from "@assets/24_1766192998146.png";
-import swirlVerticalImg from "@assets/84_1766192998146.png";
 
 interface HomepagePromotion {
   id: string;
@@ -175,19 +172,6 @@ export default function PublicHome() {
             <BirdSVG className="absolute top-36 left-[48%] animate-bird animation-delay-500" />
             <BirdSVG className="absolute top-32 left-[52%] animate-bird animation-delay-300" />
             
-            {/* Brand Swirl Decorations */}
-            <img 
-              src={swirlGreenImg} 
-              alt="" 
-              className="absolute bottom-32 left-[3%] w-32 md:w-48 opacity-40 animate-float-gentle"
-              aria-hidden="true"
-            />
-            <img 
-              src={swirlPurpleImg} 
-              alt="" 
-              className="absolute top-[40%] right-[2%] w-40 md:w-56 opacity-30 animate-float-gentle animation-delay-1000"
-              aria-hidden="true"
-            />
           </div>
 
           {/* Main Hero Content */}
@@ -279,14 +263,6 @@ export default function PublicHome() {
 
         {/* EXPLORE CATEGORIES - Glass Cards Grid */}
         <section className="py-24 relative" data-testid="section-categories">
-          {/* Decorative Swirl */}
-          <img 
-            src={swirlVerticalImg} 
-            alt="" 
-            className="absolute top-20 right-[5%] w-24 md:w-32 opacity-20 hidden lg:block"
-            aria-hidden="true"
-          />
-          
           <div className="max-w-7xl mx-auto px-6">
             <motion.div
               initial="hidden"
@@ -662,20 +638,6 @@ export default function PublicHome() {
           <CloudSVG className="absolute top-10 left-[5%] opacity-40 animate-cloud-drift" size="lg" />
           <CloudSVG className="absolute top-20 right-[10%] opacity-30 animate-cloud-drift animation-delay-1000" size="md" />
           <CloudSVG className="absolute bottom-20 left-[15%] opacity-35 animate-cloud-drift animation-delay-2000" size="sm" />
-          
-          {/* Brand Swirl Decoration */}
-          <img 
-            src={swirlPurpleImg} 
-            alt="" 
-            className="absolute top-10 left-[5%] w-36 md:w-48 opacity-25 rotate-180 hidden md:block"
-            aria-hidden="true"
-          />
-          <img 
-            src={swirlGreenImg} 
-            alt="" 
-            className="absolute bottom-10 right-[5%] w-32 md:w-40 opacity-30 hidden md:block"
-            aria-hidden="true"
-          />
           
           {/* Mascot */}
           <img 
