@@ -24,12 +24,30 @@ interface HomepagePromotion {
   content?: ContentWithRelations;
 }
 
-const dubaiImages = [
-  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1546412414-e1885259563a?w=600&h=800&fit=crop",
-  "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=600&h=800&fit=crop",
+// World landmarks for the flowing logo texture
+const worldLandmarks = [
+  "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&h=800&fit=crop", // Eiffel Tower, Paris
+  "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=600&h=800&fit=crop", // Colosseum, Rome
+  "https://images.unsplash.com/photo-1548013146-72479768bada?w=600&h=800&fit=crop", // Taj Mahal, India
+  "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=600&h=800&fit=crop", // Statue of Liberty, NYC
+  "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600&h=800&fit=crop", // London Bridge & Big Ben
+  "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=600&h=800&fit=crop", // Sydney Opera House
+  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=800&fit=crop", // Burj Khalifa, Dubai
+  "https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=600&h=800&fit=crop", // Tokyo Tower, Japan
+];
+
+// Playful mascot messages when trying to catch it
+const mascotMessages = [
+  "You can't catch me!",
+  "Too slow!",
+  "Nice try!",
+  "Almost got me!",
+  "I'm too fast!",
+  "Keep trying!",
+  "Hehe, missed!",
+  "Catch me if you can!",
+  "Not today!",
+  "So close!",
 ];
 
 const categories = [
@@ -107,6 +125,39 @@ export default function PublicHome() {
   const heroRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
   const { t, localePath, isRTL } = useLocale();
+  
+  // Interactive mascot state
+  const [mascotMessage, setMascotMessage] = useState("");
+  const [mascotPosition, setMascotPosition] = useState({ x: 0, y: 0 });
+  const [showMascotMessage, setShowMascotMessage] = useState(false);
+  const mascotTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleMascotHover = () => {
+    // Random direction to "run away"
+    const newX = (Math.random() - 0.5) * 100;
+    const newY = (Math.random() - 0.5) * 40;
+    setMascotPosition({ x: newX, y: newY });
+    
+    // Random message
+    const randomMessage = mascotMessages[Math.floor(Math.random() * mascotMessages.length)];
+    setMascotMessage(randomMessage);
+    setShowMascotMessage(true);
+    
+    // Hide message after delay
+    if (mascotTimeoutRef.current) clearTimeout(mascotTimeoutRef.current);
+    mascotTimeoutRef.current = setTimeout(() => {
+      setShowMascotMessage(false);
+      // Reset position after a bit
+      setTimeout(() => setMascotPosition({ x: 0, y: 0 }), 500);
+    }, 1500);
+  };
+  
+  // Cleanup mascot timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (mascotTimeoutRef.current) clearTimeout(mascotTimeoutRef.current);
+    };
+  }, []);
 
   // Mouse parallax effect
   useEffect(() => {
@@ -234,19 +285,19 @@ export default function PublicHome() {
                   maskRepeat: 'no-repeat',
                 }}
                 role="img"
-                aria-label="TRAVI - Your Dubai Travel Guide"
+                aria-label="TRAVI - Your World Travel Guide"
               >
                 {/* Animated flowing image strip */}
                 <div 
                   className="absolute inset-0 flex animate-logo-flow"
                   style={{ width: '200%' }}
                 >
-                  {[...dubaiImages, ...dubaiImages].map((img, i) => (
+                  {[...worldLandmarks, ...worldLandmarks].map((img, i) => (
                     <div 
                       key={i}
                       className="h-full flex-shrink-0"
                       style={{
-                        width: `${100 / dubaiImages.length}%`,
+                        width: `${100 / worldLandmarks.length}%`,
                         backgroundImage: `url(${img})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
@@ -257,13 +308,40 @@ export default function PublicHome() {
               </div>
             </div>
 
-            {/* Mascot */}
-            <div className="flex justify-center mb-6">
-              <img 
-                src={mascotImg} 
-                alt="Travi mascot - friendly duck with sunglasses" 
-                className="w-32 h-32 sm:w-40 sm:h-40 animate-float-gentle drop-shadow-lg"
-              />
+            {/* Interactive Mascot */}
+            <div className="flex justify-center mb-6 relative">
+              <div 
+                className="relative cursor-pointer select-none"
+                onMouseEnter={handleMascotHover}
+                data-testid="mascot-interactive"
+              >
+                {/* Speech bubble */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                  animate={{ 
+                    opacity: showMascotMessage ? 1 : 0, 
+                    scale: showMascotMessage ? 1 : 0.8,
+                    y: showMascotMessage ? 0 : 10
+                  }}
+                  className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-purple-100 whitespace-nowrap z-20"
+                >
+                  <span className="text-sm font-medium text-[#6C5CE7]">{mascotMessage}</span>
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white/95" />
+                </motion.div>
+                
+                {/* Mascot image that "runs away" */}
+                <motion.img 
+                  src={mascotImg} 
+                  alt="Travi mascot - friendly duck with sunglasses" 
+                  className="w-32 h-32 sm:w-40 sm:h-40 drop-shadow-lg"
+                  animate={{ 
+                    x: mascotPosition.x,
+                    y: mascotPosition.y,
+                    rotate: mascotPosition.x > 0 ? 10 : mascotPosition.x < 0 ? -10 : 0
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                />
+              </div>
             </div>
 
             {/* Tagline */}
@@ -521,7 +599,7 @@ export default function PublicHome() {
                     <Link href={getContentPath(content)} data-testid={`explore-card-${content.id}`}>
                       <div className="group relative overflow-hidden rounded-3xl cursor-pointer aspect-[3/4]">
                         <img
-                          src={content.heroImage || dubaiImages[index % dubaiImages.length]}
+                          src={content.heroImage || worldLandmarks[index % worldLandmarks.length]}
                           alt={content.heroImageAlt || content.title}
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
@@ -604,7 +682,7 @@ export default function PublicHome() {
                     <Link href={getContentPath(content)} data-testid={`trending-card-${content.id}`}>
                       <div className="group relative overflow-hidden rounded-3xl cursor-pointer aspect-[4/5] shadow-lg shadow-rose-100/50 hover:shadow-xl hover:shadow-rose-200/50 transition-all duration-500">
                         <img
-                          src={content.heroImage || dubaiImages[index % dubaiImages.length]}
+                          src={content.heroImage || worldLandmarks[index % worldLandmarks.length]}
                           alt={content.heroImageAlt || content.title}
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
