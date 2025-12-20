@@ -173,6 +173,7 @@ export function ImageEnginePicker({ open, onOpenChange, onSelect, aspectRatio = 
                     variant="ghost" 
                     onClick={() => setActiveTab("generate")}
                     className="mt-2"
+                    data-testid="picker-button-generate-empty"
                   >
                     Generate a new image
                   </Button>
