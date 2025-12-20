@@ -358,17 +358,45 @@ function ArticleDetailView({ content }: { content: ContentWithExtensions }) {
   const category = content.article?.category;
   const blocks = content.blocks || [];
 
+  // Filter related articles by matching category or overlapping keywords
+  const currentKeywords = new Set([
+    ...(content.secondaryKeywords || []),
+    ...(content.lsiKeywords || []),
+    ...(content.focusKeyword ? [content.focusKeyword] : []),
+  ].map(k => k.toLowerCase()));
+  
   const relatedArticles = allArticles
     .filter((a) => a.id !== content.id)
-    .map((a) => ({
-      id: a.id,
-      title: a.title,
-      slug: a.slug,
-      heroImage: a.heroImage,
-      metaDescription: a.metaDescription,
-      publishedAt: a.publishedAt,
-      category: a.article?.category || undefined,
-    }));
+    .map((a) => {
+      const articleKeywords = [
+        ...(a.secondaryKeywords || []),
+        ...(a.lsiKeywords || []),
+        ...(a.focusKeyword ? [a.focusKeyword] : []),
+      ].map(k => k.toLowerCase());
+      
+      // Calculate relevance score: +3 for category match, +1 for each keyword match
+      let score = 0;
+      if (category && a.article?.category === category) {
+        score += 3;
+      }
+      articleKeywords.forEach(k => {
+        if (currentKeywords.has(k)) score += 1;
+      });
+      
+      return {
+        id: a.id,
+        title: a.title,
+        slug: a.slug,
+        heroImage: a.heroImage,
+        metaDescription: a.metaDescription,
+        publishedAt: a.publishedAt,
+        category: a.article?.category || undefined,
+        score,
+      };
+    })
+    .filter(a => a.score > 0) // Only include articles with some relevance
+    .sort((a, b) => b.score - a.score) // Sort by relevance score
+    .slice(0, 8); // Take top 8 for RelatedArticles component to slice to 4
 
   const recommendationItems = recommendations
     .filter((r) => r.id !== content.id && r.type !== "article")
