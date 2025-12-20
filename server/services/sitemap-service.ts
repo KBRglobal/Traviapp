@@ -108,11 +108,15 @@ async function getUrlsForLocale(locale: Locale): Promise<SitemapUrl[]> {
   for (const page of staticPages) {
     const alternates = SUPPORTED_LOCALES.map((l) => ({
       locale: l.code,
-      url: `${BASE_URL}/${l.code}${page.path}`,
+      url: l.code === "en" 
+        ? `${BASE_URL}${page.path || "/"}` 
+        : `${BASE_URL}/${l.code}${page.path}`,
     }));
 
     urls.push({
-      loc: `${BASE_URL}/${locale}${page.path}`,
+      loc: locale === "en" 
+        ? `${BASE_URL}${page.path || "/"}` 
+        : `${BASE_URL}/${locale}${page.path}`,
       lastmod: now,
       changefreq: page.changefreq,
       priority: page.priority,
@@ -137,13 +141,17 @@ async function getUrlsForLocale(locale: Locale): Promise<SitemapUrl[]> {
 
       const alternates = availableLocales.map((l) => ({
         locale: l,
-        url: `${BASE_URL}/${l}${contentPath}`,
+        url: l === "en" 
+          ? `${BASE_URL}${contentPath}` 
+          : `${BASE_URL}/${l}${contentPath}`,
       }));
 
       // Only add URL if this locale has a translation or is English (original)
       if (locale === "en" || translations.some((t) => t.locale === locale)) {
         urls.push({
-          loc: `${BASE_URL}/${locale}${contentPath}`,
+          loc: locale === "en" 
+            ? `${BASE_URL}${contentPath}` 
+            : `${BASE_URL}/${locale}${contentPath}`,
           lastmod,
           changefreq: "weekly",
           priority: 0.7,

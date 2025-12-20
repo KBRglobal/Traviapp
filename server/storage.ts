@@ -59,6 +59,7 @@ import {
   type InsertContentVersion,
   type Translation,
   type InsertTranslation,
+  type Locale,
   type ContentFingerprint,
   type InsertContentFingerprint,
   type HomepagePromotion,
@@ -191,7 +192,8 @@ export interface IStorage {
   getLatestVersionNumber(contentId: string): Promise<number>;
 
   getTranslationsByContentId(contentId: string): Promise<Translation[]>;
-  getTranslation(id: string): Promise<Translation | undefined>;
+  getTranslation(contentId: string, locale: Locale): Promise<Translation | undefined>;
+  getTranslationById(id: string): Promise<Translation | undefined>;
   createTranslation(translation: InsertTranslation): Promise<Translation>;
   updateTranslation(id: string, data: Partial<InsertTranslation>): Promise<Translation | undefined>;
   deleteTranslation(id: string): Promise<boolean>;
@@ -910,7 +912,15 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(translations).where(eq(translations.contentId, contentId));
   }
 
-  async getTranslation(id: string): Promise<Translation | undefined> {
+  async getTranslation(contentId: string, locale: Locale): Promise<Translation | undefined> {
+    const [translation] = await db
+      .select()
+      .from(translations)
+      .where(and(eq(translations.contentId, contentId), eq(translations.locale, locale)));
+    return translation;
+  }
+
+  async getTranslationById(id: string): Promise<Translation | undefined> {
     const [translation] = await db.select().from(translations).where(eq(translations.id, id));
     return translation;
   }

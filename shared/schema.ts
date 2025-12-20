@@ -483,11 +483,36 @@ export const translations = pgTable("translations", {
   blocks: jsonb("blocks").$type<ContentBlock[]>().default([]),
   translatedBy: varchar("translated_by"),
   reviewedBy: varchar("reviewed_by"),
+  sourceHash: text("source_hash"), // Hash of original content to detect changes
+  isManualOverride: boolean("is_manual_override").default(false), // Manual edits won't be auto-retranslated
+  translationProvider: varchar("translation_provider"), // "deepl" | "anthropic" | "manual"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   uniqueContentLocale: sql`UNIQUE (${table.contentId}, ${table.locale})`,
 }));
+
+// UI Translations table - for static interface strings
+export const uiTranslations = pgTable("ui_translations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull(), // e.g., "nav.home", "common.loading"
+  locale: localeEnum("locale").notNull(),
+  value: text("value").notNull(),
+  namespace: varchar("namespace").default("common"), // "common", "admin", "public"
+  isManualOverride: boolean("is_manual_override").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueKeyLocale: sql`UNIQUE (${table.key}, ${table.locale})`,
+}));
+
+export const insertUiTranslationSchema = createInsertSchema(uiTranslations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertUiTranslation = z.infer<typeof insertUiTranslationSchema>;
+export type UiTranslation = typeof uiTranslations.$inferSelect;
 
 // Homepage Promotions table - for curating homepage sections
 export const homepageSectionEnum = pgEnum("homepage_section", ["featured", "attractions", "hotels", "articles", "trending"]);

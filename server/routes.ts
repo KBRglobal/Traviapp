@@ -5346,6 +5346,301 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // ============================================================================
+  // TRANSLATIONS - DeepL Multi-Language SEO System
+  // ============================================================================
+
+  // Get translations for a content item
+  app.get("/api/translations/:contentId", async (req, res) => {
+    try {
+      const translations = await storage.getTranslationsByContentId(req.params.contentId);
+      res.json(translations);
+    } catch (error) {
+      console.error("Error fetching translations:", error);
+      res.status(500).json({ error: "Failed to fetch translations" });
+    }
+  });
+
+  // Get a specific translation
+  app.get("/api/translations/:contentId/:locale", async (req, res) => {
+    try {
+      const { contentId, locale } = req.params;
+      const translation = await storage.getTranslation(contentId, locale as any);
+      if (!translation) {
+        return res.status(404).json({ error: "Translation not found" });
+      }
+      res.json(translation);
+    } catch (error) {
+      console.error("Error fetching translation:", error);
+      res.status(500).json({ error: "Failed to fetch translation" });
+    }
+  });
+
+  // Translate content to a specific language using DeepL
+  app.post("/api/translations/:contentId/translate", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { contentId } = req.params;
+      const { targetLocale, sourceLocale = "en" } = req.body;
+
+      if (!targetLocale) {
+        return res.status(400).json({ error: "Target locale is required" });
+      }
+
+      const content = await storage.getContent(contentId);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      const { translateContent, generateContentHash } = await import("./services/deepl-service");
+      
+      const translatedContent = await translateContent(
+        {
+          title: content.title,
+          metaTitle: content.metaTitle || undefined,
+          metaDescription: content.metaDescription || undefined,
+          blocks: content.blocks || [],
+        },
+        targetLocale,
+        sourceLocale
+      );
+
+      const existingTranslation = await storage.getTranslation(contentId, targetLocale);
+      
+      if (existingTranslation && existingTranslation.isManualOverride) {
+        return res.status(409).json({ 
+          error: "Manual override exists. Use force=true to overwrite.",
+          existingTranslation 
+        });
+      }
+
+      const translationData = {
+        contentId,
+        locale: targetLocale,
+        status: "completed" as const,
+        title: translatedContent.title || null,
+        metaTitle: translatedContent.metaTitle || null,
+        metaDescription: translatedContent.metaDescription || null,
+        blocks: translatedContent.blocks || [],
+        sourceHash: translatedContent.sourceHash,
+        translatedBy: "deepl",
+        translationProvider: "deepl",
+        isManualOverride: false,
+      };
+
+      let translation;
+      if (existingTranslation) {
+        translation = await storage.updateTranslation(existingTranslation.id, translationData);
+      } else {
+        translation = await storage.createTranslation(translationData);
+      }
+
+      res.json(translation);
+    } catch (error) {
+      console.error("Error translating content:", error);
+      res.status(500).json({ error: "Failed to translate content" });
+    }
+  });
+
+  // Batch translate content to multiple languages
+  app.post("/api/translations/:contentId/translate-all", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { contentId } = req.params;
+      const { targetTiers = [1, 2], sourceLocale = "en" } = req.body;
+
+      const content = await storage.getContent(contentId);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      const { translateToMultipleLanguages, generateContentHash, getDeepLSupportedLocales } = await import("./services/deepl-service");
+      
+      const supportedLocales = getDeepLSupportedLocales().filter(locale => {
+        const localeInfo = SUPPORTED_LOCALES.find(l => l.code === locale);
+        return localeInfo && targetTiers.includes(localeInfo.tier) && locale !== sourceLocale;
+      });
+
+      const translations = await translateToMultipleLanguages(
+        {
+          title: content.title,
+          metaTitle: content.metaTitle || undefined,
+          metaDescription: content.metaDescription || undefined,
+          blocks: content.blocks || [],
+        },
+        supportedLocales,
+        sourceLocale
+      );
+
+      const savedTranslations = [];
+      for (const [locale, translatedContent] of translations) {
+        const existingTranslation = await storage.getTranslation(contentId, locale);
+        
+        if (existingTranslation?.isManualOverride) {
+          continue;
+        }
+
+        const translationData = {
+          contentId,
+          locale,
+          status: "completed" as const,
+          title: translatedContent.title || null,
+          metaTitle: translatedContent.metaTitle || null,
+          metaDescription: translatedContent.metaDescription || null,
+          blocks: translatedContent.blocks || [],
+          sourceHash: translatedContent.sourceHash,
+          translatedBy: "deepl",
+          translationProvider: "deepl",
+          isManualOverride: false,
+        };
+
+        let translation;
+        if (existingTranslation) {
+          translation = await storage.updateTranslation(existingTranslation.id, translationData);
+        } else {
+          translation = await storage.createTranslation(translationData);
+        }
+        savedTranslations.push(translation);
+      }
+
+      res.json({
+        success: true,
+        translatedCount: savedTranslations.length,
+        targetLocales: supportedLocales,
+        translations: savedTranslations,
+      });
+    } catch (error) {
+      console.error("Error batch translating content:", error);
+      res.status(500).json({ error: "Failed to batch translate content" });
+    }
+  });
+
+  // Manual translation override
+  app.put("/api/translations/:contentId/:locale", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { contentId, locale } = req.params;
+      const { title, metaTitle, metaDescription, blocks } = req.body;
+
+      const existingTranslation = await storage.getTranslation(contentId, locale as any);
+      
+      const translationData = {
+        contentId,
+        locale: locale as any,
+        status: "completed" as const,
+        title: title || null,
+        metaTitle: metaTitle || null,
+        metaDescription: metaDescription || null,
+        blocks: blocks || [],
+        translatedBy: "manual",
+        translationProvider: "manual",
+        isManualOverride: true,
+      };
+
+      let translation;
+      if (existingTranslation) {
+        translation = await storage.updateTranslation(existingTranslation.id, translationData);
+      } else {
+        translation = await storage.createTranslation(translationData);
+      }
+
+      res.json(translation);
+    } catch (error) {
+      console.error("Error saving manual translation:", error);
+      res.status(500).json({ error: "Failed to save translation" });
+    }
+  });
+
+  // Get DeepL usage stats
+  app.get("/api/translations/usage", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const { getDeepLUsage, getDeepLSupportedLocales, getUnsupportedLocales } = await import("./services/deepl-service");
+      const usage = await getDeepLUsage();
+      
+      res.json({
+        usage,
+        supportedLocales: getDeepLSupportedLocales(),
+        unsupportedLocales: getUnsupportedLocales(),
+        totalLocales: SUPPORTED_LOCALES.length,
+      });
+    } catch (error) {
+      console.error("Error fetching DeepL usage:", error);
+      res.status(500).json({ error: "Failed to fetch usage stats" });
+    }
+  });
+
+  // Get public translated content
+  app.get("/api/public/content/:slug/:locale", async (req, res) => {
+    try {
+      const { slug, locale } = req.params;
+      
+      const content = await storage.getContentBySlug(slug);
+      if (!content || content.status !== "published") {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      if (locale === "en") {
+        return res.json(content);
+      }
+
+      const translation = await storage.getTranslation(content.id, locale as any);
+      if (!translation || translation.status !== "completed") {
+        return res.json(content);
+      }
+
+      res.json({
+        ...content,
+        title: translation.title || content.title,
+        metaTitle: translation.metaTitle || content.metaTitle,
+        metaDescription: translation.metaDescription || content.metaDescription,
+        blocks: translation.blocks || content.blocks,
+        locale,
+        isTranslated: true,
+      });
+    } catch (error) {
+      console.error("Error fetching translated content:", error);
+      res.status(500).json({ error: "Failed to fetch content" });
+    }
+  });
+
+  // Get all translations status for admin dashboard
+  app.get("/api/admin/translation-status", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const contents = await storage.getContents({ status: "published" });
+      
+      const status = await Promise.all(
+        contents.map(async (content) => {
+          const translations = await storage.getTranslationsByContentId(content.id);
+          const translatedLocales = translations
+            .filter(t => t.status === "completed")
+            .map(t => t.locale);
+          
+          return {
+            contentId: content.id,
+            title: content.title,
+            type: content.type,
+            translatedLocales,
+            totalTranslations: translatedLocales.length,
+            missingLocales: SUPPORTED_LOCALES
+              .filter(l => l.code !== "en" && !translatedLocales.includes(l.code))
+              .map(l => l.code),
+          };
+        })
+      );
+
+      res.json({
+        totalContent: contents.length,
+        items: status,
+        localeStats: SUPPORTED_LOCALES.map(locale => ({
+          code: locale.code,
+          name: locale.name,
+          tier: locale.tier,
+          translatedCount: status.filter(s => s.translatedLocales.includes(locale.code)).length,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching translation status:", error);
+      res.status(500).json({ error: "Failed to fetch translation status" });
+    }
+  });
+
+  // ============================================================================
   // SITEMAPS - Multilingual SEO Support (50 languages)
   // ============================================================================
 
