@@ -1,5 +1,5 @@
 import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail, Globe, Building2, TrendingUp, Sparkles, Heart, Camera, Utensils, Palmtree, Sun, Compass } from "lucide-react";
-import { useState, type KeyboardEvent } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -93,11 +93,38 @@ const staggerContainer = {
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
 };
 
+// Quick category shortcuts for hero section
+const quickCategories = [
+  { title: "Attractions", icon: Camera, href: "/attractions", color: "from-purple-500 to-pink-500" },
+  { title: "Hotels", icon: Building2, href: "/hotels", color: "from-blue-500 to-cyan-500" },
+  { title: "Events", icon: Sparkles, href: "/events", color: "from-rose-500 to-orange-500" },
+];
+
 export default function PublicHome() {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const heroRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
   const { t, localePath, isRTL } = useLocale();
+
+  // Mouse parallax effect
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (heroRef.current) {
+        const rect = heroRef.current.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        setMousePosition({ x, y });
+      }
+    };
+
+    const heroElement = heroRef.current;
+    if (heroElement) {
+      heroElement.addEventListener('mousemove', handleMouseMove);
+      return () => heroElement.removeEventListener('mousemove', handleMouseMove);
+    }
+  }, []);
 
   useDocumentMeta({
     title: `Travi - ${t("home.heroTitle")} | ${t("nav.hotels")}, ${t("nav.attractions")}`,
@@ -153,38 +180,50 @@ export default function PublicHome() {
 
       <main id="main-content">
         {/* HERO SECTION - Sky Theme with Giant TRAVI Letters */}
-        <section className="relative min-h-screen sky-gradient overflow-hidden" data-testid="section-hero">
-          {/* Floating Clouds */}
+        <section ref={heroRef} className="relative min-h-screen sky-gradient overflow-hidden" data-testid="section-hero">
+          {/* Floating Clouds with Parallax */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <CloudSVG className="absolute top-20 left-[5%] opacity-90 animate-cloud-drift" size="lg" />
-            <CloudSVG className="absolute top-32 right-[10%] opacity-80 animate-cloud-drift animation-delay-1000" size="md" />
-            <CloudSVG className="absolute top-48 left-[25%] opacity-70 animate-cloud-drift animation-delay-2000" size="sm" />
-            <CloudSVG className="absolute bottom-40 right-[20%] opacity-85 animate-cloud-drift animation-delay-500" size="lg" />
-            <CloudSVG className="absolute bottom-60 left-[15%] opacity-75 animate-cloud-drift animation-delay-3000" size="md" />
+            <div style={{ transform: `translate(${mousePosition.x * 20}px, ${mousePosition.y * 15}px)` }} className="transition-transform duration-300 ease-out">
+              <CloudSVG className="absolute top-20 left-[5%] opacity-90" size="lg" />
+            </div>
+            <div style={{ transform: `translate(${mousePosition.x * -25}px, ${mousePosition.y * 20}px)` }} className="transition-transform duration-300 ease-out">
+              <CloudSVG className="absolute top-32 right-[10%] opacity-80" size="md" />
+            </div>
+            <div style={{ transform: `translate(${mousePosition.x * 15}px, ${mousePosition.y * -10}px)` }} className="transition-transform duration-300 ease-out">
+              <CloudSVG className="absolute top-48 left-[25%] opacity-70" size="sm" />
+            </div>
+            <div style={{ transform: `translate(${mousePosition.x * -30}px, ${mousePosition.y * 25}px)` }} className="transition-transform duration-300 ease-out">
+              <CloudSVG className="absolute bottom-40 right-[20%] opacity-85" size="lg" />
+            </div>
+            <div style={{ transform: `translate(${mousePosition.x * 18}px, ${mousePosition.y * -20}px)` }} className="transition-transform duration-300 ease-out">
+              <CloudSVG className="absolute bottom-60 left-[15%] opacity-75" size="md" />
+            </div>
           </div>
 
-          {/* Floating Decorative Elements */}
+          {/* Floating Decorative Elements with Parallax */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <HotAirBalloonSVG className="absolute top-24 right-[8%] animate-balloon" color="#EC4899" />
-            <HotAirBalloonSVG className="absolute top-40 left-[12%] animate-balloon animation-delay-2000" color="#6C5CE7" />
+            <div style={{ transform: `translate(${mousePosition.x * -40}px, ${mousePosition.y * 30}px)` }} className="transition-transform duration-500 ease-out">
+              <HotAirBalloonSVG className="absolute top-24 right-[8%] animate-balloon" color="#EC4899" />
+            </div>
+            <div style={{ transform: `translate(${mousePosition.x * 35}px, ${mousePosition.y * -25}px)` }} className="transition-transform duration-500 ease-out">
+              <HotAirBalloonSVG className="absolute top-40 left-[12%] animate-balloon animation-delay-2000" color="#6C5CE7" />
+            </div>
             <Plane className="absolute top-16 left-[30%] w-8 h-8 text-white/60 animate-plane plane-icon" />
-            <BirdSVG className="absolute top-28 left-[45%] animate-bird" />
-            <BirdSVG className="absolute top-36 left-[48%] animate-bird animation-delay-500" />
-            <BirdSVG className="absolute top-32 left-[52%] animate-bird animation-delay-300" />
-            
+            <div style={{ transform: `translate(${mousePosition.x * 12}px, ${mousePosition.y * 8}px)` }} className="transition-transform duration-200 ease-out">
+              <BirdSVG className="absolute top-28 left-[45%] animate-bird" />
+              <BirdSVG className="absolute top-36 left-[48%] animate-bird animation-delay-500" />
+              <BirdSVG className="absolute top-32 left-[52%] animate-bird animation-delay-300" />
+            </div>
           </div>
 
           {/* Main Hero Content */}
           <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20">
-            {/* Giant TRAVI Logo with Dubai Images Texture */}
+            {/* Giant TRAVI Logo with Flowing Dubai Images Texture */}
             <div className="text-center mb-8 flex justify-center" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
               <div 
                 className="relative w-[90vw] max-w-[800px] h-[20vh] sm:h-[25vh] lg:h-[30vh]"
                 style={{
-                  backgroundImage: `url(${dubaiImages[0]}), url(${dubaiImages[1]}), url(${dubaiImages[2]}), url(${dubaiImages[3]}), url(${dubaiImages[4]})`,
-                  backgroundSize: '20% 100%',
-                  backgroundPosition: '0% 0%, 25% 0%, 50% 0%, 75% 0%, 100% 0%',
-                  backgroundRepeat: 'no-repeat',
+                  filter: 'drop-shadow(0 8px 30px rgba(108, 92, 231, 0.3)) drop-shadow(0 4px 15px rgba(236, 72, 153, 0.2))',
                   WebkitMaskImage: `url(${traviLogoImg})`,
                   maskImage: `url(${traviLogoImg})`,
                   WebkitMaskSize: 'contain',
@@ -196,7 +235,26 @@ export default function PublicHome() {
                 }}
                 role="img"
                 aria-label="TRAVI - Your Dubai Travel Guide"
-              />
+              >
+                {/* Animated flowing image strip */}
+                <div 
+                  className="absolute inset-0 flex animate-logo-flow"
+                  style={{ width: '200%' }}
+                >
+                  {[...dubaiImages, ...dubaiImages].map((img, i) => (
+                    <div 
+                      key={i}
+                      className="h-full flex-shrink-0"
+                      style={{
+                        width: `${100 / dubaiImages.length}%`,
+                        backgroundImage: `url(${img})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Mascot */}
@@ -246,9 +304,29 @@ export default function PublicHome() {
               </div>
             </form>
 
+            {/* Quick Category Shortcuts */}
+            <div className="flex flex-wrap justify-center gap-3 mt-8">
+              {quickCategories.map((cat) => (
+                <Link key={cat.title} href={localePath(cat.href)}>
+                  <motion.div
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-2 bg-white/80 backdrop-blur-xl px-5 py-3 rounded-full shadow-lg shadow-purple-500/10 border border-white/50 cursor-pointer group"
+                    data-testid={`quick-${cat.title.toLowerCase()}`}
+                  >
+                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${cat.color} flex items-center justify-center shadow-md`}>
+                      <cat.icon className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="font-medium text-[#1E1B4B] group-hover:text-[#6C5CE7] transition-colors">{cat.title}</span>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#6C5CE7] group-hover:translate-x-0.5 transition-all" />
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
+
             {/* Quick Stats */}
             {publishedContent && publishedContent.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-8 mt-12">
+              <div className="flex flex-wrap justify-center gap-8 mt-6">
                 <div className="flex items-center gap-2 text-[#1E1B4B] bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
                   <MapPin className="w-5 h-5 text-[#EC4899]" />
                   <span className="font-medium">{publishedContent.length} {t("common.places")}</span>
