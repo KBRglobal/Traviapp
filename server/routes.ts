@@ -81,6 +81,8 @@ import { registerAutomationRoutes } from "./automation-routes";
 import { registerContentIntelligenceRoutes } from "./content-intelligence-routes";
 import { registerAutoPilotRoutes } from "./auto-pilot-routes";
 import { registerEnhancementRoutes } from "./enhancement-routes";
+import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
+import { registerDocUploadRoutes } from "./doc-upload-routes";
 import { cache, cacheKeys } from "./cache";
 
 // Permission checking utilities (imported from security.ts for route-level checks)
@@ -5812,6 +5814,16 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // ENHANCEMENTS (Readability, CTAs, Search, Popups, Newsletter, Monetization, PWA)
   // ============================================================================
   registerEnhancementRoutes(app);
+
+  // ============================================================================
+  // CUSTOMER JOURNEY ANALYTICS (Page views, clicks, scroll, conversions, heatmaps)
+  // ============================================================================
+  registerCustomerJourneyRoutes(app);
+
+  // ============================================================================
+  // DOC/DOCX UPLOAD (Import content directly from Word documents)
+  // ============================================================================
+  registerDocUploadRoutes(app);
 
   // ============================================================================
   // SECURE ERROR HANDLER (no stack traces to client)
