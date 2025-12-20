@@ -439,6 +439,23 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
     if (normalized) {
       normalizedBlocks.push(normalized);
       blockTypes.add(normalized.type);
+      
+      // If FAQ block has remaining FAQs, expand them into separate blocks
+      if (normalized.type === 'faq' && (normalized.data as any)._remainingFaqs) {
+        const remainingFaqs = (normalized.data as any)._remainingFaqs as Array<{ question?: string; answer?: string; q?: string; a?: string }>;
+        // Clean up the _remainingFaqs from the first block
+        delete (normalized.data as any)._remainingFaqs;
+        
+        // Add remaining FAQs as separate blocks
+        for (const faq of remainingFaqs) {
+          const q = faq.question || faq.q || 'Question?';
+          const a = faq.answer || faq.a || 'Answer pending.';
+          normalizedBlocks.push({
+            type: 'faq' as const,
+            data: { question: q, answer: a }
+          });
+        }
+      }
     }
   }
 
@@ -454,8 +471,7 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
     normalizedBlocks.push({
       type: 'highlights',
       data: {
-        title: 'Key Highlights',
-        items: ['Key attraction feature', 'Unique experience offered', 'Must-see element', 'Popular activity', 'Essential stop', 'Notable landmark']
+        content: 'Key attraction feature\nUnique experience offered\nMust-see element\nPopular activity\nEssential stop\nNotable landmark'
       }
     });
   }
@@ -464,26 +480,24 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
     normalizedBlocks.push({
       type: 'tips',
       data: {
-        title: 'Expert Tips',
-        tips: ['Plan your visit during cooler months', 'Book tickets in advance', 'Arrive early to avoid crowds', 'Bring comfortable walking shoes', 'Stay hydrated', 'Check dress codes beforehand', 'Consider guided tours for insights']
+        content: 'Plan your visit during cooler months\nBook tickets in advance\nArrive early to avoid crowds\nBring comfortable walking shoes\nStay hydrated\nCheck dress codes beforehand\nConsider guided tours for insights'
       }
     });
   }
 
   if (!blockTypes.has('faq')) {
-    normalizedBlocks.push({
-      type: 'faq',
-      data: {
-        title: 'Frequently Asked Questions',
-        faqs: [
-          { question: 'What are the opening hours?', answer: 'Opening hours vary by season. Check the official website for current timings.' },
-          { question: 'How much does entry cost?', answer: 'Pricing varies depending on the package selected. Visit the official website for current rates.' },
-          { question: 'Is parking available?', answer: 'Yes, parking is available on-site for visitors.' },
-          { question: 'Are there any accessibility options?', answer: 'Wheelchair access and accessibility services are available.' },
-          { question: 'Can I bring food and drinks?', answer: 'Outside food may be restricted. Check venue policies before visiting.' }
-        ]
-      }
-    });
+    // Add individual FAQ blocks (editor expects question/answer format)
+    const defaultFaqs = [
+      { question: 'What are the opening hours?', answer: 'Opening hours vary by season. Check the official website for current timings.' },
+      { question: 'How much does entry cost?', answer: 'Pricing varies depending on the package selected. Visit the official website for current rates.' },
+      { question: 'Is parking available?', answer: 'Yes, parking is available on-site for visitors.' }
+    ];
+    for (const faq of defaultFaqs) {
+      normalizedBlocks.push({
+        type: 'faq',
+        data: { question: faq.question, answer: faq.answer }
+      });
+    }
   }
 
   if (!blockTypes.has('cta')) {
@@ -517,52 +531,62 @@ function normalizeBlock(type: string, data: Record<string, unknown>): Omit<Conte
       return { type: 'text' as const, data };
 
     case 'highlights':
-      // Ensure items array exists with at least 4 items
-      let items = (data as any).items;
-      if (!Array.isArray(items) || items.length < 4) {
-        items = items && Array.isArray(items) ? items : [];
-        while (items.length < 4) {
-          (items as string[]).push(`Key highlight ${items.length + 1}`);
-        }
+      // Convert items array to content string (one per line) for editor compatibility
+      let highlightItems = (data as any).items || (data as any).highlights;
+      if (Array.isArray(highlightItems) && highlightItems.length > 0) {
+        // Convert array to newline-separated string for textarea editing
+        const highlightContent = highlightItems.map((item: unknown) => {
+          if (typeof item === 'string') return item;
+          if (typeof item === 'object' && item && (item as any).title) {
+            // Handle {title, description} format
+            const t = item as { title?: string; description?: string };
+            return t.description ? `${t.title}: ${t.description}` : t.title;
+          }
+          return String(item);
+        }).join('\n');
+        return { type: 'highlights' as const, data: { ...data, content: highlightContent } };
       }
-      return { type: 'highlights' as const, data: { ...data, items } };
+      // If already has content, use it
+      if (typeof (data as any).content === 'string' && (data as any).content.length > 0) {
+        return { type: 'highlights' as const, data };
+      }
+      // Default highlights
+      return { type: 'highlights' as const, data: { ...data, content: 'Key attraction feature\nUnique experience offered\nMust-see element\nPopular activity' } };
 
     case 'tips':
-      // Normalize tips array - accept "tips" or "items"
-      let tips = (data as any).tips || (data as any).items;
-      if (!Array.isArray(tips) || tips.length < 5) {
-        tips = tips && Array.isArray(tips) ? tips : [];
-        const defaultTips = ['Visit during off-peak hours', 'Book in advance', 'Wear comfortable clothing', 'Stay hydrated', 'Check local customs', 'Download offline maps', 'Carry local currency'];
-        while (tips.length < 5) {
-          (tips as string[]).push(defaultTips[tips.length] || `Tip ${tips.length + 1}`);
-        }
+      // Convert tips array to content string (one per line) for editor compatibility
+      let tipsArray = (data as any).tips || (data as any).items;
+      if (Array.isArray(tipsArray) && tipsArray.length > 0) {
+        // Convert array to newline-separated string for textarea editing
+        const tipsContent = tipsArray.map((tip: unknown) => String(tip)).join('\n');
+        return { type: 'tips' as const, data: { ...data, content: tipsContent } };
       }
-      return { type: 'tips' as const, data: { ...data, tips } };
+      // If already has content, use it
+      if (typeof (data as any).content === 'string' && (data as any).content.length > 0) {
+        return { type: 'tips' as const, data };
+      }
+      // Default tips
+      return { type: 'tips' as const, data: { ...data, content: 'Visit during off-peak hours\nBook in advance\nWear comfortable clothing\nStay hydrated\nCheck local customs' } };
 
     case 'faq':
-      // Normalize FAQ structure - accept "faqs" or "items"
-      let faqs = (data as any).faqs || (data as any).items;
-      if (!Array.isArray(faqs) || faqs.length < 3) {
-        faqs = faqs && Array.isArray(faqs) ? faqs : [];
-        const defaultFaqs = [
-          { question: 'What is the best time to visit?', answer: 'The best time to visit is during the cooler months from November to March.' },
-          { question: 'How do I get there?', answer: 'You can reach the destination via taxi, metro, or private transfer.' },
-          { question: 'What should I wear?', answer: 'Dress modestly and wear comfortable shoes for walking.' }
-        ];
-        while (faqs.length < 3) {
-          (faqs as Array<{question: string; answer: string}>).push(defaultFaqs[faqs.length] || { question: `Question ${faqs.length + 1}?`, answer: 'Please check with the venue for more details.' });
+      // For FAQ, editor expects individual blocks with question/answer strings
+      // If data has question/answer directly, use it
+      if (typeof (data as any).question === 'string' && (data as any).question.length > 0) {
+        return { type: 'faq' as const, data };
+      }
+      // If data has faqs array, take the first one (other FAQs handled by validateAndNormalizeBlocks)
+      let faqsArray = (data as any).faqs || (data as any).items || (data as any).questions;
+      if (Array.isArray(faqsArray) && faqsArray.length > 0) {
+        const firstFaq = faqsArray[0];
+        if (typeof firstFaq === 'object' && firstFaq) {
+          const q = (firstFaq as any).question || (firstFaq as any).q || 'Question?';
+          const a = (firstFaq as any).answer || (firstFaq as any).a || 'Answer pending.';
+          // Store the remaining FAQs for later extraction
+          return { type: 'faq' as const, data: { question: q, answer: a, _remainingFaqs: faqsArray.slice(1) } };
         }
       }
-      // Ensure each FAQ has question and answer
-      const normalizedFaqs = faqs.map((faq: unknown) => {
-        if (typeof faq !== 'object' || !faq) return { question: 'Question?', answer: 'Answer pending.' };
-        const f = faq as Record<string, unknown>;
-        return {
-          question: f.question || f.q || 'Question?',
-          answer: f.answer || f.a || 'Answer pending.'
-        };
-      });
-      return { type: 'faq' as const, data: { ...data, faqs } };
+      // Default FAQ
+      return { type: 'faq' as const, data: { question: 'What are the opening hours?', answer: 'Check the official website for current timings.' } };
 
     case 'cta':
       return { type: 'cta' as const, data };
@@ -588,14 +612,12 @@ function createDefaultBlocks(title: string): ContentBlock[] {
   return [
     { id: `hero-${timestamp}-0`, type: 'hero', data: { title, subtitle: 'Discover Dubai Travel', overlayText: '' }, order: 0 },
     { id: `text-${timestamp}-1`, type: 'text', data: { heading: 'Overview', content: 'Content generation incomplete. Please edit this article to add more details.' }, order: 1 },
-    { id: `highlights-${timestamp}-2`, type: 'highlights', data: { title: 'Key Highlights', items: ['Feature 1', 'Feature 2', 'Feature 3', 'Feature 4', 'Feature 5', 'Feature 6'] }, order: 2 },
-    { id: `tips-${timestamp}-3`, type: 'tips', data: { title: 'Expert Tips', tips: ['Plan ahead', 'Book in advance', 'Visit early morning', 'Stay hydrated', 'Respect local customs', 'Bring camera', 'Check weather'] }, order: 3 },
-    { id: `faq-${timestamp}-4`, type: 'faq', data: { title: 'FAQ', faqs: [
-      { question: 'What are the opening hours?', answer: 'Check official website for current hours.' },
-      { question: 'Is there parking?', answer: 'Yes, parking is available.' },
-      { question: 'What should I bring?', answer: 'Comfortable shoes, sunscreen, and water.' }
-    ] }, order: 4 },
-    { id: `cta-${timestamp}-5`, type: 'cta', data: { title: 'Book Your Visit', content: 'Plan your trip today!', buttonText: 'Book Now', buttonLink: '#' }, order: 5 }
+    { id: `highlights-${timestamp}-2`, type: 'highlights', data: { content: 'Feature 1\nFeature 2\nFeature 3\nFeature 4\nFeature 5\nFeature 6' }, order: 2 },
+    { id: `tips-${timestamp}-3`, type: 'tips', data: { content: 'Plan ahead\nBook in advance\nVisit early morning\nStay hydrated\nRespect local customs\nBring camera\nCheck weather' }, order: 3 },
+    { id: `faq-${timestamp}-4`, type: 'faq', data: { question: 'What are the opening hours?', answer: 'Check official website for current hours.' }, order: 4 },
+    { id: `faq-${timestamp}-5`, type: 'faq', data: { question: 'Is there parking?', answer: 'Yes, parking is available.' }, order: 5 },
+    { id: `faq-${timestamp}-6`, type: 'faq', data: { question: 'What should I bring?', answer: 'Comfortable shoes, sunscreen, and water.' }, order: 6 },
+    { id: `cta-${timestamp}-7`, type: 'cta', data: { title: 'Book Your Visit', content: 'Plan your trip today!', buttonText: 'Book Now', buttonLink: '#' }, order: 7 }
   ];
 }
 
