@@ -80,6 +80,7 @@ import { registerImageLogicRoutes } from "./image-logic-routes";
 import { registerAutomationRoutes } from "./automation-routes";
 import { registerContentIntelligenceRoutes } from "./content-intelligence-routes";
 import { registerAutoPilotRoutes } from "./auto-pilot-routes";
+import { registerEnhancementRoutes } from "./enhancement-routes";
 import { cache, cacheKeys } from "./cache";
 
 // Permission checking utilities (imported from security.ts for route-level checks)
@@ -5806,6 +5807,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // AUTO-PILOT (Zero-touch automation - supervisor only)
   // ============================================================================
   registerAutoPilotRoutes(app);
+
+  // ============================================================================
+  // ENHANCEMENTS (Readability, CTAs, Search, Popups, Newsletter, Monetization, PWA)
+  // ============================================================================
+  registerEnhancementRoutes(app);
 
   // ============================================================================
   // SECURE ERROR HANDLER (no stack traces to client)
