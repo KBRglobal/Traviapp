@@ -1,4 +1,4 @@
-import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail, Globe, Building2, TrendingUp, Sparkles, Heart, Camera, Utensils, Palmtree, Sun, Compass } from "lucide-react";
+import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail, Globe, Building2, TrendingUp, Sparkles, Heart, Camera, Utensils, Palmtree, Sun, Compass, Scale } from "lucide-react";
 import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -115,7 +115,7 @@ const staggerContainer = {
 const quickCategories = [
   { title: "70+ Free Things", icon: Sparkles, href: "/dubai/free-things-to-do", color: "from-emerald-500 to-cyan-500", badge: "Top Guide" },
   { title: "Off-Plan Investment", icon: Building2, href: "/dubai-off-plan-properties", color: "from-purple-500 to-pink-500", badge: "Investors" },
-  { title: "Districts Guide", icon: MapPin, href: "/districts", color: "from-blue-500 to-indigo-500", badge: "21 Areas" },
+  { title: "Laws & Fines", icon: Scale, href: "/dubai/laws-for-tourists", color: "from-red-500 to-amber-500", badge: "Must Read" },
 ];
 
 export default function PublicHome() {
