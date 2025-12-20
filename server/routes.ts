@@ -73,7 +73,10 @@ import {
   CATEGORY_PERSONALITY_MAPPING,
   getContentWriterSystemPrompt,
   determineContentCategory,
-  buildArticleGenerationPrompt
+  buildArticleGenerationPrompt,
+  validateArticleResponse,
+  buildRetryPrompt,
+  type ArticleResponse
 } from "./content-writer-guidelines";
 
 // Permission checking utilities (imported from security.ts for route-level checks)
@@ -1024,18 +1027,59 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
         const systemPrompt = getContentWriterSystemPrompt(category, personality, structure);
         const userPrompt = buildArticleGenerationPrompt(sources, category, personality, structure);
 
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
+        // Generate article with validation and retries
+        let validatedData: ArticleResponse | null = null;
+        let attempts = 0;
+        const maxAttempts = 3;
+        let lastResponse: unknown = null;
+        let lastErrors: string[] = [];
+
+        while (!validatedData && attempts < maxAttempts) {
+          attempts++;
+          console.log(`[RSS Auto-Process] Article generation attempt ${attempts}/${maxAttempts} for cluster: ${cluster.topic}`);
+
+          const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt }
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.7,
-          max_tokens: 4000,
-        });
+          ];
 
-        const mergedData = JSON.parse(completion.choices[0].message.content || "{}");
+          // Add retry prompt if this is a retry
+          if (attempts > 1 && lastErrors.length > 0) {
+            messages.push({ 
+              role: "user", 
+              content: buildRetryPrompt(lastErrors, lastResponse) 
+            });
+          }
+
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages,
+            response_format: { type: "json_object" },
+            temperature: attempts === 1 ? 0.7 : 0.5, // Lower temp on retries for more predictable output
+            max_tokens: 6000, // Increased for longer articles
+          });
+
+          lastResponse = JSON.parse(completion.choices[0].message.content || "{}");
+          const validation = validateArticleResponse(lastResponse);
+
+          if (validation.isValid && validation.data) {
+            validatedData = validation.data;
+            console.log(`[RSS Auto-Process] Validation passed on attempt ${attempts} - ${validation.wordCount} words`);
+          } else {
+            lastErrors = validation.errors;
+            console.log(`[RSS Auto-Process] Validation failed (attempt ${attempts}): ${validation.errors.join(", ")}`);
+          }
+        }
+
+        // If validation never passed, skip this cluster
+        if (!validatedData) {
+          const errorMsg = `Failed to generate valid article after ${maxAttempts} attempts for "${cluster.topic}". Last errors: ${lastErrors.join(", ")}`;
+          console.error(`[RSS Auto-Process] ${errorMsg}`);
+          result.errors.push(errorMsg);
+          continue;
+        }
+
+        const mergedData = validatedData;
 
         const slug = (mergedData.title || cluster.topic)
           .toLowerCase()
@@ -1043,62 +1087,113 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
           .replace(/^-|-$/g, "")
           .substring(0, 80);
 
+        const textContent = mergedData.content || '';
+        const wordCount = textContent.replace(/<[^>]*>/g, '').split(/\s+/).filter((w: string) => w.length > 0).length;
+
+        // STEP 1: Fetch hero image BEFORE creating blocks
+        const imageSearchTerms = mergedData.imageSearchTerms || [];
+        const articleKeywords = mergedData.secondaryKeywords || [];
+        const articleTopic = mergedData.title || cluster.topic;
+        
+        console.log(`[RSS Auto-Process] Finding image for article: "${articleTopic}" with terms: ${imageSearchTerms.join(", ")}`);
+        
+        let heroImageUrl: string | null = null;
+        let heroImageAlt: string | null = null;
+        
+        const searchAttempts = [
+          imageSearchTerms, // AI-generated terms first
+          [articleTopic], // Article title
+          articleKeywords.slice(0, 3), // Top keywords
+          [`Dubai ${category}`], // Category fallback
+        ];
+        
+        for (const searchTerms of searchAttempts) {
+          if (heroImageUrl) break;
+          if (searchTerms.length === 0) continue;
+          
+          const searchQuery = searchTerms.join(" ");
+          console.log(`[RSS Auto-Process] Image search attempt: "${searchQuery}"`);
+          
+          const articleImage = await findOrCreateArticleImage(
+            searchQuery,
+            searchTerms as string[],
+            category
+          );
+          
+          if (articleImage) {
+            heroImageUrl = articleImage.url;
+            heroImageAlt = articleImage.altText;
+            console.log(`[RSS Auto-Process] Attached image from ${articleImage.source}: ${articleImage.url}`);
+          }
+        }
+        
+        if (!heroImageUrl) {
+          console.log(`[RSS Auto-Process] No image found after all attempts, creating article without hero image`);
+        }
+
+        // STEP 2: Create all content blocks with validated data
         const blocks: ContentBlock[] = [];
         let blockOrder = 0;
 
+        // Hero block with image
         blocks.push({
           id: `hero-${Date.now()}-${blockOrder}`,
           type: "hero",
           data: {
             title: mergedData.title || cluster.topic,
             subtitle: mergedData.metaDescription || '',
-            overlayText: ''
+            overlayText: '',
+            imageUrl: heroImageUrl || '',
+            imageAlt: heroImageAlt || ''
           },
           order: blockOrder++
         });
 
-        if (mergedData.content) {
-          blocks.push({
-            id: `text-${Date.now()}-${blockOrder}`,
-            type: "text",
-            data: { heading: '', content: mergedData.content },
-            order: blockOrder++
-          });
-        }
+        // Main content block (always present - validated)
+        blocks.push({
+          id: `text-${Date.now()}-${blockOrder}`,
+          type: "text",
+          data: { heading: '', content: mergedData.content },
+          order: blockOrder++
+        });
 
-        if (mergedData.quickFacts?.length > 0) {
-          blocks.push({
-            id: `highlights-${Date.now()}-${blockOrder}`,
-            type: "highlights",
-            data: { title: "Quick Facts", items: mergedData.quickFacts },
-            order: blockOrder++
-          });
-        }
+        // Quick facts block (always present - validated 5+ items)
+        blocks.push({
+          id: `highlights-${Date.now()}-${blockOrder}`,
+          type: "highlights",
+          data: { 
+            title: "Quick Facts", 
+            items: mergedData.quickFacts 
+          },
+          order: blockOrder++
+        });
 
-        if (mergedData.proTips?.length > 0) {
-          blocks.push({
-            id: `tips-${Date.now()}-${blockOrder}`,
-            type: "tips",
-            data: { title: "Pro Tips", tips: mergedData.proTips },
-            order: blockOrder++
-          });
-        }
+        // Pro tips block (always present - validated 5+ items)
+        blocks.push({
+          id: `tips-${Date.now()}-${blockOrder}`,
+          type: "tips",
+          data: { 
+            title: "Pro Tips", 
+            tips: mergedData.proTips 
+          },
+          order: blockOrder++
+        });
 
-        if (mergedData.faqs?.length > 0) {
-          blocks.push({
-            id: `faq-${Date.now()}-${blockOrder}`,
-            type: "faq",
-            data: {
-              title: "Frequently Asked Questions",
-              faqs: mergedData.faqs.map((faq: { question: string; answer: string }) => ({
-                question: faq.question,
-                answer: faq.answer
-              })),
-            },
-            order: blockOrder++
-          });
-        }
+        // FAQ block (always present - validated 5+ items)
+        blocks.push({
+          id: `faq-${Date.now()}-${blockOrder}`,
+          type: "faq",
+          data: {
+            title: "Frequently Asked Questions",
+            faqs: mergedData.faqs.map((faq) => ({
+              question: faq.question,
+              answer: faq.answer
+            })),
+          },
+          order: blockOrder++
+        });
 
+        // CTA block
         blocks.push({
           id: `cta-${Date.now()}-${blockOrder}`,
           type: "cta",
@@ -1110,30 +1205,6 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
           },
           order: blockOrder++
         });
-
-        const textContent = mergedData.content || '';
-        const wordCount = textContent.replace(/<[^>]*>/g, '').split(/\s+/).filter((w: string) => w.length > 0).length;
-
-        const articleKeywords = mergedData.secondaryKeywords || [];
-        const articleTopic = mergedData.title || cluster.topic;
-        
-        console.log(`[RSS Auto-Process] Finding image for article: "${articleTopic}"`);
-        const articleImage = await findOrCreateArticleImage(
-          articleTopic,
-          articleKeywords,
-          category
-        );
-        
-        let heroImageUrl: string | null = null;
-        let heroImageAlt: string | null = null;
-        
-        if (articleImage) {
-          heroImageUrl = articleImage.url;
-          heroImageAlt = articleImage.altText;
-          console.log(`[RSS Auto-Process] Attached image from ${articleImage.source}: ${articleImage.url}`);
-        } else {
-          console.log(`[RSS Auto-Process] No image found for article, will be created without hero image`);
-        }
 
         const content = await storage.createContent({
           title: mergedData.title || cluster.topic,

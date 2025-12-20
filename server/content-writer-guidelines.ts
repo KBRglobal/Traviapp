@@ -1,3 +1,101 @@
+import { z } from "zod";
+
+// Zod schema for validating AI-generated article content
+export const ArticleResponseSchema = z.object({
+  title: z.string().min(30).max(80).describe("SEO headline 50-65 chars, keyword first"),
+  metaDescription: z.string().min(100).max(180).describe("Meta description 150-160 chars"),
+  category: z.string(),
+  urgencyLevel: z.enum(["urgent", "relevant", "evergreen"]),
+  targetAudience: z.array(z.string()).min(1),
+  content: z.string().min(3000).describe("Full HTML article content, minimum 800 words"),
+  quickFacts: z.array(z.string()).min(5).max(7).describe("5-7 key facts"),
+  proTips: z.array(z.string()).min(5).max(7).describe("5-7 insider tips"),
+  warnings: z.array(z.string()).default([]),
+  faqs: z.array(z.object({
+    question: z.string().min(20),
+    answer: z.string().min(50)
+  })).min(5).max(7).describe("5-7 FAQs"),
+  sources: z.array(z.string()).default([]),
+  primaryKeyword: z.string().min(3),
+  secondaryKeywords: z.array(z.string()).min(3).max(10),
+  imageSearchTerms: z.array(z.string()).min(3).max(5).describe("Keywords for Freepik image search")
+});
+
+export type ArticleResponse = z.infer<typeof ArticleResponseSchema>;
+
+// Validation result type
+export type ValidationResult = {
+  isValid: boolean;
+  data?: ArticleResponse;
+  errors: string[];
+  wordCount: number;
+};
+
+// Validate AI response and check word count
+export function validateArticleResponse(response: unknown): ValidationResult {
+  const result: ValidationResult = {
+    isValid: false,
+    errors: [],
+    wordCount: 0
+  };
+
+  try {
+    // Parse with Zod
+    const parsed = ArticleResponseSchema.safeParse(response);
+    
+    if (!parsed.success) {
+      result.errors = parsed.error.errors.map(e => `${e.path.join('.')}: ${e.message}`);
+      return result;
+    }
+
+    // Calculate word count from content
+    const textContent = parsed.data.content.replace(/<[^>]*>/g, '');
+    result.wordCount = textContent.split(/\s+/).filter(w => w.length > 0).length;
+
+    // Check minimum word count
+    if (result.wordCount < 800) {
+      result.errors.push(`Word count ${result.wordCount} is below minimum 800 words`);
+      return result;
+    }
+
+    // All checks passed
+    result.isValid = true;
+    result.data = parsed.data;
+    return result;
+
+  } catch (error) {
+    result.errors.push(`Validation error: ${error instanceof Error ? error.message : 'Unknown'}`);
+    return result;
+  }
+}
+
+// Enhanced prompt for retry when initial response is incomplete
+export function buildRetryPrompt(errors: string[], originalResponse: unknown): string {
+  return `Your previous response was INCOMPLETE or INVALID. Please fix these issues:
+
+ERRORS FOUND:
+${errors.map(e => `- ${e}`).join('\n')}
+
+REQUIREMENTS REMINDER:
+1. Article content MUST be at least 800 words (count: ${JSON.stringify(originalResponse).length} chars is NOT enough)
+2. You MUST provide exactly 5-7 quickFacts
+3. You MUST provide exactly 5-7 proTips
+4. You MUST provide exactly 5-7 FAQs with detailed questions and answers
+5. You MUST provide 3-5 imageSearchTerms for finding relevant Freepik images
+6. Title must be 50-65 characters
+7. Meta description must be 150-160 characters
+
+EXPAND YOUR CONTENT:
+- Add more detailed paragraphs with specific information
+- Include background context and history
+- Add comparisons with similar attractions/places
+- Include practical visitor information
+- Describe the experience in sensory detail
+- Add related recommendations
+
+Please provide the COMPLETE response again with ALL required fields properly filled.`;
+}
+
 export const CONTENT_WRITER_PERSONALITIES = {
   A: {
     name: "The Professional Guide",
@@ -261,28 +359,36 @@ YOUR TASK
 Create a comprehensive, SEO-optimized article following the ${structure.name} structure.
 Use the ${personality.name} writing personality throughout.
 
-Respond in JSON format with the following structure:
+Respond in JSON format with the following structure (ALL FIELDS ARE REQUIRED):
 {
   "title": "SEO-optimized headline (50-65 chars, keyword first)",
   "metaDescription": "Compelling meta description (150-160 chars, includes keyword and CTA)",
   "category": "${category}",
-  "urgencyLevel": "urgent|relevant|evergreen",
+  "urgencyLevel": "urgent" OR "relevant" OR "evergreen",
   "targetAudience": ["families", "couples", "solo travelers", "business travelers"],
-  "content": "Full article content in HTML format with proper <h2>, <h3>, <p>, <ul>, <li> tags. Target 800-1500 words.",
-  "quickFacts": ["Fact 1", "Fact 2", "Fact 3", "Fact 4", "Fact 5"],
-  "proTips": ["Tip 1", "Tip 2", "Tip 3", "Tip 4", "Tip 5"],
+  "content": "COMPREHENSIVE article in HTML format. MINIMUM 800 words. Use <h2>, <h3>, <p>, <ul>, <li> tags. Include introduction, multiple detailed sections, practical info, and conclusion.",
+  "quickFacts": ["Fact 1", "Fact 2", "Fact 3", "Fact 4", "Fact 5", "Fact 6", "Fact 7"],
+  "proTips": ["Tip 1", "Tip 2", "Tip 3", "Tip 4", "Tip 5", "Tip 6", "Tip 7"],
   "warnings": ["Warning 1 if applicable"],
   "faqs": [
-    {"question": "Question 1?", "answer": "Answer 1"},
-    {"question": "Question 2?", "answer": "Answer 2"},
-    {"question": "Question 3?", "answer": "Answer 3"},
-    {"question": "Question 4?", "answer": "Answer 4"},
-    {"question": "Question 5?", "answer": "Answer 5"}
+    {"question": "Detailed question 1 (20+ chars)?", "answer": "Comprehensive answer 1 (50+ chars)"},
+    {"question": "Detailed question 2?", "answer": "Comprehensive answer 2"},
+    {"question": "Detailed question 3?", "answer": "Comprehensive answer 3"},
+    {"question": "Detailed question 4?", "answer": "Comprehensive answer 4"},
+    {"question": "Detailed question 5?", "answer": "Comprehensive answer 5"}
   ],
   "sources": ["Source 1 name", "Source 2 name"],
   "primaryKeyword": "main SEO keyword",
-  "secondaryKeywords": ["keyword 1", "keyword 2", "keyword 3"]
+  "secondaryKeywords": ["keyword 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5"],
+  "imageSearchTerms": ["Dubai + topic keyword", "relevant visual term", "location/attraction name"]
 }
+
+MANDATORY REQUIREMENTS - YOUR RESPONSE WILL BE REJECTED IF:
+- content has less than 800 words (aim for 1000-1500)
+- quickFacts has fewer than 5 items
+- proTips has fewer than 5 items
+- faqs has fewer than 5 items
+- imageSearchTerms is missing or has fewer than 3 terms
 
 IMPORTANT GUIDELINES:
 - Merge all unique information from all sources
