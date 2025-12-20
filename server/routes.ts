@@ -10,7 +10,7 @@ import QRCode from "qrcode";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { Resend } from "resend";
-import { eq } from "drizzle-orm";
+import { eq, like, or, desc, and, sql } from "drizzle-orm";
 import {
   insertContentSchema,
   insertAttractionSchema,
@@ -67,6 +67,14 @@ import {
   type GeneratedImage,
   type ImageGenerationOptions
 } from "./ai-generator";
+import {
+  CONTENT_WRITER_PERSONALITIES,
+  ARTICLE_STRUCTURES,
+  CATEGORY_PERSONALITY_MAPPING,
+  getContentWriterSystemPrompt,
+  determineContentCategory,
+  buildArticleGenerationPrompt
+} from "./content-writer-guidelines";
 
 // Permission checking utilities (imported from security.ts for route-level checks)
 type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
@@ -586,6 +594,641 @@ function createDefaultBlocks(title: string): ContentBlock[] {
     ] }, order: 4 },
     { id: `cta-${timestamp}-5`, type: 'cta', data: { title: 'Book Your Visit', content: 'Plan your trip today!', buttonText: 'Book Now', buttonLink: '#' }, order: 5 }
   ];
+}
+
+function generateFingerprint(title: string, url?: string): string {
+  const normalizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalizedUrl = url ? url.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+  return crypto
+    .createHash("sha256")
+    .update(`${normalizedTitle}-${normalizedUrl}`)
+    .digest("hex")
+    .substring(0, 32);
+}
+
+interface ArticleImageResult {
+  url: string;
+  altText: string;
+  imageId: string;
+  source: 'library' | 'freepik';
+}
+
+async function findOrCreateArticleImage(
+  topic: string,
+  keywords: string[],
+  category: string
+): Promise<ArticleImageResult | null> {
+  console.log(`[Image Finder] Searching for image: topic="${topic}", category="${category}", keywords=${JSON.stringify(keywords)}`);
+  
+  try {
+    const { aiGeneratedImages } = await import("@shared/schema");
+    
+    const searchTerms = [topic, ...keywords].filter(Boolean);
+    const searchConditions = searchTerms.map(term => 
+      or(
+        like(aiGeneratedImages.topic, `%${term}%`),
+        like(aiGeneratedImages.altText, `%${term}%`),
+        like(aiGeneratedImages.category, `%${term}%`)
+      )
+    );
+    
+    let foundImage = null;
+    
+    if (searchConditions.length > 0) {
+      const approvedImages = await db.select()
+        .from(aiGeneratedImages)
+        .where(and(
+          eq(aiGeneratedImages.isApproved, true),
+          or(...searchConditions)
+        ))
+        .orderBy(desc(aiGeneratedImages.usageCount))
+        .limit(1);
+      
+      if (approvedImages.length > 0) {
+        foundImage = approvedImages[0];
+        console.log(`[Image Finder] Found approved library image: ${foundImage.id}`);
+      } else {
+        const anyImages = await db.select()
+          .from(aiGeneratedImages)
+          .where(or(...searchConditions))
+          .orderBy(desc(aiGeneratedImages.createdAt))
+          .limit(1);
+        
+        if (anyImages.length > 0) {
+          foundImage = anyImages[0];
+          console.log(`[Image Finder] Found library image (not approved): ${foundImage.id}`);
+        }
+      }
+    }
+    
+    if (!foundImage) {
+      const categoryImages = await db.select()
+        .from(aiGeneratedImages)
+        .where(eq(aiGeneratedImages.category, category))
+        .orderBy(desc(aiGeneratedImages.isApproved), desc(aiGeneratedImages.createdAt))
+        .limit(1);
+      
+      if (categoryImages.length > 0) {
+        foundImage = categoryImages[0];
+        console.log(`[Image Finder] Found category fallback image: ${foundImage.id}`);
+      }
+    }
+    
+    if (foundImage) {
+      await db.update(aiGeneratedImages)
+        .set({ usageCount: (foundImage.usageCount || 0) + 1, updatedAt: new Date() })
+        .where(eq(aiGeneratedImages.id, foundImage.id));
+      
+      return {
+        url: foundImage.url,
+        altText: foundImage.altText || `${topic} - Dubai Travel`,
+        imageId: foundImage.id,
+        source: 'library'
+      };
+    }
+    
+    console.log(`[Image Finder] No library images found, trying Freepik...`);
+    
+    const freepikApiKey = process.env.FREEPIK_API_KEY;
+    if (!freepikApiKey) {
+      console.log(`[Image Finder] Freepik API key not configured, skipping`);
+      return null;
+    }
+    
+    const searchQuery = `dubai ${topic} tourism`.substring(0, 100);
+    const searchUrl = new URL("https://api.freepik.com/v1/resources");
+    searchUrl.searchParams.set("term", searchQuery);
+    searchUrl.searchParams.set("page", "1");
+    searchUrl.searchParams.set("limit", "5");
+    searchUrl.searchParams.set("filters[content_type][photo]", "1");
+    
+    const freepikResponse = await fetch(searchUrl.toString(), {
+      headers: {
+        "Accept-Language": "en-US",
+        "Accept": "application/json",
+        "x-freepik-api-key": freepikApiKey,
+      },
+    });
+    
+    if (!freepikResponse.ok) {
+      console.error(`[Image Finder] Freepik search failed: ${freepikResponse.status}`);
+      return null;
+    }
+    
+    const freepikData = await freepikResponse.json();
+    const results = freepikData.data || [];
+    
+    if (results.length === 0) {
+      console.log(`[Image Finder] No Freepik results found for: ${searchQuery}`);
+      return null;
+    }
+    
+    const bestResult = results[0];
+    const imageUrl = bestResult.image?.source?.url || bestResult.preview?.url || bestResult.thumbnail?.url;
+    
+    if (!imageUrl) {
+      console.log(`[Image Finder] No usable image URL from Freepik result`);
+      return null;
+    }
+    
+    console.log(`[Image Finder] Importing Freepik image: ${bestResult.id}`);
+    
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      console.error(`[Image Finder] Failed to fetch Freepik image: ${imageResponse.status}`);
+      return null;
+    }
+    
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const filename = `freepik-${Date.now()}.jpg`;
+    let persistedUrl = imageUrl;
+    
+    const storageClient = getObjectStorageClient();
+    let uploadedSuccessfully = false;
+    
+    if (storageClient) {
+      try {
+        const objectPath = `public/images/${filename}`;
+        await storageClient.uploadFromBytes(objectPath, Buffer.from(imageBuffer));
+        persistedUrl = `/object-storage/${objectPath}`;
+        uploadedSuccessfully = true;
+      } catch (storageError) {
+        console.log(`[Image Finder] Object storage upload failed, falling back to local: ${storageError}`);
+      }
+    }
+    
+    if (!uploadedSuccessfully) {
+      const uploadsDir = path.join(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(uploadsDir, filename), Buffer.from(imageBuffer));
+      persistedUrl = `/uploads/${filename}`;
+    }
+    
+    const altText = bestResult.title || `${topic} - Dubai Travel`;
+    
+    const [savedImage] = await db.insert(aiGeneratedImages).values({
+      filename,
+      url: persistedUrl,
+      topic: topic,
+      category: category || "general",
+      imageType: "hero",
+      source: "freepik" as const,
+      prompt: null,
+      keywords: keywords.slice(0, 10),
+      altText: altText,
+      caption: bestResult.title || topic,
+      size: imageBuffer.byteLength,
+      usageCount: 1,
+    }).returning();
+    
+    console.log(`[Image Finder] Successfully imported Freepik image: ${savedImage.id}`);
+    
+    return {
+      url: persistedUrl,
+      altText: altText,
+      imageId: savedImage.id,
+      source: 'freepik'
+    };
+    
+  } catch (error) {
+    console.error(`[Image Finder] Error finding/creating article image:`, error);
+    return null;
+  }
+}
+
+// RTL languages that need special handling
+const RTL_LOCALES = ["ar", "he", "fa", "ur"];
+
+// All target languages for translation (excluding English which is source)
+const TARGET_LOCALES = ["ar", "hi", "zh", "ru", "ur", "fr", "de", "fa", "bn", "fil", "es", "tr", "it", "ja", "ko", "he"] as const;
+
+async function translateArticleToAllLanguages(contentId: string, content: {
+  title: string;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  blocks?: any[];
+}): Promise<{ success: number; failed: number; errors: string[] }> {
+  const result = { success: 0, failed: 0, errors: [] as string[] };
+  
+  try {
+    const { translateContent, generateContentHash } = await import("./services/deepl-service");
+    
+    console.log(`[Auto-Translation] Starting translation for content ${contentId} to ${TARGET_LOCALES.length} languages...`);
+    
+    const BATCH_SIZE = 3;
+    for (let i = 0; i < TARGET_LOCALES.length; i += BATCH_SIZE) {
+      const batch = TARGET_LOCALES.slice(i, i + BATCH_SIZE);
+      
+      const batchResults = await Promise.allSettled(
+        batch.map(async (locale) => {
+          try {
+            console.log(`[Auto-Translation] Translating to ${locale}...`);
+            
+            const translatedContent = await translateContent(
+              {
+                title: content.title,
+                metaTitle: content.metaTitle || undefined,
+                metaDescription: content.metaDescription || undefined,
+                blocks: content.blocks || [],
+              },
+              locale as any,
+              "en"
+            );
+            
+            const existingTranslation = await storage.getTranslation(contentId, locale as any);
+            
+            const isRtl = RTL_LOCALES.includes(locale);
+            const translationData = {
+              contentId,
+              locale: locale as any,
+              status: "completed" as const,
+              title: translatedContent.title || null,
+              metaTitle: translatedContent.metaTitle || null,
+              metaDescription: translatedContent.metaDescription || null,
+              blocks: translatedContent.blocks || [],
+              sourceHash: translatedContent.sourceHash,
+              translatedBy: "deepl-auto",
+              translationProvider: "deepl",
+              isManualOverride: false,
+            };
+            
+            if (existingTranslation && !existingTranslation.isManualOverride) {
+              await storage.updateTranslation(existingTranslation.id, translationData);
+            } else if (!existingTranslation) {
+              await storage.createTranslation(translationData);
+            }
+            
+            console.log(`[Auto-Translation] Successfully translated to ${locale}${isRtl ? ' (RTL)' : ''}`);
+            return { locale, success: true };
+          } catch (error) {
+            const errorMsg = `Failed to translate to ${locale}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            console.error(`[Auto-Translation] ${errorMsg}`);
+            return { locale, success: false, error: errorMsg };
+          }
+        })
+      );
+      
+      for (const batchResult of batchResults) {
+        if (batchResult.status === 'fulfilled') {
+          if (batchResult.value.success) {
+            result.success++;
+          } else {
+            result.failed++;
+            if (batchResult.value.error) {
+              result.errors.push(batchResult.value.error);
+            }
+          }
+        } else {
+          result.failed++;
+          result.errors.push(`Batch error: ${batchResult.reason}`);
+        }
+      }
+      
+      if (i + BATCH_SIZE < TARGET_LOCALES.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    console.log(`[Auto-Translation] Complete for content ${contentId}: ${result.success} successful, ${result.failed} failed`);
+  } catch (error) {
+    const errorMsg = `Translation process error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    console.error(`[Auto-Translation] ${errorMsg}`);
+    result.errors.push(errorMsg);
+  }
+  
+  return result;
+}
+
+export type AutoProcessResult = {
+  feedsProcessed: number;
+  itemsFound: number;
+  clustersCreated: number;
+  articlesGenerated: number;
+  errors: string[];
+};
+
+export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
+  const result: AutoProcessResult = {
+    feedsProcessed: 0,
+    itemsFound: 0,
+    clustersCreated: 0,
+    articlesGenerated: 0,
+    errors: [],
+  };
+
+  try {
+    const feeds = await storage.getRssFeeds();
+    const activeFeeds = feeds.filter(f => f.isActive);
+    
+    if (activeFeeds.length === 0) {
+      console.log("[RSS Auto-Process] No active RSS feeds found");
+      return result;
+    }
+
+    console.log(`[RSS Auto-Process] Processing ${activeFeeds.length} active feeds...`);
+
+    for (const feed of activeFeeds) {
+      try {
+        const items = await parseRssFeed(feed.url);
+        result.feedsProcessed++;
+        result.itemsFound += items.length;
+
+        console.log(`[RSS Auto-Process] Feed "${feed.name}" returned ${items.length} items`);
+
+        for (const item of items) {
+          const fingerprint = generateFingerprint(item.title, item.link);
+          const existingFp = await storage.getContentFingerprintByHash(fingerprint);
+          if (existingFp) {
+            continue;
+          }
+
+          let cluster = await storage.findSimilarCluster(item.title);
+          
+          if (!cluster) {
+            cluster = await storage.createTopicCluster({
+              topic: item.title,
+              status: "pending",
+              articleCount: 0,
+            });
+            result.clustersCreated++;
+          }
+
+          await storage.createTopicClusterItem({
+            clusterId: cluster.id,
+            sourceTitle: item.title,
+            sourceDescription: item.description || null,
+            sourceUrl: item.link || null,
+            rssFeedId: feed.id || null,
+            pubDate: item.pubDate ? new Date(item.pubDate) : null,
+          });
+
+          try {
+            await storage.createContentFingerprint({
+              contentId: null,
+              fingerprint: fingerprint,
+              sourceUrl: item.link || null,
+              sourceTitle: item.title,
+              rssFeedId: feed.id || null,
+            });
+          } catch (e) {
+            // Fingerprint might already exist
+          }
+
+          const clusterItems = await storage.getTopicClusterItems(cluster.id);
+          await storage.updateTopicCluster(cluster.id, {
+            articleCount: clusterItems.length,
+            similarityScore: clusterItems.length > 1 ? Math.min(90, 50 + clusterItems.length * 10) : 50,
+          });
+        }
+      } catch (feedError) {
+        const errorMsg = `Failed to process feed "${feed.name}": ${feedError}`;
+        console.error(`[RSS Auto-Process] ${errorMsg}`);
+        result.errors.push(errorMsg);
+      }
+    }
+
+    const pendingClusters = await storage.getTopicClusters({ status: "pending" });
+    const openai = getOpenAIClient();
+    
+    if (!openai) {
+      console.log("[RSS Auto-Process] OpenAI not configured, skipping article generation");
+      return result;
+    }
+
+    console.log(`[RSS Auto-Process] Found ${pendingClusters.length} pending clusters to process`);
+
+    for (const cluster of pendingClusters) {
+      try {
+        const items = await storage.getTopicClusterItems(cluster.id);
+        if (items.length === 0) continue;
+
+        const sources = items.map(item => ({
+          title: item.sourceTitle,
+          description: item.sourceDescription || '',
+          url: item.sourceUrl || '',
+          date: item.pubDate?.toISOString() || '',
+        }));
+
+        const combinedText = sources.map(s => `${s.title} ${s.description}`).join(' ');
+        const category = determineContentCategory(combinedText, '');
+        const mapping = CATEGORY_PERSONALITY_MAPPING[category] || CATEGORY_PERSONALITY_MAPPING.news;
+        const personality = CONTENT_WRITER_PERSONALITIES[mapping.personality];
+        const structure = ARTICLE_STRUCTURES[mapping.structure];
+
+        const systemPrompt = getContentWriterSystemPrompt(category, personality, structure);
+        const userPrompt = buildArticleGenerationPrompt(sources, category, personality, structure);
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.7,
+          max_tokens: 4000,
+        });
+
+        const mergedData = JSON.parse(completion.choices[0].message.content || "{}");
+
+        const slug = (mergedData.title || cluster.topic)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .substring(0, 80);
+
+        const blocks: ContentBlock[] = [];
+        let blockOrder = 0;
+
+        blocks.push({
+          id: `hero-${Date.now()}-${blockOrder}`,
+          type: "hero",
+          data: {
+            title: mergedData.title || cluster.topic,
+            subtitle: mergedData.metaDescription || '',
+            overlayText: ''
+          },
+          order: blockOrder++
+        });
+
+        if (mergedData.content) {
+          blocks.push({
+            id: `text-${Date.now()}-${blockOrder}`,
+            type: "text",
+            data: { heading: '', content: mergedData.content },
+            order: blockOrder++
+          });
+        }
+
+        if (mergedData.quickFacts?.length > 0) {
+          blocks.push({
+            id: `highlights-${Date.now()}-${blockOrder}`,
+            type: "highlights",
+            data: { title: "Quick Facts", items: mergedData.quickFacts },
+            order: blockOrder++
+          });
+        }
+
+        if (mergedData.proTips?.length > 0) {
+          blocks.push({
+            id: `tips-${Date.now()}-${blockOrder}`,
+            type: "tips",
+            data: { title: "Pro Tips", tips: mergedData.proTips },
+            order: blockOrder++
+          });
+        }
+
+        if (mergedData.faqs?.length > 0) {
+          blocks.push({
+            id: `faq-${Date.now()}-${blockOrder}`,
+            type: "faq",
+            data: {
+              title: "Frequently Asked Questions",
+              faqs: mergedData.faqs.map((faq: { question: string; answer: string }) => ({
+                question: faq.question,
+                answer: faq.answer
+              })),
+            },
+            order: blockOrder++
+          });
+        }
+
+        blocks.push({
+          id: `cta-${Date.now()}-${blockOrder}`,
+          type: "cta",
+          data: {
+            title: "Plan Your Visit",
+            content: "Ready to experience this? Start planning your Dubai adventure today!",
+            buttonText: "Explore More",
+            buttonLink: "/articles"
+          },
+          order: blockOrder++
+        });
+
+        const textContent = mergedData.content || '';
+        const wordCount = textContent.replace(/<[^>]*>/g, '').split(/\s+/).filter((w: string) => w.length > 0).length;
+
+        const articleKeywords = mergedData.secondaryKeywords || [];
+        const articleTopic = mergedData.title || cluster.topic;
+        
+        console.log(`[RSS Auto-Process] Finding image for article: "${articleTopic}"`);
+        const articleImage = await findOrCreateArticleImage(
+          articleTopic,
+          articleKeywords,
+          category
+        );
+        
+        let heroImageUrl: string | null = null;
+        let heroImageAlt: string | null = null;
+        
+        if (articleImage) {
+          heroImageUrl = articleImage.url;
+          heroImageAlt = articleImage.altText;
+          console.log(`[RSS Auto-Process] Attached image from ${articleImage.source}: ${articleImage.url}`);
+        } else {
+          console.log(`[RSS Auto-Process] No image found for article, will be created without hero image`);
+        }
+
+        const content = await storage.createContent({
+          title: mergedData.title || cluster.topic,
+          slug: `${slug}-${Date.now()}`,
+          type: "article",
+          status: "draft",
+          metaTitle: mergedData.title || cluster.topic,
+          metaDescription: mergedData.metaDescription || null,
+          primaryKeyword: mergedData.primaryKeyword || null,
+          secondaryKeywords: mergedData.secondaryKeywords || [],
+          blocks: blocks as any,
+          wordCount: wordCount,
+          heroImage: heroImageUrl,
+          heroImageAlt: heroImageAlt,
+        });
+
+        const articleCategory = category === 'food' || category === 'restaurants' || category === 'dining' 
+          ? 'food' 
+          : category === 'attractions' || category === 'activities' 
+            ? 'attractions'
+            : category === 'hotels' || category === 'accommodation'
+              ? 'hotels'
+              : category === 'transport' || category === 'transportation' || category === 'logistics'
+                ? 'transport'
+                : category === 'events' || category === 'festivals'
+                  ? 'events'
+                  : category === 'tips' || category === 'guides'
+                    ? 'tips'
+                    : category === 'shopping' || category === 'deals'
+                      ? 'shopping'
+                      : 'news';
+
+        await storage.createArticle({
+          contentId: content.id,
+          category: articleCategory as any,
+          urgencyLevel: mergedData.urgencyLevel || 'relevant',
+          targetAudience: mergedData.targetAudience || [],
+          personality: mapping.personality,
+          tone: mapping.tone,
+          quickFacts: mergedData.quickFacts || [],
+          proTips: mergedData.proTips || [],
+          warnings: mergedData.warnings || [],
+          faq: mergedData.faqs || [],
+        });
+
+        for (const item of items) {
+          if (item.sourceUrl) {
+            const fp = generateFingerprint(item.sourceTitle, item.sourceUrl);
+            try {
+              await storage.createContentFingerprint({
+                contentId: content.id,
+                fingerprint: fp,
+                sourceUrl: item.sourceUrl,
+                sourceTitle: item.sourceTitle,
+                rssFeedId: item.rssFeedId || null,
+              });
+            } catch (e) {
+              // Already exists
+            }
+          }
+          await storage.updateTopicClusterItem(item.id, { isUsedInMerge: true });
+        }
+
+        await storage.updateTopicCluster(cluster.id, {
+          status: "merged",
+          mergedContentId: content.id,
+        });
+
+        result.articlesGenerated++;
+        console.log(`[RSS Auto-Process] Generated article: "${mergedData.title}" (${wordCount} words)`);
+
+        // Auto-translate to all 16 target languages (background, non-blocking)
+        console.log(`[RSS Auto-Process] Starting automatic translation for article: ${content.id}`);
+        translateArticleToAllLanguages(content.id, {
+          title: content.title,
+          metaTitle: content.metaTitle,
+          metaDescription: content.metaDescription,
+          blocks: content.blocks as any[],
+        }).then((translationResult) => {
+          console.log(`[RSS Auto-Process] Translation complete for ${content.id}: ${translationResult.success} successful, ${translationResult.failed} failed`);
+        }).catch((err) => {
+          console.error(`[RSS Auto-Process] Translation error for ${content.id}:`, err);
+        });
+
+      } catch (clusterError) {
+        const errorMsg = `Failed to generate article for cluster "${cluster.topic}": ${clusterError}`;
+        console.error(`[RSS Auto-Process] ${errorMsg}`);
+        result.errors.push(errorMsg);
+      }
+    }
+
+  } catch (error) {
+    const errorMsg = `Auto-process failed: ${error}`;
+    console.error(`[RSS Auto-Process] ${errorMsg}`);
+    result.errors.push(errorMsg);
+  }
+
+  console.log(`[RSS Auto-Process] Complete - Feeds: ${result.feedsProcessed}, Items: ${result.itemsFound}, New Clusters: ${result.clustersCreated}, Articles: ${result.articlesGenerated}`);
+  return result;
 }
 
 export async function registerRoutes(
@@ -2133,7 +2776,7 @@ export async function registerRoutes(
     }
   });
 
-  // AI-powered merge cluster into single article
+  // AI-powered merge cluster into single article with enhanced content writer guidelines
   app.post("/api/topic-clusters/:id/merge", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
       const cluster = await storage.getTopicCluster(req.params.id);
@@ -2154,80 +2797,174 @@ export async function registerRoutes(
         date: item.pubDate?.toISOString() || '',
       }));
 
-      // Use OpenAI to merge the articles
+      // Determine content category based on source material
+      const combinedText = sources.map(s => `${s.title} ${s.description}`).join(' ');
+      const category = determineContentCategory(combinedText, '');
+      
+      // Get the appropriate personality and structure for this category
+      const mapping = CATEGORY_PERSONALITY_MAPPING[category] || CATEGORY_PERSONALITY_MAPPING.news;
+      const personality = CONTENT_WRITER_PERSONALITIES[mapping.personality];
+      const structure = ARTICLE_STRUCTURES[mapping.structure];
+
+      // Use OpenAI to merge the articles with enhanced prompting
       const openai = getOpenAIClient();
       if (!openai) {
         return res.status(503).json({ error: "OpenAI API not configured. Please set OPENAI_API_KEY." });
       }
 
-      const prompt = `You are a professional journalist. Merge the following ${sources.length} news articles about the same topic into ONE comprehensive article.
-
-SOURCES:
-${sources.map((s, i) => `[Source ${i + 1}] ${s.title}\n${s.description}\nURL: ${s.url}\nDate: ${s.date}`).join('\n\n')}
-
-Create a comprehensive merged article with:
-1. A clear, SEO-friendly title
-2. A comprehensive summary (2-3 paragraphs) that includes all unique information from all sources
-3. Key facts and details from all sources
-4. Proper attribution to sources where relevant
-
-Respond in JSON format:
-{
-  "title": "Merged article title",
-  "metaDescription": "SEO meta description (150-160 chars)",
-  "content": "Full merged article content in HTML format with paragraphs",
-  "keyPoints": ["Key point 1", "Key point 2", ...],
-  "sources": ["Source 1 name", "Source 2 name", ...]
-}`;
+      // Build the enhanced system and user prompts
+      const systemPrompt = getContentWriterSystemPrompt(category, personality, structure);
+      const userPrompt = buildArticleGenerationPrompt(sources, category, personality, structure);
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
         response_format: { type: "json_object" },
         temperature: 0.7,
+        max_tokens: 4000,
       });
 
       const mergedData = JSON.parse(completion.choices[0].message.content || "{}");
 
-      // Create merged content
-      const slug = mergedData.title
+      // Create merged content with enhanced data
+      const slug = (mergedData.title || cluster.topic)
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "")
         .substring(0, 80);
 
+      // Build content blocks from the generated content
+      const blocks: ContentBlock[] = [];
+      let blockOrder = 0;
+
+      // Hero block
+      blocks.push({
+        id: `hero-${Date.now()}-${blockOrder}`,
+        type: "hero",
+        data: {
+          title: mergedData.title || cluster.topic,
+          subtitle: mergedData.metaDescription || '',
+          overlayText: ''
+        },
+        order: blockOrder++
+      });
+
+      // Main content text block
+      if (mergedData.content) {
+        blocks.push({
+          id: `text-${Date.now()}-${blockOrder}`,
+          type: "text",
+          data: {
+            heading: '',
+            content: mergedData.content,
+          },
+          order: blockOrder++
+        });
+      }
+
+      // Quick Facts / Highlights block
+      if (mergedData.quickFacts?.length > 0) {
+        blocks.push({
+          id: `highlights-${Date.now()}-${blockOrder}`,
+          type: "highlights",
+          data: {
+            title: "Quick Facts",
+            items: mergedData.quickFacts,
+          },
+          order: blockOrder++
+        });
+      }
+
+      // Pro Tips block
+      if (mergedData.proTips?.length > 0) {
+        blocks.push({
+          id: `tips-${Date.now()}-${blockOrder}`,
+          type: "tips",
+          data: {
+            title: "Pro Tips",
+            tips: mergedData.proTips,
+          },
+          order: blockOrder++
+        });
+      }
+
+      // FAQ block
+      if (mergedData.faqs?.length > 0) {
+        blocks.push({
+          id: `faq-${Date.now()}-${blockOrder}`,
+          type: "faq",
+          data: {
+            title: "Frequently Asked Questions",
+            faqs: mergedData.faqs.map((faq: { question: string; answer: string }) => ({
+              question: faq.question,
+              answer: faq.answer
+            })),
+          },
+          order: blockOrder++
+        });
+      }
+
+      // CTA block
+      blocks.push({
+        id: `cta-${Date.now()}-${blockOrder}`,
+        type: "cta",
+        data: {
+          title: "Plan Your Visit",
+          content: "Ready to experience this? Start planning your Dubai adventure today!",
+          buttonText: "Explore More",
+          buttonLink: "/articles"
+        },
+        order: blockOrder++
+      });
+
+      // Calculate word count
+      const textContent = mergedData.content || '';
+      const wordCount = textContent.replace(/<[^>]*>/g, '').split(/\s+/).filter((w: string) => w.length > 0).length;
+
       const content = await storage.createContent({
-        title: mergedData.title,
+        title: mergedData.title || cluster.topic,
         slug: `${slug}-${Date.now()}`,
         type: "article",
         status: "draft",
+        metaTitle: mergedData.title || cluster.topic,
         metaDescription: mergedData.metaDescription || null,
-        blocks: [
-          {
-            id: `text-${Date.now()}-0`,
-            type: "text",
-            data: {
-              heading: mergedData.title,
-              content: mergedData.content || "",
-            },
-            order: 0,
-          },
-          ...(mergedData.keyPoints?.length > 0 ? [{
-            id: `highlights-${Date.now()}-1`,
-            type: "highlights",
-            data: {
-              heading: "Key Points",
-              items: mergedData.keyPoints,
-            },
-            order: 1,
-          }] : []),
-        ],
+        primaryKeyword: mergedData.primaryKeyword || null,
+        secondaryKeywords: mergedData.secondaryKeywords || [],
+        blocks: blocks as any,
+        wordCount: wordCount,
       });
 
-      // Create article entry
+      // Create article entry with enhanced fields
+      const articleCategory = category === 'food' || category === 'restaurants' || category === 'dining' 
+        ? 'food' 
+        : category === 'attractions' || category === 'activities' 
+          ? 'attractions'
+          : category === 'hotels' || category === 'accommodation'
+            ? 'hotels'
+            : category === 'transport' || category === 'transportation' || category === 'logistics'
+              ? 'transport'
+              : category === 'events' || category === 'festivals'
+                ? 'events'
+                : category === 'tips' || category === 'guides'
+                  ? 'tips'
+                  : category === 'shopping' || category === 'deals'
+                    ? 'shopping'
+                    : 'news';
+
       await storage.createArticle({
         contentId: content.id,
-        category: "news",
+        category: articleCategory as any,
+        urgencyLevel: mergedData.urgencyLevel || 'relevant',
+        targetAudience: mergedData.targetAudience || [],
+        personality: mapping.personality,
+        tone: mapping.tone,
+        quickFacts: mergedData.quickFacts || [],
+        proTips: mergedData.proTips || [],
+        warnings: mergedData.warnings || [],
+        faq: mergedData.faqs || [],
       });
 
       // Create fingerprints for all source items
@@ -2255,11 +2992,29 @@ Respond in JSON format:
         mergedContentId: content.id,
       });
 
+      // Auto-translate to all 16 target languages (background, non-blocking)
+      console.log(`[Merge] Starting automatic translation for article: ${content.id}`);
+      translateArticleToAllLanguages(content.id, {
+        title: content.title,
+        metaTitle: content.metaTitle,
+        metaDescription: content.metaDescription,
+        blocks: content.blocks as any[],
+      }).then((translationResult) => {
+        console.log(`[Merge] Translation complete for ${content.id}: ${translationResult.success} successful, ${translationResult.failed} failed`);
+      }).catch((err) => {
+        console.error(`[Merge] Translation error for ${content.id}:`, err);
+      });
+
       res.status(201).json({
-        message: `Successfully merged ${items.length} articles`,
+        message: `Successfully merged ${items.length} articles using ${personality.name} personality`,
         content,
         mergedFrom: items.length,
         sources: mergedData.sources || [],
+        category,
+        personality: mapping.personality,
+        structure: mapping.structure,
+        wordCount,
+        translationsQueued: TARGET_LOCALES.length,
       });
     } catch (error) {
       console.error("Error merging cluster:", error);
@@ -2289,6 +3044,42 @@ Respond in JSON format:
     } catch (error) {
       console.error("Error deleting cluster:", error);
       res.status(500).json({ error: "Failed to delete cluster" });
+    }
+  });
+
+  // ==================== Automatic RSS Processing ====================
+  
+  // POST /api/rss/auto-process - Manual trigger for automatic RSS processing
+  app.post("/api/rss/auto-process", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
+    try {
+      console.log("[RSS Auto-Process] Manual trigger started...");
+      const result = await autoProcessRssFeeds();
+      res.status(200).json({
+        message: "RSS auto-processing completed",
+        ...result,
+      });
+    } catch (error) {
+      console.error("[RSS Auto-Process] Manual trigger failed:", error);
+      res.status(500).json({ error: "Failed to auto-process RSS feeds" });
+    }
+  });
+
+  // GET /api/rss/auto-process/status - Check last run status (no auth required for monitoring)
+  app.get("/api/rss/auto-process/status", async (req, res) => {
+    try {
+      const feeds = await storage.getRssFeeds();
+      const activeFeeds = feeds.filter(f => f.isActive);
+      const pendingClusters = await storage.getTopicClusters({ status: "pending" });
+      
+      res.json({
+        activeFeedsCount: activeFeeds.length,
+        pendingClustersCount: pendingClusters.length,
+        lastCheckTimestamp: new Date().toISOString(),
+        autoProcessIntervalMinutes: 30,
+      });
+    } catch (error) {
+      console.error("[RSS Auto-Process] Status check failed:", error);
+      res.status(500).json({ error: "Failed to get auto-process status" });
     }
   });
 

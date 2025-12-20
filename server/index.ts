@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { registerRoutes, autoProcessRssFeeds } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { initTelegramBot } from "./telegram-bot";
@@ -97,6 +97,33 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      
+      // Start automatic RSS processing background loop (every 30 minutes)
+      const RSS_AUTO_PROCESS_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+      
+      log("[RSS Auto-Process] Starting background loop (runs every 30 minutes)", "rss");
+      
+      // Run immediately on startup (after 5 seconds to let everything initialize)
+      setTimeout(async () => {
+        try {
+          log("[RSS Auto-Process] Running initial auto-process...", "rss");
+          const result = await autoProcessRssFeeds();
+          log(`[RSS Auto-Process] Initial run complete - Feeds: ${result.feedsProcessed}, Items: ${result.itemsFound}, Articles: ${result.articlesGenerated}`, "rss");
+        } catch (error) {
+          log(`[RSS Auto-Process] Initial run failed: ${error}`, "rss");
+        }
+      }, 5000);
+      
+      // Then run every 30 minutes
+      setInterval(async () => {
+        try {
+          log("[RSS Auto-Process] Running scheduled auto-process...", "rss");
+          const result = await autoProcessRssFeeds();
+          log(`[RSS Auto-Process] Scheduled run complete - Feeds: ${result.feedsProcessed}, Items: ${result.itemsFound}, Articles: ${result.articlesGenerated}`, "rss");
+        } catch (error) {
+          log(`[RSS Auto-Process] Scheduled run failed: ${error}`, "rss");
+        }
+      }, RSS_AUTO_PROCESS_INTERVAL_MS);
     },
   );
 })();
