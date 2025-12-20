@@ -2401,6 +2401,34 @@ export async function registerRoutes(
     }
   });
 
+  // Cancel in-progress translations for content
+  app.post("/api/contents/:id/cancel-translation", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const content = await storage.getContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      const translations = await storage.getTranslationsByContentId(req.params.id);
+      const pendingTranslations = translations.filter(t => t.status === "pending" || t.status === "in_progress");
+      
+      let cancelledCount = 0;
+      for (const translation of pendingTranslations) {
+        await storage.updateTranslation(translation.id, { status: "cancelled" });
+        cancelledCount++;
+      }
+
+      res.json({
+        message: "Translation cancelled",
+        cancelledCount,
+        contentId: req.params.id
+      });
+    } catch (error) {
+      console.error("Error cancelling translation:", error);
+      res.status(500).json({ error: "Failed to cancel translation" });
+    }
+  });
+
   // Content deletion - requires authentication and permission
   app.delete("/api/contents/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
     try {

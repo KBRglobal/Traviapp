@@ -152,6 +152,8 @@ export default function AIArticleGenerator() {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "") + `-${Date.now()}`;
       
+      // Convert data to editor-compatible format
+      // Highlights/Tips use 'content' as newline-separated string, FAQ uses individual blocks
       const blocks = [
         {
           type: "hero",
@@ -171,31 +173,29 @@ export default function AIArticleGenerator() {
         ...(editedData.article.quickFacts?.length ? [{
           type: "highlights",
           data: {
-            title: "Quick Facts",
-            items: editedData.article.quickFacts.map(f => `${f.label}: ${f.value}`),
+            content: editedData.article.quickFacts.map(f => `${f.label}: ${f.value}`).join('\n'),
           },
         }] : []),
         ...(editedData.article.proTips?.length ? [{
           type: "tips",
           data: {
-            title: "Pro Tips",
-            tips: editedData.article.proTips,
+            content: editedData.article.proTips.join('\n'),
           },
         }] : []),
         ...(editedData.article.goodToKnow?.length ? [{
           type: "tips",
           data: {
-            title: "Good to Know",
-            tips: editedData.article.goodToKnow,
+            content: editedData.article.goodToKnow.join('\n'),
           },
         }] : []),
-        ...(editedData.article.faq?.length ? [{
+        // Create individual FAQ blocks for each question/answer pair
+        ...(editedData.article.faq?.length ? editedData.article.faq.map(f => ({
           type: "faq",
           data: {
-            title: "Frequently Asked Questions",
-            faqs: editedData.article.faq.map(f => ({ question: f.q, answer: f.a })),
+            question: f.q,
+            answer: f.a,
           },
-        }] : []),
+        })) : []),
         {
           type: "cta",
           data: {
@@ -230,6 +230,8 @@ export default function AIArticleGenerator() {
         ogTitle: editedData.meta.ogTitle,
         ogDescription: editedData.meta.ogDescription,
         keywords: editedData.meta.keywords,
+        primaryKeyword: editedData.analysis.primaryKeyword || editedData.meta.keywords?.[0] || editedData.article.h1,
+        secondaryKeywords: editedData.analysis.secondaryKeywords || [],
         heroImage: editedData.heroImage?.url || null,
         heroImageAlt: editedData.heroImage?.alt || editedData.article.h1,
         blocks,

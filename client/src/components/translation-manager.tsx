@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Languages, Globe, Check, Clock, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { Languages, Globe, Check, Clock, AlertCircle, Loader2, RefreshCw, Eye, X, StopCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { SUPPORTED_LOCALES, type Locale } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -64,10 +65,24 @@ const getFlag = (locale: Locale): string => {
   return flagMap[locale] || "🌐";
 };
 
+interface Translation {
+  id: string;
+  contentId: string;
+  locale: Locale;
+  title: string;
+  metaDescription: string;
+  blocks: unknown[];
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export function TranslationManager({ contentId, contentTitle }: TranslationManagerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTiers, setSelectedTiers] = useState<number[]>([1, 2]); // Default: Tier 1 & 2
   const [isTranslating, setIsTranslating] = useState(false);
+  const [activeTab, setActiveTab] = useState<"manage" | "preview">("manage");
+  const [previewLocale, setPreviewLocale] = useState<Locale | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -81,6 +96,40 @@ export function TranslationManager({ contentId, contentTitle }: TranslationManag
     },
     enabled: isOpen,
     refetchInterval: isTranslating ? 5000 : false, // Poll while translating
+  });
+
+  // Fetch all translations for preview
+  const { data: translations } = useQuery<Translation[]>({
+    queryKey: ["translations", contentId],
+    queryFn: async () => {
+      const res = await fetch(`/api/contents/${contentId}/translations`);
+      if (!res.ok) throw new Error("Failed to fetch translations");
+      return res.json();
+    },
+    enabled: isOpen && activeTab === "preview",
+  });
+
+  // Cancel translation mutation
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/contents/${contentId}/cancel-translation`);
+      return res.json();
+    },
+    onSuccess: () => {
+      setIsTranslating(false);
+      toast({
+        title: "Translation cancelled",
+        description: "The translation process has been stopped.",
+      });
+      refetch();
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to cancel",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    },
   });
 
   // Start translation mutation
@@ -146,7 +195,7 @@ export function TranslationManager({ contentId, contentTitle }: TranslationManag
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Globe className="h-5 w-5" />
@@ -157,30 +206,59 @@ export function TranslationManager({ contentId, contentTitle }: TranslationManag
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Progress Overview */}
-            {status && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Translation Progress</span>
-                  <span className="font-medium">
-                    {status.completedCount} / {status.totalLocales} languages ({status.percentage}%)
-                  </span>
-                </div>
-                <Progress value={status.percentage} className="h-2" />
-                {isTranslating && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Translation in progress...
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "manage" | "preview")} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="manage" className="gap-2" data-testid="tab-manage">
+              <Languages className="h-4 w-4" />
+              Manage
+            </TabsTrigger>
+            <TabsTrigger value="preview" className="gap-2" data-testid="tab-preview">
+              <Eye className="h-4 w-4" />
+              Preview ({translations?.length || 0})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="manage" className="flex-1 overflow-auto">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Progress Overview */}
+                {status && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Translation Progress</span>
+                      <span className="font-medium">
+                        {status.completedCount} / {status.totalLocales} languages ({status.percentage}%)
+                      </span>
+                    </div>
+                    <Progress value={status.percentage} className="h-2" />
+                    {isTranslating && (
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Translation in progress...
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => cancelMutation.mutate()}
+                          disabled={cancelMutation.isPending}
+                          data-testid="button-cancel-translation"
+                        >
+                          {cancelMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <StopCircle className="h-4 w-4" />
+                          )}
+                          <span className="ml-1">Cancel</span>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
 
             {/* Tier Selection */}
             <div className="space-y-3">
@@ -245,10 +323,81 @@ export function TranslationManager({ contentId, contentTitle }: TranslationManag
                 </ScrollArea>
               </div>
             )}
-          </div>
-        )}
+              </div>
+            )}
+          </TabsContent>
 
-        <DialogFooter className="flex gap-2">
+          <TabsContent value="preview" className="flex-1 overflow-auto">
+            {translations && translations.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {translations
+                    .filter(t => t.status === "completed")
+                    .map((t) => (
+                      <Button
+                        key={t.locale}
+                        size="sm"
+                        variant={previewLocale === t.locale ? "default" : "outline"}
+                        onClick={() => setPreviewLocale(t.locale)}
+                        data-testid={`preview-locale-${t.locale}`}
+                      >
+                        {getFlag(t.locale)} {t.locale.toUpperCase()}
+                      </Button>
+                    ))}
+                </div>
+                
+                {previewLocale && (
+                  <div className="space-y-4">
+                    {(() => {
+                      const preview = translations.find(t => t.locale === previewLocale);
+                      if (!preview) return null;
+                      return (
+                        <ScrollArea className="h-80 rounded-md border p-4">
+                          <div className="space-y-4">
+                            <div>
+                              <Label className="text-muted-foreground text-xs">Title</Label>
+                              <p className="font-semibold text-lg">{preview.title}</p>
+                            </div>
+                            <div>
+                              <Label className="text-muted-foreground text-xs">Meta Description</Label>
+                              <p className="text-sm">{preview.metaDescription}</p>
+                            </div>
+                            {preview.blocks && Array.isArray(preview.blocks) && preview.blocks.length > 0 && (
+                              <div>
+                                <Label className="text-muted-foreground text-xs">Content Blocks ({preview.blocks.length})</Label>
+                                <div className="space-y-2 mt-2">
+                                  {preview.blocks.slice(0, 5).map((block: any, idx: number) => (
+                                    <div key={idx} className="p-2 bg-muted rounded text-sm">
+                                      <Badge variant="secondary" className="mb-1">{block.type}</Badge>
+                                      {block.data?.content && (
+                                        <p className="text-xs line-clamp-2">{String(block.data.content).substring(0, 150)}...</p>
+                                      )}
+                                    </div>
+                                  ))}
+                                  {preview.blocks.length > 5 && (
+                                    <p className="text-xs text-muted-foreground">... and {preview.blocks.length - 5} more blocks</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Globe className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">No translations yet</p>
+                <p className="text-sm text-muted-foreground">Create translations to preview them here</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        <DialogFooter className="flex gap-2 pt-4 border-t">
           <Button
             variant="outline"
             onClick={() => refetch()}
