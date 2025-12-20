@@ -122,7 +122,7 @@ router.get("/sitemap.xml", async (req: Request, res: Response) => {
           path = `/hotels/${content.slug}`;
           priority = 0.8;
           break;
-        case "restaurant":
+        case "dining":
           path = `/dining/${content.slug}`;
           priority = 0.7;
           break;

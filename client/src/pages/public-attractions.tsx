@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
-  Search, MapPin, Star, Users, Sparkles, Moon,
+  Search, MapPin, Star, Users, Sparkles, Moon, Heart,
   Gem, Compass, Mountain, Building2, Ship,
   Camera, TreePine, Waves, ChevronRight, ArrowRight,
   Clock, Sun, Bookmark, Map, Zap

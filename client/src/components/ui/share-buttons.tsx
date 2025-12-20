@@ -64,6 +64,8 @@ export function ShareButtons({
     }
   };
 
+  const hasNativeShare = typeof navigator !== "undefined" && !!navigator.share;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -71,7 +73,7 @@ export function ShareButtons({
           variant="outline"
           size={variant === "icon" ? "icon" : "default"}
           className={className}
-          onClick={navigator.share ? handleNativeShare : undefined}
+          onClick={hasNativeShare ? handleNativeShare : undefined}
         >
           <Share2 className="w-4 h-4" />
           {variant === "full" && <span className="ml-2">Share</span>}

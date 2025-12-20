@@ -599,6 +599,52 @@ export async function registerRoutes(
   }
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
 
+  // Serve AI-generated images from object storage
+  app.get("/api/ai-images/:filename", async (req: Request, res: Response) => {
+    const filename = req.params.filename;
+    const client = getObjectStorageClient();
+
+    if (client) {
+      try {
+        const objectPath = `public/ai-generated/${filename}`;
+        const result = await client.downloadAsBytes(objectPath);
+
+        if (!result.ok) {
+          console.error(`Object storage error for ${filename}:`, result.error);
+          res.status(404).send('Image not found');
+          return;
+        }
+
+        const [buffer] = result.value;
+
+        // Determine content type
+        const ext = filename.split('.').pop()?.toLowerCase();
+        const contentTypes: Record<string, string> = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'webp': 'image/webp',
+          'gif': 'image/gif',
+        };
+
+        res.set('Content-Type', contentTypes[ext || 'jpg'] || 'image/jpeg');
+        res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        res.send(buffer);
+      } catch (error) {
+        console.error(`Error serving AI image ${filename}:`, error);
+        res.status(404).send('Image not found');
+      }
+    } else {
+      // Fallback to local file
+      const localPath = path.join(process.cwd(), "uploads", "ai-generated", filename);
+      if (fs.existsSync(localPath)) {
+        res.sendFile(localPath);
+      } else {
+        res.status(404).send('Image not found');
+      }
+    }
+  });
+
   // Sitemap and robots.txt routes
   const sitemapRoutes = (await import("./routes/sitemap")).default;
   app.use(sitemapRoutes);
@@ -2800,7 +2846,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
             await storageClient.uploadFromBytes(objectPath, buffer);
             storedImages.push({
               ...image,
-              url: `/api/media/${image.filename}`, // Use proxy URL
+              url: `/api/ai-images/${image.filename}`, // Use AI images endpoint
             });
           } else {
             // Store locally
@@ -2871,7 +2917,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       if (storageClient) {
         const objectPath = `public/ai-generated/${finalFilename}`;
         await storageClient.uploadFromBytes(objectPath, buffer);
-        storedUrl = `/api/media/${finalFilename}`;
+        storedUrl = `/api/ai-images/${finalFilename}`;
       } else {
         const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
         if (!fs.existsSync(uploadsDir)) {
