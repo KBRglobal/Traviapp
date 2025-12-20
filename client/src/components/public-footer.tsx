@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Logo } from "@/components/logo";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
-import { MapPin, Camera, Building2, Utensils, Compass, Calculator, BookOpen, Globe, Mail, Phone, Clock, Sun } from "lucide-react";
+import { MapPin, Camera, Building2, Utensils, Compass, Calculator, BookOpen, Globe, Mail, Phone, Clock, Sun, Gift, Scale, Crown, Coffee } from "lucide-react";
 import { SiInstagram, SiFacebook, SiX, SiYoutube, SiTiktok } from "react-icons/si";
 import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
 
@@ -14,6 +14,13 @@ export function PublicFooter() {
     { href: "/districts", icon: MapPin, label: t('nav.districts') },
     { href: "/dining", icon: Utensils, label: t('nav.dining') },
     { href: "/articles", icon: Compass, label: t('nav.articles') },
+  ];
+
+  const featuredGuides = [
+    { href: "/dubai/free-things-to-do", icon: Gift, label: "70+ Free Things to Do" },
+    { href: "/dubai/24-hours-open", icon: Coffee, label: "Open 24 Hours" },
+    { href: "/dubai/sheikh-mohammed-bin-rashid", icon: Crown, label: "Tribute to HH Sheikh Mohammed" },
+    { href: "/dubai/laws-for-tourists", icon: Scale, label: "Laws for Tourists" },
   ];
 
   const toolLinks = [
@@ -74,7 +81,7 @@ export function PublicFooter() {
             </div>
 
             {/* Links Grid */}
-            <div className="lg:w-2/3 grid grid-cols-2 md:grid-cols-3 gap-8 lg:gap-12">
+            <div className="lg:w-2/3 grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
               {/* Explore Column */}
               <div>
                 <h4 className="font-semibold text-slate-900 dark:text-white mb-5 text-sm uppercase tracking-wide">
@@ -82,6 +89,29 @@ export function PublicFooter() {
                 </h4>
                 <ul className="space-y-3">
                   {exploreLinks.map((link) => {
+                    const IconComponent = link.icon;
+                    return (
+                      <li key={link.href}>
+                        <Link 
+                          href={localePath(link.href)} 
+                          className="group flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-[#6C5CE7] dark:hover:text-[#6C5CE7] transition-colors text-sm"
+                        >
+                          <IconComponent className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" />
+                          {link.label}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              {/* Featured Guides Column */}
+              <div>
+                <h4 className="font-semibold text-slate-900 dark:text-white mb-5 text-sm uppercase tracking-wide">
+                  Featured Guides
+                </h4>
+                <ul className="space-y-3">
+                  {featuredGuides.map((link) => {
                     const IconComponent = link.icon;
                     return (
                       <li key={link.href}>
