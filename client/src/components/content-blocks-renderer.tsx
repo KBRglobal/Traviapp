@@ -71,7 +71,8 @@ interface RoomCardsBlockData {
 interface TipsBlockData {
   title?: string;
   tips?: string[];
-  content?: string; // Editor format: newline-separated string
+  items?: string[]; // Editor uses 'items' instead of 'tips'
+  content?: string; // RSS format: newline-separated string
 }
 
 function HeroBlock({ data }: { data: HeroBlockData }) {
@@ -353,12 +354,14 @@ function RoomCardsBlock({ data }: { data: RoomCardsBlockData }) {
 }
 
 function TipsBlock({ data }: { data: TipsBlockData }) {
-  // Support both formats: array (tips) or newline-separated string (content)
+  // Support all formats: tips array, items array (editor), or newline string (RSS)
   const tips = data.tips?.length 
     ? data.tips 
-    : data.content 
-      ? data.content.split('\n').filter(tip => tip.trim())
-      : [];
+    : data.items?.length
+      ? data.items
+      : data.content 
+        ? data.content.split('\n').filter(tip => tip.trim())
+        : [];
   
   if (!tips.length) return null;
   
