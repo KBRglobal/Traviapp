@@ -5753,6 +5753,387 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // ============================================================================
+  // IMAGE ENGINE API - AI Image Generation and Library Management
+  // ============================================================================
+
+  // Get Dubai keywords database
+  app.get("/api/image-engine/keywords", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { DUBAI_KEYWORDS, getAllTopics, IMAGE_TYPES } = await import("@shared/dubai-keywords");
+      res.json({
+        categories: DUBAI_KEYWORDS,
+        allTopics: getAllTopics(),
+        imageTypes: IMAGE_TYPES,
+      });
+    } catch (error) {
+      console.error("Error fetching keywords:", error);
+      res.status(500).json({ error: "Failed to fetch keywords" });
+    }
+  });
+
+  // Search keywords/topics
+  app.get("/api/image-engine/keywords/search", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { searchTopics } = await import("@shared/dubai-keywords");
+      const query = req.query.q as string || "";
+      const results = searchTopics(query);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching keywords:", error);
+      res.status(500).json({ error: "Failed to search keywords" });
+    }
+  });
+
+  // Generate image for a topic
+  app.post("/api/image-engine/generate", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+    try {
+      const { topic, imageType, category, customPrompt } = req.body;
+
+      if (!topic) {
+        return res.status(400).json({ error: "Topic is required" });
+      }
+
+      const { generateImagePrompt, slugify } = await import("@shared/dubai-keywords");
+      const prompt = customPrompt || generateImagePrompt(topic, imageType || "hero");
+
+      console.log(`Generating image for topic: ${topic}, type: ${imageType}`);
+      const imageUrl = await generateImage(prompt, {
+        size: imageType === "hero" ? "1792x1024" : "1024x1024",
+        quality: "hd",
+        style: "natural",
+      });
+
+      if (!imageUrl) {
+        return res.status(500).json({ error: "Failed to generate image" });
+      }
+
+      const timestamp = Date.now();
+      const filename = `${slugify(topic)}-${imageType || "hero"}-${timestamp}.jpg`;
+
+      const imageData = {
+        filename,
+        url: imageUrl,
+        topic,
+        category: category || "general",
+        imageType: imageType || "hero",
+        source: "openai" as const,
+        prompt,
+        keywords: [topic.toLowerCase(), imageType || "hero", "dubai", "tourism"],
+        altText: `${topic} - Dubai Tourism`,
+        caption: `Explore ${topic} in Dubai`,
+      };
+
+      const { aiGeneratedImages } = await import("@shared/schema");
+      const [savedImage] = await db.insert(aiGeneratedImages).values(imageData).returning();
+
+      res.json({
+        success: true,
+        image: savedImage,
+      });
+    } catch (error) {
+      console.error("Error generating image:", error);
+      res.status(500).json({ error: "Failed to generate image" });
+    }
+  });
+
+  // Get all images in library
+  app.get("/api/image-engine/library", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { aiGeneratedImages } = await import("@shared/schema");
+      const { desc, eq, like, or, sql } = await import("drizzle-orm");
+      
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+      const search = req.query.search as string;
+      const category = req.query.category as string;
+      const rating = req.query.rating as string;
+      const approved = req.query.approved as string;
+
+      let query = db.select().from(aiGeneratedImages);
+      
+      const conditions: any[] = [];
+      
+      if (search) {
+        conditions.push(
+          or(
+            like(aiGeneratedImages.topic, `%${search}%`),
+            like(aiGeneratedImages.altText, `%${search}%`)
+          )
+        );
+      }
+      
+      if (category) {
+        conditions.push(eq(aiGeneratedImages.category, category));
+      }
+      
+      if (rating === "liked") {
+        conditions.push(eq(aiGeneratedImages.userRating, "like"));
+      } else if (rating === "disliked") {
+        conditions.push(eq(aiGeneratedImages.userRating, "dislike"));
+      }
+      
+      if (approved === "true") {
+        conditions.push(eq(aiGeneratedImages.isApproved, true));
+      }
+
+      const baseQuery = conditions.length > 0 
+        ? db.select().from(aiGeneratedImages).where(conditions.length === 1 ? conditions[0] : sql`${conditions.join(" AND ")}`)
+        : db.select().from(aiGeneratedImages);
+      
+      const images = await db.select()
+        .from(aiGeneratedImages)
+        .orderBy(desc(aiGeneratedImages.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const [countResult] = await db.select({ count: sql`count(*)` }).from(aiGeneratedImages);
+      const total = Number(countResult?.count || 0);
+
+      res.json({
+        images,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching library:", error);
+      res.status(500).json({ error: "Failed to fetch library" });
+    }
+  });
+
+  // Get single image
+  app.get("/api/image-engine/library/:id", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { aiGeneratedImages } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const [image] = await db.select().from(aiGeneratedImages).where(eq(aiGeneratedImages.id, req.params.id));
+      
+      if (!image) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      res.json(image);
+    } catch (error) {
+      console.error("Error fetching image:", error);
+      res.status(500).json({ error: "Failed to fetch image" });
+    }
+  });
+
+  // Rate an image (like/dislike/skip)
+  app.patch("/api/image-engine/library/:id/rate", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { rating } = req.body;
+      
+      if (!["like", "dislike", "skip"].includes(rating)) {
+        return res.status(400).json({ error: "Invalid rating" });
+      }
+
+      const { aiGeneratedImages } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const [updatedImage] = await db.update(aiGeneratedImages)
+        .set({ userRating: rating, updatedAt: new Date() })
+        .where(eq(aiGeneratedImages.id, req.params.id))
+        .returning();
+      
+      if (!updatedImage) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      res.json(updatedImage);
+    } catch (error) {
+      console.error("Error rating image:", error);
+      res.status(500).json({ error: "Failed to rate image" });
+    }
+  });
+
+  // Approve/unapprove an image
+  app.patch("/api/image-engine/library/:id/approve", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { approved } = req.body;
+
+      const { aiGeneratedImages } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const [updatedImage] = await db.update(aiGeneratedImages)
+        .set({ isApproved: Boolean(approved), updatedAt: new Date() })
+        .where(eq(aiGeneratedImages.id, req.params.id))
+        .returning();
+      
+      if (!updatedImage) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      res.json(updatedImage);
+    } catch (error) {
+      console.error("Error approving image:", error);
+      res.status(500).json({ error: "Failed to approve image" });
+    }
+  });
+
+  // Delete an image
+  app.delete("/api/image-engine/library/:id", requirePermission("canDelete"), async (req, res) => {
+    try {
+      const { aiGeneratedImages } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const [deletedImage] = await db.delete(aiGeneratedImages)
+        .where(eq(aiGeneratedImages.id, req.params.id))
+        .returning();
+      
+      if (!deletedImage) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      res.json({ success: true, deleted: deletedImage });
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      res.status(500).json({ error: "Failed to delete image" });
+    }
+  });
+
+  // Get library statistics
+  app.get("/api/image-engine/stats", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { aiGeneratedImages } = await import("@shared/schema");
+      const { sql, eq } = await import("drizzle-orm");
+      
+      const [totalCount] = await db.select({ count: sql`count(*)` }).from(aiGeneratedImages);
+      const [approvedCount] = await db.select({ count: sql`count(*)` }).from(aiGeneratedImages).where(eq(aiGeneratedImages.isApproved, true));
+      const [likedCount] = await db.select({ count: sql`count(*)` }).from(aiGeneratedImages).where(eq(aiGeneratedImages.userRating, "like"));
+      const [dislikedCount] = await db.select({ count: sql`count(*)` }).from(aiGeneratedImages).where(eq(aiGeneratedImages.userRating, "dislike"));
+
+      const categoryStats = await db.select({
+        category: aiGeneratedImages.category,
+        count: sql`count(*)`
+      })
+      .from(aiGeneratedImages)
+      .groupBy(aiGeneratedImages.category);
+
+      const topicStats = await db.select({
+        topic: aiGeneratedImages.topic,
+        count: sql`count(*)`
+      })
+      .from(aiGeneratedImages)
+      .groupBy(aiGeneratedImages.topic)
+      .limit(20);
+
+      res.json({
+        total: Number(totalCount?.count || 0),
+        approved: Number(approvedCount?.count || 0),
+        liked: Number(likedCount?.count || 0),
+        disliked: Number(dislikedCount?.count || 0),
+        byCategory: categoryStats,
+        topTopics: topicStats,
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ error: "Failed to fetch statistics" });
+    }
+  });
+
+  // Collections API
+  app.get("/api/image-engine/collections", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { imageCollections } = await import("@shared/schema");
+      const collections = await db.select().from(imageCollections);
+      res.json(collections);
+    } catch (error) {
+      console.error("Error fetching collections:", error);
+      res.status(500).json({ error: "Failed to fetch collections" });
+    }
+  });
+
+  app.post("/api/image-engine/collections", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ error: "Collection name is required" });
+      }
+
+      const { imageCollections } = await import("@shared/schema");
+      const [newCollection] = await db.insert(imageCollections).values({
+        name,
+        description: description || null,
+        imageIds: [],
+      }).returning();
+      
+      res.json(newCollection);
+    } catch (error) {
+      console.error("Error creating collection:", error);
+      res.status(500).json({ error: "Failed to create collection" });
+    }
+  });
+
+  app.patch("/api/image-engine/collections/:id/images", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+    try {
+      const { imageIds, action } = req.body;
+      
+      if (!imageIds || !Array.isArray(imageIds)) {
+        return res.status(400).json({ error: "Image IDs array is required" });
+      }
+
+      const { imageCollections } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const [collection] = await db.select().from(imageCollections).where(eq(imageCollections.id, req.params.id));
+      
+      if (!collection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+
+      let updatedImageIds = collection.imageIds || [];
+      
+      if (action === "add") {
+        updatedImageIds = [...new Set([...updatedImageIds, ...imageIds])];
+      } else if (action === "remove") {
+        updatedImageIds = updatedImageIds.filter((id: string) => !imageIds.includes(id));
+      } else {
+        updatedImageIds = imageIds;
+      }
+
+      const [updatedCollection] = await db.update(imageCollections)
+        .set({ imageIds: updatedImageIds, updatedAt: new Date() })
+        .where(eq(imageCollections.id, req.params.id))
+        .returning();
+      
+      res.json(updatedCollection);
+    } catch (error) {
+      console.error("Error updating collection images:", error);
+      res.status(500).json({ error: "Failed to update collection" });
+    }
+  });
+
+  app.delete("/api/image-engine/collections/:id", requirePermission("canDelete"), async (req, res) => {
+    try {
+      const { imageCollections } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const [deletedCollection] = await db.delete(imageCollections)
+        .where(eq(imageCollections.id, req.params.id))
+        .returning();
+      
+      if (!deletedCollection) {
+        return res.status(404).json({ error: "Collection not found" });
+      }
+      
+      res.json({ success: true, deleted: deletedCollection });
+    } catch (error) {
+      console.error("Error deleting collection:", error);
+      res.status(500).json({ error: "Failed to delete collection" });
+    }
+  });
+
+  // ============================================================================
   // SECURE ERROR HANDLER (no stack traces to client)
   // ============================================================================
   app.use(secureErrorHandler);

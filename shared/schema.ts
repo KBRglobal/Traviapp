@@ -371,6 +371,65 @@ export const mediaFiles = pgTable("media_files", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Image Engine - AI Generated Images Library
+export const imageSourceEnum = pgEnum("image_source", ["gemini", "openai", "freepik", "stock", "upload"]);
+export const imageRatingEnum = pgEnum("image_rating", ["like", "dislike", "skip"]);
+
+export const aiGeneratedImages = pgTable("ai_generated_images", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  filename: text("filename").notNull(),
+  url: text("url").notNull(),
+  topic: text("topic").notNull(),
+  category: text("category"),
+  imageType: text("image_type"),
+  source: imageSourceEnum("source").default("openai"),
+  prompt: text("prompt"),
+  keywords: jsonb("keywords").$type<string[]>().default([]),
+  altText: text("alt_text"),
+  altTextHe: text("alt_text_he"),
+  caption: text("caption"),
+  captionHe: text("caption_he"),
+  aiQualityScore: integer("ai_quality_score"),
+  userRating: imageRatingEnum("user_rating"),
+  width: integer("width"),
+  height: integer("height"),
+  size: integer("size"),
+  isApproved: boolean("is_approved").default(false),
+  usageCount: integer("usage_count").default(0),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAiGeneratedImageSchema = createInsertSchema(aiGeneratedImages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiGeneratedImage = z.infer<typeof insertAiGeneratedImageSchema>;
+export type AiGeneratedImage = typeof aiGeneratedImages.$inferSelect;
+
+// Image Collections
+export const imageCollections = pgTable("image_collections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  coverImageId: varchar("cover_image_id"),
+  imageIds: jsonb("image_ids").$type<string[]>().default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertImageCollectionSchema = createInsertSchema(imageCollections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertImageCollection = z.infer<typeof insertImageCollectionSchema>;
+export type ImageCollection = typeof imageCollections.$inferSelect;
+
 // Internal Links table
 export const internalLinks = pgTable("internal_links", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
