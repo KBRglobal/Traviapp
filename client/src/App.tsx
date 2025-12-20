@@ -93,6 +93,7 @@ const DistrictJVC = lazy(() => import("@/pages/district-jvc"));
 const DistrictBluewaters = lazy(() => import("@/pages/district-bluewaters-island"));
 const DistrictInternationalCity = lazy(() => import("@/pages/district-international-city"));
 const DistrictAlKarama = lazy(() => import("@/pages/district-al-karama"));
+const LandingFreeDubai = lazy(() => import("@/pages/landing-free-dubai"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -317,6 +318,8 @@ const publicRoutes = [
   { path: "/case-study-off-plan-launch", component: CaseStudyOffPlanLaunch },
   { path: "/case-study-retirement-planning", component: CaseStudyRetirementPlanning },
   { path: "/glossary", component: GlossaryHub },
+  // Landing pages
+  { path: "/dubai/free-things-to-do", component: LandingFreeDubai },
   // District pages
   { path: "/districts", component: DistrictsGateway },
   { path: "/districts/downtown-dubai", component: DistrictDowntownDubai },

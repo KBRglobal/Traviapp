@@ -111,11 +111,11 @@ const staggerContainer = {
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
 };
 
-// Quick category shortcuts for hero section
+// Featured landing pages - premium content shortcuts
 const quickCategories = [
-  { title: "Attractions", icon: Camera, href: "/attractions", color: "from-purple-500 to-pink-500" },
-  { title: "Hotels", icon: Building2, href: "/hotels", color: "from-blue-500 to-cyan-500" },
-  { title: "Events", icon: Sparkles, href: "/events", color: "from-rose-500 to-orange-500" },
+  { title: "70+ Free Things", icon: Sparkles, href: "/dubai/free-things-to-do", color: "from-emerald-500 to-cyan-500", badge: "Top Guide" },
+  { title: "Off-Plan Investment", icon: Building2, href: "/dubai-off-plan-properties", color: "from-purple-500 to-pink-500", badge: "Investors" },
+  { title: "Districts Guide", icon: MapPin, href: "/districts", color: "from-blue-500 to-indigo-500", badge: "21 Areas" },
 ];
 
 export default function PublicHome() {
@@ -415,21 +415,24 @@ export default function PublicHome() {
               </div>
             </form>
 
-            {/* Quick Category Shortcuts */}
+            {/* Featured Landing Pages */}
             <div className="flex flex-wrap justify-center gap-3 mt-8">
               {quickCategories.map((cat) => (
                 <Link key={cat.title} href={localePath(cat.href)}>
                   <motion.div
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.98 }}
-                    className="flex items-center gap-2 bg-white/80 backdrop-blur-xl px-5 py-3 rounded-full shadow-lg shadow-purple-500/10 border border-white/50 cursor-pointer group"
-                    data-testid={`quick-${cat.title.toLowerCase()}`}
+                    className="flex items-center gap-2 bg-white/90 backdrop-blur-xl px-5 py-3 rounded-full shadow-lg shadow-purple-500/10 border border-white/50 cursor-pointer group"
+                    data-testid={`quick-${cat.title.toLowerCase().replace(/\+/g, 'plus').replace(/\s+/g, '-')}`}
                   >
-                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${cat.color} flex items-center justify-center shadow-md`}>
+                    <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${cat.color} flex items-center justify-center shadow-md`}>
                       <cat.icon className="w-4 h-4 text-white" />
                     </div>
-                    <span className="font-medium text-[#1E1B4B] group-hover:text-[#6C5CE7] transition-colors">{cat.title}</span>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#6C5CE7] group-hover:translate-x-0.5 transition-all" />
+                    <div className="flex flex-col items-start">
+                      <span className="font-semibold text-[#1E1B4B] group-hover:text-[#6C5CE7] transition-colors leading-tight">{cat.title}</span>
+                      <span className="text-xs text-slate-400">{cat.badge}</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#6C5CE7] group-hover:translate-x-0.5 transition-all ml-1" />
                   </motion.div>
                 </Link>
               ))}
