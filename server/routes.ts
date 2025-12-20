@@ -799,10 +799,14 @@ async function findOrCreateArticleImage(
 }
 
 // RTL languages that need special handling
-const RTL_LOCALES = ["ar", "he", "fa", "ur"];
+const RTL_LOCALES = ["ar", "fa", "ur"];
 
 // All target languages for translation (excluding English which is source)
-const TARGET_LOCALES = ["ar", "hi", "zh", "ru", "ur", "fr", "de", "fa", "bn", "fil", "es", "tr", "it", "ja", "ko", "he"] as const;
+// Note: DeepL does NOT support: Bengali (bn), Filipino (fil), Hebrew (he), Hindi (hi), Urdu (ur), Persian (fa)
+// For unsupported languages, we use GPT as fallback translator
+const DEEPL_SUPPORTED_LOCALES = ["ar", "zh", "ru", "fr", "de", "es", "tr", "it", "ja", "ko", "pt"] as const;
+const GPT_FALLBACK_LOCALES = ["hi", "ur", "fa"] as const; // Languages supported by GPT but not DeepL
+const TARGET_LOCALES = [...DEEPL_SUPPORTED_LOCALES, ...GPT_FALLBACK_LOCALES] as const;
 
 async function translateArticleToAllLanguages(contentId: string, content: {
   title: string;

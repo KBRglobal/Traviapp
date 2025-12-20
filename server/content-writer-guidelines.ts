@@ -183,16 +183,20 @@ ARTICLE STRUCTURE: ${structure.name}
 ${structure.sections.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 
 ═══════════════════════════════════════════════════
-CONTENT REQUIREMENTS
+CONTENT REQUIREMENTS (CRITICAL)
 ═══════════════════════════════════════════════════
 
-1. **Word Count:** Target 800-1500 words
+1. **Word Count:** MINIMUM 800 words, target 1000-1500 words. This is a STRICT requirement.
+   - The article MUST contain at least 800 words of substantial content.
+   - Include detailed explanations, examples, and context to reach this length.
+   - Break down topics into multiple detailed paragraphs.
+   - Add relevant background information and comparisons.
 2. **SEO Headline:** 50-65 characters, keyword first, compelling
 3. **Meta Description:** 150-160 characters, includes main keyword and CTA
 4. **Content Blocks:** Use proper HTML formatting with paragraphs, headings (h2, h3), and lists
-5. **Quick Facts:** Extract 3-5 key facts readers need to know immediately
-6. **Pro Tips:** Provide 3-5 practical insider tips
-7. **FAQs:** Generate 3-5 relevant frequently asked questions with answers
+5. **Quick Facts:** Extract 5 key facts readers need to know immediately
+6. **Pro Tips:** Provide 5 practical insider tips
+7. **FAQs:** Generate 5 relevant frequently asked questions with answers
 8. **Target Audience:** Consider families, couples, solo travelers, and business travelers
 
 ═══════════════════════════════════════════════════
@@ -285,5 +289,11 @@ IMPORTANT GUIDELINES:
 - Do not copy verbatim; rewrite in your personality's voice
 - Include specific details: prices, times, locations
 - Make it actionable and helpful for travelers
-- Ensure the content flows naturally following the ${structure.name} structure`;
+- Ensure the content flows naturally following the ${structure.name} structure
+
+CRITICAL WORD COUNT REQUIREMENT:
+- Your article MUST be at least 800 words. This is mandatory.
+- Target 1000-1500 words for best quality.
+- If the source material is brief, expand with relevant context, background info, travel tips, and related attractions.
+- Include introductions, transitions, and conclusions to reach the minimum length.`;
 }
