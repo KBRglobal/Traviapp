@@ -7,6 +7,7 @@ import type { Express, Request, Response } from "express";
 import { requirePermission, requireAuth } from "./security";
 import { enterprise } from "./enterprise";
 import { cache, cacheKeys } from "./cache";
+import { exportService, importService, backupService, type ExportOptions } from "./import-export";
 
 export function registerEnterpriseRoutes(app: Express) {
   // ============================================================================
@@ -593,6 +594,108 @@ export function registerEnterpriseRoutes(app: Express) {
     } catch (error) {
       console.error("Error clearing cache:", error);
       res.status(500).json({ error: "Failed to clear cache" });
+    }
+  });
+
+  // ============================================================================
+  // IMPORT/EXPORT ROUTES
+  // ============================================================================
+
+  // Get backup statistics
+  app.get("/api/admin/backup/stats", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const stats = await backupService.getBackupStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching backup stats:", error);
+      res.status(500).json({ error: "Failed to fetch backup statistics" });
+    }
+  });
+
+  // Export data
+  app.post("/api/admin/export", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const options: ExportOptions = req.body || {};
+      const data = await exportService.exportData(options);
+
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Disposition", `attachment; filename="travi-export-${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(data);
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      res.status(500).json({ error: "Failed to export data" });
+    }
+  });
+
+  // Preview export (returns stats without downloading)
+  app.post("/api/admin/export/preview", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const options: ExportOptions = req.body || {};
+      const data = await exportService.exportData(options);
+      res.json({
+        version: data.version,
+        stats: data.stats,
+        options: data.options,
+      });
+    } catch (error) {
+      console.error("Error previewing export:", error);
+      res.status(500).json({ error: "Failed to preview export" });
+    }
+  });
+
+  // Validate import data
+  app.post("/api/admin/import/validate", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const validation = await importService.validateImportData(req.body);
+      res.json(validation);
+    } catch (error) {
+      console.error("Error validating import:", error);
+      res.status(500).json({ error: "Failed to validate import data" });
+    }
+  });
+
+  // Import data (dry run)
+  app.post("/api/admin/import/preview", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { data, options = {} } = req.body;
+      const result = await importService.importData(data, { ...options, dryRun: true });
+      res.json(result);
+    } catch (error) {
+      console.error("Error previewing import:", error);
+      res.status(500).json({ error: "Failed to preview import" });
+    }
+  });
+
+  // Import data (actual)
+  app.post("/api/admin/import", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { data, options = {} } = req.body;
+
+      // Validate first
+      const validation = await importService.validateImportData(data);
+      if (!validation.valid) {
+        return res.status(400).json({ error: "Invalid import data", details: validation.errors });
+      }
+
+      const result = await importService.importData(data, { ...options, dryRun: false });
+      res.json(result);
+    } catch (error) {
+      console.error("Error importing data:", error);
+      res.status(500).json({ error: "Failed to import data" });
+    }
+  });
+
+  // Create full backup
+  app.post("/api/admin/backup", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const data = await backupService.createBackup();
+
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Disposition", `attachment; filename="travi-backup-${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(data);
+    } catch (error) {
+      console.error("Error creating backup:", error);
+      res.status(500).json({ error: "Failed to create backup" });
     }
   });
 
