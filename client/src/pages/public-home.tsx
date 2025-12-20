@@ -126,30 +126,56 @@ export default function PublicHome() {
   const [, setLocation] = useLocation();
   const { t, localePath, isRTL } = useLocale();
   
-  // Interactive mascot state
+  // Interactive mascot state - can escape anywhere on screen
   const [mascotMessage, setMascotMessage] = useState("");
   const [mascotPosition, setMascotPosition] = useState({ x: 0, y: 0 });
+  const [mascotEscaped, setMascotEscaped] = useState(false);
   const [showMascotMessage, setShowMascotMessage] = useState(false);
   const mascotTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const escapeCount = useRef(0);
+  
+  // Escape positions - corners and edges of the viewport
+  const escapePositions = [
+    { x: -300, y: -200 }, // top left area
+    { x: 300, y: -200 },  // top right area
+    { x: -350, y: 150 },  // left side
+    { x: 350, y: 150 },   // right side
+    { x: -250, y: 300 },  // bottom left
+    { x: 250, y: 300 },   // bottom right
+    { x: 0, y: -250 },    // top center
+    { x: 0, y: 350 },     // bottom center
+  ];
   
   const handleMascotHover = () => {
-    // Random direction to "run away"
-    const newX = (Math.random() - 0.5) * 100;
-    const newY = (Math.random() - 0.5) * 40;
+    escapeCount.current += 1;
+    
+    // Pick a random escape position, avoiding the current one
+    const availablePositions = escapePositions.filter(
+      pos => Math.abs(pos.x - mascotPosition.x) > 100 || Math.abs(pos.y - mascotPosition.y) > 100
+    );
+    const randomPos = availablePositions[Math.floor(Math.random() * availablePositions.length)] || escapePositions[0];
+    
+    // Add some randomness to the position
+    const newX = randomPos.x + (Math.random() - 0.5) * 80;
+    const newY = randomPos.y + (Math.random() - 0.5) * 60;
     setMascotPosition({ x: newX, y: newY });
+    setMascotEscaped(true);
     
     // Random message
     const randomMessage = mascotMessages[Math.floor(Math.random() * mascotMessages.length)];
     setMascotMessage(randomMessage);
     setShowMascotMessage(true);
     
-    // Hide message after delay
+    // Hide message after delay, but keep mascot in escaped position longer
     if (mascotTimeoutRef.current) clearTimeout(mascotTimeoutRef.current);
     mascotTimeoutRef.current = setTimeout(() => {
       setShowMascotMessage(false);
-      // Reset position after a bit
-      setTimeout(() => setMascotPosition({ x: 0, y: 0 }), 500);
-    }, 1500);
+      // Return home after longer delay if not touched again
+      setTimeout(() => {
+        setMascotPosition({ x: 0, y: 0 });
+        setMascotEscaped(false);
+      }, 3000);
+    }, 2000);
   };
   
   // Cleanup mascot timeout on unmount
@@ -287,7 +313,7 @@ export default function PublicHome() {
                 role="img"
                 aria-label="TRAVI - Your World Travel Guide"
               >
-                {/* Animated flowing image strip */}
+                {/* Animated flowing image strip - seamless loop */}
                 <div 
                   className="absolute inset-0 flex animate-logo-flow"
                   style={{ width: '200%' }}
@@ -297,7 +323,7 @@ export default function PublicHome() {
                       key={i}
                       className="h-full flex-shrink-0"
                       style={{
-                        width: `${100 / worldLandmarks.length}%`,
+                        width: `${100 / (worldLandmarks.length * 2)}%`,
                         backgroundImage: `url(${img})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
@@ -308,14 +334,26 @@ export default function PublicHome() {
               </div>
             </div>
 
-            {/* Interactive Mascot */}
-            <div className="flex justify-center mb-6 relative">
-              <div 
-                className="relative cursor-pointer select-none"
+            {/* Interactive Mascot - Escapes across the page! */}
+            <div className="flex justify-center mb-6 relative" style={{ minHeight: '160px' }}>
+              <motion.div 
+                className="relative cursor-pointer select-none z-30"
                 onMouseEnter={handleMascotHover}
                 data-testid="mascot-interactive"
+                animate={{ 
+                  x: mascotPosition.x,
+                  y: mascotPosition.y,
+                  rotate: mascotEscaped ? (mascotPosition.x > 0 ? 15 : -15) : 0,
+                  scale: mascotEscaped ? 0.9 : 1
+                }}
+                transition={{ 
+                  type: "spring", 
+                  stiffness: 200, 
+                  damping: 25,
+                  mass: 1.2
+                }}
               >
-                {/* Speech bubble */}
+                {/* Speech bubble follows mascot */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8, y: 10 }}
                   animate={{ 
@@ -323,25 +361,20 @@ export default function PublicHome() {
                     scale: showMascotMessage ? 1 : 0.8,
                     y: showMascotMessage ? 0 : 10
                   }}
+                  transition={{ duration: 0.2 }}
                   className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-purple-100 whitespace-nowrap z-20"
                 >
                   <span className="text-sm font-medium text-[#6C5CE7]">{mascotMessage}</span>
                   <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white/95" />
                 </motion.div>
                 
-                {/* Mascot image that "runs away" */}
-                <motion.img 
+                {/* Mascot image */}
+                <img 
                   src={mascotImg} 
                   alt="Travi mascot - friendly duck with sunglasses" 
-                  className="w-32 h-32 sm:w-40 sm:h-40 drop-shadow-lg"
-                  animate={{ 
-                    x: mascotPosition.x,
-                    y: mascotPosition.y,
-                    rotate: mascotPosition.x > 0 ? 10 : mascotPosition.x < 0 ? -10 : 0
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="w-32 h-32 sm:w-40 sm:h-40 drop-shadow-lg pointer-events-none"
                 />
-              </div>
+              </motion.div>
             </div>
 
             {/* Tagline */}
