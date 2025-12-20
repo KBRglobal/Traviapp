@@ -128,7 +128,7 @@ export default function PublicHome() {
   return (
     <div className="min-h-screen overflow-x-hidden">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md">
-        Skip to main content
+        {t("home.skipToMain")}
       </a>
 
       <PublicNav variant="transparent" />
@@ -208,11 +208,11 @@ export default function PublicHome() {
               <div className="bg-white rounded-2xl md:rounded-full shadow-xl p-3 md:p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <div className="flex-1 flex items-center gap-3 px-4 md:px-5">
                   <Search className="w-5 h-5 text-[#6C5CE7] shrink-0" aria-hidden="true" />
-                  <label htmlFor="hero-search" className="sr-only">Search Dubai experiences</label>
+                  <label htmlFor="hero-search" className="sr-only">{t("home.searchLabel")}</label>
                   <input
                     id="hero-search"
                     type="search"
-                    placeholder="Where do you want to go?"
+                    placeholder={t("home.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
@@ -360,9 +360,9 @@ export default function PublicHome() {
                 <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center mx-auto mb-6">
                   <MapPin className="w-10 h-10 text-[#6C5CE7]" />
                 </div>
-                <h3 className="text-2xl font-bold text-[#1E1B4B] mb-3">Coming Soon</h3>
+                <h3 className="text-2xl font-bold text-[#1E1B4B] mb-3">{t("home.comingSoon")}</h3>
                 <p className="text-[#64748B] max-w-md mx-auto">
-                  We're curating the best Dubai experiences for you. Check back soon for hand-picked destinations!
+                  {t("home.comingSoonExplore")}
                 </p>
               </div>
             )}
@@ -379,10 +379,10 @@ export default function PublicHome() {
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="flex items-end justify-between mb-12 gap-4 flex-wrap">
               <div>
-                <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-2">
-                  Trending in Dubai
+                <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-2" dir={isRTL ? "rtl" : "ltr"}>
+                  {t("home.trendingInDubai")}
                 </h2>
-                <p className="text-xl text-[#64748B]">What everyone's talking about</p>
+                <p className="text-xl text-[#64748B]" dir={isRTL ? "rtl" : "ltr"}>{t("home.whatEveryoneTalking")}</p>
               </div>
               {trendingContent.length > 0 && (
                 <Link href={localePath("/articles")} className="hidden sm:block" data-testid="link-view-all-trending">
@@ -418,7 +418,7 @@ export default function PublicHome() {
                       
                       <div className="absolute top-4 right-4">
                         <Badge className="bg-[#EC4899] text-white border-0 text-xs font-semibold">
-                          Hot
+                          {t("home.hot")}
                         </Badge>
                       </div>
 
@@ -439,9 +439,9 @@ export default function PublicHome() {
                 <div className="w-20 h-20 rounded-full bg-[#EC4899]/10 flex items-center justify-center mx-auto mb-6">
                   <Star className="w-10 h-10 text-[#EC4899]" />
                 </div>
-                <h3 className="text-2xl font-bold text-[#1E1B4B] mb-3">Coming Soon</h3>
+                <h3 className="text-2xl font-bold text-[#1E1B4B] mb-3">{t("home.comingSoon")}</h3>
                 <p className="text-[#64748B] max-w-md mx-auto">
-                  We're gathering the hottest trends in Dubai. Stay tuned for exciting content!
+                  {t("home.comingSoonTrending")}
                 </p>
               </div>
             )}
@@ -453,15 +453,14 @@ export default function PublicHome() {
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="text-center mb-12">
               <Badge className="bg-[#F59E0B] text-white border-0 mb-4">
-                <Building2 className="w-3 h-3 mr-1" />
-                Investment Hub
+                <Building2 className={`w-3 h-3 ${isRTL ? "ml-1" : "mr-1"}`} />
+                {t("home.investmentHub")}
               </Badge>
-              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">
-                Dubai Off-Plan Properties
+              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.offPlanProperties")}
               </h2>
-              <p className="text-xl text-white/80 max-w-2xl mx-auto">
-                Invest in Dubai real estate with cryptocurrency (BTC/USDT/ETH) or cash. 
-                Entry from AED 420K with 15-30% ROI potential.
+              <p className="text-xl text-white/80 max-w-2xl mx-auto" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.offPlanSubtitle")}
               </p>
             </div>
 
@@ -469,29 +468,29 @@ export default function PublicHome() {
               <Link href="/dubai-off-plan-properties" data-testid="link-offplan-hub">
                 <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
                   <Building2 className="w-8 h-8 text-[#F59E0B] mb-3" />
-                  <h3 className="font-semibold text-white mb-1">Property Hub</h3>
-                  <p className="text-sm text-white/70">1,577+ Active Projects</p>
+                  <h3 className="font-semibold text-white mb-1">{t("home.propertyHub")}</h3>
+                  <p className="text-sm text-white/70">1,577+ {t("home.activeProjects")}</p>
                 </div>
               </Link>
               <Link href="/tools-roi-calculator" data-testid="link-roi-calculator">
                 <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
                   <TrendingUp className="w-8 h-8 text-[#10B981] mb-3" />
-                  <h3 className="font-semibold text-white mb-1">ROI Calculator</h3>
-                  <p className="text-sm text-white/70">Calculate Returns</p>
+                  <h3 className="font-semibold text-white mb-1">{t("home.roiCalculator")}</h3>
+                  <p className="text-sm text-white/70">{t("home.calculateReturns")}</p>
                 </div>
               </Link>
               <Link href="/compare-off-plan-vs-ready" data-testid="link-compare">
                 <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
                   <Users className="w-8 h-8 text-[#8B5CF6] mb-3" />
-                  <h3 className="font-semibold text-white mb-1">Comparisons</h3>
-                  <p className="text-sm text-white/70">11 Analysis Guides</p>
+                  <h3 className="font-semibold text-white mb-1">{t("home.comparisons")}</h3>
+                  <p className="text-sm text-white/70">11 {t("home.analysisGuides")}</p>
                 </div>
               </Link>
               <Link href="/glossary" data-testid="link-glossary">
                 <div className="bg-white/10 backdrop-blur rounded-lg p-5 hover-elevate cursor-pointer border border-white/20">
                   <MapPin className="w-8 h-8 text-[#EC4899] mb-3" />
-                  <h3 className="font-semibold text-white mb-1">Glossary</h3>
-                  <p className="text-sm text-white/70">25+ Terms Explained</p>
+                  <h3 className="font-semibold text-white mb-1">{t("footer.glossary")}</h3>
+                  <p className="text-sm text-white/70">25+ {t("home.termsExplained")}</p>
                 </div>
               </Link>
             </div>
@@ -512,11 +511,10 @@ export default function PublicHome() {
           <div className="max-w-4xl mx-auto px-6 text-center">
             <div className="flex items-center justify-center gap-3 mb-3">
               <Globe className="w-6 h-6 text-[#6C5CE7]" />
-              <h3 className="text-lg font-semibold text-[#1E1B4B]">Currently Focused on Dubai</h3>
+              <h3 className="text-lg font-semibold text-[#1E1B4B]" dir={isRTL ? "rtl" : "ltr"}>{t("home.focusedOnDubai")}</h3>
             </div>
-            <p className="text-[#64748B]">
-              Travi is your dedicated Dubai travel companion. We're expanding to more destinations in the coming months - 
-              stay tuned for Abu Dhabi, Saudi Arabia, and beyond!
+            <p className="text-[#64748B]" dir={isRTL ? "rtl" : "ltr"}>
+              {t("home.focusedOnDubaiMessage")}
             </p>
           </div>
         </section>
@@ -538,39 +536,40 @@ export default function PublicHome() {
           />
 
           <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
-            <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4">
-              Stay in the Loop
+            <h2 className="text-4xl lg:text-5xl font-bold text-[#1E1B4B] mb-4" dir={isRTL ? "rtl" : "ltr"}>
+              {t("home.stayInLoop")}
             </h2>
-            <p className="text-xl text-[#475569] mb-8">
-              Get exclusive Dubai travel tips, deals, and inspiration delivered to your inbox
+            <p className="text-xl text-[#475569] mb-8" dir={isRTL ? "rtl" : "ltr"}>
+              {t("home.emailTipsMessage")}
             </p>
 
-            <form 
+            <form
               onSubmit={(e) => { e.preventDefault(); }}
               className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto"
             >
               <div className="flex-1 relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94A3B8]" />
+                <Mail className={`absolute ${isRTL ? "right-4" : "left-4"} top-1/2 -translate-y-1/2 w-5 h-5 text-[#94A3B8]`} />
                 <input
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder={t("common.emailPlaceholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-full border-0 shadow-lg text-[#1E1B4B] placeholder:text-[#94A3B8] outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+                  className={`w-full ${isRTL ? "pr-12 pl-4" : "pl-12 pr-4"} py-4 rounded-full border-0 shadow-lg text-[#1E1B4B] placeholder:text-[#94A3B8] outline-none focus:ring-2 focus:ring-[#6C5CE7]`}
                   data-testid="input-newsletter-email"
+                  dir={isRTL ? "rtl" : "ltr"}
                 />
               </div>
-              <Button 
+              <Button
                 type="submit"
                 className="btn-gold rounded-full px-8 py-4 text-lg whitespace-nowrap"
                 data-testid="button-newsletter-subscribe"
               >
-                Subscribe
+                {t("common.subscribe")}
               </Button>
             </form>
 
-            <p className="text-sm text-[#64748B] mt-4">
-              No spam, unsubscribe anytime
+            <p className="text-sm text-[#64748B] mt-4" dir={isRTL ? "rtl" : "ltr"}>
+              {t("home.noSpamMessage")}
             </p>
           </div>
         </section>
@@ -585,42 +584,42 @@ export default function PublicHome() {
             <div className="absolute top-32 right-[20%] w-1 h-1 bg-white rounded-full opacity-60" />
           </div>
 
-          <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-7xl mx-auto px-6" dir={isRTL ? "rtl" : "ltr"}>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
               {/* Logo & Mascot */}
               <div className="flex flex-col items-start">
-                <img src={logoImg} alt="Travi" className="h-12 mb-4" />
+                <img src={logoImg} alt="Travi" className="h-12 mb-4" style={{ direction: 'ltr' }} />
                 <p className="text-white/70 text-sm leading-relaxed mb-4">
-                  Your trusted companion for discovering the best of Dubai.
+                  {t("home.trustedCompanion")}
                 </p>
                 <img src={mascotImg} alt="" className="w-20 h-20 opacity-80" />
               </div>
 
               {/* Explore Links */}
               <div>
-                <h4 className="font-semibold text-white mb-4">Explore</h4>
+                <h4 className="font-semibold text-white mb-4">{t("footer.explore")}</h4>
                 <ul className="space-y-3 text-sm text-white/70">
-                  <li><Link href="/hotels" className="hover:text-white transition-colors" data-testid="link-footer-hotels">Hotels</Link></li>
-                  <li><Link href="/attractions" className="hover:text-white transition-colors" data-testid="link-footer-attractions">Attractions</Link></li>
-                  <li><Link href="/articles" className="hover:text-white transition-colors" data-testid="link-footer-articles">Travel Guides</Link></li>
-                  <li><Link href="/search" className="hover:text-white transition-colors" data-testid="link-footer-search">Search</Link></li>
+                  <li><Link href={localePath("/hotels")} className="hover:text-white transition-colors" data-testid="link-footer-hotels">{t("nav.hotels")}</Link></li>
+                  <li><Link href={localePath("/attractions")} className="hover:text-white transition-colors" data-testid="link-footer-attractions">{t("nav.attractions")}</Link></li>
+                  <li><Link href={localePath("/articles")} className="hover:text-white transition-colors" data-testid="link-footer-articles">{t("home.travelGuides")}</Link></li>
+                  <li><Link href={localePath("/search")} className="hover:text-white transition-colors" data-testid="link-footer-search">{t("nav.search")}</Link></li>
                 </ul>
               </div>
 
               {/* Company Links */}
               <div>
-                <h4 className="font-semibold text-white mb-4">Company</h4>
+                <h4 className="font-semibold text-white mb-4">{t("home.company")}</h4>
                 <ul className="space-y-3 text-sm text-white/70">
-                  <li><Link href="/about" className="hover:text-white transition-colors" data-testid="link-footer-about">About Us</Link></li>
-                  <li><Link href="/contact" className="hover:text-white transition-colors" data-testid="link-footer-contact">Contact</Link></li>
-                  <li><Link href="/privacy" className="hover:text-white transition-colors" data-testid="link-footer-privacy">Privacy Policy</Link></li>
-                  <li><Link href="/terms" className="hover:text-white transition-colors" data-testid="link-footer-terms">Terms of Service</Link></li>
+                  <li><Link href={localePath("/about")} className="hover:text-white transition-colors" data-testid="link-footer-about">{t("footer.aboutUs")}</Link></li>
+                  <li><Link href={localePath("/contact")} className="hover:text-white transition-colors" data-testid="link-footer-contact">{t("footer.contactUs")}</Link></li>
+                  <li><Link href={localePath("/privacy")} className="hover:text-white transition-colors" data-testid="link-footer-privacy">{t("footer.privacyPolicy")}</Link></li>
+                  <li><Link href={localePath("/terms")} className="hover:text-white transition-colors" data-testid="link-footer-terms">{t("footer.termsOfService")}</Link></li>
                 </ul>
               </div>
 
               {/* Connect */}
               <div>
-                <h4 className="font-semibold text-white mb-4">Connect</h4>
+                <h4 className="font-semibold text-white mb-4">{t("home.connect")}</h4>
                 <ul className="space-y-3 text-sm text-white/70">
                   <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</a></li>
                   <li><a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter</a></li>
@@ -633,10 +632,10 @@ export default function PublicHome() {
             {/* Bottom Bar */}
             <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-white/50 text-sm">
-                2024 Travi. All rights reserved.
+                {t("footer.allRightsReserved")}
               </p>
               <p className="text-white/50 text-sm">
-                Made with love in Dubai
+                {t("home.madeWithLove")}
               </p>
             </div>
           </div>
