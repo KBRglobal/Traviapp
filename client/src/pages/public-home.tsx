@@ -1,5 +1,5 @@
 import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail, Globe, Building2, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import type { Content, ContentWithRelations } from "@shared/schema";
@@ -79,6 +79,21 @@ export default function PublicHome() {
   const [email, setEmail] = useState("");
   const [, setLocation] = useLocation();
   const { t, locale, localePath, isRTL } = useLocale();
+  
+  // Escaping image state
+  const [escapingPosition, setEscapingPosition] = useState({ x: 0, y: 0 });
+  const [escapeCount, setEscapeCount] = useState(0);
+  const [showMessage, setShowMessage] = useState(false);
+  const escapingRef = useRef<HTMLDivElement>(null);
+
+  const handleEscapeInteraction = useCallback(() => {
+    const randomX = (Math.random() - 0.5) * 200;
+    const randomY = (Math.random() - 0.5) * 100;
+    setEscapingPosition({ x: randomX, y: randomY });
+    setEscapeCount(prev => prev + 1);
+    setShowMessage(true);
+    setTimeout(() => setShowMessage(false), 3500);
+  }, []);
 
   useDocumentMeta({
     title: `Travi - ${t("home.heroTitle")} | ${t("nav.hotels")}, ${t("nav.attractions")}`,
@@ -229,6 +244,75 @@ export default function PublicHome() {
                 </Button>
               </div>
             </form>
+
+            {/* 3 Strong CTAs */}
+            <div className="flex flex-wrap justify-center gap-4 mt-8" data-testid="hero-ctas">
+              <Link href={localePath("/attractions")}>
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="bg-white/90 backdrop-blur-sm rounded-full px-6 text-base font-semibold shadow-lg"
+                  data-testid="cta-attractions"
+                >
+                  <Star className="w-5 h-5 mr-2" />
+                  {t("home.ctaAttractions")}
+                </Button>
+              </Link>
+              <Link href={localePath("/hotels")}>
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="bg-white/90 backdrop-blur-sm rounded-full px-6 text-base font-semibold shadow-lg"
+                  data-testid="cta-hotels"
+                >
+                  <Building2 className="w-5 h-5 mr-2" />
+                  {t("home.ctaHotels")}
+                </Button>
+              </Link>
+              <Link href={localePath("/real-estate")}>
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className="bg-white/90 backdrop-blur-sm rounded-full px-6 text-base font-semibold shadow-lg"
+                  data-testid="cta-real-estate"
+                >
+                  <TrendingUp className="w-5 h-5 mr-2" />
+                  {t("home.ctaRealEstate")}
+                </Button>
+              </Link>
+            </div>
+
+            {/* Interactive Escaping Image */}
+            <div className="flex justify-center mt-10 mb-4 relative h-32" data-testid="escaping-image-container">
+              <div
+                ref={escapingRef}
+                className="relative cursor-pointer transition-all duration-300 ease-out"
+                style={{ 
+                  transform: `translate(${escapingPosition.x}px, ${escapingPosition.y}px)`,
+                }}
+                onMouseEnter={handleEscapeInteraction}
+                onClick={handleEscapeInteraction}
+                onTouchStart={handleEscapeInteraction}
+                data-testid="escaping-image"
+              >
+                <img 
+                  src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=120&h=120&fit=crop" 
+                  alt="Dubai skyline"
+                  className="w-24 h-24 rounded-full border-4 border-white shadow-xl object-cover"
+                  draggable={false}
+                />
+                {showMessage && (
+                  <div 
+                    className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#1E1B4B] text-white px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap shadow-lg animate-bounce"
+                    data-testid="escape-message"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {t("home.cantCatchMe")}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Quick Stats - Dynamic based on content */}
             {publishedContent && publishedContent.length > 0 && (
