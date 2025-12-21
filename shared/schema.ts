@@ -131,6 +131,7 @@ export const users = pgTable("users", {
   username: varchar("username").unique(),
   passwordHash: varchar("password_hash"),
   email: varchar("email").unique(),
+  name: varchar("name"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -498,6 +499,9 @@ export const translations = pgTable("translations", {
   blocks: jsonb("blocks").$type<ContentBlock[]>().default([]),
   translatedBy: varchar("translated_by"),
   reviewedBy: varchar("reviewed_by"),
+  sourceHash: varchar("source_hash"),
+  isManualOverride: boolean("is_manual_override").default(false),
+  translationProvider: varchar("translation_provider"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -1581,32 +1585,36 @@ export type InsertScheduledTask = z.infer<typeof insertScheduledTaskSchema>;
 export type ScheduledTask = typeof scheduledTasks.$inferSelect;
 
 // ============================================================================
-// TELEGRAM BOT TABLES - For Telegram integration
+// TELEGRAM BOT TABLES - For Telegram integration (matching existing DB structure)
 // ============================================================================
 
 export const telegramUserProfiles = pgTable("telegram_user_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  telegramId: varchar("telegram_id").notNull().unique(),
-  username: varchar("username"),
+  telegramId: varchar("telegram_id").notNull(),
+  telegramUsername: varchar("telegram_username"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
-  languageCode: varchar("language_code"),
+  language: varchar("language"),
   isPremium: boolean("is_premium").default(false),
-  isBot: boolean("is_bot").default(false),
-  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  interests: jsonb("interests").$type<string[]>().default([]),
+  favorites: jsonb("favorites").$type<string[]>().default([]),
+  tripDates: jsonb("trip_dates").$type<Record<string, unknown>>(),
+  travelStyle: varchar("travel_style"),
+  budget: varchar("budget"),
+  notificationsEnabled: boolean("notifications_enabled").default(true),
+  dailyDigestEnabled: boolean("daily_digest_enabled").default(false),
+  totalInteractions: integer("total_interactions").default(0),
+  badges: jsonb("badges").$type<string[]>().default([]),
+  points: integer("points").default(0),
+  lastActiveAt: timestamp("last_active_at"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const telegramConversations = pgTable("telegram_conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   telegramUserId: varchar("telegram_user_id").references(() => telegramUserProfiles.id),
-  chatId: varchar("chat_id").notNull(),
-  messageId: varchar("message_id"),
-  direction: varchar("direction", { length: 10 }), // 'in' or 'out'
-  messageType: varchar("message_type", { length: 50 }),
+  role: varchar("role"),
   content: text("content"),
-  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1614,43 +1622,49 @@ export type TelegramUserProfile = typeof telegramUserProfiles.$inferSelect;
 export type TelegramConversation = typeof telegramConversations.$inferSelect;
 
 // ============================================================================
-// AI GENERATED IMAGES - For tracking AI image generation
+// AI GENERATED IMAGES - For tracking AI image generation (matching existing DB structure)
 // ============================================================================
 
 export const aiGeneratedImages = pgTable("ai_generated_images", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   prompt: text("prompt").notNull(),
-  negativePrompt: text("negative_prompt"),
-  model: varchar("model", { length: 100 }),
-  provider: varchar("provider", { length: 50 }), // flux, dall-e, midjourney, etc.
+  filename: text("filename"),
+  url: text("url"),
+  topic: text("topic"),
+  category: text("category"),
+  imageType: varchar("image_type"),
+  source: varchar("source"),
+  keywords: jsonb("keywords").$type<string[]>().default([]),
+  altText: text("alt_text"),
+  altTextHe: text("alt_text_he"),
+  caption: text("caption"),
+  captionHe: text("caption_he"),
   width: integer("width"),
   height: integer("height"),
-  seed: varchar("seed"),
-  imageUrl: text("image_url"),
-  thumbnailUrl: text("thumbnail_url"),
-  status: varchar("status", { length: 20 }).default("pending"), // pending, completed, failed
-  error: text("error"),
-  cost: varchar("cost"),
-  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-  contentId: varchar("content_id").references(() => contents.id, { onDelete: "set null" }),
-  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+  aiQualityScore: integer("ai_quality_score"),
+  userRating: integer("user_rating"),
+  size: integer("size"),
+  isApproved: boolean("is_approved").default(false),
+  usageCount: integer("usage_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export type AiGeneratedImage = typeof aiGeneratedImages.$inferSelect;
 
 // ============================================================================
-// TOPIC CLUSTERS - For organizing topics into clusters
+// TOPIC CLUSTERS - For organizing topics into clusters (matching existing DB structure)
 // ============================================================================
+
+export const topicClusterStatusEnum = pgEnum("topic_cluster_status", ["pending", "merged", "skipped"]);
 
 export const topicClusters = pgTable("topic_clusters", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  description: text("description"),
-  color: varchar("color", { length: 7 }),
-  icon: varchar("icon", { length: 50 }),
-  isActive: boolean("is_active").default(true),
+  topic: text("topic").notNull(),
+  status: topicClusterStatusEnum("status").default("pending"),
+  mergedContentId: varchar("merged_content_id").references(() => contents.id, { onDelete: "set null" }),
+  similarityScore: integer("similarity_score"),
+  articleCount: integer("article_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1658,14 +1672,15 @@ export const topicClusters = pgTable("topic_clusters", {
 export const topicClusterItems = pgTable("topic_cluster_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clusterId: varchar("cluster_id").notNull().references(() => topicClusters.id, { onDelete: "cascade" }),
-  topicBankId: varchar("topic_bank_id").references(() => topicBank.id, { onDelete: "cascade" }),
-  contentId: varchar("content_id").references(() => contents.id, { onDelete: "cascade" }),
-  position: integer("position").default(0),
+  rssFeedId: varchar("rss_feed_id").references(() => rssFeeds.id, { onDelete: "set null" }),
+  sourceUrl: text("source_url"),
+  sourceTitle: text("source_title"),
+  sourceDescription: text("source_description"),
+  pubDate: timestamp("pub_date"),
+  isUsedInMerge: boolean("is_used_in_merge").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("IDX_topic_cluster_items_cluster").on(table.clusterId),
-  index("IDX_topic_cluster_items_topic").on(table.topicBankId),
-  index("IDX_topic_cluster_items_content").on(table.contentId),
 ]);
 
 export type TopicCluster = typeof topicClusters.$inferSelect;
