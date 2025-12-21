@@ -1627,7 +1627,7 @@ export type TelegramConversation = typeof telegramConversations.$inferSelect;
 
 export const aiGeneratedImages = pgTable("ai_generated_images", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  prompt: text("prompt").notNull(),
+  prompt: text("prompt"),
   filename: text("filename"),
   url: text("url"),
   topic: text("topic"),
