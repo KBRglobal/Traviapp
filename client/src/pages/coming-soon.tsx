@@ -243,8 +243,8 @@ export default function ComingSoon() {
   }, [language, t.invalidEmail]);
 
   useEffect(() => {
-    // Launch date: January 1, 2026 at 00:00:00 (midnight)
-    const launchDate = new Date('2026-01-01T00:00:00');
+    // Launch date: December 31, 2024 at 23:59:59 (midnight)
+    const launchDate = new Date('2024-12-31T23:59:59');
 
     const timer = setInterval(() => {
       const now = new Date().getTime();

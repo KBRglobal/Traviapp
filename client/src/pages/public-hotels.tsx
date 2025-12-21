@@ -16,6 +16,12 @@ import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { FavoriteButton } from "@/components/ui/favorite-button";
+import { useTranslatedContents } from "@/hooks/use-translated-content";
+
+interface TranslatedContentData {
+  title: string;
+  metaDescription: string | null;
+}
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&h=600&fit=crop",
@@ -176,7 +182,7 @@ export default function PublicHotels() {
                   key={hotel.id} 
                   content={hotel} 
                   index={index}
-                  translation={translationsMap?.get(hotel.id)}
+                  translation={translationsMap?.get(hotel.id) as TranslatedContentData | undefined}
                 />
               ))}
             </div>
