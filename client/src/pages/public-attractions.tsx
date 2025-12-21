@@ -368,42 +368,42 @@ const FEATURED_ATTRACTIONS = [
   {
     name: "Burj Khalifa",
     tagline: "World's Tallest Building at 828m",
-    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=1000&fit=crop",
+    image: "https://images.unsplash.com/photo-1546412414-e1885259563a?w=800&h=1000&fit=crop",
     tags: ["Iconic", "Must See"],
     label: "Editor's Pick"
   },
   {
     name: "Dubai Fountain",
     tagline: "World's Largest Choreographed Fountain Show",
-    image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&h=600&fit=crop",
+    image: "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=800&h=600&fit=crop",
     tags: ["Free", "Night"],
     label: "Most Loved"
   },
   {
     name: "Desert Safari",
     tagline: "Dune Bashing, Dinner & Bedouin Culture",
-    image: "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=800&h=600&fit=crop",
+    image: "https://images.unsplash.com/photo-1547234935-80c7145ec969?w=800&h=600&fit=crop",
     tags: ["Adventure", "Sunset"],
     label: "First Time Dubai"
   },
   {
     name: "Atlantis Aquaventure",
     tagline: "World's Largest Waterpark with 105+ Slides",
-    image: "https://images.unsplash.com/photo-1582654454409-778f6619e0e2?w=800&h=600&fit=crop",
+    image: "https://images.unsplash.com/photo-1596402184320-417e7178b2cd?w=800&h=600&fit=crop",
     tags: ["Family", "Thrill"],
     label: null
   },
   {
     name: "Museum of the Future",
     tagline: "Award-Winning Architectural Marvel",
-    image: "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=800&h=600&fit=crop",
+    image: "https://images.unsplash.com/photo-1512632578888-169bbbc64f33?w=800&h=600&fit=crop",
     tags: ["Innovation", "Culture"],
     label: null
   },
   {
     name: "Ain Dubai",
     tagline: "World's Tallest Observation Wheel at 250m",
-    image: "https://images.unsplash.com/photo-1597659840241-37e2b9c2f55f?w=800&h=600&fit=crop",
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
     tags: ["Views", "Romantic"],
     label: null
   },
