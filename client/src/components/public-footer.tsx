@@ -14,7 +14,7 @@ export function PublicFooter() {
     { href: "/hotels", icon: Building2, label: t('nav.hotels') },
     { href: "/districts", icon: MapPin, label: t('nav.districts') },
     { href: "/dining", icon: Utensils, label: t('nav.dining') },
-    { href: "/articles", icon: Compass, label: t('nav.articles') },
+    { href: "/news", icon: Compass, label: t('nav.news') },
   ];
 
   const featuredGuides = [

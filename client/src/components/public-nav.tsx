@@ -30,7 +30,7 @@ export function PublicNav({ className = "", variant = "default" }: PublicNavProp
     { href: "/hotels", labelKey: "nav.hotels", icon: Building2 },
     { href: "/districts", labelKey: "nav.districts", icon: MapPin },
     { href: "/dining", labelKey: "nav.dining", icon: Utensils },
-    { href: "/articles", labelKey: "nav.articles", icon: Compass },
+    { href: "/news", labelKey: "nav.news", icon: Compass },
   ];
 
   const isTransparent = variant === "transparent";

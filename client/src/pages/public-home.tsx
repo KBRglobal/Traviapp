@@ -36,7 +36,7 @@ const activityCategories = [
   { titleKey: "nav.dining", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop", type: "dining" },
   { titleKey: "nav.districts", image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400&h=300&fit=crop", type: "district" },
   { titleKey: "nav.events", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=300&fit=crop", type: "event" },
-  { titleKey: "nav.articles", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop", type: "article" },
+  { titleKey: "nav.news", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop", type: "news" },
 ];
 
 const CloudSVG = ({ className = "", size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) => {
