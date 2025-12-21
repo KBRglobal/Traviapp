@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { db } from "./db";
-import { contentRules, DEFAULT_CONTENT_RULES } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { contentRules, DEFAULT_CONTENT_RULES, keywordRepository } from "@shared/schema";
+import { eq, desc, and } from "drizzle-orm";
 
 // ============================================================================
 // STRICT CONTENT RULES - These rules CANNOT be bypassed by AI
@@ -37,6 +37,95 @@ export async function getActiveContentRules(): Promise<typeof DEFAULT_CONTENT_RU
 export function clearRulesCache() {
   cachedRules = null;
   cacheTime = 0;
+}
+
+// ============================================================================
+// KEYWORD REPOSITORY - SEO Bible integration
+// ============================================================================
+
+// Cache for keywords
+let cachedKeywords: { keyword: string; type: string; category: string | null; priority: number; relatedKeywords: string[] }[] | null = null;
+let keywordCacheTime = 0;
+const KEYWORD_CACHE_TTL = 300000; // 5 minutes
+
+// Get active keywords from repository
+export async function getActiveKeywords(category?: string, limit = 50): Promise<typeof cachedKeywords> {
+  const now = Date.now();
+
+  // Return cached if available and no category filter
+  if (cachedKeywords && now - keywordCacheTime < KEYWORD_CACHE_TTL && !category) {
+    return cachedKeywords;
+  }
+
+  try {
+    let query = db
+      .select({
+        keyword: keywordRepository.keyword,
+        type: keywordRepository.type,
+        category: keywordRepository.category,
+        priority: keywordRepository.priority,
+        relatedKeywords: keywordRepository.relatedKeywords,
+      })
+      .from(keywordRepository)
+      .where(eq(keywordRepository.isActive, true))
+      .orderBy(desc(keywordRepository.priority))
+      .limit(limit);
+
+    const keywords = await query;
+
+    // Filter by category if provided
+    const result = category
+      ? keywords.filter(k => k.category?.toLowerCase() === category.toLowerCase())
+      : keywords;
+
+    // Cache only non-filtered results
+    if (!category) {
+      cachedKeywords = result as typeof cachedKeywords;
+      keywordCacheTime = now;
+    }
+
+    return result as typeof cachedKeywords;
+  } catch (error) {
+    console.error("Error fetching keywords:", error);
+    return [];
+  }
+}
+
+// Get keywords for specific content type
+export async function getKeywordsForContentType(contentType: string): Promise<string[]> {
+  const categoryMap: Record<string, string> = {
+    attraction: "attractions",
+    hotel: "hotels",
+    article: "news",
+    dining: "food",
+    district: "districts",
+    transport: "transport",
+    event: "events",
+    itinerary: "travel",
+    landing_page: "seo",
+    case_study: "real_estate",
+    off_plan: "real_estate",
+  };
+
+  const category = categoryMap[contentType] || contentType;
+  const keywords = await getActiveKeywords(category, 30);
+
+  // Return primary keywords + related keywords
+  const allKeywords: string[] = [];
+  keywords?.forEach(k => {
+    allKeywords.push(k.keyword);
+    if (k.relatedKeywords) {
+      allKeywords.push(...k.relatedKeywords.slice(0, 3));
+    }
+  });
+
+  return [...new Set(allKeywords)]; // Remove duplicates
+}
+
+// Clear keyword cache
+export function clearKeywordCache() {
+  cachedKeywords = null;
+  keywordCacheTime = 0;
 }
 
 // ============================================================================
@@ -99,6 +188,8 @@ export type ValidationResult = {
     conclusionWords: number;
     dubaiMentions: number;
     internalLinks: number;
+    keywordsUsed: string[];
+    keywordCoverage: number; // percentage
   };
 };
 
@@ -119,6 +210,17 @@ function countInternalLinks(html: string): number {
   return (html.match(linkRegex) || []).length;
 }
 
+// Check which keywords from repository are used in content
+function findUsedKeywords(text: string, keywords: string[]): string[] {
+  const lowerText = text.toLowerCase();
+  return keywords.filter(keyword => {
+    const lowerKeyword = keyword.toLowerCase();
+    // Check for exact word match or phrase match
+    const regex = new RegExp(`\\b${lowerKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    return regex.test(lowerText);
+  });
+}
+
 // Validate AI response against STRICT rules
 export async function validateArticleResponse(response: unknown): Promise<ValidationResult> {
   const rules = await getActiveContentRules();
@@ -136,6 +238,8 @@ export async function validateArticleResponse(response: unknown): Promise<Valida
       conclusionWords: 0,
       dubaiMentions: 0,
       internalLinks: 0,
+      keywordsUsed: [],
+      keywordCoverage: 0,
     }
   };
 
@@ -159,6 +263,16 @@ export async function validateArticleResponse(response: unknown): Promise<Valida
     result.structureAnalysis.internalLinks = countInternalLinks(data.content);
     result.structureAnalysis.faqWords = data.faqs.reduce((acc, faq) => acc + countWords(faq.answer), 0);
     result.structureAnalysis.tipsWords = data.proTips.reduce((acc, tip) => acc + countWords(tip), 0);
+
+    // Check keyword usage from repository
+    const allKeywords = await getActiveKeywords(undefined, 100);
+    if (allKeywords && allKeywords.length > 0) {
+      const keywordList = allKeywords.map(k => k.keyword);
+      result.structureAnalysis.keywordsUsed = findUsedKeywords(textContent, keywordList);
+      result.structureAnalysis.keywordCoverage = Math.round(
+        (result.structureAnalysis.keywordsUsed.length / Math.min(keywordList.length, 20)) * 100
+      );
+    }
 
     // ============================================================================
     // STRICT VALIDATION - These checks MUST pass
@@ -199,6 +313,11 @@ export async function validateArticleResponse(response: unknown): Promise<Valida
       result.errors.push(`⚠️ Only ${result.structureAnalysis.internalLinks} internal links, recommended minimum is ${rules.internalLinksMin}`);
     }
 
+    // Check keyword coverage from SEO Bible
+    if (result.structureAnalysis.keywordCoverage < 30) {
+      result.errors.push(`⚠️ Low keyword coverage (${result.structureAnalysis.keywordCoverage}%). Use more keywords from the SEO keyword repository.`);
+    }
+
     // If there are no STRICT violations, mark as valid
     const hasStrictViolations = result.errors.some(e => e.includes('STRICT VIOLATION'));
 
@@ -219,8 +338,10 @@ export async function validateArticleResponse(response: unknown): Promise<Valida
 // RETRY PROMPT - When content doesn't meet requirements
 // ============================================================================
 
-export async function buildRetryPrompt(errors: string[], wordCount: number): Promise<string> {
+export async function buildRetryPrompt(errors: string[], wordCount: number, contentType?: string): Promise<string> {
   const rules = await getActiveContentRules();
+  const keywords = await getActiveKeywords(undefined, 20);
+  const keywordList = keywords?.map(k => k.keyword).slice(0, 15) || [];
 
   const strictErrors = errors.filter(e => e.includes('STRICT VIOLATION'));
   const warnings = errors.filter(e => !e.includes('STRICT VIOLATION'));
@@ -284,6 +405,9 @@ STRICT REQUIREMENTS - CANNOT BE BYPASSED:
 - Internal links: ${rules.internalLinksMin}-${rules.internalLinksMax} links
 - Primary keyword: 2-3 times naturally
 - Secondary keywords: 3-5 times each
+
+🔑 REQUIRED KEYWORDS (from SEO Bible - use at least 5):
+${keywordList.length > 0 ? keywordList.map(k => `• ${k}`).join('\n') : '• dubai tourism\n• things to do in dubai\n• dubai attractions\n• visit dubai\n• dubai guide'}
 
 ⚠️ THIS IS YOUR ${errors.length > 3 ? 'FINAL' : 'SECOND'} ATTEMPT
    If you fail again, the article will be rejected entirely.
@@ -359,6 +483,8 @@ export const CATEGORY_PERSONALITY_MAPPING: Record<string, keyof typeof CONTENT_W
 // Get the content writer system prompt based on category and rules
 export async function getContentWriterSystemPrompt(category: string): Promise<string> {
   const rules = await getActiveContentRules();
+  const keywords = await getActiveKeywords(category, 20);
+  const keywordList = keywords?.map(k => k.keyword).slice(0, 15) || [];
   const personalityKey = CATEGORY_PERSONALITY_MAPPING[category] || "A";
   const personality = CONTENT_WRITER_PERSONALITIES[personalityKey];
 
@@ -388,6 +514,9 @@ SEO REQUIREMENTS:
 - Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal links
 - Primary keyword in title, first paragraph, and H2s
 - Use LSI keywords naturally throughout
+
+🔑 REQUIRED KEYWORDS (from SEO Bible - use at least 5 naturally):
+${keywordList.length > 0 ? keywordList.map(k => `• ${k}`).join('\n') : '• dubai tourism\n• things to do in dubai\n• dubai attractions\n• visit dubai\n• dubai guide'}
 
 FORMAT:
 - Use proper HTML with semantic tags (h2, h3, p, ul, ol)
@@ -421,6 +550,8 @@ export async function buildArticleGenerationPrompt(
 ): Promise<string> {
   const rules = await getActiveContentRules();
   const category = determineContentCategory(topic);
+  const keywords = await getActiveKeywords(category, 20);
+  const keywordList = keywords?.map(k => k.keyword).slice(0, 15) || [];
 
   return `Write a comprehensive article about: "${topic}"
 
@@ -447,6 +578,9 @@ REQUIREMENTS (STRICT - Your response will be REJECTED if not met):
 3. SEO:
    - Mention "Dubai" or "UAE" at least ${rules.dubaiMentionsMin} times
    - Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal links
+
+4. REQUIRED KEYWORDS (from SEO Bible - use at least 5 naturally):
+${keywordList.length > 0 ? keywordList.map(k => `   • ${k}`).join('\n') : '   • dubai tourism\n   • things to do in dubai\n   • dubai attractions\n   • visit dubai\n   • dubai guide'}
 
 Respond with a JSON object matching the ArticleResponse schema.`;
 }
