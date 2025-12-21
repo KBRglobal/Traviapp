@@ -1,5 +1,5 @@
 import { Search, Star, MapPin, ChevronRight, Mail, BookOpen, Users, Globe, Building, UtensilsCrossed, Calendar, Clock, DollarSign, ArrowRight, Check, Newspaper } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import type { Content, ContentWithRelations } from "@shared/schema";
@@ -10,6 +10,8 @@ import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import mascotImage from "@assets/Mascot_for_Dark_Background_1766314766064.png";
+import skyBackground from "@assets/blue-sky-clouds-background_1766314952453.jpg";
 
 interface HomepagePromotion {
   id: string;
@@ -75,11 +77,77 @@ const popularGuides = [
   { title: "First Time in Dubai? Read This", slug: "first-time-guide" },
 ];
 
+const mascotPhrases = [
+  "mascotSurprised",
+  "mascotWhyCatch",
+  "mascotNotReady",
+  "mascotTooSlow",
+  "mascotNiceDay",
+  "mascotCantCatch",
+];
+
+const getRandomPosition = (heroRect: DOMRect, mascotSize: number = 120) => {
+  const minX = heroRect.width * 0.55;
+  const maxX = heroRect.width - mascotSize - 40;
+  const minY = 80;
+  const maxY = heroRect.height * 0.55;
+  
+  const x = minX + Math.random() * (maxX - minX);
+  const y = minY + Math.random() * (maxY - minY);
+  
+  return { x: Math.max(minX, Math.min(maxX, x)), y: Math.max(minY, Math.min(maxY, y)) };
+};
+
 export default function PublicHome() {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
   const [, setLocation] = useLocation();
   const { t, localePath, isRTL } = useLocale();
+  
+  const heroRef = useRef<HTMLElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [mascotPosition, setMascotPosition] = useState({ x: 0, y: 0 });
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
+  const [showPhrase, setShowPhrase] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  
+  useEffect(() => {
+    if (heroRef.current && !isInitialized) {
+      const rect = heroRef.current.getBoundingClientRect();
+      const pos = getRandomPosition(rect);
+      setMascotPosition(pos);
+      setIsInitialized(true);
+    }
+  }, [isInitialized]);
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+  
+  const handleMascotClick = useCallback(() => {
+    if (!heroRef.current) return;
+    
+    // Clear any existing timeout
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    // Only move mascot if reduced motion is not preferred
+    if (!prefersReducedMotion) {
+      const rect = heroRef.current.getBoundingClientRect();
+      const newPos = getRandomPosition(rect);
+      setMascotPosition(newPos);
+    }
+    
+    // Always show speech bubble (even with reduced motion)
+    setCurrentPhraseIndex((prev) => (prev + 1) % mascotPhrases.length);
+    setShowPhrase(true);
+    
+    // Set new timeout
+    timeoutRef.current = setTimeout(() => setShowPhrase(false), 4000);
+  }, [prefersReducedMotion]);
 
   useDocumentMeta({
     title: "Travi - Dubai Travel Guide | Things to Do, Hotels & Attractions",
@@ -116,23 +184,75 @@ export default function PublicHome() {
       <PublicNav />
 
       <main id="main-content">
-        {/* 1. HERO SECTION - SEO Focused */}
-        <section className="relative min-h-[80vh] flex items-center" data-testid="section-hero">
+        {/* 1. HERO SECTION - Playful Sky Theme with Interactive Mascot */}
+        <section 
+          ref={heroRef}
+          className="relative min-h-[85vh] flex items-center overflow-hidden" 
+          data-testid="section-hero"
+        >
+          {/* Sky Background */}
           <div className="absolute inset-0">
             <img 
-              src={heroImage} 
-              alt="Dubai skyline with Burj Khalifa"
+              src={skyBackground} 
+              alt=""
               className="w-full h-full object-cover"
+              aria-hidden="true"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30" />
           </div>
 
+          {/* Interactive Mascot */}
+          {isInitialized && (
+            <div
+              className="absolute z-20 cursor-pointer select-none"
+              style={{
+                left: `${mascotPosition.x}px`,
+                top: `${mascotPosition.y}px`,
+                transition: prefersReducedMotion ? "none" : "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+              }}
+              onClick={handleMascotClick}
+              data-testid="mascot-interactive"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && handleMascotClick()}
+              aria-label={t("home.mascotLabel") || "Interactive mascot - click to play!"}
+            >
+              <img 
+                src={mascotImage} 
+                alt="Travi the Duck"
+                className="w-24 h-24 md:w-32 md:h-32 drop-shadow-lg hover:scale-110 transition-transform"
+                draggable={false}
+              />
+              
+              {/* Speech Bubble */}
+              {showPhrase && currentPhraseIndex >= 0 && (
+                <div 
+                  className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white rounded-xl px-4 py-2 shadow-lg whitespace-nowrap"
+                  dir={isRTL ? "rtl" : "ltr"}
+                  data-testid="mascot-speech-bubble"
+                >
+                  <span className="text-sm font-medium text-foreground">
+                    {t(`home.${mascotPhrases[currentPhraseIndex]}`)}
+                  </span>
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Main Content */}
           <div className="relative z-10 max-w-7xl mx-auto px-6 py-20 w-full">
             <div className="max-w-2xl" dir={isRTL ? "rtl" : "ltr"}>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+              {/* Big TRAVI Letters */}
+              <div className="mb-6">
+                <span className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 drop-shadow-sm">
+                  TRAVI
+                </span>
+              </div>
+              
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 leading-tight">
                 {t("home.heroTitleNew") || "Discover Dubai Like a Local"}
               </h1>
-              <p className="text-xl md:text-2xl text-white/90 mb-8">
+              <p className="text-lg md:text-xl text-gray-600 mb-8">
                 {t("home.heroSubtitleNew") || "The most comprehensive guide to Dubai's attractions, hotels & hidden gems."}
               </p>
 
@@ -142,7 +262,7 @@ export default function PublicHome() {
                 role="search" 
                 className="mb-8"
               >
-                <div className="bg-white rounded-full shadow-xl p-2 flex items-center">
+                <div className="bg-white rounded-full shadow-xl p-2 flex items-center border border-gray-200">
                   <div className="flex-1 flex items-center gap-3 px-4">
                     <Search className="w-5 h-5 text-muted-foreground shrink-0" aria-hidden="true" />
                     <input
@@ -165,7 +285,7 @@ export default function PublicHome() {
               </form>
 
               {/* Social Proof */}
-              <div className="flex flex-wrap items-center gap-6 text-white/90">
+              <div className="flex flex-wrap items-center gap-6 text-gray-700">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-5 h-5" />
                   <span className="font-semibold">{t("home.guidesCount") || "847 Guides"}</span>
@@ -187,10 +307,13 @@ export default function PublicHome() {
                     href={localePath(`/${cat.key}`)}
                     data-testid={`category-${cat.key}`}
                   >
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center hover-elevate cursor-pointer border border-white/20">
-                      <Icon className="w-6 h-6 mx-auto mb-2 text-white" />
-                      <div className="text-white font-medium text-sm">{t(`nav.${cat.key}`)}</div>
-                      <div className="text-white/70 text-xs">{cat.count}</div>
+                    <div 
+                      className="bg-white/80 backdrop-blur-sm rounded-xl p-4 text-center hover-elevate cursor-pointer border border-gray-200 shadow-sm"
+                      style={{ borderLeftColor: cat.color, borderLeftWidth: "3px" }}
+                    >
+                      <Icon className="w-6 h-6 mx-auto mb-2" style={{ color: cat.color }} />
+                      <div className="text-gray-800 font-medium text-sm">{t(`nav.${cat.key}`)}</div>
+                      <div className="text-gray-500 text-xs">{cat.count}</div>
                     </div>
                   </Link>
                 );

@@ -83,5 +83,16 @@ Content follows a status progression: draft → in_review → approved → sched
 - **Lucide React**: Icon library
 - **cmdk**: Command palette component
 - **embla-carousel-react**: Carousel functionality
+
+## Homepage Design
+
+The public homepage features a playful, inviting design:
+- **Hero Section**: Sky/clouds background with interactive mascot duck character
+- **Mascot Interaction**: Click/hover moves the duck and shows fun speech bubble phrases (translated in all 17 languages)
+- **Design Philosophy**: Friendly, approachable aesthetic targeting travelers with "Discover Dubai Like a Local" messaging
+- **Key Elements**: Large "TRAVI" gradient logo, search bar, 6 category quick-links (Attractions, Hotels, Dining, Districts, News, Events)
+- **Accessibility**: Keyboard navigation, aria-labels, respects prefers-reduced-motion (still shows speech bubbles)
+
+### UI Component Libraries (continued)
 - **react-day-picker**: Date picker component
 - **vaul**: Drawer component
