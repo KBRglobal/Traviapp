@@ -82,8 +82,8 @@ const typeConfig = {
     wordTarget: "~3000 words",
   },
   article: {
-    title: "Articles",
-    singular: "Article",
+    title: "News",
+    singular: "News Article",
     icon: FileText,
     basePath: "/admin/articles",
     wordTarget: "~1200-2000 words",
@@ -509,6 +509,7 @@ export default function ContentList({ type }: ContentListProps) {
               onSelectionChange={setSelectedIds}
               getItemId={(item) => item.id}
               pageSize={10}
+              onRowClick={(item) => navigate(`${config.basePath}/${item.id}`)}
             />
           )}
         </CardContent>

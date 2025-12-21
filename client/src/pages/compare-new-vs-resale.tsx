@@ -28,7 +28,7 @@ const comparisonTable = [
 
 export default function CompareNewVsResale() {
   useDocumentMeta({
-    title: "New Build vs Resale Property Dubai | Comparison Guide 2025",
+    title: "New Build vs Resale Property Dubai | Comparison Guide 2026",
     description: "Compare buying new ready properties vs resale in Dubai. New builds offer warranties and condition. Resales offer negotiability and proven locations. Full analysis.",
     ogType: "article"
   });

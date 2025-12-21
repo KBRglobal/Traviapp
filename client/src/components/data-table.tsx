@@ -40,6 +40,7 @@ interface DataTableProps<T> {
   getItemId: (item: T) => string;
   pageSize?: number;
   emptyMessage?: string;
+  onRowClick?: (item: T) => void;
 }
 
 export function DataTable<T>({
@@ -52,6 +53,7 @@ export function DataTable<T>({
   getItemId,
   pageSize = 10,
   emptyMessage = "No items found",
+  onRowClick,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -117,7 +119,19 @@ export function DataTable<T>({
             {paginatedData.map((item) => {
               const id = getItemId(item);
               return (
-                <TableRow key={id} data-testid={`row-${id}`}>
+                <TableRow 
+                  key={id} 
+                  data-testid={`row-${id}`}
+                  className={onRowClick ? "cursor-pointer hover-elevate" : ""}
+                  onClick={(e) => {
+                    // Don't trigger row click when clicking on checkbox or actions
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button') || target.closest('[role="checkbox"]') || target.closest('[data-radix-collection-item]')) {
+                      return;
+                    }
+                    onRowClick?.(item);
+                  }}
+                >
                   {selectable && (
                     <TableCell>
                       <Checkbox

@@ -113,7 +113,7 @@ export default function PublicHome() {
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      setLocation(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setLocation(localePath(`/search?q=${encodeURIComponent(searchQuery.trim())}`));
     }
   };
 
@@ -123,7 +123,7 @@ export default function PublicHome() {
     }
   };
 
-  const getContentPath = (content: Content) => `/${content.type}s/${content.slug}`;
+  const getContentPath = (content: Content) => localePath(`/${content.type}s/${content.slug}`);
 
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -193,9 +193,9 @@ export default function PublicHome() {
             </div>
 
             {/* Tagline */}
-            <div className="text-center mb-10">
-              <p className="text-2xl sm:text-3xl text-[#1E1B4B] font-medium" dir={isRTL ? "rtl" : "ltr"}>
-                {t("home.heroTitle")} <span className="font-script text-3xl sm:text-4xl text-[#EC4899]">{t("home.heroSubtitle")}</span>
+            <div className="text-center mb-10" dir={isRTL ? "rtl" : "ltr"}>
+              <p className="text-xl sm:text-2xl md:text-3xl text-[#1E1B4B] font-medium px-4">
+                {t("home.heroTitle")} <span className="font-script text-2xl sm:text-3xl md:text-4xl text-[#EC4899]">{t("home.heroSubtitle")}</span>
               </p>
             </div>
 
@@ -216,7 +216,7 @@ export default function PublicHome() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
-                    className="flex-1 min-w-0 text-[#1E1B4B] placeholder:text-[#94A3B8] bg-transparent outline-none py-3 md:py-4 text-base md:text-lg"
+                    className="flex-1 min-w-0 text-[#1E1B4B] placeholder:text-[#94A3B8] bg-transparent outline-none py-3 lg:py-4 text-base lg:text-lg"
                     data-testid="input-search"
                   />
                 </div>

@@ -43,7 +43,7 @@ export default function CaseStudyRetirementPlanning() {
     { year: "2023", event: "First Purchase", description: "Acquired Dubai Marina 3-bed for AED 2.8M, secured Golden Visa" },
     { year: "2023", event: "Second Purchase", description: "Added JBR 2-bed for AED 2.2M, diversified beachfront exposure" },
     { year: "2024", event: "Rental Operations", description: "Both properties tenanted, generating AED 330K annual income" },
-    { year: "2025", event: "Retirement Start", description: "Planned retirement with AED 27.5K monthly tax-free income" }
+    { year: "2026", event: "Retirement Start", description: "Planned retirement with AED 27.5K monthly tax-free income" }
   ];
 
   const incomeBreakdown = [

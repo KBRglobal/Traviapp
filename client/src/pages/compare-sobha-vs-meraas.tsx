@@ -28,7 +28,7 @@ const comparisonTable = [
 
 export default function CompareSobhaVsMeraas() {
   useDocumentMeta({
-    title: "Sobha vs Meraas | Luxury Developer Comparison Dubai 2025",
+    title: "Sobha vs Meraas | Luxury Developer Comparison Dubai 2026",
     description: "Compare Sobha and Meraas luxury developers. Sobha offers from AED 1.4M in nature-focused communities. Meraas delivers iconic waterfront from AED 1.8M.",
     ogType: "article"
   });

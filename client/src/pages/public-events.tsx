@@ -126,7 +126,7 @@ export default function PublicEvents() {
               <Link href="/hotels" className="text-foreground/80 hover:text-primary font-medium transition-colors">Hotels</Link>
               <Link href="/attractions" className="text-foreground/80 hover:text-primary font-medium transition-colors">Attractions</Link>
               <Link href="/tools/events" className="text-primary font-medium">Events</Link>
-              <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">Articles</Link>
+              <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">News</Link>
             </div>
           </div>
         </div>
@@ -343,7 +343,7 @@ export default function PublicEvents() {
               <Link href="/hotels" className="hover:text-foreground transition-colors">Hotels</Link>
               <Link href="/attractions" className="hover:text-foreground transition-colors">Attractions</Link>
               <Link href="/tools/events" className="hover:text-foreground transition-colors">Events</Link>
-              <Link href="/articles" className="hover:text-foreground transition-colors">Articles</Link>
+              <Link href="/articles" className="hover:text-foreground transition-colors">News</Link>
             </div>
             <div className="flex items-center gap-4 text-muted-foreground text-sm">
               <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>

@@ -33,7 +33,7 @@ const emaarMilestones = [
 
 export default function OffPlanEmaar() {
   useDocumentMeta({
-    title: "Emaar Properties Dubai | Off-Plan Projects & Developer Guide 2025",
+    title: "Emaar Properties Dubai | Off-Plan Projects & Developer Guide 2026",
     description: "Explore Emaar off-plan properties in Dubai. Premium developments with 95% on-time delivery and 24% average ROI. From Burj Khalifa creators - luxury apartments, villas & waterfront homes.",
     ogType: "website"
   });

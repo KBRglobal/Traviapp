@@ -45,8 +45,8 @@ const roiComponents = [
 
 export default function PillarROIRentalYields() {
   useDocumentMeta({
-    title: "Dubai ROI & Rental Yields Guide 2025 | Off-Plan Returns Analysis",
-    description: "Complete guide to Dubai property ROI and rental yields. Compare yields by area from 5-9%. Learn how to calculate returns on off-plan investments. Updated 2025 data.",
+    title: "Dubai ROI & Rental Yields Guide 2026 | Off-Plan Returns Analysis",
+    description: "Complete guide to Dubai property ROI and rental yields. Compare yields by area from 5-9%. Learn how to calculate returns on off-plan investments. Updated 2026 data.",
     ogType: "article"
   });
 
@@ -73,7 +73,7 @@ export default function PillarROIRentalYields() {
                   Tier 2 Pillar
                 </Badge>
                 <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-200 border-emerald-400/30">
-                  2025 Data
+                  2026 Data
                 </Badge>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
@@ -118,7 +118,7 @@ export default function PillarROIRentalYields() {
         </section>
 
         <section className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Rental Yields by Area (2025)</h2>
+          <h2 className="text-2xl font-bold mb-6">Rental Yields by Area (2026)</h2>
           <Card>
             <CardContent className="pt-6 overflow-x-auto">
               <table className="w-full text-sm">
@@ -154,7 +154,7 @@ export default function PillarROIRentalYields() {
             </CardContent>
           </Card>
           <p className="text-sm text-muted-foreground mt-4 text-center">
-            Data from PropertyFinder.ae and Dubai Land Department, December 2025. Gross yields before service charges.
+            Data from PropertyFinder.ae and Dubai Land Department, December 2026. Gross yields before service charges.
           </p>
         </section>
 

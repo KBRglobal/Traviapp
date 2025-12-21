@@ -86,6 +86,12 @@ interface GeneratedArticle {
     alternativeIntros: string[];
     alternativeCta: string;
   };
+  heroImage?: {
+    url: string;
+    alt: string;
+    source: 'library' | 'freepik';
+    imageId: string;
+  } | null;
 }
 
 const inputTypeOptions = [
@@ -146,12 +152,15 @@ export default function AIArticleGenerator() {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "") + `-${Date.now()}`;
       
+      // Convert data to editor-compatible format
+      // Highlights/Tips use 'content' as newline-separated string, FAQ uses individual blocks
       const blocks = [
         {
           type: "hero",
           data: {
-            heading: editedData.article.h1,
-            subheading: editedData.article.intro,
+            title: editedData.article.h1,
+            subtitle: editedData.article.intro,
+            image: editedData.heroImage?.url || null,
           },
         },
         ...editedData.article.sections.map((section) => ({
@@ -161,20 +170,41 @@ export default function AIArticleGenerator() {
             content: section.body,
           },
         })),
+        ...(editedData.article.quickFacts?.length ? [{
+          type: "highlights",
+          data: {
+            content: editedData.article.quickFacts.map(f => `${f.label}: ${f.value}`).join('\n'),
+          },
+        }] : []),
         ...(editedData.article.proTips?.length ? [{
           type: "tips",
           data: {
-            heading: "Pro Tips",
-            items: editedData.article.proTips,
+            content: editedData.article.proTips.join('\n'),
           },
         }] : []),
-        ...(editedData.article.faq?.length ? [{
+        ...(editedData.article.goodToKnow?.length ? [{
+          type: "tips",
+          data: {
+            content: editedData.article.goodToKnow.join('\n'),
+          },
+        }] : []),
+        // Create individual FAQ blocks for each question/answer pair
+        ...(editedData.article.faq?.length ? editedData.article.faq.map(f => ({
           type: "faq",
           data: {
-            heading: "Frequently Asked Questions",
-            items: editedData.article.faq.map(f => ({ question: f.q, answer: f.a })),
+            question: f.q,
+            answer: f.a,
           },
-        }] : []),
+        })) : []),
+        {
+          type: "cta",
+          data: {
+            title: "Plan Your Trip",
+            content: "Ready to experience Dubai? Start planning your adventure today!",
+            buttonText: "Explore More",
+            buttonLink: "/articles",
+          },
+        },
       ];
       
       const categoryMap: Record<string, string> = {
@@ -200,6 +230,10 @@ export default function AIArticleGenerator() {
         ogTitle: editedData.meta.ogTitle,
         ogDescription: editedData.meta.ogDescription,
         keywords: editedData.meta.keywords,
+        primaryKeyword: editedData.analysis.primaryKeyword || editedData.meta.keywords?.[0] || editedData.article.h1,
+        secondaryKeywords: editedData.analysis.secondaryKeywords || [],
+        heroImage: editedData.heroImage?.url || null,
+        heroImageAlt: editedData.heroImage?.alt || editedData.article.h1,
         blocks,
         article: {
           category: mappedCategory,

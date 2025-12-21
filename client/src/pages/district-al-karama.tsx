@@ -67,7 +67,7 @@ const hotels = [
 const faqs = [
   {
     question: "What is Al Karama known for?",
-    answer: "Al Karama is Dubai's most authentic neighborhood — famous for 200+ authentic restaurants (Indian, Pakistani, Filipino, Iranian, Arab cuisines), budget shopping (textiles, fabrics, electronics), and real local street life. Meals start from just AED 10-40."
+    answer: "Al Karama is Dubai's most authentic neighborhood   famous for 200+ authentic restaurants (Indian, Pakistani, Filipino, Iranian, Arab cuisines), budget shopping (textiles, fabrics, electronics), and real local street life. Meals start from just AED 10-40."
   },
   {
     question: "Is Al Karama safe for tourists?",
@@ -124,12 +124,12 @@ function HeroSection() {
           <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             Al Karama
             <span className="block text-3xl md:text-4xl font-normal text-orange-200 mt-2">
-              Authentic Food, Budget Shopping & Central Living 2025
+              Authentic Food, Budget Shopping & Central Living 2026
             </span>
           </motion.h1>
           
           <motion.p variants={fadeInUp} className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-8">
-            Dubai's oldest and most authentic neighborhood — 200+ restaurants, 
+            Dubai's oldest and most authentic neighborhood   200+ restaurants, 
             budget shopping, and real street life just 2 km from Burj Khalifa.
           </motion.p>
           
@@ -291,7 +291,7 @@ function DiningSection() {
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">200+ Restaurants, 15+ Cuisines</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              50-70% cheaper than Dubai Mall or Marina — without compromising quality.
+              50-70% cheaper than Dubai Mall or Marina   without compromising quality.
             </p>
           </motion.div>
 
@@ -371,7 +371,7 @@ function DiningSection() {
                 <div>
                   <h4 className="font-bold text-lg mb-2">Karak Tea Culture</h4>
                   <p className="text-muted-foreground">
-                    Karak chai shops on every corner (AED 1-2/cup). Sweet milky tea — Dubai's social glue. 
+                    Karak chai shops on every corner (AED 1-2/cup). Sweet milky tea   Dubai's social glue. 
                     Often 24/7. Fresh juice bars too: mango (AED 8-12), sugarcane (AED 5-8).
                   </p>
                 </div>
@@ -395,7 +395,7 @@ function ShoppingSection() {
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">30-60% Cheaper Than Dubai Mall</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Al Karama built its reputation on textiles, fabrics, and electronics. Quality varies — know what you're buying.
+              Al Karama built its reputation on textiles, fabrics, and electronics. Quality varies   know what you're buying.
             </p>
           </motion.div>
 
@@ -422,7 +422,7 @@ function ShoppingSection() {
                 <div>
                   <h4 className="font-bold text-lg mb-2">Custom Tailoring</h4>
                   <p className="text-muted-foreground mb-3">
-                    Bring a design or photo — get clothes made in 24-48 hours.
+                    Bring a design or photo   get clothes made in 24-48 hours.
                   </p>
                   <ul className="text-sm space-y-1">
                     <li>Custom shirt/kurta: AED 60-100 (vs AED 200-300 malls)</li>
@@ -531,9 +531,9 @@ function TransportSection() {
                 <Train className="w-12 h-12 mx-auto mb-4 text-orange-600" />
                 <h3 className="font-bold text-lg mb-2">Metro Access</h3>
                 <ul className="text-sm text-muted-foreground space-y-2">
-                  <li><strong>ADCB Station</strong> — Heart of Karama</li>
-                  <li>Al Jafiliya Station — 5 mins walk</li>
-                  <li>Healthcare City — 8 mins walk</li>
+                  <li><strong>ADCB Station</strong>   Heart of Karama</li>
+                  <li>Al Jafiliya Station   5 mins walk</li>
+                  <li>Healthcare City   8 mins walk</li>
                 </ul>
               </Card>
             </motion.div>
@@ -590,9 +590,9 @@ function TipsSection() {
                   {[
                     "Walk 18th Street 7-10pm for the full Karama vibe",
                     "Try street food: dosa, shawarma, karak chai",
-                    "Get custom tailoring — bring photos of what you want",
+                    "Get custom tailoring   bring photos of what you want",
                     "Explore Karama Shopping Complex for textiles",
-                    "Use Metro — ADCB station is perfectly central"
+                    "Use Metro   ADCB station is perfectly central"
                   ].map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <Star className="w-4 h-4 text-orange-600 shrink-0 mt-1" />

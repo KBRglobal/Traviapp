@@ -382,6 +382,65 @@ export const mediaFiles = pgTable("media_files", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Image Engine - AI Generated Images Library
+export const imageSourceEnum = pgEnum("image_source", ["gemini", "openai", "freepik", "stock", "upload"]);
+export const imageRatingEnum = pgEnum("image_rating", ["like", "dislike", "skip"]);
+
+export const aiGeneratedImages = pgTable("ai_generated_images", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  filename: text("filename").notNull(),
+  url: text("url").notNull(),
+  topic: text("topic").notNull(),
+  category: text("category"),
+  imageType: text("image_type"),
+  source: imageSourceEnum("source").default("openai"),
+  prompt: text("prompt"),
+  keywords: jsonb("keywords").$type<string[]>().default([]),
+  altText: text("alt_text"),
+  altTextHe: text("alt_text_he"),
+  caption: text("caption"),
+  captionHe: text("caption_he"),
+  aiQualityScore: integer("ai_quality_score"),
+  userRating: imageRatingEnum("user_rating"),
+  width: integer("width"),
+  height: integer("height"),
+  size: integer("size"),
+  isApproved: boolean("is_approved").default(false),
+  usageCount: integer("usage_count").default(0),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAiGeneratedImageSchema = createInsertSchema(aiGeneratedImages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiGeneratedImage = z.infer<typeof insertAiGeneratedImageSchema>;
+export type AiGeneratedImage = typeof aiGeneratedImages.$inferSelect;
+
+// Image Collections
+export const imageCollections = pgTable("image_collections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  coverImageId: varchar("cover_image_id"),
+  imageIds: jsonb("image_ids").$type<string[]>().default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertImageCollectionSchema = createInsertSchema(imageCollections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertImageCollection = z.infer<typeof insertImageCollectionSchema>;
+export type ImageCollection = typeof imageCollections.$inferSelect;
+
 // Internal Links table
 export const internalLinks = pgTable("internal_links", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -476,6 +535,50 @@ export const localeEnum = pgEnum("locale", [
 
 export const translationStatusEnum = pgEnum("translation_status", ["pending", "in_progress", "completed", "needs_review"]);
 
+// Topic Cluster status enum - for RSS aggregation
+export const topicClusterStatusEnum = pgEnum("topic_cluster_status", ["pending", "merged", "dismissed"]);
+
+// Topic Clusters table - for aggregating similar articles from multiple sources
+export const topicClusters = pgTable("topic_clusters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  topic: text("topic").notNull(), // AI-identified topic
+  status: topicClusterStatusEnum("status").notNull().default("pending"),
+  mergedContentId: varchar("merged_content_id").references(() => contents.id, { onDelete: "set null" }),
+  similarityScore: integer("similarity_score"), // 0-100 confidence score
+  articleCount: integer("article_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Topic Cluster Items - articles belonging to a cluster
+export const topicClusterItems = pgTable("topic_cluster_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clusterId: varchar("cluster_id").notNull().references(() => topicClusters.id, { onDelete: "cascade" }),
+  contentId: varchar("content_id").references(() => contents.id, { onDelete: "cascade" }),
+  rssFeedId: varchar("rss_feed_id").references(() => rssFeeds.id, { onDelete: "set null" }),
+  sourceUrl: text("source_url"),
+  sourceTitle: text("source_title").notNull(),
+  sourceDescription: text("source_description"),
+  pubDate: timestamp("pub_date"),
+  isUsedInMerge: boolean("is_used_in_merge").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTopicClusterSchema = createInsertSchema(topicClusters).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTopicCluster = z.infer<typeof insertTopicClusterSchema>;
+export type TopicCluster = typeof topicClusters.$inferSelect;
+
+export const insertTopicClusterItemSchema = createInsertSchema(topicClusterItems).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTopicClusterItem = z.infer<typeof insertTopicClusterItemSchema>;
+export type TopicClusterItem = typeof topicClusterItems.$inferSelect;
+
 // Content Fingerprints table - for RSS deduplication
 export const contentFingerprints = pgTable("content_fingerprints", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -509,6 +612,28 @@ export const translations = pgTable("translations", {
   index("IDX_translations_locale").on(table.locale),
   index("IDX_translations_status").on(table.status),
 ]);
+
+// UI Translations table - for static interface strings
+export const uiTranslations = pgTable("ui_translations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull(), // e.g., "nav.home", "common.loading"
+  locale: localeEnum("locale").notNull(),
+  value: text("value").notNull(),
+  namespace: varchar("namespace").default("common"), // "common", "admin", "public"
+  isManualOverride: boolean("is_manual_override").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueKeyLocale: sql`UNIQUE (${table.key}, ${table.locale})`,
+}));
+
+export const insertUiTranslationSchema = createInsertSchema(uiTranslations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertUiTranslation = z.infer<typeof insertUiTranslationSchema>;
+export type UiTranslation = typeof uiTranslations.$inferSelect;
 
 // Homepage Promotions table - for curating homepage sections
 export const homepageSectionEnum = pgEnum("homepage_section", ["featured", "attractions", "hotels", "articles", "trending"]);

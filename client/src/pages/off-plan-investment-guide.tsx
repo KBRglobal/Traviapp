@@ -127,7 +127,7 @@ const FAQS = [
     a: "All payments are held in DLD escrow accounts. If a project is cancelled, investors receive 100% refund within 60 days. Dubai's RERA strictly monitors developer financial health and project progress."
   },
   {
-    q: "Should I invest in 2025 with current market prices?",
+    q: "Should I invest in 2026 with current market prices?",
     a: "Dubai property prices are 15-20% below 2014 peak in real terms. Population growth of 3% annually, Expo 2020 legacy infrastructure, and 2040 Urban Master Plan support long-term appreciation. Entry timing matters less than exit strategy."
   },
 ];
@@ -135,7 +135,7 @@ const FAQS = [
 const RELATED_LINKS = [
   { title: "How to Buy Off-Plan in Dubai", href: "/how-to-buy-dubai-off-plan", description: "Step-by-step purchase guide" },
   { title: "Understanding Payment Plans", href: "/dubai-off-plan-payment-plans", description: "80/20, post-handover options" },
-  { title: "Best Projects 2025", href: "/best-off-plan-projects-dubai-2025", description: "Top investment opportunities" },
+  { title: "Best Projects 2026", href: "/best-off-plan-projects-dubai-2026", description: "Top investment opportunities" },
   { title: "Crypto Payments Guide", href: "/dubai-off-plan-crypto-payments", description: "BTC, USDT, ETH accepted" },
   { title: "Golden Visa Through Property", href: "/dubai-off-plan-golden-visa", description: "10-year residency pathway" },
   { title: "Off-Plan vs Ready Property", href: "/dubai-off-plan-vs-ready-property", description: "Compare investment options" },
@@ -145,8 +145,8 @@ export default function OffPlanInvestmentGuide() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "Dubai Off-Plan Investment Guide 2025 | ROI, Strategies & Risk Analysis",
-    description: "Complete Dubai off-plan investment guide: 15-40% ROI potential, payment plan strategies, risk mitigation, and expert tips for international investors. Updated for 2025.",
+    title: "Dubai Off-Plan Investment Guide 2026 | ROI, Strategies & Risk Analysis",
+    description: "Complete Dubai off-plan investment guide: 15-40% ROI potential, payment plan strategies, risk mitigation, and expert tips for international investors. Updated for 2026.",
     ogType: "article"
   });
 
@@ -164,7 +164,7 @@ export default function OffPlanInvestmentGuide() {
         {/* Hero */}
         <section className="py-12 md:py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <Badge variant="secondary" className="mb-4">Investment Guide 2025</Badge>
+            <Badge variant="secondary" className="mb-4">Investment Guide 2026</Badge>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
               Dubai Off-Plan Investment Guide
             </h1>

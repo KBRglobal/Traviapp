@@ -38,7 +38,7 @@ const buyerProtections = [
 
 export default function OffPlanEscrow() {
   useDocumentMeta({
-    title: "Dubai Off-Plan Escrow Protection | RERA Buyer Safety 2025",
+    title: "Dubai Off-Plan Escrow Protection | RERA Buyer Safety 2026",
     description: "Understand Dubai's off-plan escrow protection system. Your funds held securely until construction milestones verified. RERA-regulated buyer protection under UAE Law No. 8.",
     ogType: "website"
   });

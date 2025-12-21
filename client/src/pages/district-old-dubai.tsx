@@ -126,7 +126,7 @@ const attractions = [
     id: "textile-souk",
     name: "Textile Souk (Fabric Souk)",
     tagline: "Dubai's Oldest Traditional Market",
-    description: "300+ shops in covered alleys operating since 1960s. Floor-to-ceiling fabric rolls — silk, cotton, linen from India, Pakistan, China. Custom tailoring 24-48 hours.",
+    description: "300+ shops in covered alleys operating since 1960s. Floor-to-ceiling fabric rolls   silk, cotton, linen from India, Pakistan, China. Custom tailoring 24-48 hours.",
     duration: "1-2 hours",
     bestTime: "Morning or evening",
     priceRange: "Fabrics AED 15-120/meter",
@@ -137,7 +137,7 @@ const attractions = [
     id: "meena-bazaar",
     name: "Meena Bazaar",
     tagline: "Indian Shopping Heart",
-    description: "200+ shops near Al Fahidi Metro. Historic Indian district since 1970s — gold jewelry (22K), textiles, saris, wedding outfits, spices.",
+    description: "200+ shops near Al Fahidi Metro. Historic Indian district since 1970s   gold jewelry (22K), textiles, saris, wedding outfits, spices.",
     duration: "1-2 hours",
     bestTime: "Weekday mornings",
     priceRange: "Varies widely",
@@ -237,12 +237,12 @@ function HeroSection() {
           <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             Old Dubai
             <span className="block text-3xl md:text-4xl font-normal text-amber-200 mt-2">
-              Heritage District Guide 2025
+              Heritage District Guide 2026
             </span>
           </motion.h1>
           
           <motion.p variants={fadeInUp} className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-8">
-            Where it all began. Gold Souk, Spice Souk, Al Fahidi, Dubai Creek — 
+            Where it all began. Gold Souk, Spice Souk, Al Fahidi, Dubai Creek   
             10+ historic neighborhoods, AED 1 abra rides, and the soul of Dubai.
           </motion.p>
           
@@ -325,7 +325,7 @@ function OverviewSection() {
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Where It All Began</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Before Burj Khalifa and Palm Jumeirah, there was Dubai Creek — a natural inlet 
+              Before Burj Khalifa and Palm Jumeirah, there was Dubai Creek   a natural inlet 
               that transformed a fishing village into a trading empire.
             </p>
           </motion.div>
@@ -359,7 +359,7 @@ function OverviewSection() {
                   "World's largest Gold Souk",
                   "Traditional abra rides for AED 1",
                   "Al Fahidi Historical District (1890s)",
-                  "Real local life — not tourist artifice",
+                  "Real local life   not tourist artifice",
                   "Budget-friendly dining and shopping"
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-3">
@@ -443,7 +443,7 @@ function SubDistrictsSection() {
               <div className="flex items-center gap-4">
                 <Ship className="w-12 h-12 text-amber-600" />
                 <div>
-                  <h4 className="font-bold text-lg">Dubai Creek — The Waterway</h4>
+                  <h4 className="font-bold text-lg">Dubai Creek   The Waterway</h4>
                   <p className="text-muted-foreground">14km historic trading route connecting Deira and Bur Dubai. AED 1 abra rides, dhow cruises, and waterfront promenades.</p>
                 </div>
               </div>
@@ -844,14 +844,14 @@ function TipsSection() {
                 <ul className="space-y-3">
                   {[
                     "Visit during cooler months (Nov-Mar)",
-                    "Explore early morning (7-10am) — best light, fewer crowds",
-                    "Take the AED 1 abra — best value in Dubai",
-                    "Bargain respectfully — it's expected in souks",
-                    "Try street food — safe and delicious",
-                    "Dress modestly — shoulders/knees covered",
+                    "Explore early morning (7-10am)   best light, fewer crowds",
+                    "Take the AED 1 abra   best value in Dubai",
+                    "Bargain respectfully   it's expected in souks",
+                    "Try street food   safe and delicious",
+                    "Dress modestly   shoulders/knees covered",
                     "Visit SMCCU for cultural understanding",
-                    "Walk Al Fahidi at sunset — magical atmosphere",
-                    "Bring cash — many vendors don't take cards"
+                    "Walk Al Fahidi at sunset   magical atmosphere",
+                    "Bring cash   many vendors don't take cards"
                   ].map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <Check className="w-4 h-4 text-green-600 shrink-0 mt-1" />
@@ -870,13 +870,13 @@ function TipsSection() {
                 <ul className="space-y-3">
                   {[
                     "Buy gold without checking daily rates",
-                    "Skip bargaining — you'll overpay",
-                    "Visit midday in summer — dangerously hot",
+                    "Skip bargaining   you'll overpay",
+                    "Visit midday in summer   dangerously hot",
                     "Eat at tourist-trap restaurants near Gold Souk",
                     "Take photos of people without permission",
-                    "Buy counterfeit goods — illegal, can be confiscated",
-                    "Expect pristine cleanliness — it's a working district",
-                    "Rush — slow down and soak in the atmosphere"
+                    "Buy counterfeit goods   illegal, can be confiscated",
+                    "Expect pristine cleanliness   it's a working district",
+                    "Rush   slow down and soak in the atmosphere"
                   ].map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <X className="w-4 h-4 text-red-600 shrink-0 mt-1" />

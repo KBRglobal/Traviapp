@@ -135,7 +135,7 @@ const FAQS = [
 const RELATED_LINKS = [
   { title: "Investment Guide", href: "/dubai-off-plan-investment-guide", description: "ROI strategies" },
   { title: "How to Buy", href: "/how-to-buy-dubai-off-plan", description: "Step-by-step process" },
-  { title: "Best Projects 2025", href: "/best-off-plan-projects-dubai-2025", description: "Top opportunities" },
+  { title: "Best Projects 2026", href: "/best-off-plan-projects-dubai-2026", description: "Top opportunities" },
   { title: "Crypto Payments", href: "/dubai-off-plan-crypto-payments", description: "BTC, USDT accepted" },
   { title: "Post-Handover Plans", href: "/dubai-off-plan-post-handover", description: "Extended payment options" },
 ];
@@ -144,7 +144,7 @@ export default function OffPlanPaymentPlans() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "Dubai Off-Plan Payment Plans 2025 | 80/20, Post-Handover, Monthly Options",
+    title: "Dubai Off-Plan Payment Plans 2026 | 80/20, Post-Handover, Monthly Options",
     description: "Complete guide to Dubai off-plan payment plans: 80/20, 60/40, post-handover, and 1% monthly options. Interest-free developer financing with crypto payment acceptance.",
     ogType: "article"
   });
@@ -163,7 +163,7 @@ export default function OffPlanPaymentPlans() {
         {/* Hero */}
         <section className="py-12 md:py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <Badge variant="secondary" className="mb-4">Payment Plans 2025</Badge>
+            <Badge variant="secondary" className="mb-4">Payment Plans 2026</Badge>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
               Dubai Off-Plan Payment Plans
             </h1>

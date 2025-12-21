@@ -25,7 +25,7 @@ export default function ToolsRentalYieldCalculator() {
   const [vacancyRate, setVacancyRate] = useState(5);
   
   useDocumentMeta({
-    title: "Rental Yield Calculator Dubai 2025 | Gross & Net Yield Tool",
+    title: "Rental Yield Calculator Dubai 2026 | Gross & Net Yield Tool",
     description: "Calculate gross and net rental yields for Dubai property. Factor in service charges, maintenance, and vacancy. Free calculator with Dubai market benchmarks.",
     ogType: "website"
   });

@@ -57,7 +57,7 @@ const OFF_PLAN_ADVANTAGES = [
   {
     icon: TrendingUp,
     title: "Capital Appreciation (15-30%)",
-    description: "Properties gain value during construction. Emaar Creek Harbour units from 2019 now worth 28% more at 2025 handover.",
+    description: "Properties gain value during construction. Emaar Creek Harbour units from 2019 now worth 28% more at 2026 handover.",
     source: "Knight Frank Dubai 2024",
   },
   {
@@ -75,8 +75,8 @@ const OFF_PLAN_ADVANTAGES = [
   {
     icon: Building2,
     title: "Modern Design & Smart Features",
-    description: "New developments include smart home systems, LEED certification, EV charging, co-working spaces. 100% of 2025 launches have smart home integration.",
-    source: "2025 Developer Standards",
+    description: "New developments include smart home systems, LEED certification, EV charging, co-working spaces. 100% of 2026 launches have smart home integration.",
+    source: "2026 Developer Standards",
   },
   {
     icon: BadgeCheck,
@@ -265,14 +265,14 @@ const PROCESS_STEPS = [
 const FAQ_ITEMS = [
   {
     question: "What is off-plan property in Dubai?",
-    answer: "Off-plan property refers to real estate sold before or during construction, allowing buyers to purchase units at pre-completion prices typically 15-25% below market value. In Dubai, all payments are held in DLD-monitored escrow accounts and released to developers only upon verified construction milestones. As of December 2025, Dubai's off-plan market offers 8,548+ active projects with cryptocurrency and traditional payment options.",
+    answer: "Off-plan property refers to real estate sold before or during construction, allowing buyers to purchase units at pre-completion prices typically 15-25% below market value. In Dubai, all payments are held in DLD-monitored escrow accounts and released to developers only upon verified construction milestones. As of December 2026, Dubai's off-plan market offers 8,548+ active projects with cryptocurrency and traditional payment options.",
   },
   {
     question: "Can I really buy Dubai property with cryptocurrency?",
     answer: "Yes! We facilitate cryptocurrency payments including Bitcoin (BTC), USDT (Tether), and Ethereum (ETH) through VARA-licensed gateways. Crypto converts instantly to AED at locked rates (24-48hr protection) and deposits directly into DLD-regulated escrow accounts. 22% of international off-plan purchases in 2024 used cryptocurrency, with USDT being most popular (64% of crypto transactions) due to price stability.",
   },
   {
-    question: "How much do I need to buy off-plan property in Dubai 2025?",
+    question: "How much do I need to buy off-plan property in Dubai 2026?",
     answer: "Entry prices start from AED 450,000 (~$122K USD) for studios in emerging communities like JVC, Dubai South, and Al Furjan. With 10-20% down payment structures, you can secure an off-plan unit with as little as AED 45,000-90,000 ($12,000-25,000 USD) initial deposit. The remaining balance spreads over 3-5 years during construction milestones.",
   },
   {
@@ -297,14 +297,14 @@ const FAQ_ITEMS = [
   },
   {
     question: "What ROI can I expect from Dubai off-plan?",
-    answer: "Historical data shows 15-30% capital appreciation from purchase to handover (2-3 years), with rental yields of 6-9% annually post-handover. Example: Emaar Dubai Creek Harbour units purchased at launch (2019) are now worth 28% more at 2025 handover. JVC studios typically achieve 8-9% rental yields.",
+    answer: "Historical data shows 15-30% capital appreciation from purchase to handover (2-3 years), with rental yields of 6-9% annually post-handover. Example: Emaar Dubai Creek Harbour units purchased at launch (2019) are now worth 28% more at 2026 handover. JVC studios typically achieve 8-9% rental yields.",
   },
   {
     question: "Which developers are best for off-plan?",
     answer: "Top 5 developers by reliability: Emaar (95% on-time delivery, 24% avg ROI), Sobha (94% on-time, 22% ROI), Meraas (92% on-time, 23% ROI), Nakheel (91% on-time, 21% ROI), and DAMAC (88% on-time, 19% ROI but offers most flexible payment plans). All accept cryptocurrency payments through approved gateways.",
   },
   {
-    question: "What are the best areas for off-plan investment in 2025?",
+    question: "What are the best areas for off-plan investment in 2026?",
     answer: "Top performing areas: Business Bay (43 projects, from AED 950K, 7-8% yields), Dubai Creek Harbour (12 mega-projects, from AED 1.4M, 24% historical ROI), JVC (58 projects, from AED 650K, 8-9% yields), and Dubai South (34 projects, from AED 450K, highest growth potential near Expo City).",
   },
   {
@@ -969,9 +969,9 @@ export default function PublicOffPlan() {
                   Payment Plans
                 </Button>
               </Link>
-              <Link href="/best-off-plan-projects-dubai-2025">
-                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-best-2025">
-                  Best 2025
+              <Link href="/best-off-plan-projects-dubai-2026">
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="subnav-best-2026">
+                  Best 2026
                 </Button>
               </Link>
               
@@ -1060,7 +1060,7 @@ export default function PublicOffPlan() {
                   Dubai's off-plan market has matured significantly since 2020, with stricter developer regulations by Dubai Land Department (DLD) and Real Estate Regulatory Agency (RERA) ensuring buyer protection through escrow accounts and transparent construction timelines. All payments are held in DLD-monitored escrow accounts and released to developers only upon verified construction milestones.
                 </p>
                 <p className="mb-4">
-                  In December 2025, Dubai's off-plan market offers exceptional opportunities driven by Expo City Dubai's ongoing expansion, Dubai Creek Harbour mega-development, and Mohammed bin Rashid City entering final phases. Top developers now offer post-handover payment plans allowing buyers to move into completed units while continuing to pay installments.
+                  In December 2026, Dubai's off-plan market offers exceptional opportunities driven by Expo City Dubai's ongoing expansion, Dubai Creek Harbour mega-development, and Mohammed bin Rashid City entering final phases. Top developers now offer post-handover payment plans allowing buyers to move into completed units while continuing to pay installments.
                 </p>
                 <p>
                   Studios start AED 450K (Damac Lagoons, Dubai South), 1-bedroom apartments from AED 700K (JVC, Dubai Sports City), 2-bedroom apartments from AED 1.1M (Business Bay, Dubai Hills Estate), 3-bedroom townhouses from AED 1.8M (Damac Hills 2, Arabian Ranches 3), and luxury villas from AED 3M+ (MBR City, Tilal Al Ghaf).
@@ -1261,7 +1261,7 @@ export default function PublicOffPlan() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">12 Exclusive Pre-Launch Projects</h2>
-              <p className="text-muted-foreground text-lg">December 2025 | All accept crypto payment</p>
+              <p className="text-muted-foreground text-lg">December 2026 | All accept crypto payment</p>
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -1314,7 +1314,7 @@ export default function PublicOffPlan() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Top 5 Off-Plan Developers</h2>
-              <p className="text-muted-foreground text-lg">2025 Rankings | All accept crypto payments</p>
+              <p className="text-muted-foreground text-lg">2026 Rankings | All accept crypto payments</p>
             </div>
             
             <div className="grid md:grid-cols-5 gap-4">
@@ -1465,7 +1465,7 @@ export default function PublicOffPlan() {
                   <li><Link href="/dubai-off-plan-investment-guide" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-investment">Investment Guide</Link></li>
                   <li><Link href="/how-to-buy-dubai-off-plan" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-howtobuy">How to Buy Off-Plan</Link></li>
                   <li><Link href="/dubai-off-plan-payment-plans" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-payment">Payment Plan Guide</Link></li>
-                  <li><Link href="/best-off-plan-projects-dubai-2025" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-best2025">Best Projects 2025</Link></li>
+                  <li><Link href="/best-off-plan-projects-dubai-2026" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-best2026">Best Projects 2026</Link></li>
                   <li><Link href="/dubai-roi-rental-yields" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-roi">ROI & Yields Guide</Link></li>
                   <li><Link href="/dubai-legal-security-guide" className="text-sm text-muted-foreground hover:text-foreground transition-colors block" data-testid="link-guide-legal">Legal & Security Guide</Link></li>
                   <li><Link href="/glossary" className="text-sm text-primary hover:underline transition-colors block font-medium" data-testid="link-glossary-main">Glossary (25+ Terms)</Link></li>

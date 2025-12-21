@@ -238,7 +238,7 @@ export default function LandingDubaiLaws() {
   const drugsRef = useRef<HTMLDivElement>(null);
 
   useDocumentMeta({
-    title: "Dubai Laws for Tourists 2025 - Complete Traffic Fines & Legal Rules Guide",
+    title: "Dubai Laws for Tourists 2026 - Complete Traffic Fines & Legal Rules Guide",
     description: "Critical Dubai laws every tourist must know. Traffic fines (AED 400-50,000), drug laws, public behavior, alcohol rules, photography restrictions. One mistake can mean prison or deportation.",
     ogType: "article"
   });
@@ -279,7 +279,7 @@ export default function LandingDubaiLaws() {
             >
               <Badge className="bg-gradient-to-r from-red-500 to-amber-500 text-white border-0 px-6 py-2.5 text-base mb-8">
                 <AlertTriangle className="w-5 h-5 mr-2" />
-                CRITICAL READING - Updated December 2025
+                CRITICAL READING - Updated December 2026
               </Badge>
             </motion.div>
 
@@ -841,7 +841,7 @@ export default function LandingDubaiLaws() {
             </div>
             <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 text-center text-white">
               <Calendar className="w-20 h-20 mx-auto mb-6" />
-              <h3 className="text-3xl font-bold mb-4">2025 Ramadan Dates</h3>
+              <h3 className="text-3xl font-bold mb-4">2026 Ramadan Dates</h3>
               <div className="text-5xl font-bold mb-2">Feb 28 - Mar 29</div>
               <p className="text-white/70">(Approximate - dates confirmed annually)</p>
             </div>

@@ -53,7 +53,7 @@ const housingTypes = [
 const faqs = [
   {
     question: "Is Dubai Hills Estate a good place to live?",
-    answer: "Excellent for families seeking space, safety, and modern amenities. Golf course, mall, parks, schools — all within the community. 30% cheaper than Downtown but 15-20 mins away."
+    answer: "Excellent for families seeking space, safety, and modern amenities. Golf course, mall, parks, schools   all within the community. 30% cheaper than Downtown but 15-20 mins away."
   },
   {
     question: "What is Dubai Hills Mall like?",
@@ -106,12 +106,12 @@ function HeroSection() {
           <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             Dubai Hills Estate
             <span className="block text-3xl md:text-4xl font-normal text-emerald-200 mt-2">
-              Golf, Mall & Family Living 2025
+              Golf, Mall & Family Living 2026
             </span>
           </motion.h1>
           
           <motion.p variants={fadeInUp} className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-8">
-            2,700 acres of Emaar perfection — championship golf course, mega mall, 
+            2,700 acres of Emaar perfection   championship golf course, mega mall, 
             18 km Central Park, top schools. Where Dubai families thrive.
           </motion.p>
           
@@ -302,7 +302,7 @@ function HousingSection() {
           <motion.div variants={fadeInUp} className="text-center mb-12">
             <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200 mb-4">Mixed Housing</Badge>
             <h2 className="text-4xl font-bold mb-4">Residential Options</h2>
-            <p className="text-xl text-muted-foreground">All price ranges — villas to studios</p>
+            <p className="text-xl text-muted-foreground">All price ranges   villas to studios</p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -426,7 +426,7 @@ function TipsSection() {
                   "Walk/jog Central Park early morning (6-8am)",
                   "Play twilight golf (cheaper, cooler)",
                   "Explore Dubai Hills Mall on weekdays (less crowded)",
-                  "Have a car — essential here",
+                  "Have a car   essential here",
                   "Consider for families relocating to Dubai"
                 ].map((tip, idx) => (
                   <li key={idx} className="flex items-start gap-3">

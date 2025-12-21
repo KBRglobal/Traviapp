@@ -28,7 +28,7 @@ const comparisonTable = [
 
 export default function CompareNakheelVsAzizi() {
   useDocumentMeta({
-    title: "Nakheel vs Azizi | Dubai Developer Comparison 2025",
+    title: "Nakheel vs Azizi | Dubai Developer Comparison 2026",
     description: "Compare Nakheel and Azizi developers. Nakheel offers iconic waterfronts from AED 1.2M. Azizi delivers high yields from AED 650K. Full investment analysis.",
     ogType: "article"
   });

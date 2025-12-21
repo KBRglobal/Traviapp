@@ -22,64 +22,64 @@ import { FavoriteButton } from "@/components/ui/favorite-button";
 const EXPERIENCE_TYPES = [
   { 
     id: "iconic", 
-    title: "Iconic Dubai", 
-    description: "Must-see landmarks that define the city",
+    titleKey: "attractions.categories.iconic",
+    descKey: "attractions.categoriesDesc.iconic",
     icon: Star,
     gradient: "from-[#FF9327] to-[#FFD112]",
     keywords: ["burj", "khalifa", "fountain", "frame", "palm"]
   },
   { 
     id: "family", 
-    title: "Family & Kids", 
-    description: "Fun for the whole family",
+    titleKey: "attractions.categories.family",
+    descKey: "attractions.categoriesDesc.family",
     icon: Users,
     gradient: "from-[#02A65C] to-[#59ED63]",
     keywords: ["kids", "family", "children", "theme park", "aquarium", "zoo"]
   },
   { 
     id: "thrill", 
-    title: "Thrill & Adventure", 
-    description: "Adrenaline-pumping experiences",
+    titleKey: "attractions.categories.thrill",
+    descKey: "attractions.categoriesDesc.thrill",
     icon: Zap,
     gradient: "from-[#F94498] to-[#FDA9E5]",
     keywords: ["adventure", "thrill", "extreme", "desert", "skydive", "safari"]
   },
   { 
     id: "culture", 
-    title: "Culture & History", 
-    description: "Heritage and authentic Emirati experiences",
+    titleKey: "attractions.categories.culture",
+    descKey: "attractions.categoriesDesc.culture",
     icon: Sparkles,
     gradient: "from-[#FF9327] to-[#F2CCA6]",
     keywords: ["museum", "heritage", "history", "culture", "traditional", "souk"]
   },
   { 
     id: "night", 
-    title: "Night & After Dark", 
-    description: "Dubai comes alive at night",
+    titleKey: "attractions.categories.night",
+    descKey: "attractions.categoriesDesc.night",
     icon: Moon,
     gradient: "from-[#6443F4] to-[#9077EF]",
     keywords: ["night", "evening", "dinner", "cruise", "show", "fountain"]
   },
   { 
     id: "relax", 
-    title: "Relax & Scenic", 
-    description: "Peaceful escapes and stunning views",
+    titleKey: "attractions.categories.relax",
+    descKey: "attractions.categoriesDesc.relax",
     icon: Waves,
     gradient: "from-[#01BEFF] to-[#6443F4]",
     keywords: ["beach", "spa", "view", "observation", "garden", "park"]
   },
   { 
     id: "budget", 
-    title: "Budget Friendly", 
-    description: "Amazing experiences without breaking the bank",
+    titleKey: "attractions.categories.budget",
+    descKey: "attractions.categoriesDesc.budget",
     icon: Heart,
     gradient: "from-[#02A65C] to-[#01BEFF]",
     keywords: ["free", "cheap", "budget", "affordable"]
   },
   { 
     id: "luxury", 
-    title: "Luxury Experiences", 
-    description: "Premium and exclusive adventures",
+    titleKey: "attractions.categories.luxury",
+    descKey: "attractions.categoriesDesc.luxury",
     icon: Gem,
     gradient: "from-[#6443F4] to-[#F94498]",
     keywords: ["luxury", "premium", "vip", "private", "exclusive", "yacht"]
@@ -87,66 +87,68 @@ const EXPERIENCE_TYPES = [
 ];
 
 const CATEGORIES = [
-  { id: "museums", label: "Museums", icon: Building2 },
-  { id: "theme-parks", label: "Theme Parks", icon: Star },
-  { id: "observation-decks", label: "Observation Decks", icon: Mountain },
-  { id: "cruises", label: "Cruises", icon: Ship },
-  { id: "water-parks", label: "Water Parks", icon: Waves },
-  { id: "tours", label: "Tours", icon: Compass },
-  { id: "immersive-experiences", label: "Immersive", icon: Camera },
-  { id: "parks", label: "Parks & Gardens", icon: TreePine },
+  { id: "museums", labelKey: "attractions.browseCategories.museums", icon: Building2 },
+  { id: "theme-parks", labelKey: "attractions.browseCategories.themeparks", icon: Star },
+  { id: "observation-decks", labelKey: "attractions.browseCategories.observation", icon: Mountain },
+  { id: "cruises", labelKey: "attractions.browseCategories.cruises", icon: Ship },
+  { id: "water-parks", labelKey: "attractions.browseCategories.waterparks", icon: Waves },
+  { id: "tours", labelKey: "attractions.browseCategories.tours", icon: Compass },
+  { id: "immersive-experiences", labelKey: "attractions.browseCategories.immersive", icon: Camera },
+  { id: "parks", labelKey: "attractions.browseCategories.parks", icon: TreePine },
 ];
 
 const CONTEXTUAL_HINTS = [
-  { icon: Star, text: "Best for first-time visitors", filter: "iconic" },
-  { icon: Clock, text: "Can be done in 1-2 hours", filter: null },
-  { icon: Sun, text: "Great in summer (indoor)", filter: null },
-  { icon: Moon, text: "Perfect for evenings", filter: "night" },
+  { icon: Star, textKey: "attractions.hints.firstTime", filter: "iconic" },
+  { icon: Clock, textKey: "attractions.hints.quickVisit", filter: null },
+  { icon: Sun, textKey: "attractions.hints.indoor", filter: null },
+  { icon: Moon, textKey: "attractions.hints.evening", filter: "night" },
 ];
 
 const FEATURED_EXPERIENCES = [
   {
     slug: "burj-khalifa",
-    title: "At the Top, Burj Khalifa",
-    tagline: "Touch the sky at the world's tallest building",
+    titleKey: "burjKhalifa",
+    taglineKey: "burjKhalifaTagline",
     image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=1000&fit=crop",
-    tags: ["Iconic", "Must-See"],
-    label: "Editor's Pick"
+    tagKeys: ["iconic", "mustSee"],
+    labelKey: "editorsPick"
   },
   {
     slug: "dubai-fountain",
-    title: "Dubai Fountain Show",
-    tagline: "World's largest choreographed fountain",
+    titleKey: "dubaiFountain",
+    taglineKey: "dubaiFountainTagline",
     image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&h=600&fit=crop",
-    tags: ["Free", "Night"],
-    label: "Most Loved"
+    tagKeys: ["free", "night"],
+    labelKey: "mostLoved"
   },
   {
     slug: "desert-safari",
-    title: "Desert Safari Adventure",
-    tagline: "Dune bashing, BBQ & stargazing",
+    titleKey: "desertSafari",
+    taglineKey: "desertSafariTagline",
     image: "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=800&h=600&fit=crop",
-    tags: ["Adventure", "Sunset"],
-    label: "First Time Dubai"
+    tagKeys: ["adventure", "sunset"],
+    labelKey: "firstTimeDubai"
   },
   {
     slug: "dubai-aquarium",
-    title: "Dubai Aquarium & Underwater Zoo",
-    tagline: "Face-to-face with sharks",
+    titleKey: "dubaiAquarium",
+    taglineKey: "dubaiAquariumTagline",
     image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop",
-    tags: ["Family", "Indoor"],
-    label: null
+    tagKeys: ["family", "indoor"],
+    labelKey: null
   },
 ];
 
 function ExperienceCard({ 
   experience, 
   isActive, 
-  onClick 
+  onClick,
+  t
 }: { 
   experience: typeof EXPERIENCE_TYPES[0]; 
   isActive: boolean;
   onClick: () => void;
+  t: (key: string) => string;
 }) {
   const Icon = experience.icon;
   
@@ -167,8 +169,8 @@ function ExperienceCard({
         <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-white/20 flex items-center justify-center mb-3">
           <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
         </div>
-        <h3 className="font-bold text-white text-sm md:text-base mb-1">{experience.title}</h3>
-        <p className="text-white/80 text-xs md:text-sm line-clamp-2">{experience.description}</p>
+        <h3 className="font-bold text-white text-sm md:text-base mb-1">{t(experience.titleKey)}</h3>
+        <p className="text-white/80 text-xs md:text-sm line-clamp-2">{t(experience.descKey)}</p>
       </div>
     </button>
   );
@@ -176,11 +178,17 @@ function ExperienceCard({
 
 function FeaturedCard({ 
   experience, 
-  featured = false 
+  featured = false,
+  t
 }: { 
   experience: typeof FEATURED_EXPERIENCES[0]; 
   featured?: boolean;
+  t: (key: string) => string;
 }) {
+  const title = t(`attractions.featured.${experience.titleKey}`);
+  const tagline = t(`attractions.featured.${experience.taglineKey}`);
+  const label = experience.labelKey ? t(`attractions.labels.${experience.labelKey}`) : null;
+  
   return (
     <Link href={`/attractions/${experience.slug}`}>
       <Card 
@@ -192,42 +200,42 @@ function FeaturedCard({
         <div className={`overflow-hidden rounded-lg ${featured ? 'aspect-[4/5]' : 'aspect-[4/3]'}`}>
           <img 
             src={experience.image} 
-            alt={experience.title}
+            alt={title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-lg" />
           
-          {experience.label && (
+          {label && (
             <div className="absolute top-4 left-4">
               <Badge className="bg-primary text-primary-foreground">
-                {experience.label}
+                {label}
               </Badge>
             </div>
           )}
           
           <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
             <div className="flex flex-wrap gap-1.5 mb-2">
-              {experience.tags.map((tag) => (
+              {experience.tagKeys.map((tagKey) => (
                 <Badge 
-                  key={tag} 
+                  key={tagKey} 
                   variant="secondary" 
                   className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs"
                 >
-                  {tag}
+                  {t(`attractions.tags.${tagKey}`)}
                 </Badge>
               ))}
             </div>
             
             <h3 className={`font-bold text-white mb-1 ${featured ? 'text-xl md:text-2xl' : 'text-base md:text-lg'}`}>
-              {experience.title}
+              {title}
             </h3>
             
             <p className="text-white/80 text-xs md:text-sm line-clamp-2 mb-3">
-              {experience.tagline}
+              {tagline}
             </p>
             
             <div className="flex items-center gap-2 text-white font-medium text-sm group-hover:gap-3 transition-all">
-              <span>Explore</span>
+              <span>{t("attractions.actions.explore")}</span>
               <ArrowRight className="w-4 h-4" />
             </div>
           </div>
@@ -237,14 +245,22 @@ function FeaturedCard({
   );
 }
 
+interface TranslatedContentData {
+  title: string;
+  metaDescription: string | null;
+}
+
 function AttractionCard({ 
   attraction, 
-  index 
+  index,
+  translation
 }: { 
   attraction: ContentWithRelations; 
   index: number;
+  translation?: TranslatedContentData | null;
 }) {
   const image = attraction.heroImage || `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop`;
+  const displayTitle = translation?.title || attraction.title;
   
   return (
     <Link href={`/attractions/${attraction.slug}`}>
@@ -255,14 +271,14 @@ function AttractionCard({
         <div className="relative aspect-[4/3] overflow-hidden">
           <img 
             src={image} 
-            alt={attraction.title}
+            alt={displayTitle}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           
           <div className="absolute bottom-0 left-0 right-0 p-3">
             <h3 className="font-semibold text-white text-sm md:text-base line-clamp-1 group-hover:text-white transition-colors">
-              {attraction.title}
+              {displayTitle}
             </h3>
             {attraction.attraction?.location && (
               <div className="flex items-center gap-1 text-xs text-white/70 mt-1">
@@ -282,7 +298,7 @@ function AttractionCard({
             )}
           </div>
           {attraction.attraction?.priceFrom && (
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
+            <span className="text-xs text-muted-foreground whitespace-nowrap price-display">
               From AED {attraction.attraction.priceFrom}
             </span>
           )}
@@ -292,7 +308,7 @@ function AttractionCard({
   );
 }
 
-function CategoryCard({ category }: { category: typeof CATEGORIES[0] }) {
+function CategoryCard({ category, t }: { category: typeof CATEGORIES[0]; t: (key: string) => string }) {
   const Icon = category.icon;
   
   return (
@@ -301,7 +317,7 @@ function CategoryCard({ category }: { category: typeof CATEGORIES[0] }) {
         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-primary/20 transition-colors">
           <Icon className="w-6 h-6 text-primary" />
         </div>
-        <h3 className="font-medium text-sm">{category.label}</h3>
+        <h3 className="font-medium text-sm">{t(category.labelKey)}</h3>
       </Card>
     </Link>
   );
@@ -331,6 +347,8 @@ export default function PublicAttractions() {
   });
 
   const attractions = allContent?.filter(c => c.type === "attraction") || [];
+  
+  const { data: translationsMap } = useTranslatedContents(attractions);
   
   const filteredAttractions = useMemo(() => {
     let filtered = attractions;
@@ -416,8 +434,8 @@ export default function PublicAttractions() {
         <section className="py-12 md:py-16 bg-muted/30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold mb-2">Choose Your Experience</h2>
-              <p className="text-muted-foreground">How do you want to feel today?</p>
+              <h2 className="text-2xl md:text-3xl font-bold mb-2">{t("attractions.sections.chooseExperience")}</h2>
+              <p className="text-muted-foreground">{t("attractions.sections.howToFeel")}</p>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -427,6 +445,7 @@ export default function PublicAttractions() {
                   experience={experience} 
                   isActive={activeExperience === experience.id}
                   onClick={() => handleExperienceClick(experience.id)}
+                  t={t}
                 />
               ))}
             </div>
@@ -438,7 +457,7 @@ export default function PublicAttractions() {
                   onClick={() => setActiveExperience(null)}
                   data-testid="button-clear-experience-filter"
                 >
-                  Clear filter
+                  {t("attractions.actions.clearFilter")}
                 </Button>
               </div>
             )}
@@ -451,16 +470,16 @@ export default function PublicAttractions() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-bold mb-1">Featured Experiences</h2>
-                  <p className="text-muted-foreground">Hand-picked for first-time visitors</p>
+                  <h2 className="text-2xl md:text-3xl font-bold mb-1">{t("attractions.sections.featured")}</h2>
+                  <p className="text-muted-foreground">{t("attractions.sections.handPicked")}</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                <FeaturedCard experience={FEATURED_EXPERIENCES[0]} featured />
+                <FeaturedCard experience={FEATURED_EXPERIENCES[0]} featured t={t} />
                 <div className="grid grid-cols-1 gap-4 md:gap-6 md:col-span-1 lg:col-span-2">
                   {FEATURED_EXPERIENCES.slice(1, 4).map((exp) => (
-                    <FeaturedCard key={exp.slug} experience={exp} />
+                    <FeaturedCard key={exp.slug} experience={exp} t={t} />
                   ))}
                 </div>
               </div>
@@ -476,15 +495,20 @@ export default function PublicAttractions() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Zap className="w-5 h-5 text-primary" />
-                    <h2 className="text-2xl md:text-3xl font-bold">Trending Now</h2>
+                    <h2 className="text-2xl md:text-3xl font-bold">{t("attractions.sections.trending")}</h2>
                   </div>
-                  <p className="text-muted-foreground">What visitors are loving this week</p>
+                  <p className="text-muted-foreground">{t("attractions.sections.trendingDesc")}</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {trendingAttractions.map((attraction, index) => (
-                  <AttractionCard key={attraction.id} attraction={attraction} index={index} />
+                  <AttractionCard 
+                    key={attraction.id} 
+                    attraction={attraction} 
+                    index={index}
+                    translation={translationsMap?.get(attraction.id)}
+                  />
                 ))}
               </div>
             </div>
@@ -496,13 +520,13 @@ export default function PublicAttractions() {
           <section className="py-12 md:py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold mb-2">Browse by Category</h2>
-                <p className="text-muted-foreground">Find exactly what you're looking for</p>
+                <h2 className="text-2xl md:text-3xl font-bold mb-2">{t("attractions.sections.browseCategory")}</h2>
+                <p className="text-muted-foreground">{t("attractions.sections.findExactly")}</p>
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
                 {CATEGORIES.map((category) => (
-                  <CategoryCard key={category.id} category={category} />
+                  <CategoryCard key={category.id} category={category} t={t} />
                 ))}
               </div>
             </div>
@@ -517,11 +541,11 @@ export default function PublicAttractions() {
                 <div>
                   <h2 className="text-2xl md:text-3xl font-bold mb-1">
                     {activeExperience 
-                      ? EXPERIENCE_TYPES.find(e => e.id === activeExperience)?.title 
-                      : "Search Results"}
+                      ? t(EXPERIENCE_TYPES.find(e => e.id === activeExperience)?.titleKey || "") 
+                      : t("attractions.sections.searchResults")}
                   </h2>
                   <p className="text-muted-foreground">
-                    {allAttractions.length} experiences found
+                    {allAttractions.length} {t("attractions.sections.experiencesFound")}
                   </p>
                 </div>
               </div>
@@ -538,7 +562,12 @@ export default function PublicAttractions() {
               ) : allAttractions.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                   {allAttractions.map((attraction, index) => (
-                    <AttractionCard key={attraction.id} attraction={attraction} index={index} />
+                    <AttractionCard 
+                      key={attraction.id} 
+                      attraction={attraction} 
+                      index={index}
+                      translation={translationsMap?.get(attraction.id)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -546,8 +575,8 @@ export default function PublicAttractions() {
                   <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                     <Search className="w-8 h-8 text-muted-foreground" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">No experiences found</h3>
-                  <p className="text-muted-foreground mb-6">Try a different search or filter</p>
+                  <h3 className="text-xl font-semibold mb-2">{t("attractions.sections.noResults")}</h3>
+                  <p className="text-muted-foreground mb-6">{t("attractions.sections.tryDifferent")}</p>
                   <Button 
                     variant="outline" 
                     onClick={() => {
@@ -556,7 +585,7 @@ export default function PublicAttractions() {
                     }}
                     data-testid="button-clear-filters"
                   >
-                    Clear Filters
+                    {t("attractions.actions.clearFilter")}
                   </Button>
                 </div>
               )}
@@ -569,8 +598,8 @@ export default function PublicAttractions() {
           <section className="py-12 md:py-16 bg-muted/30">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold mb-2">Quick Tips</h2>
-                <p className="text-muted-foreground">Not sure what to pick? These might help</p>
+                <h2 className="text-2xl md:text-3xl font-bold mb-2">{t("attractions.sections.quickTips")}</h2>
+                <p className="text-muted-foreground">{t("attractions.sections.tipsHelp")}</p>
               </div>
               
               <div className="flex flex-wrap justify-center gap-3">
@@ -584,7 +613,7 @@ export default function PublicAttractions() {
                       data-testid={`button-hint-${index}`}
                     >
                       <Icon className="w-4 h-4" />
-                      <span className="text-sm">{hint.text}</span>
+                      <span className="text-sm">{t(hint.textKey)}</span>
                     </button>
                   );
                 })}
@@ -603,24 +632,24 @@ export default function PublicAttractions() {
           
           <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Not Sure Yet?
+              {t("attractions.sections.notSureYet")}
             </h2>
             <p className="text-lg text-white/80 mb-8 max-w-2xl mx-auto">
-              Save your favorites, explore by district, or let us help you build the perfect Dubai plan.
+              {t("attractions.sections.notSureDesc")}
             </p>
             
             <div className="flex flex-wrap justify-center gap-3">
               <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90" data-testid="button-save-for-later">
                 <Bookmark className="w-5 h-5 mr-2" />
-                Save for Later
+                {t("attractions.actions.saveForLater")}
               </Button>
               <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" data-testid="button-explore-by-district">
                 <Map className="w-5 h-5 mr-2" />
-                Explore by District
+                {t("attractions.actions.exploreByDistrict")}
               </Button>
               <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" data-testid="button-build-your-plan">
                 <Compass className="w-5 h-5 mr-2" />
-                Build Your Plan
+                {t("attractions.actions.buildPlan")}
               </Button>
             </div>
           </div>

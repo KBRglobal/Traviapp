@@ -28,7 +28,7 @@ const comparisonTable = [
 
 export default function CompareVillaVsApartment() {
   useDocumentMeta({
-    title: "Villa vs Apartment Dubai | Property Type Comparison 2025",
+    title: "Villa vs Apartment Dubai | Property Type Comparison 2026",
     description: "Compare villas and apartments for Dubai investment. Villas offer space and appreciation from AED 1.8M. Apartments deliver higher yields from AED 500K. Full analysis.",
     ogType: "article"
   });

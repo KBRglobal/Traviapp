@@ -98,7 +98,7 @@ const readyCons = [
 
 export default function OffPlanVsReady() {
   useDocumentMeta({
-    title: "Off-Plan vs Ready Property Dubai | Complete Comparison Guide 2025",
+    title: "Off-Plan vs Ready Property Dubai | Complete Comparison Guide 2026",
     description: "Compare Dubai off-plan vs ready properties. Off-plan offers 10-30% lower prices and flexible payments. Ready provides immediate use. Find which investment strategy suits you.",
     ogType: "website"
   });
@@ -405,7 +405,7 @@ export default function OffPlanVsReady() {
             { href: "/dubai-off-plan-investment-guide", title: "Investment Guide" },
             { href: "/dubai-off-plan-payment-plans", title: "Payment Plans" },
             { href: "/off-plan-post-handover", title: "Post-Handover Plans" },
-            { href: "/best-off-plan-projects-dubai-2025", title: "Best Projects 2025" },
+            { href: "/best-off-plan-projects-dubai-2026", title: "Best Projects 2026" },
             { href: "/how-to-buy-dubai-off-plan", title: "How to Buy" },
             { href: "/off-plan-golden-visa", title: "Golden Visa" }
           ]}
