@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Search, ChevronDown, MapPin, Camera, Building2, Utensils, Sparkles, Compass } from "lucide-react";
+import { Menu, X, Search, ChevronDown, MapPin, Camera, Building2, Utensils, Sparkles, Compass, ShoppingBag } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher, LanguageSelectorMobile } from "./language-switcher";
@@ -30,6 +30,7 @@ export function PublicNav({ className = "", variant = "default" }: PublicNavProp
     { href: "/hotels", labelKey: "nav.hotels", icon: Building2 },
     { href: "/districts", labelKey: "nav.districts", icon: MapPin },
     { href: "/dining", labelKey: "nav.dining", icon: Utensils },
+    { href: "/shopping", labelKey: "nav.shopping", icon: ShoppingBag },
     { href: "/news", labelKey: "nav.news", icon: Compass },
   ];
 
