@@ -9,10 +9,26 @@ import { useLocale } from "@/lib/i18n/LocaleRouter";
 interface PublicNavProps {
   className?: string;
   variant?: "default" | "transparent";
+  hideOnMobile?: boolean;
+  onMobileMenuToggle?: (isOpen: boolean) => void;
+  externalMobileMenuOpen?: boolean;
 }
 
-export function PublicNav({ className = "", variant = "default" }: PublicNavProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+export function PublicNav({ 
+  className = "", 
+  variant = "default",
+  hideOnMobile = false,
+  onMobileMenuToggle,
+  externalMobileMenuOpen
+}: PublicNavProps) {
+  const [internalMobileMenuOpen, setInternalMobileMenuOpen] = useState(false);
+  
+  // Use external state if provided, otherwise use internal
+  const mobileMenuOpen = externalMobileMenuOpen !== undefined ? externalMobileMenuOpen : internalMobileMenuOpen;
+  const setMobileMenuOpen = (value: boolean) => {
+    setInternalMobileMenuOpen(value);
+    onMobileMenuToggle?.(value);
+  };
   const [scrolled, setScrolled] = useState(false);
   const [location] = useLocation();
   const { t, localePath, isRTL } = useLocale();
@@ -43,6 +59,8 @@ export function PublicNav({ className = "", variant = "default" }: PublicNavProp
     <header className={className}>
       <nav 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          hideOnMobile ? "hidden lg:block" : ""
+        } ${
           showGlassEffect
             ? "bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg shadow-slate-200/20 dark:shadow-slate-900/30"
             : isTransparent 

@@ -1,4 +1,4 @@
-import { Search, Star, MapPin, ChevronRight, Mail, BookOpen, Users, Globe, Building, UtensilsCrossed, Calendar, Clock, DollarSign, ArrowRight, Check, Newspaper, TrendingUp } from "lucide-react";
+import { Search, Star, MapPin, ChevronRight, Mail, BookOpen, Users, Globe, Building, UtensilsCrossed, Calendar, Clock, DollarSign, ArrowRight, Check, Newspaper, TrendingUp, Menu } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -105,6 +105,7 @@ const getRandomPosition = (heroRect: DOMRect) => {
 export default function PublicHome() {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { t, localePath, isRTL } = useLocale();
   
@@ -205,7 +206,11 @@ export default function PublicHome() {
         {t("home.skipToMain")}
       </a>
 
-      <PublicNav />
+      <PublicNav 
+        hideOnMobile={true}
+        externalMobileMenuOpen={mobileMenuOpen}
+        onMobileMenuToggle={setMobileMenuOpen}
+      />
 
       <main id="main-content">
         {/* 1. HERO SECTION - Playful Sky Theme with Interactive Mascot */}
@@ -264,38 +269,51 @@ export default function PublicHome() {
             </div>
           )}
           
-          {/* Mobile Mascot - Fixed bottom right corner, small and non-intrusive */}
+          {/* Mobile Menu Trigger - Mascot + MENU button */}
           <div
-            className="md:hidden fixed bottom-20 right-4 z-30 cursor-pointer select-none"
-            onClick={handleMascotHover}
-            data-testid="mascot-mobile"
+            className={`md:hidden fixed bottom-6 z-30 cursor-pointer select-none ${isRTL ? 'left-4' : 'right-4'}`}
+            onClick={() => setMobileMenuOpen(true)}
+            data-testid="button-mobile-menu-mascot"
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => e.key === "Enter" && handleMascotHover()}
-            aria-label={t("home.mascotLabel") || "Interactive mascot - tap to play!"}
+            onKeyDown={(e) => e.key === "Enter" && setMobileMenuOpen(true)}
+            aria-label={t("nav.menu") || "Open menu"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-menu"
           >
-            <div className="relative">
-              <img 
-                src={mascotImage} 
-                alt="Travi the Duck"
-                className="w-16 h-16 drop-shadow-lg active:scale-110 transition-transform"
-                draggable={false}
-              />
+            <div className={`flex items-center gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-full pl-1 pr-4 py-1 shadow-xl shadow-black/15 border border-slate-200/50 dark:border-slate-700/50 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              {/* Mascot Image */}
+              <div className="relative">
+                <img 
+                  src={mascotImage} 
+                  alt="Travi"
+                  className="w-12 h-12 drop-shadow-md active:scale-105 transition-transform"
+                  draggable={false}
+                />
+              </div>
               
-              {/* Mobile Speech Bubble - appears above mascot */}
-              {showPhrase && currentPhraseIndex >= 0 && (
-                <div 
-                  className="absolute -top-14 right-0 bg-white rounded-xl px-3 py-2 shadow-lg max-w-[200px]"
-                  dir={isRTL ? "rtl" : "ltr"}
-                  data-testid="mascot-speech-bubble-mobile"
-                >
-                  <span className="text-xs font-medium text-foreground">
-                    {t(`home.${mascotPhrases[currentPhraseIndex]}`)}
-                  </span>
-                  <div className="absolute -bottom-2 right-4 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-white" />
-                </div>
-              )}
+              {/* MENU Text with Icon */}
+              <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <Menu className="w-4 h-4 text-[#6C5CE7]" />
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">
+                  {t("nav.menu") || "Menu"}
+                </span>
+              </div>
             </div>
+            
+            {/* Speech Bubble - appears above when interacted */}
+            {showPhrase && currentPhraseIndex >= 0 && (
+              <div 
+                className={`absolute -top-12 bg-white rounded-xl px-3 py-2 shadow-lg max-w-[180px] ${isRTL ? 'left-0' : 'right-0'}`}
+                dir={isRTL ? "rtl" : "ltr"}
+                data-testid="mascot-speech-bubble-mobile"
+              >
+                <span className="text-xs font-medium text-foreground">
+                  {t(`home.${mascotPhrases[currentPhraseIndex]}`)}
+                </span>
+                <div className={`absolute -bottom-2 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-white ${isRTL ? 'left-4' : 'right-4'}`} />
+              </div>
+            )}
           </div>
 
           {/* Main Content - Centered layout */}
