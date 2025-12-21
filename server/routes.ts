@@ -85,6 +85,17 @@ import { registerEnhancementRoutes } from "./enhancement-routes";
 import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
 import { registerDocUploadRoutes } from "./doc-upload-routes";
 import { cache, cacheKeys } from "./cache";
+import {
+  getContentWriterSystemPrompt,
+  buildArticleGenerationPrompt,
+  determineContentCategory,
+  validateArticleResponse,
+  buildRetryPrompt,
+  CONTENT_WRITER_PERSONALITIES,
+  ARTICLE_STRUCTURES,
+  CATEGORY_PERSONALITY_MAPPING,
+  type ArticleResponse,
+} from "./content-writer-guidelines";
 
 // Permission checking utilities (imported from security.ts for route-level checks)
 type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
@@ -1319,13 +1330,12 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
         }));
 
         const combinedText = sources.map(s => `${s.title} ${s.description}`).join(' ');
-        const category = determineContentCategory(combinedText, '');
-        const mapping = CATEGORY_PERSONALITY_MAPPING[category] || CATEGORY_PERSONALITY_MAPPING.news;
-        const personality = CONTENT_WRITER_PERSONALITIES[mapping.personality];
-        const structure = ARTICLE_STRUCTURES[mapping.structure];
+        const category = determineContentCategory(combinedText);
+        const sourceContent = sources.map(s => `${s.title}: ${s.description}`).join('\n\n');
 
-        const systemPrompt = getContentWriterSystemPrompt(category, personality, structure);
-        const userPrompt = buildArticleGenerationPrompt(sources, category, personality, structure);
+        // Use centralized content rules system
+        const systemPrompt = await getContentWriterSystemPrompt(category);
+        const userPrompt = await buildArticleGenerationPrompt(cluster.topic || combinedText, sourceContent);
 
         // Generate article with validation and retries
         let validatedData: ArticleResponse | null = null;
@@ -1333,6 +1343,7 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
         const maxAttempts = 3;
         let lastResponse: unknown = null;
         let lastErrors: string[] = [];
+        let lastWordCount = 0;
 
         while (!validatedData && attempts < maxAttempts) {
           attempts++;
@@ -1345,9 +1356,10 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
 
           // Add retry prompt if this is a retry
           if (attempts > 1 && lastErrors.length > 0) {
-            messages.push({ 
-              role: "user", 
-              content: buildRetryPrompt(lastErrors, lastResponse) 
+            const retryPrompt = await buildRetryPrompt(lastErrors, lastWordCount, category);
+            messages.push({
+              role: "user",
+              content: retryPrompt
             });
           }
 
@@ -1360,13 +1372,14 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
           });
 
           lastResponse = JSON.parse(completion.choices[0].message.content || "{}");
-          const validation = validateArticleResponse(lastResponse);
+          const validation = await validateArticleResponse(lastResponse);
 
           if (validation.isValid && validation.data) {
             validatedData = validation.data;
             console.log(`[RSS Auto-Process] Validation passed on attempt ${attempts} - ${validation.wordCount} words`);
           } else {
             lastErrors = validation.errors;
+            lastWordCount = validation.wordCount;
             console.log(`[RSS Auto-Process] Validation failed (attempt ${attempts}): ${validation.errors.join(", ")}`);
           }
         }
@@ -1605,13 +1618,17 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
                       ? 'shopping'
                       : 'news';
 
+        // Get personality info for article metadata
+        const personalityKey = CATEGORY_PERSONALITY_MAPPING[category] || "A";
+        const personalityData = CONTENT_WRITER_PERSONALITIES[personalityKey];
+
         await storage.createArticle({
           contentId: content.id,
           category: articleCategory as any,
           urgencyLevel: mergedData.urgencyLevel || 'relevant',
           targetAudience: mergedData.targetAudience || [],
-          personality: mapping.personality,
-          tone: mapping.tone,
+          personality: personalityKey,
+          tone: personalityData?.tone || "professional",
           quickFacts: mergedData.quickFacts || [],
           proTips: mergedData.proTips || [],
           warnings: mergedData.warnings || [],
@@ -3365,12 +3382,8 @@ export async function registerRoutes(
 
       // Determine content category based on source material
       const combinedText = sources.map(s => `${s.title} ${s.description}`).join(' ');
-      const category = determineContentCategory(combinedText, '');
-      
-      // Get the appropriate personality and structure for this category
-      const mapping = CATEGORY_PERSONALITY_MAPPING[category] || CATEGORY_PERSONALITY_MAPPING.news;
-      const personality = CONTENT_WRITER_PERSONALITIES[mapping.personality];
-      const structure = ARTICLE_STRUCTURES[mapping.structure];
+      const category = determineContentCategory(combinedText);
+      const sourceContent = sources.map(s => `${s.title}: ${s.description}`).join('\n\n');
 
       // Use OpenAI to merge the articles with enhanced prompting
       const openai = getOpenAIClient();
@@ -3378,9 +3391,9 @@ export async function registerRoutes(
         return res.status(503).json({ error: "OpenAI API not configured. Please set OPENAI_API_KEY." });
       }
 
-      // Build the enhanced system and user prompts
-      const systemPrompt = getContentWriterSystemPrompt(category, personality, structure);
-      const userPrompt = buildArticleGenerationPrompt(sources, category, personality, structure);
+      // Build the enhanced system and user prompts using centralized content rules
+      const systemPrompt = await getContentWriterSystemPrompt(category);
+      const userPrompt = await buildArticleGenerationPrompt(cluster.topic || combinedText, sourceContent);
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -3520,13 +3533,17 @@ export async function registerRoutes(
                     ? 'shopping'
                     : 'news';
 
+      // Get personality info for article metadata
+      const personalityKey = CATEGORY_PERSONALITY_MAPPING[category] || "A";
+      const personalityData = CONTENT_WRITER_PERSONALITIES[personalityKey];
+
       await storage.createArticle({
         contentId: content.id,
         category: articleCategory as any,
         urgencyLevel: mergedData.urgencyLevel || 'relevant',
         targetAudience: mergedData.targetAudience || [],
-        personality: mapping.personality,
-        tone: mapping.tone,
+        personality: personalityKey,
+        tone: personalityData?.tone || "professional",
         quickFacts: mergedData.quickFacts || [],
         proTips: mergedData.proTips || [],
         warnings: mergedData.warnings || [],
@@ -3572,13 +3589,13 @@ export async function registerRoutes(
       });
 
       res.status(201).json({
-        message: `Successfully merged ${items.length} articles using ${personality.name} personality`,
+        message: `Successfully merged ${items.length} articles using ${personalityData?.name || "Professional"} personality`,
         content,
         mergedFrom: items.length,
         sources: mergedData.sources || [],
         category,
-        personality: mapping.personality,
-        structure: mapping.structure,
+        personality: personalityKey,
+        structure: "standard",
         wordCount,
         translationsQueued: TARGET_LOCALES.length,
       });
