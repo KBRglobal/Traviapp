@@ -29,7 +29,7 @@ import {
   Command,
   LayoutDashboard,
   Sparkles,
-  FileTemplate,
+  LayoutTemplate,
   SearchCheck,
 } from "lucide-react";
 import type { ContentWithRelations } from "@shared/schema";
@@ -63,7 +63,7 @@ const navigationItems = [
   { id: "seo-audit", label: "SEO Audit", icon: SearchCheck, href: "/admin/seo-audit", category: "navigate" },
   { id: "affiliates", label: "Affiliate Links", icon: Link2, href: "/admin/affiliate-links", category: "navigate" },
   { id: "ai-generator", label: "AI Generator", icon: Sparkles, href: "/admin/ai-generator", category: "navigate" },
-  { id: "templates", label: "Templates", icon: FileTemplate, href: "/admin/templates", category: "navigate" },
+  { id: "templates", label: "Templates", icon: LayoutTemplate, href: "/admin/templates", category: "navigate" },
   { id: "users", label: "Users", icon: Users, href: "/admin/users", category: "navigate" },
   { id: "settings", label: "Settings", icon: Settings, href: "/admin/settings", category: "navigate" },
 ];

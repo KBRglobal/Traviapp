@@ -39,7 +39,7 @@ import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
-  FileTemplate,
+  LayoutTemplate,
   Plus,
   Search,
   Copy,
@@ -270,7 +270,7 @@ export default function ContentTemplatesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <FileTemplate className="h-6 w-6" />
+            <LayoutTemplate className="h-6 w-6" />
             Content Templates
           </h1>
           <p className="text-muted-foreground">
@@ -395,7 +395,7 @@ export default function ContentTemplatesPage() {
       {/* Templates Grid */}
       {filteredTemplates.length === 0 ? (
         <EmptyState
-          icon={FileTemplate}
+          icon={LayoutTemplate}
           title="No templates found"
           description={
             searchQuery || typeFilter !== "all"

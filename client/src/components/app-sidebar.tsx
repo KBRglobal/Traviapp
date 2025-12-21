@@ -43,7 +43,7 @@ import {
   Megaphone,
   FileBarChart2,
   Building,
-  FileTemplate,
+  LayoutTemplate,
   SearchCheck,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -182,7 +182,7 @@ const managementItems: Array<{
   {
     title: "Templates",
     url: "/admin/templates",
-    icon: FileTemplate,
+    icon: LayoutTemplate,
     requiredPermission: "canCreate",
   },
   {
