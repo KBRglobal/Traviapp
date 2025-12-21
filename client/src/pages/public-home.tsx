@@ -114,9 +114,8 @@ export default function PublicHome() {
   
   useEffect(() => {
     if (heroRef.current && !isInitialized) {
-      const rect = heroRef.current.getBoundingClientRect();
-      const pos = getRandomPosition(rect);
-      setMascotPosition(pos);
+      // Start mascot near the TRAVI logo (left side, near top)
+      setMascotPosition({ x: 380, y: 100 });
       setIsInitialized(true);
     }
   }, [isInitialized]);
@@ -152,7 +151,7 @@ export default function PublicHome() {
   useDocumentMeta({
     title: "Travi - Dubai Travel Guide | Things to Do, Hotels & Attractions",
     description: "The most comprehensive guide to Dubai's attractions, hotels & hidden gems. Written by local experts in 17 languages.",
-    ogTitle: "Travi - Discover Dubai Like a Local",
+    ogTitle: "Travi - Discover the World Like a Local",
     ogDescription: "The most comprehensive guide to Dubai's attractions, hotels & hidden gems.",
     ogType: "website",
   });
@@ -250,7 +249,7 @@ export default function PublicHome() {
               </div>
               
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 leading-tight">
-                {t("home.heroTitleNew") || "Discover Dubai Like a Local"}
+                {t("home.heroTitleNew") || "Discover the World Like a Local"}
               </h1>
               <p className="text-lg md:text-xl text-gray-600 mb-8">
                 {t("home.heroSubtitleNew") || "The most comprehensive guide to Dubai's attractions, hotels & hidden gems."}

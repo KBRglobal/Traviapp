@@ -72,7 +72,7 @@ export const translations = {
       ctaHotels: "Best Hotels",
       ctaRealEstate: "Invest in Dubai",
       cantCatchMe: "You can't catch me!",
-      heroTitleNew: "Discover Dubai Like a Local",
+      heroTitleNew: "Discover the World Like a Local",
       heroSubtitleNew: "The most comprehensive guide to Dubai's attractions, hotels & hidden gems.",
       guidesCount: "847 Guides",
       viewsCount: "2.3M Views",
