@@ -5,7 +5,7 @@ import {
   Camera, TreePine, Waves, ChevronRight, ArrowRight,
   Clock, Sun, Zap, Eye, Ticket, Utensils, ShoppingBag,
   Palmtree, Fish, Bike, Wind, Umbrella, Music, Theater,
-  Globe, Car, Landmark, ChefHat
+  Globe, Car, Landmark, ChefHat, Droplets
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
@@ -368,42 +368,48 @@ const FEATURED_ATTRACTIONS = [
   {
     name: "Burj Khalifa",
     tagline: "World's Tallest Building at 828m",
-    image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800&h=1000&fit=crop",
+    gradient: "from-sky-600 via-blue-700 to-indigo-800",
+    icon: Building2,
     tags: ["Iconic", "Must See"],
     label: "Editor's Pick"
   },
   {
     name: "Dubai Fountain",
     tagline: "World's Largest Choreographed Fountain Show",
-    image: "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=800&h=600&fit=crop",
+    gradient: "from-cyan-500 via-teal-600 to-emerald-700",
+    icon: Droplets,
     tags: ["Free", "Night"],
     label: "Most Loved"
   },
   {
     name: "Desert Safari",
     tagline: "Dune Bashing, Dinner & Bedouin Culture",
-    image: "https://images.unsplash.com/photo-1547234935-80c7145ec969?w=800&h=600&fit=crop",
+    gradient: "from-amber-500 via-orange-600 to-red-700",
+    icon: Sun,
     tags: ["Adventure", "Sunset"],
     label: "First Time Dubai"
   },
   {
     name: "Atlantis Aquaventure",
     tagline: "World's Largest Waterpark with 105+ Slides",
-    image: "https://images.unsplash.com/photo-1596402184320-417e7178b2cd?w=800&h=600&fit=crop",
+    gradient: "from-pink-500 via-rose-600 to-red-600",
+    icon: Waves,
     tags: ["Family", "Thrill"],
     label: null
   },
   {
     name: "Museum of the Future",
     tagline: "Award-Winning Architectural Marvel",
-    image: "https://images.unsplash.com/photo-1512632578888-169bbbc64f33?w=800&h=600&fit=crop",
+    gradient: "from-violet-600 via-purple-700 to-fuchsia-800",
+    icon: Sparkles,
     tags: ["Innovation", "Culture"],
     label: null
   },
   {
     name: "Ain Dubai",
     tagline: "World's Tallest Observation Wheel at 250m",
-    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
+    gradient: "from-emerald-500 via-teal-600 to-cyan-700",
+    icon: Eye,
     tags: ["Views", "Romantic"],
     label: null
   },
@@ -468,54 +474,48 @@ function AttractionCard({ attraction, categoryGradient }: { attraction: Attracti
   );
 }
 
-function FeaturedCard({ 
-  attraction, 
-  featured = false 
-}: { 
-  attraction: typeof FEATURED_ATTRACTIONS[0]; 
-  featured?: boolean;
-}) {
+function FeaturedCard({ attraction }: { attraction: typeof FEATURED_ATTRACTIONS[0] }) {
+  const Icon = attraction.icon;
+  
   return (
     <Card 
-      className={`group overflow-visible border-0 shadow-lg hover:shadow-2xl transition-all duration-500 cursor-default relative ${
-        featured ? 'col-span-1 md:col-span-2 row-span-2' : ''
-      }`}
+      className="group overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-500 cursor-default relative"
       data-testid={`card-featured-${attraction.name.toLowerCase().replace(/\s+/g, '-')}`}
     >
-      <div className={`overflow-hidden rounded-lg ${featured ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
-        <img 
-          src={attraction.image} 
-          alt={attraction.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-lg" />
-        
-        {attraction.label && (
-          <div className="absolute top-4 left-4">
-            <Badge className="bg-[#F94498] text-white border-0">
+      <div className={`relative aspect-[4/3] bg-gradient-to-br ${attraction.gradient} p-5 md:p-6 flex flex-col justify-between`}>
+        {/* Top Row - Label and Icon */}
+        <div className="flex items-start justify-between">
+          {attraction.label ? (
+            <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs">
               {attraction.label}
             </Badge>
+          ) : (
+            <div />
+          )}
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
           </div>
-        )}
+        </div>
         
-        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
-          <div className="flex flex-wrap gap-1.5 mb-2">
+        {/* Bottom Content */}
+        <div>
+          <div className="flex flex-wrap gap-1.5 mb-3">
             {attraction.tags.map((tag) => (
               <Badge 
                 key={tag} 
                 variant="secondary" 
-                className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs"
+                className="bg-black/20 text-white border-0 backdrop-blur-sm text-xs"
               >
                 {tag}
               </Badge>
             ))}
           </div>
           
-          <h3 className={`font-bold text-white mb-1 ${featured ? 'text-xl md:text-2xl' : 'text-base md:text-lg'}`}>
+          <h3 className="font-bold text-white text-lg md:text-xl mb-1">
             {attraction.name}
           </h3>
           
-          <p className="text-white/80 text-xs md:text-sm line-clamp-2">
+          <p className="text-white/80 text-sm line-clamp-2">
             {attraction.tagline}
           </p>
         </div>
@@ -692,18 +692,9 @@ export default function PublicAttractions() {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              <FeaturedCard attraction={FEATURED_ATTRACTIONS[0]} featured />
-              <div className="grid grid-cols-1 gap-4 md:gap-6 md:col-span-1 lg:col-span-2">
-                {FEATURED_ATTRACTIONS.slice(1, 4).map((exp) => (
-                  <FeaturedCard key={exp.name} attraction={exp} />
-                ))}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-4 md:mt-6">
-              {FEATURED_ATTRACTIONS.slice(4, 6).map((exp) => (
-                <FeaturedCard key={exp.name} attraction={exp} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {FEATURED_ATTRACTIONS.map((attraction) => (
+                <FeaturedCard key={attraction.name} attraction={attraction} />
               ))}
             </div>
           </div>
