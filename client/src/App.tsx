@@ -121,12 +121,18 @@ const AuditLogs = lazy(() => import("@/pages/audit-logs"));
 const NewsletterSubscribers = lazy(() => import("@/pages/newsletter-subscribers"));
 const Campaigns = lazy(() => import("@/pages/campaigns"));
 const TranslationsPage = lazy(() => import("@/pages/translations"));
+const ContentCalendarPage = lazy(() => import("@/pages/content-calendar"));
+const ContentTemplatesPage = lazy(() => import("@/pages/content-templates"));
+const SEOAuditPage = lazy(() => import("@/pages/seo-audit"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Login = lazy(() => import("@/pages/login"));
 const AccessDenied = lazy(() => import("@/pages/access-denied"));
 
 // Eager load AI Assistant as it's critical UI
 import { AIAssistant } from "@/components/ai-assistant";
+import { CommandPalette, useCommandPalette } from "@/components/command-palette";
+import { KeyboardShortcuts, useKeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { NotificationsCenter } from "@/components/notifications-center";
 
 // Loading fallback component
 function PageLoader() {
@@ -228,6 +234,9 @@ function AdminRouter() {
         <Route path="/admin/newsletter" component={NewsletterSubscribers} />
         <Route path="/admin/campaigns" component={Campaigns} />
         <Route path="/admin/translations" component={TranslationsPage} />
+        <Route path="/admin/calendar" component={ContentCalendarPage} />
+        <Route path="/admin/templates" component={ContentTemplatesPage} />
+        <Route path="/admin/seo-audit" component={SEOAuditPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -236,6 +245,8 @@ function AdminRouter() {
 
 function AdminLayout() {
   const { user, isLoading, isAuthenticated } = useAuth();
+  const { open: commandPaletteOpen, setOpen: setCommandPaletteOpen } = useCommandPalette();
+  const { open: shortcutsOpen, setOpen: setShortcutsOpen } = useKeyboardShortcuts();
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -260,13 +271,18 @@ function AdminLayout() {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center justify-between gap-4 p-3 border-b sticky top-0 z-50 bg-background">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <NotificationsCenter />
+              <ThemeToggle />
+            </div>
           </header>
           <main className="flex-1 overflow-auto p-6">
             <AdminRouter />
           </main>
         </div>
         <AIAssistant />
+        <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+        <KeyboardShortcuts open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       </div>
     </SidebarProvider>
   );

@@ -55,7 +55,11 @@ import {
   Megaphone,
   FileBarChart2,
   Building,
+  LayoutGrid,
+  List,
+  Kanban,
 } from "lucide-react";
+import { ContentKanban } from "@/components/content-kanban";
 import type { ContentWithRelations, Tag as TagType } from "@shared/schema";
 
 interface DeleteWarning {
@@ -160,6 +164,7 @@ export default function ContentList({ type }: ContentListProps) {
   const [deleteWarnings, setDeleteWarnings] = useState<DeleteWarning[]>([]);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [isCheckingDelete, setIsCheckingDelete] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
   const { data: contents, isLoading } = useQuery<ContentWithRelations[]>({
     queryKey: [`/api/contents?type=${type}`],
@@ -406,6 +411,26 @@ export default function ContentList({ type }: ContentListProps) {
                   <X className="h-4 w-4" />
                 </Button>
               )}
+              <div className="border-l pl-2 ml-2 flex items-center gap-1">
+                <Button
+                  variant={viewMode === "table" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("table")}
+                  data-testid="button-view-table"
+                  title="Table view"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "kanban" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("kanban")}
+                  data-testid="button-view-kanban"
+                  title="Kanban view"
+                >
+                  <Kanban className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -525,6 +550,12 @@ export default function ContentList({ type }: ContentListProps) {
               }
               actionLabel={hasFilters ? "Clear filters" : `Create ${config.singular}`}
               onAction={hasFilters ? handleClearFilters : () => navigate(`${config.basePath}/new`)}
+            />
+          ) : viewMode === "kanban" ? (
+            <ContentKanban
+              contents={filteredContents}
+              type={type}
+              basePath={config.basePath}
             />
           ) : (
             <DataTable

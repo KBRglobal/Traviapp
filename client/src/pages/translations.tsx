@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SUPPORTED_LOCALES, type Locale, type Content, type Translation } from "@shared/schema";
 import { Globe, RefreshCw, Languages, Check, X, AlertCircle, Loader2 } from "lucide-react";
+import { BulkTranslationManager } from "@/components/bulk-translation-manager";
 
 interface TranslationStats {
   totalContent: number;
@@ -223,6 +224,7 @@ export default function TranslationsPage() {
       <Tabs defaultValue="content" className="space-y-4">
         <TabsList>
           <TabsTrigger value="content">Content Status</TabsTrigger>
+          <TabsTrigger value="bulk">Bulk Manager</TabsTrigger>
           <TabsTrigger value="batch">Batch Translate</TabsTrigger>
         </TabsList>
 
@@ -304,6 +306,10 @@ export default function TranslationsPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="bulk" className="space-y-4">
+          <BulkTranslationManager />
         </TabsContent>
 
         <TabsContent value="batch" className="space-y-4">
