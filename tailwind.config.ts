@@ -81,6 +81,11 @@ export default {
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
         },
+        // TRAVI Brand Colors
+        "travi-purple": "hsl(var(--travi-purple) / <alpha-value>)",
+        "travi-orange": "hsl(var(--travi-orange) / <alpha-value>)",
+        "travi-pink": "hsl(var(--travi-pink) / <alpha-value>)",
+        "travi-green": "hsl(var(--travi-green) / <alpha-value>)",
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
