@@ -1,6 +1,25 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -155,6 +174,26 @@ function generateSlug(title: string): string {
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
+}
+
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) {
+    const mins = Math.floor(seconds / 60);
+    return `${mins} minute${mins > 1 ? 's' : ''} ago`;
+  }
+  if (seconds < 86400) {
+    const hours = Math.floor(seconds / 3600);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  }
+  if (seconds < 604800) {
+    const days = Math.floor(seconds / 86400);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // Topic categories for filtering media
@@ -441,6 +480,41 @@ export default function ContentEditor() {
   const [selectedVersion, setSelectedVersion] = useState<ContentVersion | null>(null);
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [lastAutosaveTime, setLastAutosaveTime] = useState<string | null>(null);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveBlockId(event.active.id as string);
+    setSelectedBlockId(event.active.id as string);
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setBlocks((items) => {
+        const oldIndex = items.findIndex((b) => b.id === active.id);
+        const newIndex = items.findIndex((b) => b.id === over.id);
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        return newItems.map((b, i) => ({ ...b, order: i }));
+      });
+    }
+
+    setActiveBlockId(null);
+  }, []);
+
+  const activeBlock = activeBlockId ? blocks.find(b => b.id === activeBlockId) : null;
 
   // Attraction-specific SEO data
   const [attractionSeoData, setAttractionSeoData] = useState({
@@ -1432,18 +1506,42 @@ export default function ContentEditor() {
             {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Save
           </Button>
-          {autosaveStatus === "saving" && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1" data-testid="autosave-saving">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Saving...
-            </span>
-          )}
-          {autosaveStatus === "saved" && lastAutosaveTime && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1" data-testid="autosave-saved">
-              <Check className="h-3 w-3 text-green-500" />
-              Autosaved at {lastAutosaveTime}
-            </span>
-          )}
+
+          {/* Improved Auto-save Indicator */}
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all duration-300 ${
+            autosaveStatus === "saving"
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+              : autosaveStatus === "saved"
+                ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
+                : hasChangedRef.current && status === "draft"
+                  ? "bg-muted text-muted-foreground"
+                  : "hidden"
+          }`}>
+            {autosaveStatus === "saving" && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-20" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin relative" />
+                </div>
+                <span className="font-medium" data-testid="autosave-saving">Saving changes...</span>
+              </>
+            )}
+            {autosaveStatus === "saved" && lastAutosaveTime && (
+              <>
+                <div className="relative flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-green-500 animate-[pulse_1s_ease-in-out_1] opacity-30" />
+                  <Check className="h-3.5 w-3.5 relative" />
+                </div>
+                <span className="font-medium" data-testid="autosave-saved">Saved at {lastAutosaveTime}</span>
+              </>
+            )}
+            {autosaveStatus === "idle" && hasChangedRef.current && status === "draft" && (
+              <>
+                <Clock className="h-3.5 w-3.5" />
+                <span>Auto-save in 30s</span>
+              </>
+            )}
+          </div>
           {canPublish && (
             <Button size="sm" onClick={handlePublish} disabled={publishMutation.isPending} data-testid="button-publish">
               {publishMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
@@ -1505,38 +1603,66 @@ export default function ContentEditor() {
         {/* Center - Canvas */}
         <div className="flex-1 overflow-auto bg-muted/50" ref={canvasRef} onClick={handleCanvasClick}>
           <div className="max-w-3xl mx-auto py-8 px-4">
-            {/* Canvas blocks */}
-            <div className="space-y-4">
-              {blocks.map((block, index) => {
-                const blockId = block.id ?? `block-${index}`;
-                return (
-                <CanvasBlock
-                  key={blockId}
-                  block={block}
-                  isSelected={selectedBlockId === blockId}
-                  onSelect={() => setSelectedBlockId(blockId)}
-                  onUpdate={(data) => updateBlock(blockId, data)}
-                  onDelete={() => removeBlock(blockId)}
-                  onDuplicate={() => duplicateBlock(blockId)}
-                  onMoveUp={() => moveBlock(blockId, "up")}
-                  onMoveDown={() => moveBlock(blockId, "down")}
-                  canMoveUp={index > 0}
-                  canMoveDown={index < blocks.length - 1}
-                  title={title}
-                  onTitleChange={setTitle}
-                  onGenerateImage={() => handleGenerateImage(blockId, block.type === "hero" ? "hero" : "image")}
-                  isGeneratingImage={imageGeneratingBlock === blockId}
-                />
-              );})}
+            {/* Canvas blocks with Drag & Drop */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={blocks.map(b => b.id ?? '')}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-4">
+                  {blocks.map((block, index) => {
+                    const blockId = block.id ?? `block-${index}`;
+                    return (
+                      <SortableCanvasBlock
+                        key={blockId}
+                        id={blockId}
+                        block={block}
+                        isSelected={selectedBlockId === blockId}
+                        isDragging={activeBlockId === blockId}
+                        onSelect={() => setSelectedBlockId(blockId)}
+                        onUpdate={(data) => updateBlock(blockId, data)}
+                        onDelete={() => removeBlock(blockId)}
+                        onDuplicate={() => duplicateBlock(blockId)}
+                        onMoveUp={() => moveBlock(blockId, "up")}
+                        onMoveDown={() => moveBlock(blockId, "down")}
+                        canMoveUp={index > 0}
+                        canMoveDown={index < blocks.length - 1}
+                        title={title}
+                        onTitleChange={setTitle}
+                        onGenerateImage={() => handleGenerateImage(blockId, block.type === "hero" ? "hero" : "image")}
+                        isGeneratingImage={imageGeneratingBlock === blockId}
+                      />
+                    );
+                  })}
 
-              {blocks.length === 0 && (
-                <div className="text-center py-20 text-muted-foreground">
-                  <LayoutGrid className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Start building your page</p>
-                  <p className="text-sm mt-1">Select a block from the left panel to add content</p>
+                  {blocks.length === 0 && (
+                    <div className="text-center py-20 text-muted-foreground">
+                      <LayoutGrid className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium">Start building your page</p>
+                      <p className="text-sm mt-1">Select a block from the left panel to add content</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </SortableContext>
+
+              {/* Drag Overlay for smooth dragging */}
+              <DragOverlay>
+                {activeBlock ? (
+                  <div className="opacity-80 shadow-2xl">
+                    <CanvasBlockContent
+                      block={activeBlock}
+                      isSelected={true}
+                      title={title}
+                    />
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           </div>
         </div>
 
@@ -1723,108 +1849,230 @@ export default function ContentEditor() {
         </DialogContent>
       </Dialog>
 
-      {/* Version History Dialog */}
+      {/* Version History Dialog - Improved UI */}
       <Dialog open={versionHistoryOpen} onOpenChange={(open) => { setVersionHistoryOpen(open); if (!open) setSelectedVersion(null); }}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Version History</DialogTitle>
-            <DialogDescription>View and restore previous versions of this content</DialogDescription>
+        <DialogContent className="max-w-4xl max-h-[85vh]">
+          <DialogHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-primary/10">
+                <History className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg">Version History</DialogTitle>
+                <DialogDescription className="text-sm">Browse and restore previous versions of your content</DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="flex gap-4 min-h-[400px]">
-            {/* Version List */}
-            <div className="w-1/3 border-r pr-4">
+
+          <div className="flex gap-0 min-h-[450px] border rounded-lg overflow-hidden">
+            {/* Version Timeline */}
+            <div className="w-80 bg-muted/30 border-r">
+              <div className="p-3 border-b bg-background/50 backdrop-blur-sm sticky top-0">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {versions.length} {versions.length === 1 ? 'Version' : 'Versions'}
+                </p>
+              </div>
               <ScrollArea className="h-[400px]">
                 {isLoadingVersions ? (
-                  <div className="flex items-center justify-center py-8" data-testid="loading-versions">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <div className="flex flex-col items-center justify-center py-12 gap-3" data-testid="loading-versions">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+                    <p className="text-sm text-muted-foreground">Loading versions...</p>
                   </div>
                 ) : versions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4" data-testid="empty-versions">No versions saved yet. Versions are created when you save changes.</p>
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center" data-testid="empty-versions">
+                    <div className="p-3 rounded-full bg-muted mb-3">
+                      <History className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">No versions yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Versions are created each time you save changes</p>
+                  </div>
                 ) : (
-                  <div className="space-y-2">
-                    {versions.map((version) => (
-                      <button
-                        key={version.id}
-                        onClick={() => setSelectedVersion(version)}
-                        className={`w-full text-left p-3 rounded-md border transition-colors ${
-                          selectedVersion?.id === version.id ? "border-primary bg-primary/5" : "hover-elevate"
-                        }`}
-                        data-testid={`version-item-${version.versionNumber}`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-sm">Version {version.versionNumber}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {version.createdAt ? new Date(version.createdAt).toLocaleDateString() : ""}
-                          </Badge>
-                        </div>
-                        {version.changeNote && (
-                          <p className="text-xs text-muted-foreground mt-1 truncate">{version.changeNote}</p>
-                        )}
-                      </button>
-                    ))}
+                  <div className="relative py-2">
+                    {/* Timeline line */}
+                    <div className="absolute left-6 top-4 bottom-4 w-px bg-border" />
+
+                    {versions.map((version, index) => {
+                      const isLatest = index === 0;
+                      const isSelected = selectedVersion?.id === version.id;
+                      const createdDate = version.createdAt ? new Date(version.createdAt) : null;
+                      const timeAgo = createdDate ? getTimeAgo(createdDate) : '';
+
+                      return (
+                        <button
+                          key={version.id}
+                          onClick={() => setSelectedVersion(version)}
+                          className={`w-full text-left px-3 py-2 transition-all relative ${
+                            isSelected
+                              ? "bg-primary/10"
+                              : "hover:bg-muted/80"
+                          }`}
+                          data-testid={`version-item-${version.versionNumber}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {/* Timeline dot */}
+                            <div className={`relative z-10 mt-1.5 w-3 h-3 rounded-full border-2 ${
+                              isLatest
+                                ? "bg-green-500 border-green-500"
+                                : isSelected
+                                  ? "bg-primary border-primary"
+                                  : "bg-background border-muted-foreground/40"
+                            }`} />
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={`font-medium text-sm ${isSelected ? "text-primary" : ""}`}>
+                                  v{version.versionNumber}
+                                </span>
+                                {isLatest && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 border-green-200">
+                                    Latest
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{timeAgo}</p>
+                              {version.changeNote && (
+                                <p className="text-xs text-muted-foreground mt-1 truncate italic">
+                                  "{version.changeNote}"
+                                </p>
+                              )}
+                            </div>
+
+                            {isSelected && (
+                              <ChevronRight className="h-4 w-4 text-primary mt-1" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </ScrollArea>
             </div>
-            
+
             {/* Version Details */}
-            <div className="flex-1 pl-4">
+            <div className="flex-1 bg-background">
               {selectedVersion ? (
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Version {selectedVersion.versionNumber} Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Created:</span>
-                        <span>{selectedVersion.createdAt ? new Date(selectedVersion.createdAt).toLocaleString() : "Unknown"}</span>
+                <div className="h-full flex flex-col">
+                  {/* Header */}
+                  <div className="p-4 border-b bg-muted/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <FileText className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold">Version {selectedVersion.versionNumber}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedVersion.createdAt
+                              ? new Date(selectedVersion.createdAt).toLocaleString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : 'Unknown date'}
+                          </p>
+                        </div>
                       </div>
+                      <Button
+                        onClick={() => restoreMutation.mutate(selectedVersion.id)}
+                        disabled={restoreMutation.isPending}
+                        size="sm"
+                        data-testid="button-restore-version"
+                      >
+                        {restoreMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                        )}
+                        Restore
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <ScrollArea className="flex-1">
+                    <div className="p-4 space-y-4">
+                      {/* Stats Row */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 rounded-lg bg-muted/50 text-center">
+                          <p className="text-2xl font-bold text-primary">
+                            {Array.isArray(selectedVersion.blocks) ? selectedVersion.blocks.length : 0}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Blocks</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/50 text-center">
+                          <p className="text-2xl font-bold text-primary">
+                            v{selectedVersion.versionNumber}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Version</p>
+                        </div>
+                      </div>
+
+                      {/* Title */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider">Title</Label>
+                        <div className="p-3 rounded-lg border bg-muted/30">
+                          <p className="text-sm font-medium">{selectedVersion.title || '(No title)'}</p>
+                        </div>
+                      </div>
+
+                      {/* Meta Description */}
+                      {selectedVersion.metaDescription && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Meta Description</Label>
+                          <div className="p-3 rounded-lg border bg-muted/30">
+                            <p className="text-sm text-muted-foreground">{selectedVersion.metaDescription}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Blocks Preview */}
+                      {Array.isArray(selectedVersion.blocks) && selectedVersion.blocks.length > 0 && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Content Blocks</Label>
+                          <div className="space-y-1.5">
+                            {(selectedVersion.blocks as ContentBlock[]).slice(0, 5).map((block, idx) => {
+                              const config = blockTypes.find(bt => bt.type === block.type);
+                              return (
+                                <div key={idx} className="flex items-center gap-2 p-2 rounded-md border bg-muted/30">
+                                  <div className={`p-1 rounded ${config?.color || 'bg-muted'}`}>
+                                    {config?.icon && <config.icon className="h-3 w-3" />}
+                                  </div>
+                                  <span className="text-xs font-medium">{config?.label || block.type}</span>
+                                </div>
+                              );
+                            })}
+                            {selectedVersion.blocks.length > 5 && (
+                              <p className="text-xs text-muted-foreground text-center py-1">
+                                +{selectedVersion.blocks.length - 5} more blocks
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Change Note */}
                       {selectedVersion.changeNote && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Note:</span>
-                          <span>{selectedVersion.changeNote}</span>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Change Note</Label>
+                          <div className="p-3 rounded-lg border bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+                            <p className="text-sm italic">"{selectedVersion.changeNote}"</p>
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Title</h4>
-                    <p className="text-sm bg-muted p-2 rounded">{selectedVersion.title}</p>
-                  </div>
-                  
-                  {selectedVersion.metaDescription && (
-                    <div>
-                      <h4 className="font-medium text-sm mb-2">Meta Description</h4>
-                      <p className="text-sm bg-muted p-2 rounded">{selectedVersion.metaDescription}</p>
-                    </div>
-                  )}
-                  
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Content Blocks</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {Array.isArray(selectedVersion.blocks) ? selectedVersion.blocks.length : 0} blocks
-                    </p>
-                  </div>
-                  
-                  <Button 
-                    onClick={() => restoreMutation.mutate(selectedVersion.id)} 
-                    disabled={restoreMutation.isPending}
-                    className="w-full"
-                    data-testid="button-restore-version"
-                  >
-                    {restoreMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                    )}
-                    Restore This Version
-                  </Button>
+                  </ScrollArea>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <p className="text-sm">Select a version to view details</p>
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
+                  <div className="p-4 rounded-full bg-muted mb-4">
+                    <Clock className="h-8 w-8" />
+                  </div>
+                  <p className="font-medium">Select a version</p>
+                  <p className="text-sm text-center mt-1">Click on a version from the timeline to view its details and restore it</p>
                 </div>
               )}
             </div>
@@ -1835,10 +2083,12 @@ export default function ContentEditor() {
   );
 }
 
-// Canvas Block Component - Visual representation on the canvas
-function CanvasBlock({
+// Sortable Canvas Block Wrapper - Uses dnd-kit for drag & drop
+function SortableCanvasBlock({
+  id,
   block,
   isSelected,
+  isDragging,
   onSelect,
   onUpdate,
   onDelete,
@@ -1852,8 +2102,10 @@ function CanvasBlock({
   onGenerateImage,
   isGeneratingImage,
 }: {
+  id: string;
   block: ContentBlock;
   isSelected: boolean;
+  isDragging: boolean;
   onSelect: () => void;
   onUpdate: (data: Record<string, unknown>) => void;
   onDelete: () => void;
@@ -1867,15 +2119,31 @@ function CanvasBlock({
   onGenerateImage: () => void;
   isGeneratingImage: boolean;
 }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   const blockConfig = blockTypes.find((bt) => bt.type === block.type);
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={`group relative transition-all cursor-pointer ${
         isSelected
           ? "ring-2 ring-primary shadow-xl scale-[1.01]"
           : "hover:ring-2 hover:ring-primary/30 hover:shadow-lg"
-      }`}
+      } ${isDragging ? "z-50" : ""}`}
       onClick={(e) => {
         e.stopPropagation();
         onSelect();
@@ -1885,6 +2153,15 @@ function CanvasBlock({
       {/* Block header - visible on hover/select */}
       <div className={`absolute -top-10 left-0 right-0 flex items-center justify-between px-2 transition-all ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
         <div className="flex items-center gap-2">
+          {/* Drag handle in header */}
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+            title="Drag to reorder"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
           <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${blockConfig?.color || "bg-muted"}`}>
             {blockConfig?.icon && <blockConfig.icon className="h-3 w-3" />}
             {blockConfig?.label || block.type}
@@ -1907,82 +2184,124 @@ function CanvasBlock({
         </div>
       </div>
 
-      {/* Drag handle */}
-      <div className={`absolute -left-8 top-1/2 -translate-y-1/2 transition-opacity cursor-grab active:cursor-grabbing ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-60"}`}>
+      {/* Side drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className={`absolute -left-8 top-1/2 -translate-y-1/2 transition-opacity cursor-grab active:cursor-grabbing ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-60"}`}
+        title="Drag to reorder"
+      >
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 
       {/* Block content */}
-      <div className="bg-background rounded-lg overflow-hidden">
+      <CanvasBlockContent
+        block={block}
+        isSelected={isSelected}
+        title={title}
+        onTitleChange={onTitleChange}
+        onUpdate={onUpdate}
+        onGenerateImage={onGenerateImage}
+        isGeneratingImage={isGeneratingImage}
+      />
+    </div>
+  );
+}
+
+// Canvas Block Content - The actual visual content of each block type
+function CanvasBlockContent({
+  block,
+  isSelected,
+  title,
+  onTitleChange,
+  onUpdate,
+  onGenerateImage,
+  isGeneratingImage,
+}: {
+  block: ContentBlock;
+  isSelected: boolean;
+  title: string;
+  onTitleChange?: (title: string) => void;
+  onUpdate?: (data: Record<string, unknown>) => void;
+  onGenerateImage?: () => void;
+  isGeneratingImage?: boolean;
+}) {
+  // Provide no-op fallbacks for optional handlers (used in DragOverlay)
+  const handleUpdate = onUpdate || (() => {});
+  const handleTitleChange = onTitleChange || (() => {});
+  const handleGenerateImage = onGenerateImage || (() => {});
+  const generating = isGeneratingImage || false;
+
+  return (
+    <div className="bg-background rounded-lg overflow-hidden">
         {block.type === "hero" && (
           <HeroBlockCanvas
             block={block}
             title={title}
-            onTitleChange={onTitleChange}
-            onUpdate={onUpdate}
-            onGenerateImage={onGenerateImage}
-            isGeneratingImage={isGeneratingImage}
+            onTitleChange={handleTitleChange}
+            onUpdate={handleUpdate}
+            onGenerateImage={handleGenerateImage}
+            isGeneratingImage={generating}
             isSelected={isSelected}
           />
         )}
         {block.type === "text" && (
-          <TextBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <TextBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "image" && (
-          <ImageBlockCanvas block={block} onUpdate={onUpdate} onGenerateImage={onGenerateImage} isGeneratingImage={isGeneratingImage} isSelected={isSelected} />
+          <ImageBlockCanvas block={block} onUpdate={handleUpdate} onGenerateImage={handleGenerateImage} isGeneratingImage={generating} isSelected={isSelected} />
         )}
         {block.type === "faq" && (
-          <FAQBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <FAQBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "cta" && (
-          <CTABlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <CTABlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "highlights" && (
-          <HighlightsBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <HighlightsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "tips" && (
-          <TipsBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <TipsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "info_grid" && (
-          <InfoGridBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <InfoGridBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "gallery" && (
-          <GalleryBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <GalleryBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "video" && (
-          <VideoBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <VideoBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "quote" && (
-          <QuoteBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <QuoteBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "divider" && (
-          <DividerBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <DividerBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "heading" && (
-          <HeadingBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <HeadingBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "spacer" && (
-          <SpacerBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <SpacerBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "map" && (
-          <MapBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <MapBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "social" && (
-          <SocialBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <SocialBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "accordion" && (
-          <AccordionBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <AccordionBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "tabs" && (
-          <TabsBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <TabsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "columns" && (
-          <ColumnsBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <ColumnsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "html" && (
-          <HtmlBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <HtmlBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
-      </div>
     </div>
   );
 }
