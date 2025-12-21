@@ -49,6 +49,16 @@ import {
   Check,
   FolderOpen,
   Search,
+  Video,
+  Quote,
+  Minus,
+  MessageSquare,
+  Award,
+  MapPin,
+  Clock,
+  DollarSign,
+  Plus,
+  GripHorizontal,
 } from "lucide-react";
 import type {
   ContentWithRelations,
@@ -76,18 +86,37 @@ interface BlockTypeConfig {
   label: string;
   icon: typeof Image;
   description: string;
+  category: "media" | "content" | "layout" | "interactive";
+  color: string;
 }
 
 const blockTypes: BlockTypeConfig[] = [
-  { type: "hero", label: "Hero", icon: Image, description: "Full-width hero image" },
-  { type: "text", label: "Text", icon: Type, description: "Text paragraph" },
-  { type: "image", label: "Image", icon: Image, description: "Single image" },
-  { type: "gallery", label: "Gallery", icon: LayoutGrid, description: "Image gallery" },
-  { type: "faq", label: "FAQ", icon: HelpCircle, description: "Question & answer" },
-  { type: "cta", label: "CTA", icon: MousePointer, description: "Call to action button" },
-  { type: "info_grid", label: "Info Grid", icon: LayoutGrid, description: "Information grid" },
-  { type: "highlights", label: "Highlights", icon: Star, description: "Key highlights" },
-  { type: "tips", label: "Tips", icon: Lightbulb, description: "Travel tips" },
+  // Media blocks
+  { type: "hero", label: "Hero", icon: Image, description: "Full-width hero section", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  { type: "image", label: "Image", icon: ImagePlus, description: "Single image with caption", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  { type: "gallery", label: "Gallery", icon: LayoutGrid, description: "Image gallery grid", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  { type: "video", label: "Video", icon: Video, description: "YouTube/Vimeo embed", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+
+  // Content blocks
+  { type: "text", label: "Text", icon: Type, description: "Rich text paragraph", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  { type: "highlights", label: "Highlights", icon: Star, description: "Key feature highlights", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  { type: "tips", label: "Tips", icon: Lightbulb, description: "Pro tips & advice", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  { type: "quote", label: "Quote", icon: Quote, description: "Blockquote / testimonial", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+
+  // Layout blocks
+  { type: "info_grid", label: "Info Grid", icon: LayoutGrid, description: "Quick facts grid", category: "layout", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
+  { type: "divider", label: "Divider", icon: Minus, description: "Section separator", category: "layout", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
+
+  // Interactive blocks
+  { type: "faq", label: "FAQ", icon: HelpCircle, description: "Question & answer", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  { type: "cta", label: "CTA", icon: MousePointer, description: "Call to action button", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+];
+
+const blockCategories = [
+  { id: "media", label: "Media", icon: Image },
+  { id: "content", label: "Content", icon: Type },
+  { id: "layout", label: "Layout", icon: LayoutGrid },
+  { id: "interactive", label: "Interactive", icon: MousePointer },
 ];
 
 const defaultTemplateBlocks: ContentBlock[] = [
@@ -1191,13 +1220,19 @@ export default function ContentEditor() {
       case "faq":
         return { question: "", answer: "" };
       case "cta":
-        return { text: "Learn More", url: "" };
+        return { text: "Learn More", url: "", style: "primary" };
       case "info_grid":
         return { content: "" };
       case "highlights":
         return { content: "" };
       case "tips":
         return { content: "" };
+      case "video":
+        return { url: "", caption: "", provider: "youtube" };
+      case "quote":
+        return { text: "", author: "", role: "" };
+      case "divider":
+        return { style: "line" };
       default:
         return {};
     }
@@ -1389,24 +1424,46 @@ export default function ContentEditor() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel - Block Library */}
         {!leftPanelCollapsed && (
-          <div className="w-64 border-r bg-muted/30 shrink-0 flex flex-col">
-            <div className="p-3 border-b">
-              <h3 className="font-medium text-sm">Blocks</h3>
-              <p className="text-xs text-muted-foreground mt-1">Click to add to page</p>
+          <div className="w-72 border-r bg-gradient-to-b from-background to-muted/20 shrink-0 flex flex-col">
+            <div className="p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+              <h3 className="font-semibold text-base flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Block
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">Drag or click to add</p>
             </div>
             <ScrollArea className="flex-1">
-              <div className="p-3 grid grid-cols-2 gap-2">
-                {blockTypes.map((bt) => (
-                  <button
-                    key={bt.type}
-                    onClick={() => addBlock(bt.type)}
-                    className="flex flex-col items-center gap-2 p-3 rounded-md border bg-background hover-elevate cursor-pointer transition-all"
-                    data-testid={`block-add-${bt.type}`}
-                  >
-                    <bt.icon className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-xs font-medium">{bt.label}</span>
-                  </button>
-                ))}
+              <div className="p-3 space-y-4">
+                {blockCategories.map((category) => {
+                  const categoryBlocks = blockTypes.filter(b => b.category === category.id);
+                  if (categoryBlocks.length === 0) return null;
+                  return (
+                    <div key={category.id} className="space-y-2">
+                      <div className="flex items-center gap-2 px-1">
+                        <category.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{category.label}</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {categoryBlocks.map((bt) => (
+                          <button
+                            key={bt.type}
+                            onClick={() => addBlock(bt.type)}
+                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg border transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 cursor-grab active:cursor-grabbing ${bt.color}`}
+                            data-testid={`block-add-${bt.type}`}
+                          >
+                            <div className="p-1.5 rounded-md bg-background/80">
+                              <bt.icon className="h-4 w-4" />
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                              <div className="text-sm font-medium">{bt.label}</div>
+                              <div className="text-[10px] opacity-70 truncate">{bt.description}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </ScrollArea>
           </div>
@@ -1781,8 +1838,10 @@ function CanvasBlock({
 
   return (
     <div
-      className={`group relative rounded-lg transition-all cursor-pointer ${
-        isSelected ? "ring-2 ring-primary shadow-lg" : "hover:ring-1 hover:ring-border"
+      className={`group relative transition-all cursor-pointer ${
+        isSelected
+          ? "ring-2 ring-primary shadow-xl scale-[1.01]"
+          : "hover:ring-2 hover:ring-primary/30 hover:shadow-lg"
       }`}
       onClick={(e) => {
         e.stopPropagation();
@@ -1790,27 +1849,34 @@ function CanvasBlock({
       }}
       data-testid={`canvas-block-${block.id}`}
     >
-      {/* Block label */}
-      <div className={`absolute -top-3 left-3 z-10 transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-        <Badge variant="secondary" className="text-xs">
-          {blockConfig?.label || block.type}
-        </Badge>
+      {/* Block header - visible on hover/select */}
+      <div className={`absolute -top-10 left-0 right-0 flex items-center justify-between px-2 transition-all ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+        <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${blockConfig?.color || "bg-muted"}`}>
+            {blockConfig?.icon && <blockConfig.icon className="h-3 w-3" />}
+            {blockConfig?.label || block.type}
+          </div>
+        </div>
+        <div className="flex items-center gap-0.5 bg-background/95 backdrop-blur-sm rounded-lg border shadow-sm p-0.5">
+          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={!canMoveUp} data-testid={`move-up-${block.id}`} title="Move up">
+            <ChevronUp className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={!canMoveDown} data-testid={`move-down-${block.id}`} title="Move down">
+            <ChevronDown className="h-3.5 w-3.5" />
+          </Button>
+          <div className="w-px h-4 bg-border mx-0.5" />
+          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} data-testid={`duplicate-${block.id}`} title="Duplicate">
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(); }} data-testid={`delete-${block.id}`} title="Delete">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
-      {/* Block controls */}
-      <div className={`absolute -right-12 top-1/2 -translate-y-1/2 flex flex-col gap-1 transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={!canMoveUp} data-testid={`move-up-${block.id}`}>
-          <ChevronUp className="h-3 w-3" />
-        </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={!canMoveDown} data-testid={`move-down-${block.id}`}>
-          <ChevronDown className="h-3 w-3" />
-        </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} data-testid={`duplicate-${block.id}`}>
-          <Copy className="h-3 w-3" />
-        </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(); }} data-testid={`delete-${block.id}`}>
-          <Trash2 className="h-3 w-3" />
-        </Button>
+      {/* Drag handle */}
+      <div className={`absolute -left-8 top-1/2 -translate-y-1/2 transition-opacity cursor-grab active:cursor-grabbing ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-60"}`}>
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 
       {/* Block content */}
@@ -1849,6 +1915,15 @@ function CanvasBlock({
         )}
         {block.type === "gallery" && (
           <GalleryBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "video" && (
+          <VideoBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "quote" && (
+          <QuoteBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "divider" && (
+          <DividerBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
         )}
       </div>
     </div>
@@ -2444,6 +2519,150 @@ function GalleryBlockCanvas({
   );
 }
 
+// Video Block Canvas
+function VideoBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const url = String(block.data?.url || "");
+  const caption = String(block.data?.caption || "");
+
+  // Extract video ID from YouTube or Vimeo URL
+  const getEmbedUrl = (videoUrl: string) => {
+    // YouTube
+    const ytMatch = videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\s]+)/);
+    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+    // Vimeo
+    const vimeoMatch = videoUrl.match(/vimeo\.com\/(\d+)/);
+    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    return "";
+  };
+
+  const embedUrl = getEmbedUrl(url);
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      {embedUrl ? (
+        <div className="space-y-3">
+          <div className="aspect-video rounded-lg overflow-hidden bg-black">
+            <iframe
+              src={embedUrl}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+          {caption && <p className="text-sm text-muted-foreground text-center">{caption}</p>}
+        </div>
+      ) : (
+        <div className="aspect-video rounded-lg bg-gradient-to-br from-muted to-muted/50 flex flex-col items-center justify-center">
+          <Video className="h-12 w-12 text-muted-foreground/50 mb-3" />
+          <Input
+            value={url}
+            onChange={(e) => onUpdate({ url: e.target.value })}
+            placeholder="Paste YouTube or Vimeo URL..."
+            className="max-w-md text-center"
+            data-testid={`video-url-input-${block.id}`}
+          />
+          <p className="text-xs text-muted-foreground mt-2">Supports YouTube and Vimeo</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Quote Block Canvas
+function QuoteBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const text = String(block.data?.text || "");
+  const author = String(block.data?.author || "");
+  const role = String(block.data?.role || "");
+
+  return (
+    <div className={`p-6 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="relative pl-6 border-l-4 border-primary/60">
+        <Quote className="absolute -left-3 -top-2 h-6 w-6 text-primary/40 bg-background" />
+        <Textarea
+          value={text}
+          onChange={(e) => onUpdate({ text: e.target.value })}
+          placeholder="Enter quote text..."
+          className="min-h-[100px] text-lg italic border-none bg-transparent resize-none focus-visible:ring-0 p-0"
+          data-testid={`quote-text-input-${block.id}`}
+        />
+        <div className="flex gap-2 mt-3">
+          <Input
+            value={author}
+            onChange={(e) => onUpdate({ author: e.target.value })}
+            placeholder="Author name"
+            className="max-w-[200px] text-sm font-medium"
+            data-testid={`quote-author-input-${block.id}`}
+          />
+          <Input
+            value={role}
+            onChange={(e) => onUpdate({ role: e.target.value })}
+            placeholder="Title/Role"
+            className="max-w-[200px] text-sm text-muted-foreground"
+            data-testid={`quote-role-input-${block.id}`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Divider Block Canvas
+function DividerBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const style = String(block.data?.style || "line");
+
+  return (
+    <div className={`py-6 px-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          {style === "line" && <div className="h-px bg-border" />}
+          {style === "dots" && (
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-muted-foreground">•••</span>
+            </div>
+          )}
+          {style === "space" && <div className="h-8" />}
+        </div>
+        {isSelected && (
+          <Select value={style} onValueChange={(val) => onUpdate({ style: val })}>
+            <SelectTrigger className="w-28 h-8" data-testid={`divider-style-${block.id}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="line">Line</SelectItem>
+              <SelectItem value="dots">Dots</SelectItem>
+              <SelectItem value="space">Space</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Preview Block Component
 function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) {
   if (block.type === "hero") {
@@ -2561,12 +2780,106 @@ function BlockSettingsPanel({
             data-testid={`settings-cta-url-${block.id}`}
           />
         </div>
+        <div className="space-y-2">
+          <Label>Button Style</Label>
+          <Select value={String(block.data?.style || "primary")} onValueChange={(val) => onUpdate({ style: val })}>
+            <SelectTrigger data-testid={`settings-cta-style-${block.id}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="primary">Primary</SelectItem>
+              <SelectItem value="secondary">Secondary</SelectItem>
+              <SelectItem value="outline">Outline</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "video") {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Video URL</Label>
+          <Input
+            value={String(block.data?.url || "")}
+            onChange={(e) => onUpdate({ url: e.target.value })}
+            placeholder="YouTube or Vimeo URL"
+            data-testid={`settings-video-url-${block.id}`}
+          />
+          <p className="text-xs text-muted-foreground">Supports YouTube and Vimeo links</p>
+        </div>
+        <div className="space-y-2">
+          <Label>Caption (optional)</Label>
+          <Input
+            value={String(block.data?.caption || "")}
+            onChange={(e) => onUpdate({ caption: e.target.value })}
+            placeholder="Video description..."
+            data-testid={`settings-video-caption-${block.id}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "quote") {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Quote Text</Label>
+          <Textarea
+            value={String(block.data?.text || "")}
+            onChange={(e) => onUpdate({ text: e.target.value })}
+            placeholder="Enter the quote..."
+            data-testid={`settings-quote-text-${block.id}`}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Author Name</Label>
+          <Input
+            value={String(block.data?.author || "")}
+            onChange={(e) => onUpdate({ author: e.target.value })}
+            placeholder="Who said this?"
+            data-testid={`settings-quote-author-${block.id}`}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Author Title/Role</Label>
+          <Input
+            value={String(block.data?.role || "")}
+            onChange={(e) => onUpdate({ role: e.target.value })}
+            placeholder="CEO, Traveler, etc."
+            data-testid={`settings-quote-role-${block.id}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "divider") {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Divider Style</Label>
+          <Select value={String(block.data?.style || "line")} onValueChange={(val) => onUpdate({ style: val })}>
+            <SelectTrigger data-testid={`settings-divider-style-${block.id}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="line">Line</SelectItem>
+              <SelectItem value="dots">Dots</SelectItem>
+              <SelectItem value="space">Spacer</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="text-sm text-muted-foreground">
+    <div className="text-sm text-muted-foreground text-center py-4">
+      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
       <p>Edit this block directly on the canvas.</p>
     </div>
   );
