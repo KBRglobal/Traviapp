@@ -57,7 +57,7 @@ const MEGA_MALLS: Mall[] = [
     highlights: ["Dubai Aquarium", "Ice Rink", "VR Park", "KidZania", "Fashion Avenue"],
     stores: "1,200+",
     location: "Downtown Dubai",
-    image: "https://images.unsplash.com/photo-1614531341773-3bff8b7cb3fc?w=800&h=600&fit=crop"
+    image: "gradient:from-[#6C5CE7] via-[#8B7CF7] to-[#A29BFE]"
   },
   {
     id: "mall-of-emirates",
@@ -66,7 +66,7 @@ const MEGA_MALLS: Mall[] = [
     highlights: ["Ski Dubai", "Magic Planet", "VOX Cinemas", "Luxury Fashion"],
     stores: "630+",
     location: "Al Barsha",
-    image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&h=600&fit=crop"
+    image: "gradient:from-[#00CEC9] via-[#55EFC4] to-[#81ECEC]"
   },
   {
     id: "ibn-battuta",
@@ -75,7 +75,7 @@ const MEGA_MALLS: Mall[] = [
     highlights: ["6 Themed Courts", "IMAX Theatre", "270+ Stores", "Cultural Architecture"],
     stores: "270+",
     location: "Jebel Ali",
-    image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800&h=600&fit=crop"
+    image: "gradient:from-[#FF9327] via-[#FDCB6E] to-[#FFEAA7]"
   },
   {
     id: "festival-city",
@@ -84,7 +84,7 @@ const MEGA_MALLS: Mall[] = [
     highlights: ["IMAGINE Show", "Waterfront Dining", "IKEA", "Robinsons"],
     stores: "400+",
     location: "Festival City",
-    image: "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=800&h=600&fit=crop"
+    image: "gradient:from-[#0984E3] via-[#74B9FF] to-[#A8D8FF]"
   },
   {
     id: "dubai-hills",
@@ -93,7 +93,7 @@ const MEGA_MALLS: Mall[] = [
     highlights: ["Storm Coaster", "Roxy Cinemas", "Sky Terrace", "Luxury Brands"],
     stores: "650+",
     location: "Dubai Hills Estate",
-    image: "https://images.unsplash.com/photo-1567449303078-57ad995bd329?w=800&h=600&fit=crop"
+    image: "gradient:from-[#00B894] via-[#55EFC4] to-[#A8E6CF]"
   },
   {
     id: "wafi-mall",
@@ -102,7 +102,7 @@ const MEGA_MALLS: Mall[] = [
     highlights: ["Khan Murjan Souk", "Egyptian Theme", "Fine Dining", "Artisan Crafts"],
     stores: "350+",
     location: "Umm Hurair",
-    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop"
+    image: "gradient:from-[#E17055] via-[#FAB1A0] to-[#FFECD2]"
   }
 ];
 
@@ -114,7 +114,7 @@ const TRADITIONAL_SOUKS: Souk[] = [
     description: "Over 10 tonnes of gold on display in more than 300 jewelry stores. One of the world's largest gold markets with competitive prices and expert craftsmanship.",
     location: "Deira",
     established: "1900s",
-    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&h=600&fit=crop"
+    image: "gradient:from-[#FFD700] via-[#FFC300] to-[#F39C12]"
   },
   {
     id: "spice-souk",
@@ -122,7 +122,7 @@ const TRADITIONAL_SOUKS: Souk[] = [
     specialty: "Herbs & Spices",
     description: "A sensory journey through exotic spices, herbs, frankincense, saffron, and traditional Middle Eastern ingredients. Perfect for culinary enthusiasts.",
     location: "Deira",
-    image: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&h=600&fit=crop"
+    image: "gradient:from-[#D35400] via-[#E67E22] to-[#F39C12]"
   },
   {
     id: "perfume-souk",
@@ -130,7 +130,7 @@ const TRADITIONAL_SOUKS: Souk[] = [
     specialty: "Arabic Perfumes",
     description: "Discover authentic Arabic perfumes, oud oils, attar, and bakhoor. Home to traditional perfumers who can create custom blends to your preference.",
     location: "Deira",
-    image: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=800&h=600&fit=crop"
+    image: "gradient:from-[#9B59B6] via-[#8E44AD] to-[#BB8FCE]"
   },
   {
     id: "textile-souk",
@@ -138,7 +138,7 @@ const TRADITIONAL_SOUKS: Souk[] = [
     specialty: "Fabrics & Tailoring",
     description: "Vibrant market offering silk, cotton, lace, and embroidered fabrics. Many shops offer expert tailoring services at competitive prices.",
     location: "Bur Dubai",
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop"
+    image: "gradient:from-[#E91E63] via-[#F06292] to-[#F8BBD9]"
   },
   {
     id: "souk-madinat",
@@ -146,7 +146,7 @@ const TRADITIONAL_SOUKS: Souk[] = [
     specialty: "Modern Heritage Shopping",
     description: "Luxurious recreation of a traditional Arabian marketplace featuring boutique shops, waterways, and stunning views of Burj Al Arab.",
     location: "Jumeirah",
-    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop"
+    image: "gradient:from-[#1ABC9C] via-[#16A085] to-[#A3E4D7]"
   },
   {
     id: "souk-al-bahar",
@@ -154,7 +154,7 @@ const TRADITIONAL_SOUKS: Souk[] = [
     specialty: "Downtown Shopping",
     description: "Arabian-style souk in the heart of Downtown Dubai overlooking the Dubai Fountain and Burj Khalifa. Features 100+ boutiques and restaurants.",
     location: "Downtown Dubai",
-    image: "https://images.unsplash.com/photo-1583681234900-f18c3e0e0f98?w=800&h=600&fit=crop"
+    image: "gradient:from-[#34495E] via-[#5D6D7E] to-[#85929E]"
   }
 ];
 
@@ -164,35 +164,35 @@ const SHOPPING_DISTRICTS: ShoppingDistrict[] = [
     name: "Downtown Dubai",
     description: "Home to The Dubai Mall and luxury boutiques along Boulevard. The epicenter of high-end shopping in the Middle East.",
     vibe: "Luxury & High-End",
-    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop"
+    image: "gradient:from-[#2C3E50] via-[#34495E] to-[#5D6D7E]"
   },
   {
     id: "marina",
     name: "Dubai Marina",
     description: "Waterfront shopping at Dubai Marina Mall with stunning yacht harbor views. Perfect blend of retail and leisure.",
     vibe: "Waterfront Lifestyle",
-    image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800&h=600&fit=crop"
+    image: "gradient:from-[#0077B6] via-[#00B4D8] to-[#90E0EF]"
   },
   {
     id: "city-walk",
     name: "City Walk",
     description: "Open-air lifestyle destination featuring designer boutiques, concept stores, and trendy cafes in a European-style setting.",
     vibe: "Designer Boutiques",
-    image: "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=800&h=600&fit=crop"
+    image: "gradient:from-[#F94498] via-[#FDA9E5] to-[#FED7E2]"
   },
   {
     id: "jbr-walk",
     name: "JBR The Walk",
     description: "Beachside promenade lined with shops, restaurants, and entertainment. A favorite for both shopping and people-watching.",
     vibe: "Beachside Retail",
-    image: "https://images.unsplash.com/photo-1571406761485-2cb1f2e2c8b5?w=800&h=600&fit=crop"
+    image: "gradient:from-[#F9A825] via-[#FDD835] to-[#FFF59D]"
   },
   {
     id: "difc",
     name: "DIFC Gate Avenue",
     description: "Sophisticated shopping and art galleries in Dubai's financial hub. Features contemporary art, fine dining, and luxury retail.",
     vibe: "Art & Luxury",
-    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&h=600&fit=crop"
+    image: "gradient:from-[#4A148C] via-[#7B1FA2] to-[#CE93D8]"
   }
 ];
 
@@ -237,8 +237,7 @@ export default function PublicShopping() {
 
   useDocumentMeta({
     title: "Dubai Shopping Malls & Souks | Complete Guide 2025 | Travi",
-    description: "Explore 50+ shopping malls, traditional souks, and tax-free shopping in Dubai. From the world's largest mall to historic gold markets - your complete Dubai shopping guide.",
-    keywords: "Dubai shopping, Dubai Mall, Mall of Emirates, Gold Souk, Dubai souks, tax-free shopping Dubai, Dubai Shopping Festival, luxury shopping Dubai"
+    description: "Explore 50+ shopping malls, traditional souks, and tax-free shopping in Dubai. From the world's largest mall to historic gold markets - your complete Dubai shopping guide."
   });
 
   return (
@@ -247,13 +246,8 @@ export default function PublicShopping() {
 
       {/* Hero Section */}
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1614531341773-3bff8b7cb3fc?w=1920&h=1080&fit=crop')"
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#6C5CE7] via-[#F94498] to-[#FF9327]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50" />
         
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-32 text-center">
           <Badge className="mb-6 bg-white/10 backdrop-blur-sm border-white/20 text-white px-4 py-2">
@@ -314,40 +308,41 @@ export default function PublicShopping() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {MEGA_MALLS.map((mall) => (
-              <Card key={mall.id} className="group overflow-visible hover-elevate" data-testid={`card-mall-${mall.id}`}>
-                <div className="relative h-48 overflow-hidden rounded-t-md">
-                  <img
-                    src={mall.image}
-                    alt={mall.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute top-4 right-4">
-                    <Badge className="bg-white/90 text-foreground border-0">
-                      <Store className="w-3 h-3 mr-1" />
-                      {mall.stores} stores
-                    </Badge>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <h3 className="text-xl font-bold text-foreground">{mall.name}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{mall.description}</p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                    <MapPin className="w-4 h-4 text-[#6C5CE7]" />
-                    {mall.location}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {mall.highlights.slice(0, 3).map((highlight) => (
-                      <Badge key={highlight} variant="secondary" className="text-xs">
-                        {highlight}
+            {MEGA_MALLS.map((mall) => {
+              const gradientClass = mall.image.replace("gradient:", "bg-gradient-to-br ");
+              return (
+                <Card key={mall.id} className="group overflow-visible hover-elevate" data-testid={`card-mall-${mall.id}`}>
+                  <div className={`relative h-48 overflow-hidden rounded-t-md ${gradientClass}`}>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Building2 className="w-16 h-16 text-white/30" />
+                    </div>
+                    <div className="absolute top-4 right-4">
+                      <Badge className="bg-white/90 text-foreground border-0">
+                        <Store className="w-3 h-3 mr-1" />
+                        {mall.stores} stores
                       </Badge>
-                    ))}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <h3 className="text-xl font-bold text-foreground">{mall.name}</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{mall.description}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                      <MapPin className="w-4 h-4 text-[#6C5CE7]" />
+                      {mall.location}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {mall.highlights.slice(0, 3).map((highlight) => (
+                        <Badge key={highlight} variant="secondary" className="text-xs">
+                          {highlight}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -369,37 +364,38 @@ export default function PublicShopping() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {TRADITIONAL_SOUKS.map((souk) => (
-              <Card key={souk.id} className="group overflow-visible hover-elevate" data-testid={`card-souk-${souk.id}`}>
-                <div className="relative h-48 overflow-hidden rounded-t-md">
-                  <img
-                    src={souk.image}
-                    alt={souk.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <Badge className="bg-gradient-to-r from-[#FF9327] to-[#FFD112] text-white border-0">
-                      {souk.specialty}
-                    </Badge>
-                  </div>
-                  {souk.established && (
-                    <div className="absolute top-4 right-4">
-                      <Badge className="bg-white/90 text-foreground border-0">
-                        Est. {souk.established}
+            {TRADITIONAL_SOUKS.map((souk) => {
+              const gradientClass = souk.image.replace("gradient:", "bg-gradient-to-br ");
+              return (
+                <Card key={souk.id} className="group overflow-visible hover-elevate" data-testid={`card-souk-${souk.id}`}>
+                  <div className={`relative h-48 overflow-hidden rounded-t-md ${gradientClass}`}>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Landmark className="w-16 h-16 text-white/30" />
+                    </div>
+                    <div className="absolute top-4 left-4">
+                      <Badge className="bg-white/90 backdrop-blur-sm text-foreground border-0">
+                        {souk.specialty}
                       </Badge>
                     </div>
-                  )}
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-foreground mb-2">{souk.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{souk.description}</p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 text-[#FF9327]" />
-                    {souk.location}
+                    {souk.established && (
+                      <div className="absolute top-4 right-4">
+                        <Badge className="bg-white/90 text-foreground border-0">
+                          Est. {souk.established}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </Card>
-            ))}
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-foreground mb-2">{souk.name}</h3>
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{souk.description}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="w-4 h-4 text-[#FF9327]" />
+                      {souk.location}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -421,27 +417,27 @@ export default function PublicShopping() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-            {SHOPPING_DISTRICTS.map((district) => (
-              <Card key={district.id} className="group overflow-visible hover-elevate" data-testid={`card-district-${district.id}`}>
-                <div className="relative h-36 overflow-hidden rounded-t-md">
-                  <img
-                    src={district.image}
-                    alt={district.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30 text-xs">
-                      {district.vibe}
-                    </Badge>
+            {SHOPPING_DISTRICTS.map((district) => {
+              const gradientClass = district.image.replace("gradient:", "bg-gradient-to-br ");
+              return (
+                <Card key={district.id} className="group overflow-visible hover-elevate" data-testid={`card-district-${district.id}`}>
+                  <div className={`relative h-36 overflow-hidden rounded-t-md ${gradientClass}`}>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <ShoppingBag className="w-10 h-10 text-white/30" />
+                    </div>
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30 text-xs">
+                        {district.vibe}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-bold text-foreground mb-1">{district.name}</h3>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{district.description}</p>
-                </div>
-              </Card>
-            ))}
+                  <div className="p-4">
+                    <h3 className="font-bold text-foreground mb-1">{district.name}</h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{district.description}</p>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
