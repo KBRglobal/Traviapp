@@ -112,6 +112,11 @@ import { HotelSeoEditor } from "@/components/hotel-seo-editor";
 import { DiningSeoEditor } from "@/components/dining-seo-editor";
 import { DistrictSeoEditor } from "@/components/district-seo-editor";
 import { TranslationManager } from "@/components/translation-manager";
+import { AITitleSuggestions } from "@/components/ai-title-suggestions";
+import { RelatedContentFinder } from "@/components/related-content-finder";
+import { BrokenLinkChecker } from "@/components/broken-link-checker";
+import { ReadingTimeCalculator } from "@/components/reading-time-calculator";
+import { useRegisterTab } from "@/components/multi-tab-editor";
 
 type ContentType = "attraction" | "hotel" | "article" | "dining" | "district";
 // TEMPORARILY DISABLED: "transport" | "event" | "itinerary" - Will be enabled later
@@ -462,6 +467,13 @@ export default function ContentEditor() {
     return "article";
   };
   const contentType: ContentType = getContentType();
+
+  // Multi-tab editing support
+  const { registerTab, markDirty, updateTitle } = useRegisterTab(
+    contentType,
+    contentId || "new",
+    ""
+  );
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -963,6 +975,28 @@ export default function ContentEditor() {
       setHistoryIndex(0);
     }
   }, [content, isNew]);
+
+  // Register tab for multi-tab editing
+  useEffect(() => {
+    if (content?.title || title) {
+      registerTab();
+      updateTitle(content?.title || title || "Untitled");
+    }
+  }, [content?.title, contentId]);
+
+  // Update tab title when title changes
+  useEffect(() => {
+    if (title) {
+      updateTitle(title);
+    }
+  }, [title, updateTitle]);
+
+  // Mark tab as dirty when content changes
+  useEffect(() => {
+    if (hasChangedRef.current) {
+      markDirty(true);
+    }
+  }, [title, slug, blocks, markDirty]);
 
   // Autosave effect - debounce changes and auto-save after 30 seconds of inactivity
   useEffect(() => {
@@ -1751,8 +1785,9 @@ export default function ContentEditor() {
 
           <div className="flex items-center gap-2">
             <StatusBadge status={status as "draft" | "in_review" | "approved" | "scheduled" | "published"} />
-            {/* Live Word Count */}
+            {/* Live Word Count with Reading Time */}
             <span className="text-sm text-muted-foreground">{seoScore.totalWords} words</span>
+            <ReadingTimeCalculator wordCount={seoScore.totalWords} />
           </div>
 
           {/* Live SEO Score Indicator */}
@@ -1825,6 +1860,16 @@ export default function ContentEditor() {
               <History className="h-4 w-4 mr-2" />
               History
             </Button>
+          )}
+          {/* Broken Link Checker */}
+          <BrokenLinkChecker contentBody={blocks.filter(b => b.type === "text").map(b => b.data?.content || "").join(" ")} />
+          {/* Related Content Finder */}
+          {contentId && (
+            <RelatedContentFinder
+              currentContentId={contentId}
+              currentTitle={title}
+              currentType={contentType}
+            />
           )}
           {/* Translation Manager - Only for PUBLISHED content */}
           {contentId && title && status === "published" && (
@@ -4123,7 +4168,18 @@ function PageSettingsPanel({
       <div className="space-y-4">
         <h4 className="text-sm font-medium">Basic</h4>
         <div className="space-y-2">
-          <Label>Title</Label>
+          <div className="flex items-center justify-between">
+            <Label>Title</Label>
+            <AITitleSuggestions
+              currentTitle={title}
+              onSelect={(newTitle) => {
+                onTitleChange(newTitle);
+                if (!slug || slug === generateSlug(title)) {
+                  onSlugChange(generateSlug(newTitle));
+                }
+              }}
+            />
+          </div>
           <Input
             value={title}
             onChange={(e) => {

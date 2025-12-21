@@ -133,6 +133,8 @@ import { AIAssistant } from "@/components/ai-assistant";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 import { KeyboardShortcuts, useKeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { NotificationsCenter } from "@/components/notifications-center";
+import { MultiTabProvider, EditorTabBar, TabCountBadge } from "@/components/multi-tab-editor";
+import { ContentExpiryAlerts } from "@/components/content-expiry-alerts";
 
 // Loading fallback component
 function PageLoader() {
@@ -265,26 +267,33 @@ function AdminLayout() {
   }
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex h-screen w-full">
-        <AppSidebar user={user} />
-        <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex items-center justify-between gap-4 p-3 border-b sticky top-0 z-50 bg-background">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-2">
-              <NotificationsCenter />
-              <ThemeToggle />
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto p-6">
-            <AdminRouter />
-          </main>
+    <MultiTabProvider>
+      <SidebarProvider style={style as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AppSidebar user={user} />
+          <div className="flex flex-col flex-1 min-w-0">
+            <header className="flex items-center justify-between gap-4 p-3 border-b sticky top-0 z-50 bg-background">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <TabCountBadge />
+              </div>
+              <div className="flex items-center gap-2">
+                <ContentExpiryAlerts compact />
+                <NotificationsCenter />
+                <ThemeToggle />
+              </div>
+            </header>
+            <EditorTabBar />
+            <main className="flex-1 overflow-auto p-6">
+              <AdminRouter />
+            </main>
+          </div>
+          <AIAssistant />
+          <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+          <KeyboardShortcuts open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
         </div>
-        <AIAssistant />
-        <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
-        <KeyboardShortcuts open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </MultiTabProvider>
   );
 }
 
