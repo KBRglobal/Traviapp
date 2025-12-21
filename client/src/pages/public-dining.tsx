@@ -495,13 +495,13 @@ export default function PublicDining() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href={localePath("/attractions")}>
-              <Button className="bg-white text-[#6443F4] hover:bg-white/90 px-8">
+              <Button className="bg-white text-[#6443F4] hover:bg-white/90 px-8" data-testid="button-explore-attractions">
                 Explore Attractions
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
             <Link href={localePath("/hotels")}>
-              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 bg-white/10 backdrop-blur-sm">
+              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 bg-white/10 backdrop-blur-sm" data-testid="button-find-hotels">
                 Find Hotels
               </Button>
             </Link>
