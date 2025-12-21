@@ -1642,7 +1642,7 @@ export const aiGeneratedImages = pgTable("ai_generated_images", {
   width: integer("width"),
   height: integer("height"),
   aiQualityScore: integer("ai_quality_score"),
-  userRating: integer("user_rating"),
+  userRating: varchar("user_rating"),
   size: integer("size"),
   isApproved: boolean("is_approved").default(false),
   usageCount: integer("usage_count").default(0),
