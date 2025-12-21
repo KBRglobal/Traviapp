@@ -333,7 +333,7 @@ const publicRoutes = [
   { path: "/dubai/sheikh-mohammed-bin-rashid", component: LandingSheikhMohammed },
   { path: "/dubai/24-hours-open", component: LandingDubai247 },
   // Shopping page
-  { path: "/dubai/shopping", component: PublicShopping },
+  { path: "/shopping", component: PublicShopping },
   // News portal
   { path: "/news", component: PublicNews },
   // District pages
