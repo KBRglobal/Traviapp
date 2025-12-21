@@ -63,7 +63,7 @@ export function PublicNav({
           hideOnMobile ? "hidden lg:block" : ""
         } ${
           showGlassEffect
-            ? "bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg shadow-slate-200/20 dark:shadow-slate-900/30"
+            ? "bg-white/80 dark:bg-card/80 backdrop-blur-xl shadow-lg shadow-black/5 dark:shadow-black/20"
             : isTransparent 
               ? "bg-transparent" 
               : "bg-background/95 backdrop-blur-md border-b border-border/40"
@@ -92,10 +92,10 @@ export function PublicNav({
                     className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
                       active
                         ? showGlassEffect || !isTransparent
-                          ? "bg-gradient-to-r from-[#6C5CE7]/10 to-[#EC4899]/10 text-[#6C5CE7]"
+                          ? "bg-travi-purple/10 text-travi-purple"
                           : "bg-white/20 text-white"
                         : showGlassEffect || !isTransparent
-                          ? "text-slate-600 hover:text-[#6C5CE7] hover:bg-slate-100/80"
+                          ? "text-muted-foreground hover:text-travi-purple hover:bg-muted"
                           : "text-white/80 hover:text-white hover:bg-white/10"
                     }`}
                     data-testid={`link-${link.href.slice(1)}`}
@@ -111,7 +111,7 @@ export function PublicNav({
                 href={localePath("/dubai-off-plan-properties")}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                   showGlassEffect || !isTransparent
-                    ? "bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] text-white shadow-md shadow-purple-500/25 hover:shadow-lg hover:shadow-purple-500/30"
+                    ? "bg-gradient-to-r from-travi-purple to-travi-pink text-white shadow-md shadow-travi-purple/25 hover:shadow-lg hover:shadow-travi-purple/30"
                     : "bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-white/30"
                 }`}
                 data-testid="link-off-plan"
@@ -132,7 +132,7 @@ export function PublicNav({
                   tierFilter={[1, 2, 3, 4, 5]}
                   className={`rounded-full ${
                     showGlassEffect || !isTransparent
-                      ? "border-slate-200 text-slate-600 hover:bg-slate-100"
+                      ? "border-border text-muted-foreground hover:bg-muted"
                       : "border-white/30 text-white hover:bg-white/10"
                   }`}
                 />
@@ -145,7 +145,7 @@ export function PublicNav({
                   size="icon"
                   className={`rounded-full ${
                     showGlassEffect || !isTransparent
-                      ? "text-slate-600 hover:bg-slate-100"
+                      ? "text-muted-foreground hover:bg-muted"
                       : "text-white hover:bg-white/10"
                   }`}
                   data-testid="button-search-nav"
@@ -159,7 +159,7 @@ export function PublicNav({
               <button 
                 className={`lg:hidden p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
                   showGlassEffect || !isTransparent
-                    ? "text-slate-600 hover:bg-slate-100 focus:ring-[#6C5CE7]" 
+                    ? "text-muted-foreground hover:bg-muted focus:ring-travi-purple" 
                     : "text-white hover:bg-white/10 focus:ring-white/50"
                 }`}
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -190,7 +190,7 @@ export function PublicNav({
       {/* Mobile Menu Drawer - Slides from right, always accessible */}
       <nav 
         id="mobile-menu"
-        className={`lg:hidden fixed top-0 ${isRTL ? 'left-0' : 'right-0'} h-full w-[85%] max-w-[320px] z-[101] bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-300 ease-out ${
+        className={`lg:hidden fixed top-0 ${isRTL ? 'left-0' : 'right-0'} h-full w-[85%] max-w-[320px] z-[101] bg-background shadow-2xl transition-transform duration-300 ease-out ${
           mobileMenuOpen 
             ? "translate-x-0" 
             : isRTL ? "-translate-x-full" : "translate-x-full"
@@ -199,15 +199,15 @@ export function PublicNav({
         dir={isRTL ? "rtl" : "ltr"}
       >
         {/* Drawer Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between p-5 border-b border-border">
           <Logo variant="primary" height={28} linkTo={localePath("/")} />
           <button 
             onClick={() => setMobileMenuOpen(false)}
-            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-full hover:bg-muted transition-colors"
             aria-label={t("common.close") || "Close menu"}
             data-testid="button-close-mobile-menu"
           >
-            <X className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+            <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
@@ -223,16 +223,16 @@ export function PublicNav({
                   href={localePath(link.href)}
                   className={`py-3.5 px-4 rounded-xl text-base font-medium transition-all flex items-center gap-3 ${
                     active
-                      ? "bg-gradient-to-r from-[#6C5CE7]/15 to-[#EC4899]/15 text-[#6C5CE7] dark:text-[#A29BFE]"
-                      : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      ? "bg-travi-purple/15 text-travi-purple"
+                      : "text-foreground hover:bg-muted"
                   }`}
                   data-testid={`link-${link.href.slice(1)}-mobile`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                     active 
-                      ? "bg-gradient-to-br from-[#6C5CE7] to-[#EC4899] text-white" 
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                      ? "bg-gradient-to-br from-travi-purple to-travi-pink text-white" 
+                      : "bg-muted text-muted-foreground"
                   }`}>
                     <IconComponent className="w-5 h-5" />
                   </div>
@@ -244,7 +244,7 @@ export function PublicNav({
             {/* Real Estate - Mobile (Highlighted) */}
             <Link
               href={localePath("/dubai-off-plan-properties")}
-              className="mt-2 py-3.5 px-4 rounded-xl text-base font-medium bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] text-white flex items-center gap-3 shadow-lg shadow-purple-500/25"
+              className="mt-2 py-3.5 px-4 rounded-xl text-base font-medium bg-gradient-to-r from-travi-purple to-travi-pink text-white flex items-center gap-3 shadow-lg shadow-travi-purple/25"
               data-testid="link-off-plan-mobile"
               onClick={() => setMobileMenuOpen(false)}
             >
@@ -256,8 +256,8 @@ export function PublicNav({
           </div>
 
           {/* Language Section */}
-          <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-            <span className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <div className="mt-6 pt-6 border-t border-border">
+            <span className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               {t("nav.language") || "Language"}
             </span>
             <div className="mt-3">
@@ -267,8 +267,8 @@ export function PublicNav({
         </div>
 
         {/* Drawer Footer */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-          <p className="text-xs text-center text-slate-400">
+        <div className="p-4 border-t border-border bg-muted/30">
+          <p className="text-xs text-center text-muted-foreground">
             {t("home.multiLanguageDesc") || "Read in your native language"}
           </p>
         </div>
@@ -277,12 +277,12 @@ export function PublicNav({
       {/* Mobile Top Menu Button - Hamburger (visible on all pages) */}
       <button
         type="button"
-        className={`lg:hidden fixed top-4 z-50 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg active:scale-95 transition-transform ${isRTL ? 'left-4' : 'right-4'}`}
+        className={`lg:hidden fixed top-4 z-50 p-2 rounded-full bg-background/90 backdrop-blur-sm shadow-lg active:scale-95 transition-transform ${isRTL ? 'left-4' : 'right-4'}`}
         onClick={() => setMobileMenuOpen(true)}
         data-testid="button-mobile-menu-top"
         aria-label={t("nav.menu") || "Open menu"}
       >
-        <Menu className="w-6 h-6 text-[#6C5CE7]" />
+        <Menu className="w-6 h-6 text-travi-purple" />
       </button>
 
       {/* Mobile Menu Trigger - Duck Mascot (visible on all pages) */}
@@ -304,7 +304,7 @@ export function PublicNav({
         />
         
         {/* MENU Text below duck - purple pill for visibility */}
-        <span className="text-[10px] font-bold text-white uppercase tracking-wider bg-[#6C5CE7] px-2 py-0.5 rounded-full shadow-md">
+        <span className="text-[10px] font-bold text-white uppercase tracking-wider bg-travi-purple px-2 py-0.5 rounded-full shadow-md">
           {t("nav.menu") || "Menu"}
         </span>
       </button>

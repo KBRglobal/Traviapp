@@ -1,19 +1,19 @@
 import { Link } from "wouter";
 import {
-  Search, MapPin, Star, Users, Sparkles, Moon, Heart,
-  Gem, Compass, Mountain, Building2, Ship, Plane,
-  Camera, TreePine, Waves, ChevronRight, ArrowRight,
-  Clock, Sun, Zap, Eye, Ticket, Utensils, ShoppingBag,
-  Palmtree, Fish, Bike, Wind, Umbrella, Music, Theater,
-  Globe, Car, Landmark, ChefHat, Droplets
+  MapPin, Star, Building2, Ship,
+  TreePine, Waves, ChevronRight, ArrowRight,
+  Sun, Eye, ShoppingBag,
+  Fish, Wind, Umbrella, Theater,
+  Car, ChefHat
 } from "lucide-react";
-import { PublicNav } from "@/components/public-nav";
-import { PublicFooter } from "@/components/public-footer";
 import { useState } from "react";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { PageContainer, Section, CategoryGrid, ContentCard } from "@/components/public-layout";
+import { PublicHero } from "@/components/public-hero";
 
 interface Attraction {
   id: number;
@@ -40,7 +40,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Observation Decks & Landmarks",
     count: 12,
     icon: Eye,
-    gradient: "from-[#FF9327] to-[#FFD112]",
+    gradient: "from-accent to-warning",
     image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
     description: "Experience Dubai from breathtaking heights with world-record observation decks",
     attractions: [
@@ -63,7 +63,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Theme Parks",
     count: 15,
     icon: Star,
-    gradient: "from-[#F94498] to-[#FDA9E5]",
+    gradient: "from-primary to-primary/60",
     image: "https://images.unsplash.com/photo-1558008258-3256797b43f3?w=800&h=600&fit=crop",
     description: "World-class indoor and outdoor entertainment for all ages",
     attractions: [
@@ -89,7 +89,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Water Parks",
     count: 5,
     icon: Waves,
-    gradient: "from-[#01BEFF] to-[#6443F4]",
+    gradient: "from-info to-secondary",
     image: "https://images.unsplash.com/photo-1582654454409-778f6619e0e2?w=800&h=600&fit=crop",
     description: "Year-round aquatic thrills at world-class water parks",
     attractions: [
@@ -105,7 +105,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Museums & Cultural Attractions",
     count: 25,
     icon: Building2,
-    gradient: "from-[#6443F4] to-[#9077EF]",
+    gradient: "from-secondary to-secondary/70",
     image: "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=800&h=600&fit=crop",
     description: "Discover Dubai's rich heritage and cutting-edge digital art experiences",
     attractions: [
@@ -141,7 +141,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Zoos, Aquariums & Wildlife",
     count: 8,
     icon: Fish,
-    gradient: "from-[#02A65C] to-[#59ED63]",
+    gradient: "from-success to-success/60",
     image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop",
     description: "Meet marine life and exotic animals from around the world",
     attractions: [
@@ -160,7 +160,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Parks & Gardens",
     count: 4,
     icon: TreePine,
-    gradient: "from-[#02A65C] to-[#01BEFF]",
+    gradient: "from-success to-info",
     image: "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800&h=600&fit=crop",
     description: "Stunning floral displays and natural escapes in the desert",
     attractions: [
@@ -175,7 +175,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Desert Adventures",
     count: 12,
     icon: Sun,
-    gradient: "from-[#FF9327] to-[#F2CCA6]",
+    gradient: "from-accent to-accent/50",
     image: "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=800&h=600&fit=crop",
     description: "Thrilling dune experiences and authentic Bedouin culture",
     attractions: [
@@ -198,7 +198,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Cruises & Boat Experiences",
     count: 12,
     icon: Ship,
-    gradient: "from-[#01BEFF] to-[#9077EF]",
+    gradient: "from-info to-secondary/70",
     image: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&h=600&fit=crop",
     description: "Scenic water journeys from traditional dhows to luxury yachts",
     attractions: [
@@ -221,7 +221,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Aerial Adventures & Extreme Sports",
     count: 14,
     icon: Wind,
-    gradient: "from-[#F94498] to-[#6443F4]",
+    gradient: "from-primary to-secondary",
     image: "https://images.unsplash.com/photo-1503891617560-5b8c2e28cbf6?w=800&h=600&fit=crop",
     description: "Heart-pumping experiences from skydiving to ziplines",
     attractions: [
@@ -246,7 +246,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Water Sports & Activities",
     count: 15,
     icon: Umbrella,
-    gradient: "from-[#01BEFF] to-[#02A65C]",
+    gradient: "from-info to-success",
     image: "https://images.unsplash.com/photo-1530866495561-507c9faab2ed?w=800&h=600&fit=crop",
     description: "Every water activity imaginable along Dubai's stunning coastline",
     attractions: [
@@ -272,7 +272,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Entertainment & Shows",
     count: 10,
     icon: Theater,
-    gradient: "from-[#6443F4] to-[#F94498]",
+    gradient: "from-secondary to-primary",
     image: "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&h=600&fit=crop",
     description: "World-class performances and entertainment venues",
     attractions: [
@@ -293,7 +293,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Shopping Destinations",
     count: 11,
     icon: ShoppingBag,
-    gradient: "from-[#FF9327] to-[#F94498]",
+    gradient: "from-accent to-primary",
     image: "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=800&h=600&fit=crop",
     description: "From mega malls to traditional souks - a shopper's paradise",
     attractions: [
@@ -315,7 +315,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Dining Experiences",
     count: 8,
     icon: ChefHat,
-    gradient: "from-[#F94498] to-[#FFD112]",
+    gradient: "from-primary to-warning",
     image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=600&fit=crop",
     description: "Extraordinary culinary experiences from sky-high to underwater",
     attractions: [
@@ -334,7 +334,7 @@ const CATEGORIES_DATA: CategoryData[] = [
     name: "Day Trips from Dubai",
     count: 15,
     icon: Car,
-    gradient: "from-[#02A65C] to-[#6443F4]",
+    gradient: "from-success to-secondary",
     image: "https://images.unsplash.com/photo-1512632578888-169bbbc64f33?w=800&h=600&fit=crop",
     description: "Explore Abu Dhabi's mega-attractions and the Hajar Mountains",
     attractions: [
@@ -368,86 +368,51 @@ const FEATURED_ATTRACTIONS = [
   {
     name: "Burj Khalifa",
     tagline: "World's Tallest Building at 828m",
-    gradient: "from-sky-600 via-blue-700 to-indigo-800",
-    icon: Building2,
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop",
     tags: ["Iconic", "Must See"],
     label: "Editor's Pick"
   },
   {
     name: "Dubai Fountain",
     tagline: "World's Largest Choreographed Fountain Show",
-    gradient: "from-cyan-500 via-teal-600 to-emerald-700",
-    icon: Droplets,
+    image: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&h=400&fit=crop",
     tags: ["Free", "Night"],
     label: "Most Loved"
   },
   {
     name: "Desert Safari",
     tagline: "Dune Bashing, Dinner & Bedouin Culture",
-    gradient: "from-amber-500 via-orange-600 to-red-700",
-    icon: Sun,
+    image: "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=600&h=400&fit=crop",
     tags: ["Adventure", "Sunset"],
     label: "First Time Dubai"
   },
   {
     name: "Atlantis Aquaventure",
     tagline: "World's Largest Waterpark with 105+ Slides",
-    gradient: "from-pink-500 via-rose-600 to-red-600",
-    icon: Waves,
+    image: "https://images.unsplash.com/photo-1582654454409-778f6619e0e2?w=600&h=400&fit=crop",
     tags: ["Family", "Thrill"],
     label: null
   },
   {
     name: "Museum of the Future",
     tagline: "Award-Winning Architectural Marvel",
-    gradient: "from-violet-600 via-purple-700 to-fuchsia-800",
-    icon: Sparkles,
+    image: "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=600&h=400&fit=crop",
     tags: ["Innovation", "Culture"],
     label: null
   },
   {
     name: "Ain Dubai",
     tagline: "World's Tallest Observation Wheel at 250m",
-    gradient: "from-emerald-500 via-teal-600 to-cyan-700",
-    icon: Eye,
+    image: "https://images.unsplash.com/photo-1503891617560-5b8c2e28cbf6?w=600&h=400&fit=crop",
     tags: ["Views", "Romantic"],
     label: null
   },
 ];
 
-function CategoryCard({ category }: { category: CategoryData }) {
-  const Icon = category.icon;
-  
-  return (
-    <div 
-      className="group relative overflow-hidden rounded-xl cursor-default"
-      data-testid={`card-category-${category.id}`}
-    >
-      <div className="aspect-[4/3] overflow-hidden">
-        <img 
-          src={category.image} 
-          alt={category.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-        />
-        <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-80 mix-blend-multiply`} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-      </div>
-      
-      <div className="absolute inset-0 flex flex-col justify-end p-4 md:p-5">
-        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3">
-          <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
-        </div>
-        <h3 className="font-bold text-white text-sm md:text-base mb-1">{category.name}</h3>
-        <p className="text-white/80 text-xs md:text-sm">{category.count} attractions</p>
-      </div>
-    </div>
-  );
-}
-
 function AttractionCard({ attraction, categoryGradient }: { attraction: Attraction; categoryGradient: string }) {
   return (
     <Card 
-      className="group overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
+      className="group overflow-visible shadow-[var(--shadow-level-1)] hover-elevate transition-all duration-300 rounded-[16px]"
       data-testid={`card-attraction-${attraction.id}`}
     >
       <div className="p-4">
@@ -474,106 +439,55 @@ function AttractionCard({ attraction, categoryGradient }: { attraction: Attracti
   );
 }
 
-function FeaturedCard({ attraction }: { attraction: typeof FEATURED_ATTRACTIONS[0] }) {
-  const Icon = attraction.icon;
-  
-  return (
-    <Card 
-      className="group overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-500 cursor-default relative"
-      data-testid={`card-featured-${attraction.name.toLowerCase().replace(/\s+/g, '-')}`}
-    >
-      <div className={`relative aspect-[4/3] bg-gradient-to-br ${attraction.gradient} p-5 md:p-6 flex flex-col justify-between`}>
-        {/* Top Row - Label and Icon */}
-        <div className="flex items-start justify-between">
-          {attraction.label ? (
-            <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs">
-              {attraction.label}
-            </Badge>
-          ) : (
-            <div />
-          )}
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
-          </div>
-        </div>
-        
-        {/* Bottom Content */}
-        <div>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {attraction.tags.map((tag) => (
-              <Badge 
-                key={tag} 
-                variant="secondary" 
-                className="bg-black/20 text-white border-0 backdrop-blur-sm text-xs"
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
-          
-          <h3 className="font-bold text-white text-lg md:text-xl mb-1">
-            {attraction.name}
-          </h3>
-          
-          <p className="text-white/80 text-sm line-clamp-2">
-            {attraction.tagline}
-          </p>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
 function CategorySection({ category }: { category: CategoryData }) {
   const Icon = category.icon;
   const [showAll, setShowAll] = useState(false);
   const displayedAttractions = showAll ? category.attractions : category.attractions.slice(0, 8);
   
   return (
-    <section className="py-12 md:py-16" id={category.id}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-start gap-4 mb-8">
-          <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br ${category.gradient} flex items-center justify-center flex-shrink-0`}>
-            <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h2 className="text-xl md:text-2xl font-bold">{category.name}</h2>
-              <Badge variant="secondary" className="text-xs">{category.count} attractions</Badge>
-            </div>
-            <p className="text-muted-foreground text-sm md:text-base">{category.description}</p>
-          </div>
+    <Section id={category.id} variant={CATEGORIES_DATA.indexOf(category) % 2 === 0 ? "default" : "alternate"}>
+      <div className="flex items-start gap-4 mb-8">
+        <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br ${category.gradient} flex items-center justify-center flex-shrink-0`}>
+          <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
         </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {displayedAttractions.map((attraction) => (
-            <AttractionCard 
-              key={attraction.id} 
-              attraction={attraction} 
-              categoryGradient={category.gradient}
-            />
-          ))}
-        </div>
-        
-        {category.attractions.length > 8 && (
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => setShowAll(!showAll)}
-              className="inline-flex items-center gap-2 text-[#6443F4] hover:text-[#573CD0] font-medium transition-colors"
-              data-testid={`button-show-${showAll ? 'less' : 'more'}-${category.id}`}
-            >
-              {showAll ? 'Show Less' : `Show All ${category.count} Attractions`}
-              <ChevronRight className={`w-4 h-4 transition-transform ${showAll ? 'rotate-90' : ''}`} />
-            </button>
+        <div>
+          <div className="flex items-center gap-3 mb-1 flex-wrap">
+            <h2 className="text-xl md:text-2xl font-bold">{category.name}</h2>
+            <Badge variant="secondary" className="text-xs">{category.count} attractions</Badge>
           </div>
-        )}
+          <p className="text-muted-foreground text-sm md:text-base">{category.description}</p>
+        </div>
       </div>
-    </section>
+      
+      <CategoryGrid columns={4}>
+        {displayedAttractions.map((attraction) => (
+          <AttractionCard 
+            key={attraction.id} 
+            attraction={attraction} 
+            categoryGradient={category.gradient}
+          />
+        ))}
+      </CategoryGrid>
+      
+      {category.attractions.length > 8 && (
+        <div className="mt-6 text-center">
+          <Button
+            variant="ghost"
+            onClick={() => setShowAll(!showAll)}
+            className="text-secondary hover:text-secondary/80"
+            data-testid={`button-show-${showAll ? 'less' : 'more'}-${category.id}`}
+          >
+            {showAll ? 'Show Less' : `Show All ${category.count} Attractions`}
+            <ChevronRight className={`w-4 h-4 transition-transform ${showAll ? 'rotate-90' : ''}`} />
+          </Button>
+        </div>
+      )}
+    </Section>
   );
 }
 
 export default function PublicAttractions() {
-  const { t, isRTL } = useLocale();
+  const { isRTL, localePath } = useLocale();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   useDocumentMeta({
@@ -593,171 +507,168 @@ export default function PublicAttractions() {
   };
 
   return (
-    <div className={`bg-background min-h-screen flex flex-col ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      <PublicNav variant="transparent" />
-
-      {/* Hero Section */}
-      <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop"
-            alt="Dubai skyline with Burj Khalifa"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#6443F4]/20 to-[#F94498]/20" />
-        </div>
-        
-        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-20">
-          <Badge className="bg-white/10 text-white border-white/20 backdrop-blur-sm mb-6 text-sm px-4 py-1.5">
+    <PageContainer navVariant="transparent">
+      <PublicHero
+        title="Dubai Attractions"
+        subtitle="Discover world-class theme parks, observation decks, and cultural experiences"
+        backgroundImage="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Attractions" }
+        ]}
+      >
+        <div className="flex flex-wrap items-center gap-4">
+          <Badge className="bg-white/10 text-white border-white/20 backdrop-blur-sm text-sm px-4 py-1.5">
             Complete 2025 Catalog
           </Badge>
-          
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight">
-            Discover <span className="bg-gradient-to-r from-[#FF9327] to-[#F94498] bg-clip-text text-transparent">184+</span> Dubai Attractions
-          </h1>
-          
-          <p className="text-lg md:text-xl text-white/80 mb-10 max-w-3xl mx-auto leading-relaxed">
-            From the world's tallest building to ancient souks, thrilling desert safaris to underwater restaurants. 
-            Your complete guide to everything Dubai has to offer.
-          </p>
-          
-          {/* Stats Bar */}
-          <div className="flex flex-wrap justify-center gap-4 md:gap-8 mb-10">
+          <div className="flex flex-wrap gap-4 md:gap-8">
             {STATS.map((stat, index) => (
-              <div key={index} className="text-center px-4 py-2">
-                <div className="text-2xl md:text-3xl font-bold text-white">{stat.value}</div>
-                <div className="text-white/60 text-sm">{stat.label}</div>
+              <div key={index} className="text-center">
+                <div className="text-xl md:text-2xl font-bold text-white">{stat.value}</div>
+                <div className="text-white/60 text-xs">{stat.label}</div>
               </div>
             ))}
           </div>
-          
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            <button
-              onClick={() => scrollToCategory('observation-landmarks')}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-[#6443F4] to-[#9077EF] text-white px-6 py-3 rounded-full font-medium shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/30 transition-all"
-              data-testid="button-explore-catalog"
-            >
-              Explore Full Catalog
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
         </div>
-        
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <ChevronRight className="w-6 h-6 text-white/60 rotate-90" />
+        <Button
+          onClick={() => scrollToCategory('observation-landmarks')}
+          className="mt-4 bg-secondary hover:bg-secondary/90 text-white rounded-full"
+          data-testid="button-explore-catalog"
+        >
+          Explore Full Catalog
+          <ArrowRight className="w-4 h-4" />
+        </Button>
+      </PublicHero>
+
+      {/* Category Quick Navigation */}
+      <section className="py-4 bg-muted/30 sticky top-20 z-40 backdrop-blur-md border-b border-border/50">
+        <div className="max-w-7xl mx-auto px-5 md:px-8 lg:px-[140px]">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {CATEGORIES_DATA.map((category) => {
+              const Icon = category.icon;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => scrollToCategory(category.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
+                    activeCategory === category.id
+                      ? 'bg-secondary text-white'
+                      : 'bg-background border border-border hover:border-secondary/50 hover:text-secondary'
+                  }`}
+                  data-testid={`button-nav-${category.id}`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{category.name}</span>
+                  <Badge variant="secondary" className={`text-xs ${activeCategory === category.id ? 'bg-white/20 text-white' : ''}`}>
+                    {category.count}
+                  </Badge>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      <main className="flex-1">
-        {/* Category Quick Navigation */}
-        <section className="py-8 bg-muted/30 sticky top-20 z-40 backdrop-blur-md border-b border-border/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {CATEGORIES_DATA.map((category) => {
-                const Icon = category.icon;
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => scrollToCategory(category.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
-                      activeCategory === category.id
-                        ? 'bg-[#6443F4] text-white'
-                        : 'bg-background border border-border hover:border-[#6443F4]/50 hover:text-[#6443F4]'
-                    }`}
-                    data-testid={`button-nav-${category.id}`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{category.name}</span>
-                    <Badge variant="secondary" className={`text-xs ${activeCategory === category.id ? 'bg-white/20 text-white' : ''}`}>
-                      {category.count}
-                    </Badge>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
+      {/* Featured Attractions */}
+      <Section
+        title="Featured Attractions"
+        subtitle="Hand-picked must-visit experiences that define Dubai's extraordinary appeal"
+        id="featured"
+      >
+        <div className="text-center mb-6">
+          <Badge className="bg-primary/10 text-primary border-primary/20">
+            Top Picks
+          </Badge>
+        </div>
+        <CategoryGrid columns={3}>
+          {FEATURED_ATTRACTIONS.map((attraction) => (
+            <ContentCard
+              key={attraction.name}
+              image={attraction.image}
+              title={attraction.name}
+              description={attraction.tagline}
+              badge={attraction.label || undefined}
+              aspectRatio="video"
+            />
+          ))}
+        </CategoryGrid>
+      </Section>
 
-        {/* Featured Attractions */}
-        <section className="py-12 md:py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-              <Badge className="bg-[#F94498]/10 text-[#F94498] border-[#F94498]/20 mb-4">
-                Top Picks
-              </Badge>
-              <h2 className="text-2xl md:text-4xl font-bold mb-3">Featured Attractions</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Hand-picked must-visit experiences that define Dubai's extraordinary appeal
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {FEATURED_ATTRACTIONS.map((attraction) => (
-                <FeaturedCard key={attraction.name} attraction={attraction} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Category Grid Overview */}
-        <section className="py-12 md:py-16 bg-muted/30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-bold mb-3">Browse by Category</h2>
-              <p className="text-muted-foreground">15 categories covering every type of Dubai experience</p>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {CATEGORIES_DATA.map((category) => (
-                <div 
-                  key={category.id} 
-                  onClick={() => scrollToCategory(category.id)}
-                  className="cursor-pointer"
+      {/* Category Grid Overview */}
+      <Section
+        title="Browse by Category"
+        subtitle="15 categories covering every type of Dubai experience"
+        variant="alternate"
+        id="categories"
+      >
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {CATEGORIES_DATA.map((category) => {
+            const Icon = category.icon;
+            return (
+              <div 
+                key={category.id} 
+                onClick={() => scrollToCategory(category.id)}
+                className="cursor-pointer group"
+              >
+                <Card
+                  className="relative overflow-visible rounded-[16px] hover-elevate transition-all duration-300"
+                  data-testid={`card-category-${category.id}`}
                 >
-                  <CategoryCard category={category} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+                  <div className="aspect-[4/3] overflow-hidden rounded-[16px]">
+                    <img 
+                      src={category.image} 
+                      alt={category.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-70 mix-blend-multiply rounded-[16px]`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-[16px]" />
+                  </div>
+                  
+                  <div className="absolute inset-0 flex flex-col justify-end p-4 md:p-5">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3">
+                      <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                    </div>
+                    <h3 className="font-bold text-white text-sm md:text-base mb-1">{category.name}</h3>
+                    <p className="text-white/80 text-xs md:text-sm">{category.count} attractions</p>
+                  </div>
+                </Card>
+              </div>
+            );
+          })}
+        </div>
+      </Section>
 
-        {/* All Category Sections */}
-        {CATEGORIES_DATA.map((category, index) => (
-          <div key={category.id} className={index % 2 === 0 ? '' : 'bg-muted/20'}>
-            <CategorySection category={category} />
-          </div>
-        ))}
+      {/* All Category Sections */}
+      {CATEGORIES_DATA.map((category) => (
+        <CategorySection key={category.id} category={category} />
+      ))}
 
-        {/* Bottom CTA */}
-        <section className="py-16 md:py-24 bg-gradient-to-br from-[#6443F4] to-[#F94498]">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-2xl md:text-4xl font-bold text-white mb-4">
-              Ready to Explore Dubai?
-            </h2>
-            <p className="text-white/80 text-lg mb-8 max-w-2xl mx-auto">
-              With 184+ attractions across 15 categories, Dubai offers something for everyone. 
-              Start planning your perfect Dubai adventure today.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/hotels">
-                <button className="inline-flex items-center gap-2 bg-white text-[#6443F4] px-6 py-3 rounded-full font-medium hover:bg-white/90 transition-all">
-                  Find Hotels
-                  <Building2 className="w-4 h-4" />
-                </button>
-              </Link>
-              <Link href="/districts">
-                <button className="inline-flex items-center gap-2 bg-white/10 text-white border border-white/30 px-6 py-3 rounded-full font-medium hover:bg-white/20 transition-all">
-                  Explore Districts
-                  <MapPin className="w-4 h-4" />
-                </button>
-              </Link>
-            </div>
+      {/* Bottom CTA */}
+      <section className="py-16 md:py-24 bg-gradient-to-br from-secondary to-primary">
+        <div className="max-w-4xl mx-auto px-5 md:px-8 lg:px-[140px] text-center">
+          <h2 className="text-2xl md:text-4xl font-bold text-white mb-4">
+            Ready to Explore Dubai?
+          </h2>
+          <p className="text-white/80 text-lg mb-8 max-w-2xl mx-auto">
+            With 184+ attractions across 15 categories, Dubai offers something for everyone. 
+            Start planning your perfect Dubai adventure today.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link href={localePath("/hotels")}>
+              <Button variant="secondary" className="bg-white text-secondary hover:bg-white/90 rounded-full">
+                Find Hotels
+                <Building2 className="w-4 h-4" />
+              </Button>
+            </Link>
+            <Link href={localePath("/districts")}>
+              <Button variant="outline" className="bg-white/10 text-white border-white/30 hover:bg-white/20 rounded-full">
+                Explore Districts
+                <MapPin className="w-4 h-4" />
+              </Button>
+            </Link>
           </div>
-        </section>
-      </main>
-
-      <PublicFooter />
-    </div>
+        </div>
+      </section>
+    </PageContainer>
   );
 }

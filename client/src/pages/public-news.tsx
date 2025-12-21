@@ -7,13 +7,15 @@ import {
   Users, BookOpen, ExternalLink, Flame, Sun, Shield, Camera,
   Star, MapPin, CreditCard, Lightbulb, Compass, Briefcase, Heart
 } from "lucide-react";
-import { PublicNav } from "@/components/public-nav";
-import { PublicFooter } from "@/components/public-footer";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { PageContainer, Section, ContentCard, CategoryGrid } from "@/components/public-layout";
+import { PublicHero } from "@/components/public-hero";
+import { cn } from "@/lib/utils";
 
 interface NewsArticle {
   id: number;
@@ -33,7 +35,7 @@ const HERO_ARTICLE: NewsArticle = {
   title: "Dubai Announces Free 30-Day Visa for 90 New Countries Starting January 2025",
   excerpt: "In a landmark decision to boost tourism, the UAE Cabinet has approved visa-free entry for citizens of 90 additional countries. This historic move is expected to attract over 25 million visitors by 2026, positioning Dubai as the world's most accessible luxury destination.",
   category: "Visa & Entry",
-  categoryColor: "bg-rose-500",
+  categoryColor: "bg-travi-pink",
   image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop",
   date: "Dec 21, 2024",
   readTime: "4 min read",
@@ -47,7 +49,7 @@ const TOP_STORIES: NewsArticle[] = [
     title: "Dubai Tourism Records 17.15M International Visitors in 2024",
     excerpt: "Record-breaking milestone as Dubai welcomes more tourists than ever before.",
     category: "Tourism",
-    categoryColor: "bg-blue-500",
+    categoryColor: "bg-info",
     image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&h=600&fit=crop",
     date: "Dec 20, 2024",
     readTime: "3 min",
@@ -59,7 +61,7 @@ const TOP_STORIES: NewsArticle[] = [
     title: "Emirates Launches 5 New Routes with Special Launch Fares",
     excerpt: "New connections to South America and Southeast Asia announced.",
     category: "Travel",
-    categoryColor: "bg-emerald-500",
+    categoryColor: "bg-travi-green",
     image: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&h=600&fit=crop",
     date: "Dec 20, 2024",
     readTime: "2 min",
@@ -71,7 +73,7 @@ const TOP_STORIES: NewsArticle[] = [
     title: "Dubai Shopping Festival 2025: Dates & Mega Deals Revealed",
     excerpt: "30th anniversary celebrations promise biggest discounts ever.",
     category: "Events",
-    categoryColor: "bg-pink-500",
+    categoryColor: "bg-travi-pink",
     image: "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=800&h=600&fit=crop",
     date: "Dec 19, 2024",
     readTime: "5 min",
@@ -86,7 +88,7 @@ const LATEST_NEWS: NewsArticle[] = [
     title: "Dubai Metro Blue Line: 14 New Stations to Connect JVC by 2028",
     excerpt: "The AED 18 billion expansion will serve over 500,000 residents in Jumeirah Village Circle.",
     category: "Transport",
-    categoryColor: "bg-sky-500",
+    categoryColor: "bg-info",
     image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=600&fit=crop",
     date: "Dec 18, 2024",
     readTime: "4 min",
@@ -98,7 +100,7 @@ const LATEST_NEWS: NewsArticle[] = [
     title: "Atlantis The Royal Named World's Best New Hotel 2024",
     excerpt: "The ultra-luxury resort sweeps major categories at World Travel Awards.",
     category: "Hotels",
-    categoryColor: "bg-emerald-500",
+    categoryColor: "bg-travi-green",
     image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&h=600&fit=crop",
     date: "Dec 17, 2024",
     readTime: "3 min",
@@ -110,7 +112,7 @@ const LATEST_NEWS: NewsArticle[] = [
     title: "Museum of the Future Unveils 2025 AI Exhibition",
     excerpt: "Groundbreaking exhibition exploring artificial intelligence and human creativity.",
     category: "Culture",
-    categoryColor: "bg-fuchsia-500",
+    categoryColor: "bg-travi-purple",
     image: "https://images.unsplash.com/photo-1512632578888-169bbbc64f33?w=800&h=600&fit=crop",
     date: "Dec 16, 2024",
     readTime: "4 min",
@@ -122,7 +124,7 @@ const LATEST_NEWS: NewsArticle[] = [
     title: "Dubai Food Festival 2025: 700+ Restaurants Participating",
     excerpt: "Two-week culinary celebration features exclusive tasting menus and celebrity chefs.",
     category: "Dining",
-    categoryColor: "bg-rose-400",
+    categoryColor: "bg-travi-orange",
     image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop",
     date: "Dec 15, 2024",
     readTime: "3 min",
@@ -134,7 +136,7 @@ const LATEST_NEWS: NewsArticle[] = [
     title: "Global Village Season 29: 90 Countries, 3,500+ Shopping Outlets",
     excerpt: "World's largest tourism project opens with new pavilions from Japan and Brazil.",
     category: "Events",
-    categoryColor: "bg-pink-500",
+    categoryColor: "bg-travi-pink",
     image: "https://images.unsplash.com/photo-1578895101408-1a36b834405b?w=800&h=600&fit=crop",
     date: "Dec 14, 2024",
     readTime: "5 min",
@@ -146,7 +148,7 @@ const LATEST_NEWS: NewsArticle[] = [
     title: "Palm Jebel Ali: AED 5 Billion in Sales Within First Quarter",
     excerpt: "Nakheel's new mega-development attracts unprecedented demand.",
     category: "Real Estate",
-    categoryColor: "bg-teal-500",
+    categoryColor: "bg-travi-green",
     image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800&h=600&fit=crop",
     date: "Dec 13, 2024",
     readTime: "4 min",
@@ -168,7 +170,7 @@ const FEATURED_ATTRACTIONS: NewsArticle[] = [
     title: "Museum of the Future: Complete Visitor Guide 2025",
     excerpt: "Everything you need to know about Dubai's most iconic new landmark, from ticket prices to best visiting times.",
     category: "Attractions",
-    categoryColor: "bg-purple-500",
+    categoryColor: "bg-travi-purple",
     image: "https://images.unsplash.com/photo-1512632578888-169bbbc64f33?w=800&h=600&fit=crop",
     date: "Dec 20, 2024",
     readTime: "6 min",
@@ -180,7 +182,7 @@ const FEATURED_ATTRACTIONS: NewsArticle[] = [
     title: "Dubai Frame: Best Time to Visit for Perfect Photos",
     excerpt: "Sunset visits offer the most stunning views of both old and new Dubai.",
     category: "Attractions",
-    categoryColor: "bg-purple-500",
+    categoryColor: "bg-travi-purple",
     image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&h=600&fit=crop",
     date: "Dec 19, 2024",
     readTime: "3 min",
@@ -192,7 +194,7 @@ const FEATURED_ATTRACTIONS: NewsArticle[] = [
     title: "Miracle Garden Opens with 150 Million Flowers",
     excerpt: "New Disney-themed installations draw record crowds.",
     category: "Attractions",
-    categoryColor: "bg-purple-500",
+    categoryColor: "bg-travi-purple",
     image: "https://images.unsplash.com/photo-1578895101408-1a36b834405b?w=800&h=600&fit=crop",
     date: "Dec 18, 2024",
     readTime: "4 min",
@@ -204,7 +206,7 @@ const FEATURED_ATTRACTIONS: NewsArticle[] = [
     title: "IMG Worlds of Adventure: New Marvel Zone",
     excerpt: "Spider-Man and Avengers experiences launch this December.",
     category: "Attractions",
-    categoryColor: "bg-purple-500",
+    categoryColor: "bg-travi-purple",
     image: "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=800&h=600&fit=crop",
     date: "Dec 17, 2024",
     readTime: "3 min",
@@ -214,10 +216,10 @@ const FEATURED_ATTRACTIONS: NewsArticle[] = [
 ];
 
 const THIS_WEEK = [
-  { day: "Mon", date: "23", event: "DSF Grand Opening", color: "bg-rose-500" },
-  { day: "Wed", date: "25", event: "Christmas at Expo City", color: "bg-emerald-500" },
-  { day: "Fri", date: "27", event: "Concert at Coca-Cola", color: "bg-violet-500" },
-  { day: "Sat", date: "28", event: "Food Truck Festival", color: "bg-orange-500" },
+  { day: "Mon", date: "23", event: "DSF Grand Opening", color: "bg-[#F94498]" },
+  { day: "Wed", date: "25", event: "Christmas at Expo City", color: "bg-[#02A65C]" },
+  { day: "Fri", date: "27", event: "Concert at Coca-Cola", color: "bg-[#6443F4]" },
+  { day: "Sat", date: "28", event: "Food Truck Festival", color: "bg-[#FF9327]" },
 ];
 
 const HOT_DEALS = [
@@ -270,14 +272,24 @@ export default function PublicNews() {
   });
 
   return (
-    <div className="bg-white dark:bg-slate-950 min-h-screen" dir={isRTL ? "rtl" : "ltr"}>
-      <PublicNav />
+    <PageContainer className="bg-background">
+      {/* Hero Section with Breaking News */}
+      <PublicHero
+        title="Dubai Travel News"
+        subtitle="Stay updated with the latest tourism news, visa changes, events, and travel tips for Dubai."
+        backgroundImage="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "News" },
+        ]}
+        size="small"
+      />
 
       {/* Breaking News Ticker */}
-      <div className="bg-slate-900 text-white border-b border-slate-800">
+      <div className="bg-travi-neutral-black text-white border-b border-travi-neutral-gray-75">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center h-10">
-            <div className="flex-shrink-0 bg-red-600 h-full px-4 flex items-center gap-2">
+          <div className={cn("flex items-center h-10", isRTL && "flex-row-reverse")}>
+            <div className="flex-shrink-0 bg-travi-pink h-full px-4 flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
@@ -286,10 +298,10 @@ export default function PublicNews() {
               <span className="text-xs font-bold tracking-wider">BREAKING</span>
             </div>
             <div className="overflow-hidden flex-1 px-4">
-              <div className="animate-marquee whitespace-nowrap flex items-center gap-8">
+              <div className={cn("animate-marquee whitespace-nowrap flex items-center gap-8", isRTL && "animate-marquee-rtl")}>
                 {[...BREAKING_NEWS, ...BREAKING_NEWS].map((news, i) => (
-                  <span key={i} className="text-sm text-slate-300 flex items-center gap-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  <span key={i} className="text-sm text-travi-neutral-gray-25 flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-travi-pink animate-pulse shrink-0" />
                     {news}
                   </span>
                 ))}
@@ -300,15 +312,15 @@ export default function PublicNews() {
       </div>
 
       {/* Category Navigation */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="sticky top-0 z-40 bg-background border-b border-border">
+        <div className="max-w-7xl mx-auto px-5 md:px-8 lg:px-[140px]">
           <div className="flex items-center h-12 gap-1 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setActiveCategory(null)}
               className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all whitespace-nowrap ${
                 activeCategory === null
-                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  ? "bg-travi-purple text-white"
+                  : "text-muted-foreground hover:bg-muted"
               }`}
               data-testid="button-category-all"
             >
@@ -320,8 +332,8 @@ export default function PublicNews() {
                 onClick={() => setActiveCategory(cat.id)}
                 className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all whitespace-nowrap ${
                   activeCategory === cat.id
-                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    ? "bg-travi-purple text-white"
+                    : "text-muted-foreground hover:bg-muted"
                 }`}
                 data-testid={`button-category-${cat.id}`}
               >
@@ -332,13 +344,13 @@ export default function PublicNews() {
         </div>
       </div>
 
-      {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="grid lg:grid-cols-5 gap-6">
+      {/* Featured News Section */}
+      <Section id="featured-news" className="py-10">
+        <div className="grid lg:grid-cols-5 gap-[30px]">
           {/* Main Featured Article - 3 columns */}
           <div className="lg:col-span-3 flex flex-col">
             <article className="group cursor-pointer transition-transform duration-300 hover:scale-[1.01] flex-1" data-testid="card-hero-article">
-              <div className="relative h-full min-h-[400px] rounded-2xl overflow-hidden">
+              <Card className="relative h-full min-h-[400px] rounded-[16px] overflow-hidden p-0">
                 <img
                   src={HERO_ARTICLE.image}
                   alt={HERO_ARTICLE.title}
@@ -346,8 +358,8 @@ export default function PublicNews() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent transition-opacity duration-300 group-hover:from-black/90" />
                 
-                <div className="absolute top-4 left-4 flex items-center gap-2">
-                  <span className="px-2.5 py-1 bg-red-600 text-white text-xs font-bold rounded flex items-center gap-1.5">
+                <div className={`absolute top-4 ${isRTL ? 'right-4' : 'left-4'} flex items-center gap-2`}>
+                  <span className="px-2.5 py-1 bg-travi-pink text-white text-xs font-bold rounded-[8px] flex items-center gap-1.5">
                     <span className="relative flex h-1.5 w-1.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
@@ -357,10 +369,10 @@ export default function PublicNews() {
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <span className={`inline-block px-3 py-1 ${HERO_ARTICLE.categoryColor} text-white text-xs font-semibold rounded-full mb-3`}>
+                  <Badge className={`${HERO_ARTICLE.categoryColor} text-white border-0 mb-3`}>
                     {HERO_ARTICLE.category}
-                  </span>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight mb-3">
+                  </Badge>
+                  <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight mb-3">
                     {HERO_ARTICLE.title}
                   </h1>
                   <p className="text-white/80 text-sm sm:text-base mb-4 line-clamp-2 max-w-2xl">
@@ -378,21 +390,21 @@ export default function PublicNews() {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Card>
             </article>
           </div>
 
           {/* Top Stories - Bento Grid 2 columns */}
           <div className="lg:col-span-2 flex flex-col">
             <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-4 h-4 text-rose-500" />
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Top Stories</h2>
+              <TrendingUp className="w-4 h-4 text-travi-pink" />
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Top Stories</h2>
             </div>
             {/* Bento Grid Layout */}
             <div className="grid grid-cols-2 gap-3 flex-1">
               {/* Large card - spans 2 columns */}
               <article 
-                className="col-span-2 group cursor-pointer relative rounded-xl overflow-hidden transition-transform duration-300 hover:scale-[1.02]"
+                className="col-span-2 group cursor-pointer relative rounded-[16px] overflow-hidden transition-transform duration-300 hover:scale-[1.02]"
                 data-testid={`card-top-story-${TOP_STORIES[0].id}`}
               >
                 <div className="relative aspect-[16/9]">
@@ -403,10 +415,10 @@ export default function PublicNews() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 group-hover:from-black/90" />
                   <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <span className={`inline-block px-2 py-0.5 ${TOP_STORIES[0].categoryColor} text-white text-[10px] font-semibold rounded mb-2`}>
+                    <Badge className={`${TOP_STORIES[0].categoryColor} text-white border-0 mb-2 text-[10px]`}>
                       {TOP_STORIES[0].category}
-                    </span>
-                    <h3 className="font-bold text-sm text-white line-clamp-2 leading-snug">
+                    </Badge>
+                    <h3 className="font-heading font-bold text-sm text-white line-clamp-2 leading-snug">
                       {TOP_STORIES[0].title}
                     </h3>
                     <div className="flex items-center gap-2 mt-2 text-xs text-white/70">
@@ -424,7 +436,7 @@ export default function PublicNews() {
               {TOP_STORIES.slice(1, 3).map((article) => (
                 <article 
                   key={article.id}
-                  className="group cursor-pointer relative rounded-xl overflow-hidden transition-transform duration-300 hover:scale-[1.02]"
+                  className="group cursor-pointer relative rounded-[16px] overflow-hidden transition-transform duration-300 hover:scale-[1.02]"
                   data-testid={`card-top-story-${article.id}`}
                 >
                   <div className="relative aspect-[4/5]">
@@ -435,10 +447,10 @@ export default function PublicNews() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent transition-opacity duration-300 group-hover:from-black/90" />
                     <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <span className={`inline-block px-2 py-0.5 ${article.categoryColor} text-white text-[10px] font-semibold rounded mb-1.5`}>
+                      <Badge className={`${article.categoryColor} text-white border-0 mb-1.5 text-[10px]`}>
                         {article.category}
-                      </span>
-                      <h3 className="font-semibold text-xs text-white line-clamp-2 leading-snug">
+                      </Badge>
+                      <h3 className="font-heading font-semibold text-xs text-white line-clamp-2 leading-snug">
                         {article.title}
                       </h3>
                       <div className="flex items-center gap-2 mt-1.5 text-[10px] text-white/70">
@@ -451,79 +463,80 @@ export default function PublicNews() {
             </div>
           </div>
         </div>
-      </section>
+      </Section>
 
       {/* Quick Travel Tips Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 border-t border-slate-200 dark:border-slate-800" data-testid="section-travel-tips">
+      <Section 
+        id="travel-tips" 
+        title="Quick Travel Tips" 
+        variant="alternate"
+      >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-travi-green rounded-[8px] flex items-center justify-center">
               <Lightbulb className="w-4 h-4 text-white" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Quick Travel Tips</h2>
           </div>
           <Link href="/guides">
-            <Button variant="ghost" size="sm" className="text-emerald-600 dark:text-emerald-400" data-testid="button-view-guides">
-              View All Guides <ChevronRight className="w-4 h-4 ml-1" />
+            <Button variant="ghost" size="sm" className="text-travi-green" data-testid="button-view-guides">
+              View All Guides <ChevronRight className={cn("w-4 h-4 ms-1", isRTL && "rotate-180")} />
             </Button>
           </Link>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <CategoryGrid columns={4}>
           {TRAVEL_TIPS.map((tip) => (
-            <article 
+            <Card 
               key={tip.id}
-              className="group cursor-pointer p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-all duration-300 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-md"
+              className="group cursor-pointer p-5 rounded-[16px] bg-card border border-border transition-all duration-300 hover:border-travi-green/50 hover-elevate"
               data-testid={`card-travel-tip-${tip.id}`}
             >
-              <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center mb-3">
-                <tip.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="w-10 h-10 bg-travi-green/10 rounded-[8px] flex items-center justify-center mb-3">
+                <tip.icon className="w-5 h-5 text-travi-green" />
               </div>
-              <span className="inline-block px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold rounded mb-2">
+              <Badge variant="secondary" className="bg-travi-green/10 text-travi-green border-0 mb-2">
                 {tip.category}
-              </span>
-              <h3 className="font-semibold text-sm text-slate-900 dark:text-white leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors mb-1">
+              </Badge>
+              <h3 className="font-heading font-semibold text-sm text-foreground leading-snug group-hover:text-travi-green transition-colors mb-1">
                 {tip.title}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+              <p className="text-xs text-muted-foreground line-clamp-2">
                 {tip.description}
               </p>
-            </article>
+            </Card>
           ))}
-        </div>
-      </section>
+        </CategoryGrid>
+      </Section>
 
       {/* Featured Category Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 border-t border-slate-200 dark:border-slate-800">
+      <Section id="featured-attractions" title="Featured in Attractions">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-travi-purple rounded-[8px] flex items-center justify-center">
               <Star className="w-4 h-4 text-white" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Featured in Attractions</h2>
           </div>
-          <Button variant="ghost" size="sm" className="text-purple-600 dark:text-purple-400" data-testid="link-featured-all">
-            View All <ChevronRight className="w-4 h-4 ml-1" />
+          <Button variant="ghost" size="sm" className="text-travi-purple" data-testid="link-featured-all">
+            View All <ChevronRight className={cn("w-4 h-4 ms-1", isRTL && "rotate-180")} />
           </Button>
         </div>
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid lg:grid-cols-2 gap-[30px]">
           {/* Large Featured Article */}
           <article 
             className="group cursor-pointer transition-transform duration-300 hover:scale-[1.01]"
             data-testid="card-featured-attraction-main"
           >
-            <div className="relative aspect-[16/10] rounded-2xl overflow-hidden">
+            <Card className="relative aspect-[16/10] rounded-[16px] overflow-hidden p-0">
               <img
                 src={FEATURED_ATTRACTIONS[0].image}
                 alt={FEATURED_ATTRACTIONS[0].title}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
-              {/* Enhanced gradient overlay for dark mode */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent dark:from-black/90 dark:via-black/50 dark:to-black/20 transition-opacity duration-300 group-hover:from-black/90 dark:group-hover:from-black/95" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent transition-opacity duration-300 group-hover:from-black/90" />
               <div className="absolute bottom-0 left-0 right-0 p-6">
-                <span className={`inline-block px-3 py-1 ${FEATURED_ATTRACTIONS[0].categoryColor} text-white text-xs font-semibold rounded-full mb-3`}>
+                <Badge className={`${FEATURED_ATTRACTIONS[0].categoryColor} text-white border-0 mb-3`}>
                   {FEATURED_ATTRACTIONS[0].category}
-                </span>
-                <h3 className="text-xl lg:text-2xl font-bold text-white leading-tight mb-2">
+                </Badge>
+                <h3 className="font-heading text-xl lg:text-2xl font-bold text-white leading-tight mb-2">
                   {FEATURED_ATTRACTIONS[0].title}
                 </h3>
                 <p className="text-white/80 text-sm line-clamp-2 mb-3">
@@ -534,18 +547,18 @@ export default function PublicNews() {
                   <span>{FEATURED_ATTRACTIONS[0].readTime}</span>
                 </div>
               </div>
-            </div>
+            </Card>
           </article>
 
           {/* List of smaller articles */}
           <div className="space-y-4">
             {FEATURED_ATTRACTIONS.slice(1, 4).map((article, index) => (
-              <article 
+              <Card 
                 key={article.id}
-                className="group cursor-pointer flex gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-transparent dark:border-slate-800 transition-all duration-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-[1.01]"
+                className="group cursor-pointer flex gap-4 p-3 rounded-[16px] bg-card border border-border transition-all duration-300 hover:border-[#6443F4]/50 hover-elevate"
                 data-testid={`card-featured-attraction-${index}`}
               >
-                <div className="relative w-28 h-20 flex-shrink-0 rounded-lg overflow-hidden">
+                <div className="relative w-28 h-20 flex-shrink-0 rounded-[8px] overflow-hidden">
                   <img
                     src={article.image}
                     alt={article.title}
@@ -553,13 +566,13 @@ export default function PublicNews() {
                   />
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <span className={`inline-block w-fit px-2 py-0.5 ${article.categoryColor} text-white text-[10px] font-semibold rounded mb-1.5`}>
+                  <Badge className={`${article.categoryColor} text-white border-0 w-fit mb-1.5 text-[10px]`}>
                     {article.category}
-                  </span>
-                  <h3 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                  </Badge>
+                  <h3 className="font-heading font-semibold text-sm text-foreground line-clamp-2 leading-snug group-hover:text-[#6443F4] transition-colors">
                     {article.title}
                   </h3>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-500">
+                  <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
                     <span>{article.date}</span>
                     <span className="flex items-center gap-1">
                       <Eye className="w-3 h-3" />
@@ -567,21 +580,21 @@ export default function PublicNews() {
                     </span>
                   </div>
                 </div>
-              </article>
+              </Card>
             ))}
           </div>
         </div>
-      </section>
+      </Section>
 
       {/* Main Content with Sidebar */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 border-t border-slate-200 dark:border-slate-800">
+      <Section id="latest-news" variant="alternate">
         <div className="grid lg:grid-cols-3 gap-10">
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Latest News</h2>
-              <Button variant="ghost" size="sm" className="text-rose-600" data-testid="button-view-all">
-                View All <ChevronRight className="w-4 h-4 ml-1" />
+              <h2 className="font-heading text-xl font-bold text-foreground">Latest News</h2>
+              <Button variant="ghost" size="sm" className="text-[#F94498]" data-testid="button-view-all">
+                View All <ChevronRight className={cn("w-4 h-4 ms-1", isRTL && "rotate-180")} />
               </Button>
             </div>
 
@@ -589,10 +602,10 @@ export default function PublicNews() {
               {LATEST_NEWS.map((article) => (
                 <article 
                   key={article.id}
-                  className="group cursor-pointer flex gap-5 pb-6 border-b border-slate-200 dark:border-slate-800 last:border-0 transition-transform duration-300 hover:scale-[1.01]"
+                  className="group cursor-pointer flex gap-5 pb-6 border-b border-border last:border-0 transition-transform duration-300 hover:scale-[1.01]"
                   data-testid={`card-news-${article.id}`}
                 >
-                  <div className="relative w-40 h-28 sm:w-48 sm:h-32 flex-shrink-0 rounded-xl overflow-hidden">
+                  <div className="relative w-40 h-28 sm:w-48 sm:h-32 flex-shrink-0 rounded-[16px] overflow-hidden">
                     <img
                       src={article.image}
                       alt={article.title}
@@ -601,16 +614,16 @@ export default function PublicNews() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <span className={`inline-block w-fit px-2.5 py-0.5 ${article.categoryColor} text-white text-xs font-semibold rounded-full mb-2`}>
+                    <Badge className={`${article.categoryColor} text-white border-0 w-fit mb-2`}>
                       {article.category}
-                    </span>
-                    <h3 className="font-bold text-lg text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors mb-2">
+                    </Badge>
+                    <h3 className="font-heading font-bold text-lg text-foreground line-clamp-2 leading-snug group-hover:text-[#F94498] transition-colors mb-2">
                       {article.title}
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-2 hidden sm:block">
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2 hidden sm:block">
                       {article.excerpt}
                     </p>
-                    <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span>{article.date}</span>
                       <span>{article.readTime}</span>
                       <span className="flex items-center gap-1">
@@ -626,37 +639,37 @@ export default function PublicNews() {
             <div className="mt-8 text-center">
               <Button variant="outline" size="lg" className="px-8" data-testid="button-load-more">
                 Load More Stories
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className={cn("w-4 h-4 ms-2", isRTL && "rotate-180")} />
               </Button>
             </div>
 
             {/* Popular Categories - fills remaining space */}
-            <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Browse by Category</h3>
+            <div className="mt-12 pt-8 border-t border-border">
+              <h3 className="font-heading text-lg font-bold text-foreground mb-6">Browse by Category</h3>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { name: "Travel Tips", count: 156, icon: Compass, color: "bg-sky-500" },
-                  { name: "Events & Festivals", count: 89, icon: Calendar, color: "bg-pink-500" },
-                  { name: "Food & Dining", count: 234, icon: Utensils, color: "bg-amber-500" },
-                  { name: "Real Estate", count: 67, icon: Building2, color: "bg-emerald-500" },
-                  { name: "Business", count: 45, icon: Briefcase, color: "bg-indigo-500" },
-                  { name: "Lifestyle", count: 123, icon: Heart, color: "bg-rose-500" },
+                  { name: "Travel Tips", count: 156, icon: Compass, color: "bg-[#01BEFF]" },
+                  { name: "Events & Festivals", count: 89, icon: Calendar, color: "bg-[#F94498]" },
+                  { name: "Food & Dining", count: 234, icon: Utensils, color: "bg-[#FF9327]" },
+                  { name: "Real Estate", count: 67, icon: Building2, color: "bg-[#02A65C]" },
+                  { name: "Business", count: 45, icon: Briefcase, color: "bg-[#6443F4]" },
+                  { name: "Lifestyle", count: 123, icon: Heart, color: "bg-[#F94498]" },
                 ].map((category) => (
-                  <div
+                  <Card
                     key={category.name}
-                    className="group cursor-pointer flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-transparent dark:border-slate-800 transition-all duration-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-[1.02]"
+                    className="group cursor-pointer flex items-center gap-3 p-4 bg-card rounded-[16px] border border-border transition-all duration-300 hover-elevate"
                     data-testid={`category-${category.name.toLowerCase().replace(/\s+/g, "-")}`}
                   >
-                    <div className={`w-10 h-10 ${category.color} rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110`}>
+                    <div className={`w-10 h-10 ${category.color} rounded-[8px] flex items-center justify-center transition-transform duration-300 group-hover:scale-110`}>
                       <category.icon className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                      <h4 className="font-heading font-semibold text-foreground group-hover:text-[#F94498] transition-colors">
                         {category.name}
                       </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{category.count} articles</p>
+                      <p className="text-xs text-muted-foreground">{category.count} articles</p>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -665,104 +678,103 @@ export default function PublicNews() {
           {/* Sidebar */}
           <div className="space-y-8">
             {/* This Week */}
-            <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-5">
+            <Card className="rounded-[16px] p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Calendar className="w-4 h-4 text-rose-500" />
-                <h3 className="font-bold text-slate-900 dark:text-white">This Week in Dubai</h3>
+                <Calendar className="w-4 h-4 text-[#F94498]" />
+                <h3 className="font-heading font-bold text-foreground">This Week in Dubai</h3>
               </div>
               <div className="space-y-3">
                 {THIS_WEEK.map((item, i) => (
                   <div key={i} className="flex items-center gap-3 group cursor-pointer transition-transform duration-200 hover:scale-[1.02]" data-testid={`event-${i}`}>
                     <div className="w-12 text-center">
-                      <div className="text-[10px] font-medium text-slate-500 uppercase">{item.day}</div>
-                      <div className="text-lg font-bold text-slate-900 dark:text-white">{item.date}</div>
+                      <div className="text-[10px] font-medium text-muted-foreground uppercase">{item.day}</div>
+                      <div className="text-lg font-bold text-foreground">{item.date}</div>
                     </div>
-                    <div className={`flex-1 px-3 py-2 rounded-lg ${item.color} bg-opacity-10 dark:bg-opacity-20 group-hover:bg-opacity-20 dark:group-hover:bg-opacity-30 transition-colors`}>
-                      <span className="text-sm font-medium text-slate-900 dark:text-white">{item.event}</span>
+                    <div className={`flex-1 px-3 py-2 rounded-[8px] ${item.color} bg-opacity-10 group-hover:bg-opacity-20 transition-colors`}>
+                      <span className="text-sm font-medium text-foreground">{item.event}</span>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
 
             {/* Hot Deals */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl p-5 border border-amber-200/50 dark:border-amber-800/30">
+            <Card className="bg-gradient-to-br from-[#FF9327]/10 to-[#FFD112]/10 rounded-[16px] p-5 border border-[#FF9327]/20">
               <div className="flex items-center gap-2 mb-4">
-                <Tag className="w-4 h-4 text-amber-600" />
-                <h3 className="font-bold text-slate-900 dark:text-white">Hot Deals</h3>
+                <Tag className="w-4 h-4 text-[#FF9327]" />
+                <h3 className="font-heading font-bold text-foreground">Hot Deals</h3>
               </div>
               <div className="space-y-3">
                 {HOT_DEALS.map((deal, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl transition-transform duration-200 hover:scale-[1.02] cursor-pointer" data-testid={`deal-${i}`}>
+                  <div key={i} className="flex items-center justify-between p-3 bg-card rounded-[12px] transition-transform duration-200 hover:scale-[1.02] cursor-pointer" data-testid={`deal-${i}`}>
                     <div className="flex items-center gap-2">
-                      <deal.icon className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm font-medium text-slate-900 dark:text-white">{deal.title}</span>
+                      <deal.icon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-medium text-foreground">{deal.title}</span>
                     </div>
-                    <span className="text-xs font-bold text-amber-600 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded">
+                    <Badge variant="secondary" className="bg-[#FF9327]/10 text-[#FF9327] border-0">
                       {deal.discount}
-                    </span>
+                    </Badge>
                   </div>
                 ))}
               </div>
-              <Button className="w-full mt-4 bg-amber-500 text-white" data-testid="button-all-deals">
+              <Button className="w-full mt-4 bg-[#FF9327] text-white" data-testid="button-all-deals">
                 See All Deals
               </Button>
-            </div>
+            </Card>
 
             {/* Travel Alerts */}
-            <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-5">
+            <Card className="rounded-[16px] p-5">
               <div className="flex items-center gap-2 mb-4">
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
-                <h3 className="font-bold text-slate-900 dark:text-white">Travel Alerts</h3>
+                <AlertTriangle className="w-4 h-4 text-[#FFD112]" />
+                <h3 className="font-heading font-bold text-foreground">Travel Alerts</h3>
               </div>
               <div className="space-y-2">
                 <div className="flex items-start gap-2 text-sm" data-testid="alert-0">
-                  <Sun className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-600 dark:text-slate-400">High temperatures expected: 28-32C</span>
+                  <Sun className="w-4 h-4 text-[#01BEFF] flex-shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground">High temperatures expected: 28-32C</span>
                 </div>
                 <div className="flex items-start gap-2 text-sm" data-testid="alert-1">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-600 dark:text-slate-400">DIFC road closure Dec 25-26</span>
+                  <AlertTriangle className="w-4 h-4 text-[#FFD112] flex-shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground">DIFC road closure Dec 25-26</span>
                 </div>
                 <div className="flex items-start gap-2 text-sm" data-testid="alert-2">
-                  <Shield className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-slate-600 dark:text-slate-400">All Metro lines operating normally</span>
+                  <Shield className="w-4 h-4 text-[#02A65C] flex-shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground">All Metro lines operating normally</span>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Trending Searches */}
-            <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-5">
+            <Card className="rounded-[16px] p-5">
               <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="w-4 h-4 text-rose-500" />
-                <h3 className="font-bold text-slate-900 dark:text-white">Trending Searches</h3>
+                <TrendingUp className="w-4 h-4 text-[#F94498]" />
+                <h3 className="font-heading font-bold text-foreground">Trending Searches</h3>
               </div>
               <div className="space-y-2">
                 {TRENDING.map((item) => (
                   <div key={item.rank} className="flex items-center gap-3 group cursor-pointer transition-transform duration-200 hover:scale-[1.02]" data-testid={`trending-${item.rank}`}>
-                    <span className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-400">
+                    <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
                       {item.rank}
                     </span>
-                    <span className="text-sm text-slate-700 dark:text-slate-300 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                    <span className="text-sm text-foreground group-hover:text-[#F94498] transition-colors">
                       {item.term}
                     </span>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
 
-            {/* Enhanced Newsletter with Animated Gradient */}
-            <div className="relative rounded-2xl p-6 text-white overflow-hidden" data-testid="section-newsletter-cta">
-              {/* Animated gradient background - light mode */}
-              <div className="absolute inset-0 bg-gradient-to-br from-rose-600 via-purple-600 to-indigo-700 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 animate-gradient-shift" />
-              <div className="absolute inset-0 bg-gradient-to-tr from-rose-500/50 via-transparent to-indigo-500/50 dark:from-rose-500/20 dark:via-transparent dark:to-purple-500/20 animate-gradient-shift-reverse" />
-              {/* Dark overlay for better text contrast */}
-              <div className="absolute inset-0 bg-black/10 dark:bg-black/40" />
+            {/* Enhanced Newsletter with Brand Gradient */}
+            <Card className="relative rounded-[16px] p-6 text-white overflow-hidden" data-testid="section-newsletter-cta">
+              {/* Brand gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#F94498] via-[#6443F4] to-[#01BEFF] animate-gradient-shift" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#F94498]/50 via-transparent to-[#6443F4]/50 animate-gradient-shift-reverse" />
+              <div className="absolute inset-0 bg-black/10" />
               
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-3">
                   <Mail className="w-5 h-5" />
-                  <h3 className="font-bold text-lg">Daily Newsletter</h3>
+                  <h3 className="font-heading font-bold text-lg">Daily Newsletter</h3>
                 </div>
                 <p className="text-sm text-white/90 mb-4">
                   Get Dubai travel updates delivered to your inbox every morning.
@@ -772,10 +784,10 @@ export default function PublicNews() {
                   placeholder="Your email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white/20 border-white/30 text-white placeholder:text-white/60 mb-3 focus:bg-white/30 dark:bg-white/10 dark:border-white/20 dark:focus:bg-white/20"
+                  className="bg-white/20 border-white/30 text-white placeholder:text-white/60 mb-3 focus:bg-white/30 rounded-[12px]"
                   data-testid="input-newsletter-email"
                 />
-                <Button className="w-full bg-white text-rose-600 font-semibold dark:bg-white dark:text-slate-900" data-testid="button-subscribe">
+                <Button className="w-full bg-white text-[#6443F4] font-semibold" data-testid="button-subscribe">
                   Subscribe Free
                 </Button>
                 <p className="text-xs text-white/80 mt-3 text-center flex items-center justify-center gap-1">
@@ -783,78 +795,79 @@ export default function PublicNews() {
                   Join 50,000+ subscribers
                 </p>
               </div>
-            </div>
+            </Card>
 
             {/* Quick Links */}
-            <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-5">
+            <Card className="rounded-[16px] p-5">
               <div className="flex items-center gap-2 mb-4">
-                <BookOpen className="w-4 h-4 text-sky-500" />
-                <h3 className="font-bold text-slate-900 dark:text-white">Quick Links</h3>
+                <BookOpen className="w-4 h-4 text-[#01BEFF]" />
+                <h3 className="font-heading font-bold text-foreground">Quick Links</h3>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {["Metro Map", "Currency", "Weather", "Emergency"].map((link) => (
                   <a
                     key={link}
                     href="#"
-                    className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[#F94498] transition-colors"
+                    data-testid={`link-quick-${link.toLowerCase().replace(/\s+/g, '-')}`}
                   >
                     <ExternalLink className="w-3 h-3" />
                     {link}
                   </a>
                 ))}
               </div>
-            </div>
+            </Card>
           </div>
         </div>
-      </section>
+      </Section>
 
       {/* Category Quick Links */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12 border-t border-slate-200 dark:border-slate-800">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <Section id="quick-categories">
+        <CategoryGrid columns={4}>
           {[
-            { id: "visa", name: "Visa Guide", icon: Ticket, href: "/visa", color: "bg-rose-500" },
-            { id: "hotels", name: "Hotel Deals", icon: Hotel, href: "/hotels", color: "bg-emerald-500" },
-            { id: "events", name: "Events", icon: Calendar, href: "/events", color: "bg-pink-500" },
-            { id: "attractions", name: "Attractions", icon: Camera, href: "/attractions", color: "bg-purple-500" },
+            { id: "visa", name: "Visa Guide", icon: Ticket, href: "/visa", color: "bg-[#F94498]" },
+            { id: "hotels", name: "Hotel Deals", icon: Hotel, href: "/hotels", color: "bg-[#02A65C]" },
+            { id: "events", name: "Events", icon: Calendar, href: "/events", color: "bg-[#FF9327]" },
+            { id: "attractions", name: "Attractions", icon: Camera, href: "/attractions", color: "bg-[#6443F4]" },
           ].map((item) => (
             <Link key={item.name} href={localePath(item.href)} data-testid={`link-category-${item.id}`}>
-              <div className="group cursor-pointer p-5 bg-slate-50 dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-2xl transition-all duration-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-[1.02]">
-                <div className={`w-10 h-10 ${item.color} rounded-xl flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110`}>
+              <Card className="group cursor-pointer p-5 bg-card border border-border rounded-[16px] transition-all duration-300 hover-elevate">
+                <div className={`w-10 h-10 ${item.color} rounded-[12px] flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110`}>
                   <item.icon className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                <h3 className="font-heading font-semibold text-foreground group-hover:text-[#F94498] transition-colors">
                   {item.name}
                 </h3>
-                <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-1 transition-transform duration-300 group-hover:translate-x-1" />
-              </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 transition-transform duration-300 group-hover:translate-x-1" />
+              </Card>
             </Link>
           ))}
-        </div>
-      </section>
+        </CategoryGrid>
+      </Section>
 
       {/* CTA Banner */}
-      <section className="bg-slate-900 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section className="bg-[#24103E] py-12">
+        <div className="max-w-7xl mx-auto px-5 md:px-8 lg:px-[140px]">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-white text-center md:text-left">
-              <h2 className="text-2xl font-bold mb-2">Plan Your Dubai Trip</h2>
-              <p className="text-slate-400">Explore attractions, hotels, and experiences</p>
+              <h2 className="font-heading text-2xl font-bold mb-2">Plan Your Dubai Trip</h2>
+              <p className="text-[#A79FB2]">Explore attractions, hotels, and experiences</p>
             </div>
             <div className="flex flex-wrap gap-3 justify-center">
               <Link href={localePath("/attractions")}>
-                <Button size="lg" className="bg-rose-500 text-white" data-testid="button-cta-attractions">
+                <Button size="lg" className="bg-[#F94498] text-white" data-testid="button-cta-attractions">
                   <Camera className="w-4 h-4 mr-2" />
                   Attractions
                 </Button>
               </Link>
               <Link href={localePath("/hotels")}>
-                <Button size="lg" variant="outline" className="border-slate-600 text-white" data-testid="button-cta-hotels">
+                <Button size="lg" variant="outline" className="border-[#504065] text-white" data-testid="button-cta-hotels">
                   <Hotel className="w-4 h-4 mr-2" />
                   Hotels
                 </Button>
               </Link>
               <Link href={localePath("/dining")}>
-                <Button size="lg" variant="outline" className="border-slate-600 text-white" data-testid="button-cta-dining">
+                <Button size="lg" variant="outline" className="border-[#504065] text-white" data-testid="button-cta-dining">
                   <Utensils className="w-4 h-4 mr-2" />
                   Dining
                 </Button>
@@ -863,8 +876,6 @@ export default function PublicNews() {
           </div>
         </div>
       </section>
-
-      <PublicFooter />
 
       <style>{`
         @keyframes marquee {
@@ -896,6 +907,6 @@ export default function PublicNews() {
           animation: gradient-shift-reverse 6s ease-in-out infinite;
         }
       `}</style>
-    </div>
+    </PageContainer>
   );
 }

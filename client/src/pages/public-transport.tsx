@@ -30,7 +30,7 @@ function TransportCard({ content, index }: { content: Content; index: number }) 
         <div className="p-5">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <span className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 fill-[#fdcd0a] text-[#fdcd0a]" />
+              <Star className="w-3.5 h-3.5 fill-travi-orange text-travi-orange" />
               <span className="font-medium">4.6</span>
             </span>
             <span className="text-muted-foreground/50">|</span>
@@ -150,7 +150,7 @@ export default function PublicTransport() {
         </div>
       </nav>
 
-      <section className="bg-gradient-to-br from-[#0369a1] via-[#0284c7] to-[#38bdf8] py-16 relative overflow-hidden">
+      <section className="bg-gradient-to-br from-travi-purple via-travi-purple/80 to-info py-16 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNCI+PHBhdGggZD0iTTAgMzBoNjAiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0zMCAwdjYwIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-40" />
         <div className="absolute top-5 right-10 w-36 h-36 bg-[#7dd3fc] rounded-full blur-3xl opacity-25" />
         <div className="absolute bottom-10 left-20 w-32 h-32 bg-[#0c4a6e] rounded-full blur-3xl opacity-20" />
@@ -161,7 +161,7 @@ export default function PublicTransport() {
             Back to Home
           </Link>
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7dd3fc] to-[#0284c7] flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-info/50 to-travi-purple flex items-center justify-center shadow-lg">
               <Bus className="w-8 h-8 text-[#0c4a6e]" />
             </div>
             <div>

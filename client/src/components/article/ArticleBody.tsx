@@ -55,11 +55,11 @@ function renderTextBlock(data: Record<string, any>, index: number) {
                    prose-headings:font-bold prose-headings:text-foreground
                    prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4
                    prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
-                   prose-p:text-muted-foreground prose-p:leading-relaxed
-                   prose-a:text-[#6443F4] prose-a:no-underline hover:prose-a:underline
-                   prose-strong:text-foreground prose-strong:font-semibold
-                   prose-ul:text-muted-foreground prose-ol:text-muted-foreground
-                   prose-li:marker:text-[#FF9327]"
+                   propose-p:text-muted-foreground prose-p:leading-relaxed
+                   propose-a:text-travi-purple prose-a:no-underline hover:prose-a:underline
+                   propose-strong:text-foreground prose-strong:font-semibold
+                   propose-ul:text-muted-foreground prose-ol:text-muted-foreground
+                   propose-li:marker:text-travi-orange"
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     </div>
@@ -70,7 +70,7 @@ function renderBlockquote(data: Record<string, any>, index: number) {
   return (
     <blockquote
       key={index}
-      className="relative my-8 pl-6 py-4 border-l-4 border-[#FF9327] bg-gradient-to-r from-orange-50/50 to-transparent dark:from-orange-950/20"
+      className="relative my-8 pl-6 py-4 border-l-4 border-travi-orange bg-gradient-to-r from-travi-orange/10 to-transparent"
       data-testid={`blockquote-block-${index}`}
     >
       <p className="text-lg italic text-muted-foreground leading-relaxed">
@@ -204,8 +204,8 @@ function renderTips(data: Record<string, any>, index: number) {
       data-testid={`tips-block-${index}`}
     >
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-full bg-[#6443F4]/10 flex items-center justify-center">
-          <Lightbulb className="w-5 h-5 text-[#6443F4]" />
+        <div className="w-10 h-10 rounded-full bg-travi-purple/10 flex items-center justify-center">
+          <Lightbulb className="w-5 h-5 text-travi-purple" />
         </div>
         <h3 className="text-xl font-semibold text-foreground">
           {data.title || "Pro Tips"}
@@ -214,7 +214,7 @@ function renderTips(data: Record<string, any>, index: number) {
       <ul className="space-y-3">
         {tips.map((tip: string, i: number) => (
           <li key={i} className="flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-[#02A65C] mt-0.5 flex-shrink-0" />
+            <CheckCircle className="w-5 h-5 text-travi-green mt-0.5 flex-shrink-0" />
             <span className="text-muted-foreground leading-relaxed">{tip}</span>
           </li>
         ))}
@@ -247,7 +247,7 @@ function renderHighlights(data: Record<string, any>, index: number) {
             key={i}
             className="flex items-start gap-3 p-4 rounded-lg bg-card border border-border/50"
           >
-            <Star className="w-5 h-5 text-[#FF9327] mt-0.5 flex-shrink-0" />
+            <Star className="w-5 h-5 text-travi-orange mt-0.5 flex-shrink-0" />
             <span className="font-medium text-foreground">{highlight}</span>
           </div>
         ))}
@@ -260,7 +260,7 @@ function renderCta(data: Record<string, any>, index: number) {
   return (
     <div
       key={index}
-      className="my-10 p-8 rounded-lg bg-gradient-to-r from-[#6443F4] to-[#F94498] text-center"
+      className="my-10 p-8 rounded-lg bg-gradient-to-r from-travi-purple to-travi-pink text-center"
       data-testid={`cta-block-${index}`}
     >
       {data.title && (
@@ -274,7 +274,7 @@ function renderCta(data: Record<string, any>, index: number) {
       {data.buttonText && (data.buttonUrl || data.buttonLink) && (
         <a
           href={data.buttonUrl || data.buttonLink}
-          className="inline-block bg-white text-[#6443F4] px-6 py-3 rounded-md font-medium transition-transform hover:scale-105"
+          className="inline-block bg-white text-travi-purple px-6 py-3 rounded-md font-medium transition-transform hover:scale-105"
           data-testid={`cta-button-${index}`}
         >
           {data.buttonText}

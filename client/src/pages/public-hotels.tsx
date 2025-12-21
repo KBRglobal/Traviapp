@@ -3,8 +3,8 @@ import {
   Sparkles, Award, Crown, Plane, Palmtree, Building,
   Umbrella, Utensils, Dumbbell, Car, Wifi, Coffee
 } from "lucide-react";
-import { PublicNav } from "@/components/public-nav";
-import { PublicFooter } from "@/components/public-footer";
+import { PageContainer, Section, ContentCard, CategoryGrid } from "@/components/public-layout";
+import { PublicHero } from "@/components/public-hero";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -17,7 +17,6 @@ const hotelCategories = [
     description: "Wake up to turquoise waters and pristine private beaches",
     hotels: ["Atlantis The Palm", "One&Only The Palm", "Jumeirah Beach Hotel"],
     image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&h=600&fit=crop",
-    color: "from-cyan-500 to-blue-600"
   },
   {
     name: "Iconic Landmarks",
@@ -25,7 +24,6 @@ const hotelCategories = [
     description: "Stay at architectural marvels that define Dubai's skyline",
     hotels: ["Burj Al Arab", "Jumeirah Emirates Towers", "Address Downtown"],
     image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop",
-    color: "from-amber-500 to-orange-600"
   },
   {
     name: "Business Hotels",
@@ -33,7 +31,6 @@ const hotelCategories = [
     description: "World-class facilities for the discerning business traveler",
     hotels: ["JW Marriott Marquis", "Radisson Blu DIFC", "Novotel WTC"],
     image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop",
-    color: "from-slate-600 to-slate-800"
   },
   {
     name: "Boutique Hotels",
@@ -41,7 +38,6 @@ const hotelCategories = [
     description: "Intimate experiences with unique character and design",
     hotels: ["XVA Art Hotel", "The Meydan Hotel", "Sofitel The Obelisk"],
     image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&h=600&fit=crop",
-    color: "from-pink-500 to-rose-600"
   },
   {
     name: "Family Resorts",
@@ -49,7 +45,6 @@ const hotelCategories = [
     description: "Adventure and entertainment for the whole family",
     hotels: ["Atlantis Aquaventure", "Jumeirah Creekside", "JA Beach Hotel"],
     image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&h=600&fit=crop",
-    color: "from-green-500 to-emerald-600"
   },
   {
     name: "Airport Hotels",
@@ -57,7 +52,6 @@ const hotelCategories = [
     description: "Convenience and comfort for transit travelers",
     hotels: ["JW Marriott DXB", "Hilton Garden Inn Al Mina", "Le Meridien DXB"],
     image: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&h=600&fit=crop",
-    color: "from-purple-500 to-indigo-600"
   }
 ];
 
@@ -182,26 +176,28 @@ const amenities = [
 
 function CategoryCard({ category }: { category: typeof hotelCategories[0] }) {
   const IconComponent = category.icon;
+  const { isRTL } = useLocale();
   
   return (
     <Card 
-      className="group relative overflow-visible border-0 shadow-lg bg-white dark:bg-slate-900"
+      className="group overflow-visible bg-card rounded-[16px] shadow-[var(--shadow-level-1)] hover-elevate transition-all duration-300"
       data-testid={`card-category-${category.name.toLowerCase().replace(/\s+/g, '-')}`}
     >
-      <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-t-[16px]">
         <img 
           src={category.image} 
           alt={category.name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
         
-        <div className={`absolute top-4 left-4 w-12 h-12 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center shadow-lg`}>
+        <div className={`absolute top-4 ${isRTL ? 'right-4' : 'left-4'} w-12 h-12 rounded-xl bg-travi-purple flex items-center justify-center shadow-md`}>
           <IconComponent className="w-6 h-6 text-white" />
         </div>
         
         <div className="absolute bottom-0 left-0 right-0 p-5">
-          <h3 className="font-bold text-white text-xl mb-2">{category.name}</h3>
+          <h3 className="font-heading font-bold text-white text-xl mb-2">{category.name}</h3>
           <p className="text-white/80 text-sm line-clamp-2">{category.description}</p>
         </div>
       </div>
@@ -212,7 +208,7 @@ function CategoryCard({ category }: { category: typeof hotelCategories[0] }) {
             <Badge 
               key={idx} 
               variant="secondary" 
-              className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+              className="text-xs"
             >
               {hotel}
             </Badge>
@@ -224,6 +220,7 @@ function CategoryCard({ category }: { category: typeof hotelCategories[0] }) {
 }
 
 function FeaturedHotelCard({ hotel, index }: { hotel: typeof featuredHotels[0]; index: number }) {
+  const { isRTL } = useLocale();
   const isReversed = index % 2 === 1;
   
   return (
@@ -232,23 +229,24 @@ function FeaturedHotelCard({ hotel, index }: { hotel: typeof featuredHotels[0]; 
       data-testid={`card-featured-hotel-${hotel.name.toLowerCase().replace(/\s+/g, '-')}`}
     >
       <div className="w-full lg:w-1/2">
-        <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+        <div className="relative overflow-hidden rounded-[16px] shadow-[var(--shadow-level-2)]">
           <img 
             src={hotel.image} 
             alt={hotel.name}
             className="w-full aspect-[4/3] object-cover"
+            loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
           
-          <div className="absolute top-4 right-4">
-            <Badge className="bg-white/90 text-slate-900 backdrop-blur-sm border-0 gap-1">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+          <div className={`absolute top-4 ${isRTL ? 'left-4' : 'right-4'}`}>
+            <Badge className="bg-white/90 text-foreground backdrop-blur-sm border-0 gap-1">
+              <Star className="w-3 h-3 fill-travi-orange text-travi-orange" />
               {hotel.rating === 7 ? "7-Star" : `${hotel.rating}-Star`}
             </Badge>
           </div>
           
-          <div className="absolute bottom-4 left-4">
-            <Badge className="bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] text-white border-0">
+          <div className={`absolute bottom-4 ${isRTL ? 'right-4' : 'left-4'}`}>
+            <Badge className="bg-travi-purple text-white border-0">
               {hotel.area}
             </Badge>
           </div>
@@ -257,19 +255,19 @@ function FeaturedHotelCard({ hotel, index }: { hotel: typeof featuredHotels[0]; 
       
       <div className="w-full lg:w-1/2 space-y-4">
         <div>
-          <p className="text-[#6C5CE7] font-medium text-sm uppercase tracking-wide mb-2">{hotel.tagline}</p>
-          <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white mb-4">{hotel.name}</h3>
-          <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed">{hotel.description}</p>
+          <p className="text-travi-purple font-medium text-sm uppercase tracking-wide mb-2">{hotel.tagline}</p>
+          <h3 className="font-heading text-3xl lg:text-4xl font-bold text-foreground mb-4">{hotel.name}</h3>
+          <p className="text-muted-foreground text-lg leading-relaxed">{hotel.description}</p>
         </div>
         
         <div className="flex flex-wrap gap-3 pt-4">
           {hotel.features.map((feature, idx) => (
             <div 
               key={idx}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-full"
+              className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full"
             >
-              <Sparkles className="w-4 h-4 text-[#6C5CE7]" />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{feature}</span>
+              <Sparkles className="w-4 h-4 text-travi-purple" />
+              <span className="text-sm font-medium text-foreground">{feature}</span>
             </div>
           ))}
         </div>
@@ -282,37 +280,19 @@ function AreaCard({ area }: { area: typeof dubaiAreas[0] }) {
   const IconComponent = area.icon;
   
   return (
-    <div 
-      className="group relative overflow-hidden rounded-2xl shadow-lg"
-      data-testid={`card-area-${area.name.toLowerCase().replace(/\s+/g, '-')}`}
-    >
-      <div className="aspect-[3/4] overflow-hidden">
-        <img 
-          src={area.image} 
-          alt={area.name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-        />
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-      
-      <div className="absolute bottom-0 left-0 right-0 p-6">
-        <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3">
-          <IconComponent className="w-5 h-5 text-white" />
-        </div>
-        <Badge className="mb-3 bg-white/20 backdrop-blur-sm text-white border-0 text-xs">
-          {area.type}
-        </Badge>
-        <h3 className="font-bold text-white text-xl mb-2">{area.name}</h3>
-        <p className="text-white/80 text-sm mb-3 line-clamp-2">{area.description}</p>
-        <p className="text-white/60 text-xs font-medium">{area.hotels}</p>
-      </div>
-    </div>
+    <ContentCard
+      image={area.image}
+      title={area.name}
+      description={area.description}
+      badge={area.type}
+      badgeVariant="secondary"
+      aspectRatio="portrait"
+      showGradientOverlay={true}
+    />
   );
 }
 
 export default function PublicHotels() {
-  const { isRTL } = useLocale();
-
   useDocumentMeta({
     title: "Luxury Hotels in Dubai | From Palm Jumeirah to Downtown | Travi",
     description: "Discover Dubai's finest hotels. From Palm Jumeirah beachfront resorts to Downtown high-rises overlooking Burj Khalifa. 5-star luxury, world-class service.",
@@ -322,205 +302,119 @@ export default function PublicHotels() {
   });
 
   return (
-    <div className="bg-background min-h-screen flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
-      <PublicNav variant="transparent" />
+    <PageContainer navVariant="transparent">
+      <PublicHero
+        title="Dubai Hotels"
+        subtitle="From iconic landmarks to beachfront resorts, find your perfect stay"
+        backgroundImage="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Hotels" }
+        ]}
+        size="large"
+      />
 
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop"
-            alt="Dubai luxury hotel skyline with Burj Al Arab"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
+      <Section
+        id="categories"
+        title="Find Your Perfect Stay"
+        subtitle="Dubai offers an unparalleled selection of hotels for every type of traveler"
+        variant="alternate"
+      >
+        <CategoryGrid columns={3}>
+          {hotelCategories.map((category, idx) => (
+            <CategoryCard key={idx} category={category} />
+          ))}
+        </CategoryGrid>
+      </Section>
+
+      <Section
+        id="featured"
+        title="Dubai's Finest"
+        subtitle="Iconic properties that define luxury hospitality"
+      >
+        <div className="space-y-16 lg:space-y-24">
+          {featuredHotels.map((hotel, idx) => (
+            <FeaturedHotelCard key={idx} hotel={hotel} index={idx} />
+          ))}
+        </div>
+      </Section>
+
+      <Section
+        id="areas"
+        title="Dubai Areas for Hotels"
+        subtitle="Each district offers a unique Dubai experience"
+        variant="alternate"
+      >
+        <CategoryGrid columns={3}>
+          {dubaiAreas.map((area, idx) => (
+            <AreaCard key={idx} area={area} />
+          ))}
+        </CategoryGrid>
+      </Section>
+
+      <Section id="amenities" className="bg-travi-purple">
+        <div className="text-center mb-12">
+          <h2 className="font-heading text-3xl md:text-4xl font-bold text-white mb-4">
+            World-Class Amenities
+          </h2>
+          <p className="text-lg text-white/90 max-w-2xl mx-auto">
+            Dubai's luxury hotels offer amenities that redefine hospitality
+          </p>
         </div>
         
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-32">
-          <Badge className="mb-6 bg-white/10 backdrop-blur-md border-white/20 text-white px-5 py-2.5 text-sm">
-            <Crown className="w-4 h-4 mr-2" />
-            World-Class Hospitality
-          </Badge>
-          
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-            Luxury Hotels
-            <span className="block bg-gradient-to-r from-amber-300 via-orange-300 to-pink-300 bg-clip-text text-transparent">
-              in Dubai
-            </span>
-          </h1>
-          
-          <p className="text-xl sm:text-2xl text-white/90 max-w-3xl mx-auto mb-12 leading-relaxed">
-            From Palm Jumeirah resorts to Downtown high-rises
-          </p>
-          
-          {/* Stats Bar */}
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-8">
-            {[
-              { icon: Star, label: "5-Star Resorts" },
-              { icon: Waves, label: "Beach Hotels" },
-              { icon: Briefcase, label: "Business Hotels" },
-              { icon: Sparkles, label: "Boutique Stays" }
-            ].map((stat, idx) => (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+          {amenities.map((amenity, idx) => {
+            const IconComponent = amenity.icon;
+            return (
               <div 
                 key={idx}
-                className="flex items-center gap-2 px-5 py-3 bg-white/10 backdrop-blur-md rounded-full border border-white/20"
+                className="bg-card/30 backdrop-blur-sm rounded-[16px] p-6 text-center border border-white/20"
+                data-testid={`amenity-${amenity.name.toLowerCase().replace(/\s+/g, '-')}`}
               >
-                <stat.icon className="w-5 h-5 text-amber-300" />
-                <span className="text-white font-medium text-sm">{stat.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="w-8 h-12 rounded-full border-2 border-white/40 flex items-start justify-center p-2">
-            <div className="w-1.5 h-3 bg-white/60 rounded-full animate-pulse" />
-          </div>
-        </div>
-      </section>
-
-      {/* Hotel Categories Section */}
-      <section className="py-24 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-gradient-to-r from-[#6C5CE7]/10 to-[#EC4899]/10 text-[#6C5CE7] border-0">
-              <Building2 className="w-4 h-4 mr-2" />
-              Hotel Categories
-            </Badge>
-            <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 dark:text-white mb-6">
-              Find Your Perfect Stay
-            </h2>
-            <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-              Dubai offers an unparalleled selection of hotels for every type of traveler
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {hotelCategories.map((category, idx) => (
-              <CategoryCard key={idx} category={category} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Hotels Section */}
-      <section className="py-24 bg-white dark:bg-slate-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <Badge className="mb-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-600 border-0">
-              <Award className="w-4 h-4 mr-2" />
-              Featured Hotels
-            </Badge>
-            <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 dark:text-white mb-6">
-              Dubai's Finest
-            </h2>
-            <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-              Iconic properties that define luxury hospitality
-            </p>
-          </div>
-          
-          <div className="space-y-24">
-            {featuredHotels.map((hotel, idx) => (
-              <FeaturedHotelCard key={idx} hotel={hotel} index={idx} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Dubai Areas Section */}
-      <section className="py-24 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 border-0">
-              <Palmtree className="w-4 h-4 mr-2" />
-              By Location
-            </Badge>
-            <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 dark:text-white mb-6">
-              Dubai Areas for Hotels
-            </h2>
-            <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-              Each district offers a unique Dubai experience
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {dubaiAreas.map((area, idx) => (
-              <AreaCard key={idx} area={area} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Amenities Section */}
-      <section className="py-24 bg-gradient-to-r from-[#6C5CE7] via-[#8B5CF6] to-[#EC4899]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">
-              World-Class Amenities
-            </h2>
-            <p className="text-xl text-white/90 max-w-2xl mx-auto">
-              Dubai's luxury hotels offer amenities that redefine hospitality
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-            {amenities.map((amenity, idx) => {
-              const IconComponent = amenity.icon;
-              return (
-                <div 
-                  key={idx}
-                  className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/20"
-                  data-testid={`amenity-${amenity.name.toLowerCase().replace(/\s+/g, '-')}`}
-                >
-                  <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center mx-auto mb-4">
-                    <IconComponent className="w-7 h-7 text-white" />
-                  </div>
-                  <h3 className="font-bold text-white mb-1">{amenity.name}</h3>
-                  <p className="text-white/70 text-sm">{amenity.description}</p>
+                <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center mx-auto mb-4">
+                  <IconComponent className="w-7 h-7 text-white" />
                 </div>
-              );
-            })}
-          </div>
+                <h3 className="font-heading font-bold text-white mb-1">{amenity.name}</h3>
+                <p className="text-white/70 text-sm">{amenity.description}</p>
+              </div>
+            );
+          })}
         </div>
-      </section>
+      </Section>
 
-      {/* Bottom CTA Section */}
-      <section className="py-24 bg-white dark:bg-slate-950">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <Section id="cta">
+        <div className="max-w-4xl mx-auto text-center">
           <div className="relative">
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-64 h-64 bg-gradient-to-r from-[#6C5CE7]/20 to-[#EC4899]/20 rounded-full blur-3xl" />
+              <div className="w-64 h-64 bg-[#6443F4]/10 rounded-full blur-3xl" />
             </div>
             <div className="relative">
-              <Crown className="w-16 h-16 mx-auto text-amber-500 mb-6" />
-              <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 dark:text-white mb-6">
+              <Crown className="w-16 h-16 mx-auto text-[#FF9327] mb-6" />
+              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-6">
                 Experience Dubai Luxury
               </h2>
-              <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
+              <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
                 From the world's only 7-star hotel to intimate boutique retreats, 
                 Dubai offers hospitality experiences found nowhere else on Earth.
               </p>
               <div className="flex flex-wrap justify-center gap-4">
-                <Badge className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-base">
-                  <Star className="w-4 h-4 mr-2 text-amber-500" />
+                <Badge className="px-6 py-3 text-base" variant="secondary">
+                  <Star className="w-4 h-4 mr-2 text-[#FF9327]" />
                   500+ Luxury Hotels
                 </Badge>
-                <Badge className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-base">
-                  <Heart className="w-4 h-4 mr-2 text-pink-500" />
+                <Badge className="px-6 py-3 text-base" variant="secondary">
+                  <Heart className="w-4 h-4 mr-2 text-[#F94498]" />
                   World-Renowned Service
                 </Badge>
-                <Badge className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-base">
-                  <Coffee className="w-4 h-4 mr-2 text-amber-600" />
+                <Badge className="px-6 py-3 text-base" variant="secondary">
+                  <Coffee className="w-4 h-4 mr-2 text-[#FF9327]" />
                   Michelin-Star Dining
                 </Badge>
               </div>
             </div>
           </div>
         </div>
-      </section>
-
-      <PublicFooter />
-    </div>
+      </Section>
+    </PageContainer>
   );
 }

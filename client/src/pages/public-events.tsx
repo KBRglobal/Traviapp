@@ -1,18 +1,16 @@
 import { Link } from "wouter";
-import { ArrowLeft, Calendar, MapPin, Clock, Filter, Search, Loader2 } from "lucide-react";
+import { Calendar, MapPin, Clock, Filter, Search, Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Logo } from "@/components/logo";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ContentWithRelations } from "@shared/schema";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { LazyImage } from "@/components/ui/lazy-image";
-import { FavoriteButton } from "@/components/ui/favorite-button";
+import { PageContainer, Section, CategoryGrid } from "@/components/public-layout";
+import { PublicHero } from "@/components/public-hero";
 
 const categories = [
   { id: "all", name: "All Events" },
@@ -55,20 +53,20 @@ function formatDateRange(start: string, end?: string): string {
   return `${formatDate(start)} - ${formatDate(end)}`;
 }
 
-function getCategoryColor(category: string): string {
-  const colors: Record<string, string> = {
-    festivals: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-    sports: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-    concerts: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-    exhibitions: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-    food: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-    cultural: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+function getCategoryBadgeVariant(category: string): "default" | "secondary" | "outline" {
+  const variants: Record<string, "default" | "secondary" | "outline"> = {
+    festivals: "default",
+    sports: "secondary",
+    concerts: "default",
+    exhibitions: "secondary",
+    food: "default",
+    cultural: "secondary",
   };
-  return colors[category] || "bg-muted text-muted-foreground";
+  return variants[category] || "secondary";
 }
 
 export default function PublicEvents() {
-  const { t, locale, isRTL, localePath } = useLocale();
+  const { t, isRTL, localePath } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState("all");
@@ -116,243 +114,201 @@ export default function PublicEvents() {
   const featuredEvents = filteredEvents.filter(e => e.featured);
   const regularEvents = filteredEvents.filter(e => !e.featured);
 
+  const breadcrumbs = [
+    { label: t('nav.home'), href: "/" },
+    { label: t('events.pageTitle') },
+  ];
+
   return (
-    <div className="bg-background min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b" data-testid="nav-header">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Logo variant="primary" height={28} />
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/hotels" className="text-foreground/80 hover:text-primary font-medium transition-colors">Hotels</Link>
-              <Link href="/attractions" className="text-foreground/80 hover:text-primary font-medium transition-colors">Attractions</Link>
-              <Link href="/tools/events" className="text-primary font-medium">Events</Link>
-              <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">News</Link>
-            </div>
+    <PageContainer>
+      <PublicHero
+        title={t('events.pageTitle')}
+        subtitle={t('events.pageSubtitle')}
+        backgroundImage="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1600"
+        breadcrumbs={breadcrumbs}
+        size="default"
+      />
+
+      <Section className="py-8 border-b" id="filters">
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+          <div className={`relative flex-1 max-w-md ${isRTL ? 'pr-10' : 'pl-10'}`}>
+            <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground`} />
+            <Input
+              type="text"
+              placeholder={t('nav.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={isRTL ? 'pr-10' : 'pl-10'}
+              data-testid="input-search-events"
+            />
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-40" data-testid="select-category">
+                <Filter className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-40" data-testid="select-month">
+                <Calendar className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((month) => (
+                  <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </nav>
+      </Section>
 
-      <section className="bg-gradient-to-br from-[#ea580c] via-[#f97316] to-[#fdba74] py-16 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNCI+PHBhdGggZD0iTTAgMzBoNjAiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0zMCAwdjYwIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-40" />
-        <div className="absolute top-5 right-10 w-36 h-36 bg-[#fef3c7] rounded-full blur-3xl opacity-25" />
-        <div className="absolute bottom-10 left-20 w-32 h-32 bg-[#9a3412] rounded-full blur-3xl opacity-20" />
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <Link href={localePath("/")} className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            {t('common.viewAll')}
-          </Link>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#fef3c7] to-[#f97316] flex items-center justify-center shadow-lg">
-              <Calendar className="w-8 h-8 text-[#9a3412]" />
-            </div>
-            <div>
-              <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white drop-shadow-lg">{t('events.pageTitle')}</h1>
-              <p className="text-white/90">{t('events.pageSubtitle')}</p>
-            </div>
+      <Section id="events-list">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
-        </div>
-      </section>
-
-      <section className="py-8 border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t('nav.searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-                data-testid="input-search-events"
-              />
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-40" data-testid="select-category">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-40" data-testid="select-month">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        ) : filteredEvents.length === 0 ? (
+          <div className="text-center py-16">
+            <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-heading text-xl font-semibold mb-2">{t('search.noResults')}</h3>
+            <p className="text-muted-foreground mb-6">{t('events.pageSubtitle')}</p>
+            <Link href={localePath("/")}>
+              <Button data-testid="button-back-home">{t('common.viewAll')}</Button>
+            </Link>
           </div>
-        </div>
-      </section>
-
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : filteredEvents.length === 0 ? (
-            <div className="text-center py-16">
-              <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-heading text-xl font-semibold mb-2">{t('search.noResults')}</h3>
-              <p className="text-muted-foreground mb-6">{t('events.pageSubtitle')}</p>
-              <Link href={localePath("/")}>
-                <Button data-testid="button-back-home">{t('common.viewAll')}</Button>
-              </Link>
-            </div>
-          ) : (
-            <>
-              {featuredEvents.length > 0 && (
-                <div className="mb-12">
-                  <h2 className="font-heading text-2xl font-bold mb-6 flex items-center gap-2">
-                    <span className="w-2 h-8 bg-gradient-to-b from-orange-500 to-amber-500 rounded-full" />
-                    {t('events.upcoming')}
-                  </h2>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {featuredEvents.map((event) => (
-                      <Card key={event.id} className="overflow-hidden group" data-testid={`card-event-${event.id}`}>
-                        <div className="flex flex-col sm:flex-row">
-                          <div className="sm:w-48 h-40 sm:h-auto bg-muted flex-shrink-0">
-                            <img 
-                              src={event.image} 
-                              alt={event.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1 p-5">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <Badge className={`${getCategoryColor(event.category)} no-default-hover-elevate no-default-active-elevate`}>
-                                {categories.find(c => c.id === event.category)?.name || event.category}
-                              </Badge>
-                              <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 no-default-hover-elevate no-default-active-elevate">
-                                Featured
-                              </Badge>
-                            </div>
-                            <h3 className="font-heading text-lg font-semibold mb-2">{event.title}</h3>
-                            <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{event.description}</p>
-                            <div className="space-y-1 text-sm">
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <Calendar className="w-4 h-4 text-orange-500" />
-                                <span>{formatDateRange(event.date, event.endDate)}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <Clock className="w-4 h-4 text-orange-500" />
-                                <span>{event.time}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <MapPin className="w-4 h-4 text-orange-500" />
-                                <span className="truncate">{event.location}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
+        ) : (
+          <>
+            {featuredEvents.length > 0 && (
+              <div className="mb-12">
                 <h2 className="font-heading text-2xl font-bold mb-6 flex items-center gap-2">
-                  <span className="w-2 h-8 bg-gradient-to-b from-orange-500 to-amber-500 rounded-full" />
-                  {featuredEvents.length > 0 ? t('events.pageTitle') : t('events.pageTitle')}
-                  <span className="text-muted-foreground font-normal text-lg">({filteredEvents.length})</span>
+                  <span className="w-2 h-8 bg-gradient-to-b from-travi-orange to-travi-pink rounded-full" />
+                  {t('events.upcoming')}
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(featuredEvents.length > 0 ? regularEvents : filteredEvents).map((event) => (
-                    <Card key={event.id} className="overflow-hidden group" data-testid={`card-event-${event.id}`}>
-                      <div className="h-40 bg-muted relative overflow-hidden">
-                        <img 
-                          src={event.image} 
-                          alt={event.title}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                        <Badge className={`absolute top-3 left-3 ${getCategoryColor(event.category)} no-default-hover-elevate no-default-active-elevate`}>
-                          {categories.find(c => c.id === event.category)?.name || event.category}
-                        </Badge>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-heading text-base font-semibold mb-2 line-clamp-1">{event.title}</h3>
-                        <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{event.description}</p>
-                        <div className="space-y-1 text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Calendar className="w-3.5 h-3.5 text-orange-500" />
-                            <span className="truncate">{formatDateRange(event.date, event.endDate)}</span>
+                <CategoryGrid columns={2}>
+                  {featuredEvents.map((event) => (
+                    <Card key={event.id} className="overflow-visible group rounded-[16px] shadow-[var(--shadow-level-1)] hover-elevate" data-testid={`card-event-featured-${event.id}`}>
+                      <div className="flex flex-col sm:flex-row">
+                        <div className="sm:w-48 h-40 sm:h-auto bg-muted flex-shrink-0 overflow-hidden rounded-t-[16px] sm:rounded-t-none sm:rounded-l-[16px]">
+                          <img 
+                            src={event.image} 
+                            alt={event.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div className="flex-1 p-5">
+                          <div className="flex items-start justify-between gap-2 mb-2 flex-wrap">
+                            <Badge variant={getCategoryBadgeVariant(event.category)} className="no-default-hover-elevate no-default-active-elevate">
+                              {categories.find(c => c.id === event.category)?.name || event.category}
+                            </Badge>
+                            <Badge variant="default" className="bg-travi-orange text-white no-default-hover-elevate no-default-active-elevate">
+                              Featured
+                            </Badge>
                           </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="w-3.5 h-3.5 text-orange-500" />
-                            <span className="truncate">{event.location}</span>
+                          <h3 className="font-heading text-lg font-semibold text-foreground mb-2">{event.title}</h3>
+                          <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{event.description}</p>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Calendar className="w-4 h-4 text-[#6443F4]" />
+                              <span>{formatDateRange(event.date, event.endDate)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Clock className="w-4 h-4 text-[#6443F4]" />
+                              <span>{event.time}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <MapPin className="w-4 h-4 text-[#6443F4]" />
+                              <span className="truncate">{event.location}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </Card>
                   ))}
-                </div>
+                </CategoryGrid>
               </div>
-            </>
-          )}
-        </div>
-      </section>
+            )}
 
-      <section className="py-12 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Card className="p-8 bg-gradient-to-r from-orange-500 to-amber-500 border-0 text-white">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div>
-                <h3 className="font-heading text-2xl font-bold mb-2">{t('common.learnMore')}</h3>
-                <p className="text-white/90">{t('events.pageSubtitle')}</p>
-              </div>
-              <div className="flex gap-3">
-                <Link href={localePath("/tools/budget")}>
-                  <Button className="bg-white text-orange-600 hover:bg-white/90" data-testid="link-budget">
-                    Budget Calculator
-                  </Button>
-                </Link>
-                <Link href={localePath("/tools/currency")}>
-                  <Button variant="outline" className="border-white/50 text-white hover:bg-white/10" data-testid="link-currency">
-                    Currency Converter
-                  </Button>
-                </Link>
-                <Link href={localePath("/tools/plan")}>
-                  <Button variant="outline" className="border-white/50 text-white hover:bg-white/10" data-testid="link-plan">
-                    Travel Planning
-                  </Button>
-                </Link>
-              </div>
+            <div>
+              <h2 className="font-heading text-2xl font-bold mb-6 flex items-center gap-2">
+                <span className="w-2 h-8 bg-gradient-to-b from-travi-purple to-travi-pink rounded-full" />
+                {t('events.pageTitle')}
+                <span className="text-muted-foreground font-normal text-lg">({filteredEvents.length})</span>
+              </h2>
+              <CategoryGrid columns={3}>
+                {(featuredEvents.length > 0 ? regularEvents : filteredEvents).map((event) => (
+                  <Card key={event.id} className="overflow-visible group rounded-[16px] shadow-[var(--shadow-level-1)] hover-elevate" data-testid={`card-event-${event.id}`}>
+                    <div className="aspect-video bg-muted relative overflow-hidden rounded-t-[16px]">
+                      <img 
+                        src={event.image} 
+                        alt={event.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+                      <Badge 
+                        variant={getCategoryBadgeVariant(event.category)} 
+                        className={`absolute top-3 ${isRTL ? 'right-3' : 'left-3'} no-default-hover-elevate no-default-active-elevate`}
+                      >
+                        {categories.find(c => c.id === event.category)?.name || event.category}
+                      </Badge>
+                    </div>
+                    <div className="p-5">
+                      <h3 className="font-heading text-lg font-semibold text-foreground mb-2 line-clamp-1">{event.title}</h3>
+                      <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{event.description}</p>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="w-3.5 h-3.5 text-[#6443F4]" />
+                          <span className="truncate">{formatDateRange(event.date, event.endDate)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <MapPin className="w-3.5 h-3.5 text-[#6443F4]" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </CategoryGrid>
             </div>
-          </Card>
-        </div>
-      </section>
+          </>
+        )}
+      </Section>
 
-      <footer className="py-8 border-t">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <Logo variant="primary" height={28} />
-            <div className="flex items-center gap-6 text-muted-foreground text-sm">
-              <Link href="/hotels" className="hover:text-foreground transition-colors">Hotels</Link>
-              <Link href="/attractions" className="hover:text-foreground transition-colors">Attractions</Link>
-              <Link href="/tools/events" className="hover:text-foreground transition-colors">Events</Link>
-              <Link href="/articles" className="hover:text-foreground transition-colors">News</Link>
+      <Section variant="alternate" id="cta">
+        <Card className="p-8 bg-gradient-to-r from-travi-purple to-travi-pink border-0 text-white rounded-[16px]">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h3 className="font-heading text-2xl font-bold mb-2">{t('common.learnMore')}</h3>
+              <p className="text-white/90">{t('events.pageSubtitle')}</p>
             </div>
-            <div className="flex items-center gap-4 text-muted-foreground text-sm">
-              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-              <span>2024 Travi</span>
+            <div className="flex gap-3 flex-wrap">
+              <Link href={localePath("/tools/budget")}>
+                <Button className="bg-white text-[#6443F4] border-white" data-testid="link-budget">
+                  Budget Calculator
+                </Button>
+              </Link>
+              <Link href={localePath("/tools/currency")}>
+                <Button variant="outline" className="border-white/50 text-white bg-white/10 backdrop-blur-sm" data-testid="link-currency">
+                  Currency Converter
+                </Button>
+              </Link>
+              <Link href={localePath("/tools/plan")}>
+                <Button variant="outline" className="border-white/50 text-white bg-white/10 backdrop-blur-sm" data-testid="link-plan">
+                  Travel Planning
+                </Button>
+              </Link>
             </div>
           </div>
-        </div>
-      </footer>
-    </div>
+        </Card>
+      </Section>
+    </PageContainer>
   );
 }

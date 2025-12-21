@@ -206,7 +206,7 @@ function HeroSection() {
           
           {/* Title */}
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 text-sm px-4 py-1">
+            <Badge className="bg-gradient-to-r from-travi-purple to-travi-pink text-white border-0 text-sm px-4 py-1">
               <Star className="w-3 h-3 mr-1" /> #1 Tourist District
             </Badge>
             <Badge className="bg-white/20 text-white border-white/30">
@@ -246,7 +246,7 @@ function HeroSection() {
           <div className="flex flex-wrap gap-4">
             <Button 
               size="lg"
-              className="bg-gradient-to-r from-[#6443F4] to-[#F94498] text-white border-0 hover:opacity-90 gap-2 text-lg px-8"
+              className="bg-gradient-to-r from-travi-purple to-travi-pink text-white border-0 hover:opacity-90 gap-2 text-lg px-8"
               data-testid="button-plan-visit"
             >
               <Calendar className="w-5 h-5" />
@@ -353,7 +353,7 @@ function OverviewSection() {
                 { icon: Camera, title: "Instagram paradise", desc: "Every corner offers stunning photo opportunities" },
               ].map((item) => (
                 <div key={item.title} className="flex gap-4 p-4 rounded-xl bg-muted/50">
-                  <item.icon className="w-6 h-6 text-[#6443F4] shrink-0 mt-1" />
+                  <item.icon className="w-6 h-6 text-travi-purple shrink-0 mt-1" />
                   <div>
                     <h4 className="font-semibold">{item.title}</h4>
                     <p className="text-sm text-muted-foreground">{item.desc}</p>
@@ -429,7 +429,7 @@ function AttractionsSection() {
           variants={fadeInUp}
           className="text-center mb-12"
         >
-          <Badge className="mb-4 bg-[#6443F4]/10 text-[#6443F4] border-[#6443F4]/20">
+          <Badge className="mb-4 bg-travi-purple/10 text-travi-purple border-travi-purple/20">
             <Camera className="w-3 h-3 mr-1" /> Attractions
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Top Things to Do</h2>
@@ -462,7 +462,7 @@ function AttractionsSection() {
                         className="w-full h-48 md:h-full object-cover"
                       />
                       {attraction.mustSee && (
-                        <Badge className="absolute top-4 left-4 bg-gradient-to-r from-[#F94498] to-[#FF9327] text-white border-0">
+                        <Badge className="absolute top-4 left-4 bg-gradient-to-r from-travi-pink to-travi-orange text-white border-0">
                           <Star className="w-3 h-3 mr-1" /> Must See
                         </Badge>
                       )}
@@ -473,7 +473,7 @@ function AttractionsSection() {
                       <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
                         <div>
                           <h3 className="text-xl font-bold mb-1">{attraction.name}</h3>
-                          <p className="text-[#6443F4] font-medium text-sm">{attraction.tagline}</p>
+                          <p className="text-travi-purple font-medium text-sm">{attraction.tagline}</p>
                         </div>
                         <div className="flex gap-2 text-sm text-muted-foreground">
                           <Badge variant="outline">
@@ -488,12 +488,12 @@ function AttractionsSection() {
                       {/* Tips */}
                       <div className="bg-muted/50 rounded-lg p-4">
                         <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-[#FF9327]" /> Pro Tips
+                          <Sparkles className="w-4 h-4 text-travi-orange" /> Pro Tips
                         </h4>
                         <ul className="grid sm:grid-cols-2 gap-2">
                           {attraction.tips.map((tip, i) => (
                             <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                              <div className="w-1 h-1 rounded-full bg-[#6443F4] mt-2 shrink-0" />
+                              <div className="w-1 h-1 rounded-full bg-travi-purple mt-2 shrink-0" />
                               {tip}
                             </li>
                           ))}
@@ -522,7 +522,7 @@ function HotelsSection() {
           variants={fadeInUp}
           className="text-center mb-12"
         >
-          <Badge className="mb-4 bg-[#FF9327]/10 text-[#FF9327] border-[#FF9327]/20">
+          <Badge className="mb-4 bg-travi-orange/10 text-travi-orange border-travi-orange/20">
             <Bed className="w-3 h-3 mr-1" /> Accommodation
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Where to Stay</h2>
@@ -556,7 +556,7 @@ function HotelsSection() {
                   <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                     <MapPin className="w-3 h-3" /> {hotel.location}
                   </p>
-                  <p className="text-sm text-[#6443F4] font-medium mb-2">{hotel.highlight}</p>
+                  <p className="text-sm text-travi-purple font-medium mb-2">{hotel.highlight}</p>
                   <div className="flex items-center justify-between mt-auto pt-3 border-t">
                     <span className="text-xs text-muted-foreground">Best for: {hotel.bestFor}</span>
                     <Badge variant="outline" className="text-xs">{hotel.priceRange}</Badge>
@@ -582,7 +582,7 @@ function DiningSection() {
           variants={fadeInUp}
           className="text-center mb-12"
         >
-          <Badge className="mb-4 bg-[#F94498]/10 text-[#F94498] border-[#F94498]/20">
+          <Badge className="mb-4 bg-travi-pink/10 text-travi-pink border-travi-pink/20">
             <Utensils className="w-3 h-3 mr-1" /> Dining
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Where to Eat</h2>
@@ -611,7 +611,7 @@ function DiningSection() {
                       <span>{restaurant.location}</span>
                     </div>
                     <Badge variant="outline">{restaurant.price}</Badge>
-                    <p className="text-sm text-[#6443F4] font-medium">{restaurant.highlight}</p>
+                    <p className="text-sm text-travi-purple font-medium">{restaurant.highlight}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -634,7 +634,7 @@ function TransportSection() {
           variants={fadeInUp}
           className="text-center mb-12"
         >
-          <Badge className="mb-4 bg-[#01BEFF]/10 text-[#01BEFF] border-[#01BEFF]/20">
+          <Badge className="mb-4 bg-info/10 text-info border-info/20">
             <Train className="w-3 h-3 mr-1" /> Transportation
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Getting Around</h2>
@@ -655,7 +655,7 @@ function TransportSection() {
               icon: Train,
               title: "Dubai Metro",
               subtitle: "Best Option",
-              color: "from-red-500 to-red-600",
+              color: "from-travi-orange to-travi-pink",
               details: [
                 "Burj Khalifa/Dubai Mall Station (Red Line)",
                 "5-10 min covered walk to Dubai Mall",
@@ -667,7 +667,7 @@ function TransportSection() {
               icon: Footprints,
               title: "Walking",
               subtitle: "Excellent",
-              color: "from-green-500 to-green-600",
+              color: "from-travi-green to-travi-green/80",
               details: [
                 "Covered air-conditioned walkways",
                 "Wide sidewalks with shade",
@@ -679,7 +679,7 @@ function TransportSection() {
               icon: Car,
               title: "Taxi / Uber",
               subtitle: "Convenient",
-              color: "from-purple-500 to-purple-600",
+              color: "from-travi-purple to-travi-pink",
               details: [
                 "Base fare: AED 12 (day)",
                 "To Marina: AED 50-70 (20 min)",

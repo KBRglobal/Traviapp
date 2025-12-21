@@ -1,17 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
-import {
-  MapPin, Search, ArrowRight, Map
-} from "lucide-react";
+import { MapPin, Search, Map } from "lucide-react";
 import type { Content } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PublicNav } from "@/components/public-nav";
-import { PublicFooter } from "@/components/public-footer";
 import { useState, useMemo } from "react";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { PageContainer, Section, CategoryGrid, ContentCard } from "@/components/public-layout";
+import { PublicHero } from "@/components/public-hero";
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=1000&fit=crop",
@@ -21,47 +17,22 @@ const defaultImages = [
 ];
 
 function DistrictCard({ content, index }: { content: Content; index: number }) {
-  const { t, localePath } = useLocale();
   const imageUrl = content.heroImage || defaultImages[index % defaultImages.length];
 
   return (
-    <Link href={localePath(`/districts/${content.slug}`)}>
-      <Card 
-        className="group overflow-visible border-0 shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer"
-        data-testid={`card-district-${content.slug}`}
-      >
-        <div className="overflow-hidden rounded-lg aspect-[3/4]">
-          <img 
-            src={imageUrl} 
-            alt={content.heroImageAlt || content.title}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-lg" />
-          
-          <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
-            <h3 className="font-bold text-white text-lg md:text-xl mb-1">
-              {content.title}
-            </h3>
-            
-            {content.metaDescription && (
-              <p className="text-white/80 text-xs md:text-sm line-clamp-2 mb-3">
-                {content.metaDescription}
-              </p>
-            )}
-            
-            <div className="flex items-center gap-2 text-white font-medium text-sm group-hover:gap-3 transition-all">
-              <span>{t('districts.explore')}</span>
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-      </Card>
-    </Link>
+    <ContentCard
+      image={imageUrl}
+      title={content.title}
+      description={content.metaDescription || ""}
+      href={`/districts/${content.slug}`}
+      aspectRatio="portrait"
+      showGradientOverlay={true}
+    />
   );
 }
 
 export default function PublicDistricts() {
-  const { t, locale, isRTL, localePath } = useLocale();
+  const { t, isRTL } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
 
   useDocumentMeta({
@@ -89,93 +60,106 @@ export default function PublicDistricts() {
   }, [districts, searchQuery]);
 
   return (
-    <div className="bg-background min-h-screen flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
-      <PublicNav />
-
-      <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" />
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-blue-500 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+    <PageContainer navVariant="transparent">
+      <PublicHero
+        title="Dubai Districts"
+        subtitle="Explore the diverse neighborhoods that make Dubai unique"
+        backgroundImage="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop"
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Districts" }
+        ]}
+        size="default"
+      >
+        <div className="w-full max-w-xl">
+          <div className="relative">
+            <Search className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 ${isRTL ? 'right-4' : 'left-4'}`} />
+            <input
+              type="text"
+              placeholder={t('nav.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`w-full bg-background/10 backdrop-blur-md border border-white/20 rounded-2xl py-3 ${isRTL ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-white placeholder:text-white/50 outline-none focus:border-white/40 transition-colors`}
+              data-testid="input-search-districts"
+            />
           </div>
         </div>
-        
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-16">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
-            {t('districts.pageTitle')}
-          </h1>
-          <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-            {t('districts.pageSubtitle')}
-          </p>
-          
-          <div className="max-w-xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-2 flex items-center gap-2 border border-white/20">
-              <Search className="w-5 h-5 text-white/60 ml-3" />
-              <input
-                type="text"
-                placeholder={t('nav.searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent outline-none py-3 text-white placeholder:text-white/50"
-                data-testid="input-search-districts"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+      </PublicHero>
 
-      <main className="flex-1 py-12 md:py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold mb-1">
-                {searchQuery ? t('search.results') : t('districts.pageTitle')}
-              </h2>
-              <p className="text-muted-foreground">
-                {isLoading ? t('common.loading') : `${filteredDistricts.length} ${t('districts.pageTitle').toLowerCase()}`}
-              </p>
-            </div>
-          </div>
-          
-          {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="aspect-[3/4] bg-muted rounded-lg" />
-                </div>
-              ))}
-            </div>
-          ) : filteredDistricts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredDistricts.map((district, index) => (
-                <DistrictCard key={district.id} content={district} index={index} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <Map className="w-8 h-8 text-muted-foreground" />
+      <Section
+        id="districts-grid"
+        title={searchQuery ? t('search.results') : t('districts.pageTitle')}
+        subtitle={isLoading ? t('common.loading') : `${filteredDistricts.length} ${t('districts.pageTitle').toLowerCase()}`}
+        variant="default"
+      >
+        {isLoading ? (
+          <CategoryGrid columns={4}>
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="aspect-[3/4] bg-muted rounded-[16px]" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">{t('search.noResults')}</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchQuery ? t('search.tryAgain') : "Districts will appear here once published"}
-              </p>
-              {searchQuery && (
-                <Button
-                  variant="outline"
-                  onClick={() => setSearchQuery("")}
-                  data-testid="button-clear-search"
-                >
-                  {t('search.tryAgain')}
-                </Button>
-              )}
+            ))}
+          </CategoryGrid>
+        ) : filteredDistricts.length > 0 ? (
+          <CategoryGrid columns={4}>
+            {filteredDistricts.map((district, index) => (
+              <DistrictCard key={district.id} content={district} index={index} />
+            ))}
+          </CategoryGrid>
+        ) : (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+              <Map className="w-8 h-8 text-muted-foreground" />
             </div>
-          )}
-        </div>
-      </main>
+            <h3 className="text-xl font-semibold mb-2">{t('search.noResults')}</h3>
+            <p className="text-muted-foreground mb-6">
+              {searchQuery ? t('search.tryAgain') : "Districts will appear here once published"}
+            </p>
+            {searchQuery && (
+              <Button
+                variant="outline"
+                onClick={() => setSearchQuery("")}
+                data-testid="button-clear-search"
+              >
+                {t('search.tryAgain')}
+              </Button>
+            )}
+          </div>
+        )}
+      </Section>
 
-      <PublicFooter />
-    </div>
+      <Section
+        id="explore-cta"
+        variant="alternate"
+      >
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-64 h-64 bg-travi-purple/10 rounded-full blur-3xl" />
+            </div>
+            <div className="relative">
+              <MapPin className="w-16 h-16 mx-auto text-travi-purple mb-6" />
+              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-6">
+                Discover Dubai's Neighborhoods
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+                From the historic charm of Old Dubai to the modern luxury of Palm Jumeirah, 
+                each district offers a unique experience waiting to be explored.
+              </p>
+              <div className="flex flex-wrap justify-center gap-4">
+                <Badge className="px-6 py-3 text-base" variant="secondary">
+                  <MapPin className="w-4 h-4 mr-2 text-travi-purple" />
+                  15+ Unique Districts
+                </Badge>
+                <Badge className="px-6 py-3 text-base" variant="secondary">
+                  <Map className="w-4 h-4 mr-2 text-travi-orange" />
+                  Diverse Experiences
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Section>
+    </PageContainer>
   );
 }

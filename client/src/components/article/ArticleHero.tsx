@@ -70,7 +70,7 @@ export function ArticleHero({
             <div className="flex flex-wrap items-center gap-3 mb-4">
               {category && (
                 <Badge
-                  className="bg-[#02A65C] text-white border-0 px-3 py-1"
+                  className="bg-travi-green text-white border-0 px-3 py-1"
                   data-testid="article-hero-category"
                 >
                   {category}
