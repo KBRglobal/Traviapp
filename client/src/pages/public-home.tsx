@@ -229,17 +229,6 @@ export default function PublicHome() {
             />
           </div>
 
-          {/* Mobile Top Menu Button - 3 lines hamburger */}
-          <button
-            type="button"
-            className={`md:hidden fixed top-4 z-50 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg ${isRTL ? 'left-4' : 'right-4'}`}
-            onClick={() => setMobileMenuOpen(true)}
-            data-testid="button-mobile-menu-top"
-            aria-label={t("nav.menu") || "Open menu"}
-          >
-            <Menu className="w-6 h-6 text-[#6C5CE7]" />
-          </button>
-
           {/* Interactive Mascot - Hidden on mobile, shown in fixed position on desktop */}
           {isInitialized && (
             <div

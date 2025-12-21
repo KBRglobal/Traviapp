@@ -274,6 +274,17 @@ export function PublicNav({
         </div>
       </nav>
 
+      {/* Mobile Top Menu Button - Hamburger (visible on all pages) */}
+      <button
+        type="button"
+        className={`lg:hidden fixed top-4 z-50 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg active:scale-95 transition-transform ${isRTL ? 'left-4' : 'right-4'}`}
+        onClick={() => setMobileMenuOpen(true)}
+        data-testid="button-mobile-menu-top"
+        aria-label={t("nav.menu") || "Open menu"}
+      >
+        <Menu className="w-6 h-6 text-[#6C5CE7]" />
+      </button>
+
       {/* Mobile Menu Trigger - Duck Mascot (visible on all pages) */}
       <button
         type="button"
