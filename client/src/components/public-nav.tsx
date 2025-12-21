@@ -175,9 +175,9 @@ export function PublicNav({
 
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay - Outside of nav so it's always accessible */}
       <div 
-        className={`lg:hidden fixed inset-0 z-40 transition-opacity duration-300 ${
+        className={`lg:hidden fixed inset-0 z-[100] transition-opacity duration-300 ${
           mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={() => setMobileMenuOpen(false)}
@@ -186,10 +186,10 @@ export function PublicNav({
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       </div>
 
-      {/* Mobile Menu Drawer - Slides from right */}
+      {/* Mobile Menu Drawer - Slides from right, always accessible */}
       <nav 
         id="mobile-menu"
-        className={`lg:hidden fixed top-0 ${isRTL ? 'left-0' : 'right-0'} h-full w-[85%] max-w-[320px] z-50 bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-300 ease-out ${
+        className={`lg:hidden fixed top-0 ${isRTL ? 'left-0' : 'right-0'} h-full w-[85%] max-w-[320px] z-[101] bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-300 ease-out ${
           mobileMenuOpen 
             ? "translate-x-0" 
             : isRTL ? "-translate-x-full" : "translate-x-full"

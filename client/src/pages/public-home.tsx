@@ -269,52 +269,29 @@ export default function PublicHome() {
             </div>
           )}
           
-          {/* Mobile Menu Trigger - Mascot + MENU button */}
-          <div
-            className={`md:hidden fixed bottom-6 z-30 cursor-pointer select-none ${isRTL ? 'left-4' : 'right-4'}`}
+          {/* Mobile Menu Trigger - Just the Duck with MENU text below */}
+          <button
+            type="button"
+            className={`md:hidden fixed bottom-6 z-50 flex flex-col items-center gap-1 ${isRTL ? 'left-4' : 'right-4'}`}
             onClick={() => setMobileMenuOpen(true)}
             data-testid="button-mobile-menu-mascot"
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === "Enter" && setMobileMenuOpen(true)}
             aria-label={t("nav.menu") || "Open menu"}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-menu"
           >
-            <div className={`flex items-center gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-full pl-1 pr-4 py-1 shadow-xl shadow-black/15 border border-slate-200/50 dark:border-slate-700/50 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              {/* Mascot Image */}
-              <div className="relative">
-                <img 
-                  src={mascotImage} 
-                  alt="Travi"
-                  className="w-12 h-12 drop-shadow-md active:scale-105 transition-transform"
-                  draggable={false}
-                />
-              </div>
-              
-              {/* MENU Text with Icon */}
-              <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <Menu className="w-4 h-4 text-[#6C5CE7]" />
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">
-                  {t("nav.menu") || "Menu"}
-                </span>
-              </div>
-            </div>
+            {/* Duck Mascot - no frame */}
+            <img 
+              src={mascotImage} 
+              alt="Travi"
+              className="w-16 h-16 drop-shadow-xl active:scale-95 transition-transform"
+              draggable={false}
+            />
             
-            {/* Speech Bubble - appears above when interacted */}
-            {showPhrase && currentPhraseIndex >= 0 && (
-              <div 
-                className={`absolute -top-12 bg-white rounded-xl px-3 py-2 shadow-lg max-w-[180px] ${isRTL ? 'left-0' : 'right-0'}`}
-                dir={isRTL ? "rtl" : "ltr"}
-                data-testid="mascot-speech-bubble-mobile"
-              >
-                <span className="text-xs font-medium text-foreground">
-                  {t(`home.${mascotPhrases[currentPhraseIndex]}`)}
-                </span>
-                <div className={`absolute -bottom-2 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-white ${isRTL ? 'left-4' : 'right-4'}`} />
-              </div>
-            )}
-          </div>
+            {/* MENU Text below duck */}
+            <span className="text-xs font-bold text-white uppercase tracking-wider drop-shadow-lg">
+              {t("nav.menu") || "Menu"}
+            </span>
+          </button>
 
           {/* Main Content - Centered layout */}
           <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 w-full text-center">
