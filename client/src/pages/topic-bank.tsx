@@ -9,11 +9,12 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Lightbulb, Trash2, Edit2, TrendingUp, Clock, Sparkles, Loader2, Newspaper } from "lucide-react";
+import { Plus, Lightbulb, Trash2, Edit2, TrendingUp, Clock, Sparkles, Loader2, Newspaper, Merge } from "lucide-react";
 import type { TopicBank } from "@shared/schema";
 
 type TopicCategory = "attractions" | "hotels" | "food" | "transport" | "events" | "tips" | "shopping" | "news";
@@ -122,6 +123,24 @@ export default function TopicBankPage() {
     },
   });
 
+  // Merge duplicate topics
+  const mergeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/topic-bank/merge-duplicates");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/topic-bank"] });
+      toast({
+        title: "Duplicates Merged",
+        description: data.message || `Merged ${data.mergedGroups} groups, deleted ${data.deletedItems} duplicates`
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to merge duplicates", variant: "destructive" });
+    },
+  });
+
   const resetForm = () => {
     setDialogOpen(false);
     setEditingTopic(null);
@@ -182,13 +201,46 @@ export default function TopicBankPage() {
           <h1 className="text-2xl font-semibold">Topic Bank</h1>
           <p className="text-muted-foreground">Store ideas for AI article generation when RSS lacks content</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setDialogOpen(true); }}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-topic">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Topic
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2 flex-wrap">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={mergeMutation.isPending || !topics || topics.length < 2}
+                data-testid="button-merge-duplicates"
+              >
+                {mergeMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Merge className="h-4 w-4 mr-2" />
+                )}
+                Merge Duplicates
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Merge Duplicate Topics?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will find all topics with identical names and merge them into one. 
+                  Keywords will be combined, the longest outline will be kept, and all metadata 
+                  will be preserved from the best record. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => mergeMutation.mutate()}>
+                  Merge Duplicates
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setDialogOpen(true); }}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-topic">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Topic
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{editingTopic ? "Edit Topic" : "Add Topic"}</DialogTitle>
@@ -268,7 +320,8 @@ export default function TopicBankPage() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {!topics || topics.length === 0 ? (

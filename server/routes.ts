@@ -3350,6 +3350,116 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     }
   });
 
+  // Merge duplicate topics (same title)
+  app.post("/api/topic-bank/merge-duplicates", requirePermission("canDelete"), async (req, res) => {
+    try {
+      const allTopics = await storage.getTopicBankItems({});
+      
+      // Group topics by normalized title (lowercase, trimmed)
+      const topicsByTitle = new Map<string, typeof allTopics>();
+      for (const topic of allTopics) {
+        const normalizedTitle = topic.title.toLowerCase().trim();
+        if (!topicsByTitle.has(normalizedTitle)) {
+          topicsByTitle.set(normalizedTitle, []);
+        }
+        topicsByTitle.get(normalizedTitle)!.push(topic);
+      }
+      
+      let mergedCount = 0;
+      let deletedCount = 0;
+      
+      // Process each group of duplicates
+      for (const [, duplicates] of topicsByTitle) {
+        if (duplicates.length <= 1) continue;
+        
+        // Sort by: priority (desc), timesUsed (desc), createdAt (desc - newest first for ties)
+        duplicates.sort((a, b) => {
+          if ((b.priority || 0) !== (a.priority || 0)) return (b.priority || 0) - (a.priority || 0);
+          if ((b.timesUsed || 0) !== (a.timesUsed || 0)) return (b.timesUsed || 0) - (a.timesUsed || 0);
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime; // Newest first when other fields are equal
+        });
+        
+        // Keep the first one (best), merge data into it
+        const keeper = duplicates[0];
+        const toDelete = duplicates.slice(1);
+        
+        // Merge all fields from duplicates - prefer non-null values
+        const allKeywords = new Set<string>(keeper.keywords || []);
+        let longestOutline = keeper.outline || "";
+        let totalTimesUsed = keeper.timesUsed || 0;
+        let bestCategory = keeper.category;
+        let bestMainCategory = keeper.mainCategory;
+        let bestTopicType = keeper.topicType;
+        let bestViralPotential = keeper.viralPotential;
+        let bestFormat = keeper.format;
+        let bestHeadlineAngle = keeper.headlineAngle;
+        let bestPriority = keeper.priority || 0;
+        let isActive = keeper.isActive === true; // Only true if explicitly true, not undefined
+        
+        for (const dup of toDelete) {
+          // Merge keywords
+          if (dup.keywords) {
+            for (const kw of dup.keywords) {
+              allKeywords.add(kw);
+            }
+          }
+          // Keep longest outline
+          if (dup.outline && dup.outline.length > longestOutline.length) {
+            longestOutline = dup.outline;
+          }
+          // Sum up usage
+          totalTimesUsed += dup.timesUsed || 0;
+          // Prefer non-null values for categorical fields
+          if (!bestCategory && dup.category) bestCategory = dup.category;
+          if (!bestMainCategory && dup.mainCategory) bestMainCategory = dup.mainCategory;
+          if (!bestTopicType && dup.topicType) bestTopicType = dup.topicType;
+          if (!bestViralPotential && dup.viralPotential) bestViralPotential = dup.viralPotential;
+          if (!bestFormat && dup.format) bestFormat = dup.format;
+          if (!bestHeadlineAngle && dup.headlineAngle) bestHeadlineAngle = dup.headlineAngle;
+          // Keep highest priority
+          if ((dup.priority || 0) > bestPriority) bestPriority = dup.priority || 0;
+          // If any duplicate is explicitly active, keep active
+          if (dup.isActive === true) isActive = true;
+        }
+        
+        // Update keeper with merged data
+        await storage.updateTopicBankItem(keeper.id, {
+          keywords: Array.from(allKeywords),
+          outline: longestOutline || null,
+          timesUsed: totalTimesUsed,
+          category: bestCategory,
+          mainCategory: bestMainCategory,
+          topicType: bestTopicType,
+          viralPotential: bestViralPotential,
+          format: bestFormat,
+          headlineAngle: bestHeadlineAngle,
+          priority: bestPriority,
+          isActive: isActive,
+        });
+        
+        // Delete duplicates
+        for (const dup of toDelete) {
+          await storage.deleteTopicBankItem(dup.id);
+          deletedCount++;
+        }
+        
+        mergedCount++;
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Merged ${mergedCount} groups, deleted ${deletedCount} duplicates`,
+        mergedGroups: mergedCount,
+        deletedItems: deletedCount
+      });
+    } catch (error) {
+      console.error("Error merging duplicate topics:", error);
+      res.status(500).json({ error: "Failed to merge duplicate topics" });
+    }
+  });
+
   app.post("/api/topic-bank/:id/use", requirePermission("canCreate"), async (req, res) => {
     try {
       const item = await storage.incrementTopicUsage(req.params.id);
