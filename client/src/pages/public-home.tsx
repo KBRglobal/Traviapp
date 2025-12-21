@@ -6,10 +6,10 @@ import type { Content, ContentWithRelations } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PublicNav } from "@/components/public-nav";
+import { PublicFooter } from "@/components/public-footer";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
 import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
-import logoImg from "@assets/Full_Logo_for_Light_Background_1765570034686.png";
 
 interface HomepagePromotion {
   id: string;
@@ -574,72 +574,7 @@ export default function PublicHome() {
           </div>
         </section>
 
-        {/* FOOTER - Sky Theme */}
-        <footer className="py-16 bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4C1D95] relative overflow-hidden" data-testid="footer">
-          {/* Stars/sparkles decoration */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-10 left-[20%] w-1 h-1 bg-white rounded-full opacity-60" />
-            <div className="absolute top-20 left-[40%] w-1.5 h-1.5 bg-white rounded-full opacity-40" />
-            <div className="absolute top-8 right-[30%] w-1 h-1 bg-white rounded-full opacity-50" />
-            <div className="absolute top-32 right-[20%] w-1 h-1 bg-white rounded-full opacity-60" />
-          </div>
-
-          <div className="max-w-7xl mx-auto px-6" dir={isRTL ? "rtl" : "ltr"}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-              {/* Logo & Mascot */}
-              <div className="flex flex-col items-start">
-                <img src={logoImg} alt="Travi" className="h-12 mb-4" style={{ direction: 'ltr' }} />
-                <p className="text-white/70 text-sm leading-relaxed mb-4">
-                  {t("home.trustedCompanion")}
-                </p>
-                <img src={mascotImg} alt="" className="w-20 h-20 opacity-80" />
-              </div>
-
-              {/* Explore Links */}
-              <div>
-                <h4 className="font-semibold text-white mb-4">{t("footer.explore")}</h4>
-                <ul className="space-y-3 text-sm text-white/70">
-                  <li><Link href={localePath("/hotels")} className="hover:text-white transition-colors" data-testid="link-footer-hotels">{t("nav.hotels")}</Link></li>
-                  <li><Link href={localePath("/attractions")} className="hover:text-white transition-colors" data-testid="link-footer-attractions">{t("nav.attractions")}</Link></li>
-                  <li><Link href={localePath("/articles")} className="hover:text-white transition-colors" data-testid="link-footer-articles">{t("home.travelGuides")}</Link></li>
-                  <li><Link href={localePath("/search")} className="hover:text-white transition-colors" data-testid="link-footer-search">{t("nav.search")}</Link></li>
-                </ul>
-              </div>
-
-              {/* Company Links */}
-              <div>
-                <h4 className="font-semibold text-white mb-4">{t("home.company")}</h4>
-                <ul className="space-y-3 text-sm text-white/70">
-                  <li><Link href={localePath("/about")} className="hover:text-white transition-colors" data-testid="link-footer-about">{t("footer.aboutUs")}</Link></li>
-                  <li><Link href={localePath("/contact")} className="hover:text-white transition-colors" data-testid="link-footer-contact">{t("footer.contactUs")}</Link></li>
-                  <li><Link href={localePath("/privacy")} className="hover:text-white transition-colors" data-testid="link-footer-privacy">{t("footer.privacyPolicy")}</Link></li>
-                  <li><Link href={localePath("/terms")} className="hover:text-white transition-colors" data-testid="link-footer-terms">{t("footer.termsOfService")}</Link></li>
-                </ul>
-              </div>
-
-              {/* Connect */}
-              <div>
-                <h4 className="font-semibold text-white mb-4">{t("home.connect")}</h4>
-                <ul className="space-y-3 text-sm text-white/70">
-                  <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</a></li>
-                  <li><a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter</a></li>
-                  <li><a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Facebook</a></li>
-                  <li><a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">YouTube</a></li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Bottom Bar */}
-            <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-white/50 text-sm">
-                {t("footer.allRightsReserved")}
-              </p>
-              <p className="text-white/50 text-sm">
-                {t("home.madeWithLove")}
-              </p>
-            </div>
-          </div>
-        </footer>
+        <PublicFooter />
       </main>
     </div>
   );

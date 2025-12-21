@@ -18,10 +18,10 @@ export function PublicFooter() {
   ];
 
   const featuredGuides = [
-    { href: "/dubai/free-things-to-do", icon: Gift, label: "70+ Free Things to Do" },
-    { href: "/dubai/24-hours-open", icon: Coffee, label: "Open 24 Hours" },
-    { href: "/dubai/sheikh-mohammed-bin-rashid", icon: Crown, label: "Tribute to HH Sheikh Mohammed" },
-    { href: "/dubai/laws-for-tourists", icon: Scale, label: "Laws for Tourists" },
+    { href: "/dubai/free-things-to-do", icon: Gift, label: t('footer.freeThingsToDo') },
+    { href: "/dubai/24-hours-open", icon: Coffee, label: t('footer.open24Hours') },
+    { href: "/dubai/sheikh-mohammed-bin-rashid", icon: Crown, label: t('footer.tributeToSheikh') },
+    { href: "/dubai/laws-for-tourists", icon: Scale, label: t('footer.lawsForTourists') },
   ];
 
   const toolLinks = [
@@ -109,7 +109,7 @@ export function PublicFooter() {
               {/* Featured Guides Column */}
               <div>
                 <h4 className="font-semibold text-slate-900 dark:text-white mb-5 text-sm uppercase tracking-wide">
-                  Featured Guides
+                  {t('footer.featuredGuides')}
                 </h4>
                 <ul className="space-y-3">
                   {featuredGuides.map((link) => {

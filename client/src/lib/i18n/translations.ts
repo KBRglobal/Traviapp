@@ -142,6 +142,11 @@ export const translations = {
       roiCalculator: "ROI Calculator",
       mortgageCalculator: "Mortgage Calculator",
       glossary: "Glossary",
+      featuredGuides: "Featured Guides",
+      freeThingsToDo: "70+ Free Things to Do",
+      open24Hours: "Open 24 Hours",
+      tributeToSheikh: "Tribute to HH Sheikh Mohammed",
+      lawsForTourists: "Laws for Tourists",
     },
     // Attractions
     attractions: {
@@ -475,6 +480,11 @@ export const translations = {
       allRightsReserved: "© 2024 ترافي. دليلك إلى دبي.",
       madeWith: "صنع بـ",
       inDubai: "في دبي",
+      featuredGuides: "أدلة مميزة",
+      freeThingsToDo: "70+ أشياء مجانية للقيام بها",
+      open24Hours: "مفتوح 24 ساعة",
+      tributeToSheikh: "تحية لصاحب السمو الشيخ محمد",
+      lawsForTourists: "قوانين للسياح",
     },
     // Attractions
     attractions: {
@@ -843,6 +853,11 @@ export const translations = {
       allRightsReserved: "© 2024 ट्रैवी। दुबई के लिए आपका गाइड।",
       madeWith: "बनाया गया",
       inDubai: "दुबई में",
+      featuredGuides: "विशेष गाइड",
+      freeThingsToDo: "70+ मुफ्त गतिविधियाँ",
+      open24Hours: "24 घंटे खुला",
+      tributeToSheikh: "महामहिम शेख मोहम्मद को श्रद्धांजलि",
+      lawsForTourists: "पर्यटकों के लिए नियम",
     },
     // Attractions
     attractions: {
@@ -1161,6 +1176,11 @@ export const translations = {
       allRightsReserved: "© 2024 ٹراوی۔ دبئی کے لیے آپ کا رہنما۔",
       madeWith: "بنایا گیا",
       inDubai: "دبئی میں",
+      featuredGuides: "نمایاں گائیڈز",
+      freeThingsToDo: "70+ مفت سرگرمیاں",
+      open24Hours: "24 گھنٹے کھلا",
+      tributeToSheikh: "معزز شیخ محمد کو خراج تحسین",
+      lawsForTourists: "سیاحوں کے لیے قوانین",
     },
     // Attractions
     attractions: {
@@ -1478,6 +1498,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi. Ваш путеводитель по Дубаю.",
       madeWith: "Сделано с",
       inDubai: "в Дубае",
+      featuredGuides: "Избранные гиды",
+      freeThingsToDo: "70+ бесплатных развлечений",
+      open24Hours: "Открыто 24 часа",
+      tributeToSheikh: "Дань уважения Его Высочеству Шейху Мохаммеду",
+      lawsForTourists: "Законы для туристов",
     },
     // Attractions
     attractions: {
@@ -1795,6 +1820,11 @@ export const translations = {
       allRightsReserved: "© 2024 تراوی. راهنمای شما به دبی.",
       madeWith: "ساخته شده با",
       inDubai: "در دبی",
+      featuredGuides: "راهنماهای ویژه",
+      freeThingsToDo: "70+ فعالیت رایگان",
+      open24Hours: "24 ساعته باز",
+      tributeToSheikh: "ادای احترام به حضرت شیخ محمد",
+      lawsForTourists: "قوانین برای گردشگران",
     },
     // Attractions
     attractions: {
@@ -2112,6 +2142,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi。您的迪拜指南。",
       madeWith: "制作于",
       inDubai: "迪拜",
+      featuredGuides: "精选指南",
+      freeThingsToDo: "70+ 免费活动",
+      open24Hours: "24小时营业",
+      tributeToSheikh: "致敬谢赫穆罕默德殿下",
+      lawsForTourists: "游客须知法规",
     },
     // Attractions
     attractions: {
@@ -2430,6 +2465,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi. Votre guide de Dubaï.",
       madeWith: "Fait avec",
       inDubai: "à Dubaï",
+      featuredGuides: "Guides en vedette",
+      freeThingsToDo: "70+ activités gratuites",
+      open24Hours: "Ouvert 24h/24",
+      tributeToSheikh: "Hommage à Son Altesse Cheikh Mohammed",
+      lawsForTourists: "Lois pour les touristes",
     },
     // Attractions
     attractions: {
@@ -2747,6 +2787,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi. Ihr Führer nach Dubai.",
       madeWith: "Erstellt mit",
       inDubai: "in Dubai",
+      featuredGuides: "Empfohlene Guides",
+      freeThingsToDo: "70+ kostenlose Aktivitäten",
+      open24Hours: "24 Stunden geöffnet",
+      tributeToSheikh: "Ehrung für Seine Hoheit Scheich Mohammed",
+      lawsForTourists: "Gesetze für Touristen",
     },
     // Attractions
     attractions: {
@@ -3064,6 +3109,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi. La tua guida a Dubai.",
       madeWith: "Fatto con",
       inDubai: "a Dubai",
+      featuredGuides: "Guide in evidenza",
+      freeThingsToDo: "70+ attività gratuite",
+      open24Hours: "Aperto 24 ore",
+      tributeToSheikh: "Omaggio a Sua Altezza Sceicco Mohammed",
+      lawsForTourists: "Leggi per i turisti",
     },
     // Attractions
     attractions: {
@@ -3382,6 +3432,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi. Tu guía de Dubái.",
       madeWith: "Hecho con",
       inDubai: "en Dubái",
+      featuredGuides: "Guías destacadas",
+      freeThingsToDo: "70+ actividades gratis",
+      open24Hours: "Abierto 24 horas",
+      tributeToSheikh: "Homenaje a Su Alteza el Jeque Mohammed",
+      lawsForTourists: "Leyes para turistas",
     },
     // Attractions
     attractions: {
@@ -3699,6 +3754,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi. Dubai rehberiniz.",
       madeWith: "Yapıldı",
       inDubai: "Dubai'de",
+      featuredGuides: "Öne Çıkan Rehberler",
+      freeThingsToDo: "70+ Ücretsiz Etkinlik",
+      open24Hours: "24 Saat Açık",
+      tributeToSheikh: "Ekselansları Şeyh Mohammed'e Saygı",
+      lawsForTourists: "Turistler için Yasalar",
     },
     // Attractions
     attractions: {
@@ -4017,6 +4077,11 @@ export const translations = {
       allRightsReserved: "© 2024 ট্র্যাভি। দুবাইয়ের জন্য আপনার গাইড।",
       madeWith: "তৈরি করা হয়েছে",
       inDubai: "দুবাইতে",
+      featuredGuides: "বৈশিষ্ট্যযুক্ত গাইড",
+      freeThingsToDo: "70+ বিনামূল্যে কার্যক্রম",
+      open24Hours: "24 ঘণ্টা খোলা",
+      tributeToSheikh: "মাননীয় শেখ মোহাম্মদকে শ্রদ্ধা",
+      lawsForTourists: "পর্যটকদের জন্য আইন",
     },
     // Attractions
     attractions: {
@@ -4335,6 +4400,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi. Ang iyong gabay sa Dubai.",
       madeWith: "Ginawa gamit ang",
       inDubai: "sa Dubai",
+      featuredGuides: "Mga Tampok na Gabay",
+      freeThingsToDo: "70+ Libreng Aktibidad",
+      open24Hours: "Bukas 24 Oras",
+      tributeToSheikh: "Pagpupugay kay HH Sheikh Mohammed",
+      lawsForTourists: "Mga Batas para sa mga Turista",
     },
     // Attractions
     attractions: {
@@ -4653,6 +4723,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi。ドバイのガイド。",
       madeWith: "作成",
       inDubai: "ドバイにて",
+      featuredGuides: "おすすめガイド",
+      freeThingsToDo: "70以上の無料アクティビティ",
+      open24Hours: "24時間営業",
+      tributeToSheikh: "シェイク・モハメッド殿下への敬意",
+      lawsForTourists: "観光客向けの法律",
     },
     // Attractions
     attractions: {
@@ -4971,6 +5046,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi. 두바이 가이드.",
       madeWith: "제작",
       inDubai: "두바이에서",
+      featuredGuides: "추천 가이드",
+      freeThingsToDo: "70+ 무료 활동",
+      open24Hours: "24시간 영업",
+      tributeToSheikh: "셰이크 모하메드 전하께 경의",
+      lawsForTourists: "관광객을 위한 법률",
     },
     // Attractions
     attractions: {
@@ -5254,6 +5334,11 @@ export const translations = {
       allRightsReserved: "© 2024 Travi. המדריך שלך לדובאי.",
       madeWith: "נוצר עם",
       inDubai: "בדובאי",
+      featuredGuides: "מדריכים מומלצים",
+      freeThingsToDo: "70+ פעילויות חינם",
+      open24Hours: "פתוח 24 שעות",
+      tributeToSheikh: "מחווה להוד מעלתו השייח' מוחמד",
+      lawsForTourists: "חוקים לתיירים",
     },
     // Attractions
     attractions: {
