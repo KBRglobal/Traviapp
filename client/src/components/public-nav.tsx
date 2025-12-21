@@ -91,12 +91,10 @@ export function PublicNav({
                     href={localePath(link.href)}
                     className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
                       active
-                        ? showGlassEffect || !isTransparent
-                          ? "bg-travi-purple/10 text-travi-purple"
-                          : "bg-white/20 text-white"
+                        ? "bg-travi-purple/10 text-travi-purple"
                         : showGlassEffect || !isTransparent
                           ? "text-muted-foreground hover:text-travi-purple hover:bg-muted"
-                          : "text-white/80 hover:text-white hover:bg-white/10"
+                          : "text-gray-700 dark:text-white/80 hover:text-travi-purple hover:bg-white/50 dark:hover:bg-white/10"
                     }`}
                     data-testid={`link-${link.href.slice(1)}`}
                   >
@@ -109,11 +107,7 @@ export function PublicNav({
               {/* Real Estate Link - Highlighted */}
               <Link
                 href={localePath("/dubai-off-plan-properties")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                  showGlassEffect || !isTransparent
-                    ? "bg-gradient-to-r from-travi-purple to-travi-pink text-white shadow-md shadow-travi-purple/25 hover:shadow-lg hover:shadow-travi-purple/30"
-                    : "bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-white/30"
-                }`}
+                className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 bg-gradient-to-r from-travi-purple to-travi-pink text-white shadow-md shadow-travi-purple/25 hover:shadow-lg hover:shadow-travi-purple/30"
                 data-testid="link-off-plan"
               >
                 <span className="flex items-center gap-2">
@@ -133,7 +127,7 @@ export function PublicNav({
                   className={`rounded-full ${
                     showGlassEffect || !isTransparent
                       ? "border-border text-muted-foreground hover:bg-muted"
-                      : "border-white/30 text-white hover:bg-white/10"
+                      : "border-gray-300 dark:border-white/30 text-gray-700 dark:text-white hover:bg-white/50 dark:hover:bg-white/10"
                   }`}
                 />
               </div>
@@ -146,7 +140,7 @@ export function PublicNav({
                   className={`rounded-full ${
                     showGlassEffect || !isTransparent
                       ? "text-muted-foreground hover:bg-muted"
-                      : "text-white hover:bg-white/10"
+                      : "text-gray-700 dark:text-white hover:bg-white/50 dark:hover:bg-white/10"
                   }`}
                   data-testid="button-search-nav"
                   aria-label="Search"
@@ -160,7 +154,7 @@ export function PublicNav({
                 className={`lg:hidden p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
                   showGlassEffect || !isTransparent
                     ? "text-muted-foreground hover:bg-muted focus:ring-travi-purple" 
-                    : "text-white hover:bg-white/10 focus:ring-white/50"
+                    : "text-gray-700 dark:text-white hover:bg-white/50 dark:hover:bg-white/10 focus:ring-travi-purple"
                 }`}
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 data-testid="button-mobile-menu"
