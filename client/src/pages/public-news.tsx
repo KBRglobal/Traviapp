@@ -5,7 +5,7 @@ import {
   Clock, ChevronRight, TrendingUp, Mail, ArrowRight,
   Plane, Globe, Eye, Ticket, AlertTriangle, Tag,
   Users, BookOpen, ExternalLink, Flame, Sun, Shield, Camera,
-  Star, MapPin, CreditCard, Lightbulb
+  Star, MapPin, CreditCard, Lightbulb, Compass, Briefcase, Heart
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
@@ -628,6 +628,37 @@ export default function PublicNews() {
                 Load More Stories
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
+            </div>
+
+            {/* Popular Categories - fills remaining space */}
+            <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Browse by Category</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { name: "Travel Tips", count: 156, icon: Compass, color: "bg-sky-500" },
+                  { name: "Events & Festivals", count: 89, icon: Calendar, color: "bg-pink-500" },
+                  { name: "Food & Dining", count: 234, icon: Utensils, color: "bg-amber-500" },
+                  { name: "Real Estate", count: 67, icon: Building2, color: "bg-emerald-500" },
+                  { name: "Business", count: 45, icon: Briefcase, color: "bg-indigo-500" },
+                  { name: "Lifestyle", count: 123, icon: Heart, color: "bg-rose-500" },
+                ].map((category) => (
+                  <div
+                    key={category.name}
+                    className="group cursor-pointer flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-transparent dark:border-slate-800 transition-all duration-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-[1.02]"
+                    data-testid={`category-${category.name.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    <div className={`w-10 h-10 ${category.color} rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110`}>
+                      <category.icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                        {category.name}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{category.count} articles</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

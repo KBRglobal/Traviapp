@@ -86,37 +86,20 @@ const mascotPhrases = [
   "mascotCantCatch",
 ];
 
-const getRandomPosition = (heroRect: DOMRect, traviRect: DOMRect | null, mascotWidth: number) => {
-  if (!traviRect) {
-    // Fallback if no TRAVI rect available
-    const minX = 20;
-    const maxX = Math.min(400, heroRect.width * 0.4);
-    const minY = 100;
-    const maxY = heroRect.height * 0.5;
-    const x = minX + Math.random() * (maxX - minX);
-    const y = minY + Math.random() * (maxY - minY);
-    return { x, y };
-  }
+const getRandomPosition = (heroRect: DOMRect) => {
+  // Keep mascot floating in the upper-left quadrant as a decorative element
+  // Horizontal: 3-25% of hero width (capped at 200px)
+  const minX = Math.max(10, heroRect.width * 0.03);
+  const maxX = Math.min(heroRect.width * 0.25, 200);
   
-  const traviLeft = traviRect.left - heroRect.left;
-  const traviTop = traviRect.top - heroRect.top;
-  const traviBottom = traviRect.bottom - heroRect.top;
-  const gap = 8;
-  
-  // Keep mascot in a narrow corridor immediately left of TRAVI text
-  // Only allow 30px of horizontal movement
-  const idealX = traviLeft - mascotWidth - gap;
-  const minX = Math.max(10, idealX - 30);
-  const maxX = Math.max(minX, idealX);
-  
-  // Vertical bounds: around the TRAVI text area with limited movement
-  const minY = Math.max(80, traviTop - 40);
-  const maxY = Math.min(traviBottom + 60, heroRect.height * 0.6);
+  // Vertical: 15-45% of hero height (capped at 350px)
+  const minY = Math.max(100, heroRect.height * 0.15);
+  const maxY = Math.min(heroRect.height * 0.45, 350);
   
   const x = minX + Math.random() * (Math.max(0, maxX - minX));
   const y = minY + Math.random() * (maxY - minY);
   
-  return { x: Math.max(10, x), y: Math.max(80, y) };
+  return { x: Math.max(10, x), y: Math.max(100, y) };
 };
 
 export default function PublicHome() {
@@ -145,24 +128,18 @@ export default function PublicHome() {
   }, []);
   
   useEffect(() => {
-    if (heroRef.current && traviTextRef.current && !isInitialized) {
-      // Position mascot to the LEFT of the TRAVI text (like in the logo)
-      // The hero content has extra left padding (pl-28/pl-40) to ensure room for mascot
+    if (heroRef.current && !isInitialized) {
+      // Position mascot as a floating decorative element in the upper-left quadrant
       const heroRect = heroRef.current.getBoundingClientRect();
-      const traviRect = traviTextRef.current.getBoundingClientRect();
-      
       const mascotWidth = getMascotWidth();
-      const gap = 8;
-      const traviLeft = traviRect.left - heroRect.left;
-      const traviTop = traviRect.top - heroRect.top;
       
-      // Position mascot to the left of TRAVI text
-      const startX = traviLeft - mascotWidth - gap;
-      const startY = traviTop + 10;
+      // Anchor to upper-left area (5-15% from left, 15-25% from top)
+      const startX = Math.max(20, heroRect.width * 0.08);
+      const startY = Math.max(120, heroRect.height * 0.2);
       
       setMascotPosition({ 
-        x: Math.max(10, startX), 
-        y: Math.max(100, startY) 
+        x: Math.min(startX, heroRect.width * 0.15), 
+        y: startY 
       });
       setIsInitialized(true);
     }
@@ -184,9 +161,7 @@ export default function PublicHome() {
     // Only move mascot if reduced motion is not preferred
     if (!prefersReducedMotion) {
       const heroRect = heroRef.current.getBoundingClientRect();
-      const traviRect = traviTextRef.current?.getBoundingClientRect() || null;
-      const mascotWidth = getMascotWidth();
-      const newPos = getRandomPosition(heroRect, traviRect, mascotWidth);
+      const newPos = getRandomPosition(heroRect);
       setMascotPosition(newPos);
     }
     
@@ -196,7 +171,7 @@ export default function PublicHome() {
     
     // Set new timeout
     timeoutRef.current = setTimeout(() => setShowPhrase(false), 4000);
-  }, [prefersReducedMotion, getMascotWidth]);
+  }, [prefersReducedMotion]);
 
   useDocumentMeta({
     title: "Travi - Dubai Travel Guide | Things to Do, Hotels & Attractions",
@@ -289,11 +264,11 @@ export default function PublicHome() {
             </div>
           )}
 
-          {/* Main Content - Extra left padding to make room for mascot */}
-          <div className="relative z-10 max-w-7xl mx-auto pl-28 md:pl-40 pr-6 py-20 w-full">
-            <div className="max-w-2xl" dir={isRTL ? "rtl" : "ltr"}>
-              {/* Big TRAVI Letters */}
-              <div className="mb-6">
+          {/* Main Content - Centered layout */}
+          <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 w-full text-center">
+            <div className="flex flex-col items-center" dir={isRTL ? "rtl" : "ltr"}>
+              {/* Big TRAVI Letters with mascot */}
+              <div className="mb-6 relative inline-flex items-center justify-center">
                 <span 
                   ref={traviTextRef}
                   className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 drop-shadow-sm"
@@ -305,7 +280,7 @@ export default function PublicHome() {
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 leading-tight">
                 {t("home.heroTitleNew") || "Discover the World Like a Local"}
               </h1>
-              <p className="text-lg md:text-xl text-gray-600 mb-8">
+              <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl">
                 {t("home.heroSubtitleNew") || "The most comprehensive guide to Dubai's attractions, hotels & hidden gems."}
               </p>
 
@@ -313,7 +288,7 @@ export default function PublicHome() {
               <form 
                 onSubmit={(e) => { e.preventDefault(); handleSearch(); }} 
                 role="search" 
-                className="mb-8"
+                className="mb-8 w-full max-w-xl"
               >
                 <div className="bg-white rounded-full shadow-xl p-2 flex items-center border border-gray-200">
                   <div className="flex-1 flex items-center gap-3 px-4">
@@ -338,7 +313,7 @@ export default function PublicHome() {
               </form>
 
               {/* Social Proof */}
-              <div className="flex flex-wrap items-center gap-6 text-gray-700">
+              <div className="flex flex-wrap items-center justify-center gap-6 text-gray-700">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-5 h-5" />
                   <span className="font-semibold">{t("home.guidesCount") || "847 Guides"}</span>
@@ -351,7 +326,7 @@ export default function PublicHome() {
             </div>
 
             {/* Category Quick Links */}
-            <div className="mt-12 grid grid-cols-3 md:grid-cols-6 gap-3">
+            <div className="mt-12 grid grid-cols-3 md:grid-cols-6 gap-3 max-w-4xl mx-auto">
               {categories.map((cat) => {
                 const Icon = cat.icon;
                 return (
