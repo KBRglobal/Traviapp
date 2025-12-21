@@ -2293,13 +2293,47 @@ export async function registerRoutes(
         status: status as string | undefined,
         search: search as string | undefined,
       };
-      
+
       // Always include relations (author, type-specific extensions) for consistency
       const contents = await storage.getContentsWithRelations(filters);
       res.json(contents);
     } catch (error) {
       console.error("Error fetching contents:", error);
       res.status(500).json({ error: "Failed to fetch contents" });
+    }
+  });
+
+  // Content needing attention for dashboard
+  app.get("/api/contents/attention", async (req, res) => {
+    try {
+      const contents = await storage.getContentsWithRelations({});
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+      // Low SEO score (below 70)
+      const lowSeo = contents.filter(c =>
+        c.status === "published" && (c.seoScore === null || c.seoScore === undefined || c.seoScore < 70)
+      ).slice(0, 10);
+
+      // No views in last 30 days (published content with 0 or very low views)
+      const noViews = contents.filter(c =>
+        c.status === "published" && (!c.viewCount || c.viewCount < 10)
+      ).slice(0, 10);
+
+      // Scheduled for today
+      const scheduledToday = contents.filter(c =>
+        c.status === "scheduled" &&
+        c.scheduledAt &&
+        new Date(c.scheduledAt) >= todayStart &&
+        new Date(c.scheduledAt) < todayEnd
+      );
+
+      res.json({ lowSeo, noViews, scheduledToday });
+    } catch (error) {
+      console.error("Error fetching attention items:", error);
+      res.status(500).json({ error: "Failed to fetch attention items" });
     }
   });
 
@@ -3017,6 +3051,20 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching RSS feeds:", error);
       res.status(500).json({ error: "Failed to fetch RSS feeds" });
+    }
+  });
+
+  // RSS feeds stats for dashboard
+  app.get("/api/rss-feeds/stats", requireAuth, async (req, res) => {
+    try {
+      const feeds = await storage.getRssFeeds();
+      // Count articles from RSS that are still in draft status (pending review)
+      const allContent = await storage.getContentsWithRelations({ status: "draft" });
+      const rssArticles = allContent.filter(c => c.type === "article" && c.title?.includes("[RSS]"));
+      res.json({ pendingCount: rssArticles.length, totalFeeds: feeds.length });
+    } catch (error) {
+      console.error("Error fetching RSS stats:", error);
+      res.status(500).json({ error: "Failed to fetch RSS stats" });
     }
   });
 
@@ -4734,6 +4782,19 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     } catch (error) {
       console.error("Error fetching topic bank items:", error);
       res.status(500).json({ error: "Failed to fetch topic bank items" });
+    }
+  });
+
+  // Topic bank stats for dashboard
+  app.get("/api/topic-bank/stats", async (req, res) => {
+    try {
+      const items = await storage.getTopicBankItems({ isActive: true });
+      // Count unused topics (timesUsed === 0 or undefined)
+      const unusedCount = items.filter(item => !item.timesUsed || item.timesUsed === 0).length;
+      res.json({ unusedCount, totalTopics: items.length });
+    } catch (error) {
+      console.error("Error fetching topic bank stats:", error);
+      res.status(500).json({ error: "Failed to fetch topic bank stats" });
     }
   });
 
@@ -7545,6 +7606,33 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // ============================================================================
   // TRANSLATIONS - DeepL Multi-Language SEO System
   // ============================================================================
+
+  // Get translation coverage for dashboard (simplified stats per language)
+  app.get("/api/translations/coverage", async (req, res) => {
+    try {
+      const contents = await storage.getContents();
+      const publishedContents = contents.filter(c => c.status === "published");
+      const allTranslations = await storage.getAllTranslations();
+
+      const supportedLocales = ["en", "ar", "hi", "zh", "ru", "fr", "de", "es", "ja"];
+
+      const coverage: Record<string, { translated: number; total: number }> = {};
+      for (const locale of supportedLocales) {
+        if (locale === "en") {
+          // English is the source language
+          coverage[locale] = { translated: publishedContents.length, total: publishedContents.length };
+        } else {
+          const localeTranslations = allTranslations.filter(t => t.locale === locale && t.status === "completed");
+          coverage[locale] = { translated: localeTranslations.length, total: publishedContents.length };
+        }
+      }
+
+      res.json(coverage);
+    } catch (error) {
+      console.error("Error fetching translation coverage:", error);
+      res.status(500).json({ error: "Failed to fetch translation coverage" });
+    }
+  });
 
   // Get translation statistics for admin dashboard
   app.get("/api/translations/stats", requirePermission("canViewAnalytics"), async (req, res) => {
