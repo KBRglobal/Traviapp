@@ -1580,3 +1580,94 @@ export const insertScheduledTaskSchema = createInsertSchema(scheduledTasks).omit
 export type InsertScheduledTask = z.infer<typeof insertScheduledTaskSchema>;
 export type ScheduledTask = typeof scheduledTasks.$inferSelect;
 
+// ============================================================================
+// TELEGRAM BOT TABLES - For Telegram integration
+// ============================================================================
+
+export const telegramUserProfiles = pgTable("telegram_user_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  telegramId: varchar("telegram_id").notNull().unique(),
+  username: varchar("username"),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  languageCode: varchar("language_code"),
+  isPremium: boolean("is_premium").default(false),
+  isBot: boolean("is_bot").default(false),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const telegramConversations = pgTable("telegram_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  telegramUserId: varchar("telegram_user_id").references(() => telegramUserProfiles.id),
+  chatId: varchar("chat_id").notNull(),
+  messageId: varchar("message_id"),
+  direction: varchar("direction", { length: 10 }), // 'in' or 'out'
+  messageType: varchar("message_type", { length: 50 }),
+  content: text("content"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type TelegramUserProfile = typeof telegramUserProfiles.$inferSelect;
+export type TelegramConversation = typeof telegramConversations.$inferSelect;
+
+// ============================================================================
+// AI GENERATED IMAGES - For tracking AI image generation
+// ============================================================================
+
+export const aiGeneratedImages = pgTable("ai_generated_images", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  prompt: text("prompt").notNull(),
+  negativePrompt: text("negative_prompt"),
+  model: varchar("model", { length: 100 }),
+  provider: varchar("provider", { length: 50 }), // flux, dall-e, midjourney, etc.
+  width: integer("width"),
+  height: integer("height"),
+  seed: varchar("seed"),
+  imageUrl: text("image_url"),
+  thumbnailUrl: text("thumbnail_url"),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, completed, failed
+  error: text("error"),
+  cost: varchar("cost"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  contentId: varchar("content_id").references(() => contents.id, { onDelete: "set null" }),
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type AiGeneratedImage = typeof aiGeneratedImages.$inferSelect;
+
+// ============================================================================
+// TOPIC CLUSTERS - For organizing topics into clusters
+// ============================================================================
+
+export const topicClusters = pgTable("topic_clusters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  color: varchar("color", { length: 7 }),
+  icon: varchar("icon", { length: 50 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const topicClusterItems = pgTable("topic_cluster_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clusterId: varchar("cluster_id").notNull().references(() => topicClusters.id, { onDelete: "cascade" }),
+  topicBankId: varchar("topic_bank_id").references(() => topicBank.id, { onDelete: "cascade" }),
+  contentId: varchar("content_id").references(() => contents.id, { onDelete: "cascade" }),
+  position: integer("position").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_topic_cluster_items_cluster").on(table.clusterId),
+  index("IDX_topic_cluster_items_topic").on(table.topicBankId),
+  index("IDX_topic_cluster_items_content").on(table.contentId),
+]);
+
+export type TopicCluster = typeof topicClusters.$inferSelect;
+export type TopicClusterItem = typeof topicClusterItems.$inferSelect;
+
