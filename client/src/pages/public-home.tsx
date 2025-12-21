@@ -86,16 +86,37 @@ const mascotPhrases = [
   "mascotCantCatch",
 ];
 
-const getRandomPosition = (heroRect: DOMRect, mascotSize: number = 120) => {
-  const minX = heroRect.width * 0.55;
-  const maxX = heroRect.width - mascotSize - 40;
-  const minY = 80;
-  const maxY = heroRect.height * 0.55;
+const getRandomPosition = (heroRect: DOMRect, traviRect: DOMRect | null, mascotWidth: number) => {
+  if (!traviRect) {
+    // Fallback if no TRAVI rect available
+    const minX = 20;
+    const maxX = Math.min(400, heroRect.width * 0.4);
+    const minY = 100;
+    const maxY = heroRect.height * 0.5;
+    const x = minX + Math.random() * (maxX - minX);
+    const y = minY + Math.random() * (maxY - minY);
+    return { x, y };
+  }
   
-  const x = minX + Math.random() * (maxX - minX);
+  const traviLeft = traviRect.left - heroRect.left;
+  const traviTop = traviRect.top - heroRect.top;
+  const traviBottom = traviRect.bottom - heroRect.top;
+  const gap = 8;
+  
+  // Keep mascot in a narrow corridor immediately left of TRAVI text
+  // Only allow 30px of horizontal movement
+  const idealX = traviLeft - mascotWidth - gap;
+  const minX = Math.max(10, idealX - 30);
+  const maxX = Math.max(minX, idealX);
+  
+  // Vertical bounds: around the TRAVI text area with limited movement
+  const minY = Math.max(80, traviTop - 40);
+  const maxY = Math.min(traviBottom + 60, heroRect.height * 0.6);
+  
+  const x = minX + Math.random() * (Math.max(0, maxX - minX));
   const y = minY + Math.random() * (maxY - minY);
   
-  return { x: Math.max(minX, Math.min(maxX, x)), y: Math.max(minY, Math.min(maxY, y)) };
+  return { x: Math.max(10, x), y: Math.max(80, y) };
 };
 
 export default function PublicHome() {
@@ -105,6 +126,8 @@ export default function PublicHome() {
   const { t, localePath, isRTL } = useLocale();
   
   const heroRef = useRef<HTMLElement>(null);
+  const traviTextRef = useRef<HTMLSpanElement>(null);
+  const mascotRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mascotPosition, setMascotPosition] = useState({ x: 0, y: 0 });
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
@@ -112,13 +135,38 @@ export default function PublicHome() {
   const [isInitialized, setIsInitialized] = useState(false);
   const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   
+  // Get actual mascot width for responsive positioning
+  const getMascotWidth = useCallback(() => {
+    if (mascotRef.current) {
+      return mascotRef.current.getBoundingClientRect().width;
+    }
+    // Fallback: w-24 on mobile (96px), w-32 on desktop (128px)
+    return typeof window !== "undefined" && window.innerWidth < 768 ? 96 : 128;
+  }, []);
+  
   useEffect(() => {
-    if (heroRef.current && !isInitialized) {
-      // Start mascot near the TRAVI logo (left side, near top)
-      setMascotPosition({ x: 380, y: 100 });
+    if (heroRef.current && traviTextRef.current && !isInitialized) {
+      // Position mascot to the LEFT of the TRAVI text (like in the logo)
+      // The hero content has extra left padding (pl-28/pl-40) to ensure room for mascot
+      const heroRect = heroRef.current.getBoundingClientRect();
+      const traviRect = traviTextRef.current.getBoundingClientRect();
+      
+      const mascotWidth = getMascotWidth();
+      const gap = 8;
+      const traviLeft = traviRect.left - heroRect.left;
+      const traviTop = traviRect.top - heroRect.top;
+      
+      // Position mascot to the left of TRAVI text
+      const startX = traviLeft - mascotWidth - gap;
+      const startY = traviTop + 10;
+      
+      setMascotPosition({ 
+        x: Math.max(10, startX), 
+        y: Math.max(100, startY) 
+      });
       setIsInitialized(true);
     }
-  }, [isInitialized]);
+  }, [isInitialized, getMascotWidth]);
   
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -127,7 +175,7 @@ export default function PublicHome() {
     };
   }, []);
   
-  const handleMascotClick = useCallback(() => {
+  const handleMascotHover = useCallback(() => {
     if (!heroRef.current) return;
     
     // Clear any existing timeout
@@ -135,8 +183,10 @@ export default function PublicHome() {
     
     // Only move mascot if reduced motion is not preferred
     if (!prefersReducedMotion) {
-      const rect = heroRef.current.getBoundingClientRect();
-      const newPos = getRandomPosition(rect);
+      const heroRect = heroRef.current.getBoundingClientRect();
+      const traviRect = traviTextRef.current?.getBoundingClientRect() || null;
+      const mascotWidth = getMascotWidth();
+      const newPos = getRandomPosition(heroRect, traviRect, mascotWidth);
       setMascotPosition(newPos);
     }
     
@@ -146,7 +196,7 @@ export default function PublicHome() {
     
     // Set new timeout
     timeoutRef.current = setTimeout(() => setShowPhrase(false), 4000);
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, getMascotWidth]);
 
   useDocumentMeta({
     title: "Travi - Dubai Travel Guide | Things to Do, Hotels & Attractions",
@@ -202,18 +252,19 @@ export default function PublicHome() {
           {/* Interactive Mascot */}
           {isInitialized && (
             <div
+              ref={mascotRef}
               className="absolute z-20 cursor-pointer select-none"
               style={{
                 left: `${mascotPosition.x}px`,
                 top: `${mascotPosition.y}px`,
                 transition: prefersReducedMotion ? "none" : "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
               }}
-              onClick={handleMascotClick}
+              onMouseEnter={handleMascotHover}
               data-testid="mascot-interactive"
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => e.key === "Enter" && handleMascotClick()}
-              aria-label={t("home.mascotLabel") || "Interactive mascot - click to play!"}
+              onKeyDown={(e) => e.key === "Enter" && handleMascotHover()}
+              aria-label={t("home.mascotLabel") || "Interactive mascot - hover to play!"}
             >
               <img 
                 src={mascotImage} 
@@ -238,12 +289,15 @@ export default function PublicHome() {
             </div>
           )}
 
-          {/* Main Content */}
-          <div className="relative z-10 max-w-7xl mx-auto px-6 py-20 w-full">
+          {/* Main Content - Extra left padding to make room for mascot */}
+          <div className="relative z-10 max-w-7xl mx-auto pl-28 md:pl-40 pr-6 py-20 w-full">
             <div className="max-w-2xl" dir={isRTL ? "rtl" : "ltr"}>
               {/* Big TRAVI Letters */}
               <div className="mb-6">
-                <span className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 drop-shadow-sm">
+                <span 
+                  ref={traviTextRef}
+                  className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 drop-shadow-sm"
+                >
                   TRAVI
                 </span>
               </div>

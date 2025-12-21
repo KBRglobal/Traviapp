@@ -5,7 +5,7 @@ import {
   Clock, ChevronRight, TrendingUp, Mail, ArrowRight,
   Plane, Globe, Eye, Ticket, AlertTriangle, Tag,
   Users, BookOpen, ExternalLink, Flame, Sun, Shield, Camera,
-  Play, Video, Star
+  Star, MapPin, CreditCard, Lightbulb
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
@@ -155,35 +155,11 @@ const LATEST_NEWS: NewsArticle[] = [
   }
 ];
 
-const VIDEO_STORIES = [
-  {
-    id: 1,
-    title: "Inside the World's Tallest Building: Burj Khalifa Tour",
-    duration: "8:45",
-    views: 125000,
-    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=450&fit=crop"
-  },
-  {
-    id: 2,
-    title: "Dubai Creek Harbour: The Future of Waterfront Living",
-    duration: "5:32",
-    views: 89000,
-    image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&h=450&fit=crop"
-  },
-  {
-    id: 3,
-    title: "Desert Safari Experience: What to Expect",
-    duration: "6:18",
-    views: 156000,
-    image: "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=800&h=450&fit=crop"
-  },
-  {
-    id: 4,
-    title: "Palm Jumeirah: Engineering Marvel Explained",
-    duration: "10:22",
-    views: 203000,
-    image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800&h=450&fit=crop"
-  }
+const TRAVEL_TIPS = [
+  { id: 1, title: "Best Time to Visit Dubai", category: "Planning", description: "November to March offers perfect weather", icon: Calendar },
+  { id: 2, title: "Dubai Dress Code Guide", category: "Culture", description: "Respectful attire for malls and attractions", icon: Users },
+  { id: 3, title: "Metro Navigation Tips", category: "Transport", description: "Gold class, women's cabin, and nol cards", icon: MapPin },
+  { id: 4, title: "Best Exchange Rates", category: "Money", description: "Where to get the best AED rates", icon: CreditCard },
 ];
 
 const FEATURED_ATTRACTIONS: NewsArticle[] = [
@@ -360,9 +336,9 @@ export default function PublicNews() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid lg:grid-cols-5 gap-6">
           {/* Main Featured Article - 3 columns */}
-          <div className="lg:col-span-3">
-            <article className="group cursor-pointer transition-transform duration-300 hover:scale-[1.01]" data-testid="card-hero-article">
-              <div className="relative aspect-[16/10] rounded-2xl overflow-hidden mb-4">
+          <div className="lg:col-span-3 flex flex-col">
+            <article className="group cursor-pointer transition-transform duration-300 hover:scale-[1.01] flex-1" data-testid="card-hero-article">
+              <div className="relative h-full min-h-[400px] rounded-2xl overflow-hidden">
                 <img
                   src={HERO_ARTICLE.image}
                   alt={HERO_ARTICLE.title}
@@ -477,52 +453,40 @@ export default function PublicNews() {
         </div>
       </section>
 
-      {/* Video Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 border-t border-slate-200 dark:border-slate-800">
+      {/* Quick Travel Tips Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 border-t border-slate-200 dark:border-slate-800" data-testid="section-travel-tips">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-              <Video className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+              <Lightbulb className="w-4 h-4 text-white" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Watch: Dubai Video Stories</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Quick Travel Tips</h2>
           </div>
-          <Button variant="ghost" size="sm" className="text-rose-600 dark:text-rose-400" data-testid="button-watch-all">
-            View All <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
+          <Link href="/guides">
+            <Button variant="ghost" size="sm" className="text-emerald-600 dark:text-emerald-400" data-testid="button-view-guides">
+              View All Guides <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {VIDEO_STORIES.map((video, index) => (
+          {TRAVEL_TIPS.map((tip) => (
             <article 
-              key={video.id}
-              className="group cursor-pointer transition-transform duration-300 hover:scale-[1.02]"
-              data-testid={`card-video-${index}`}
+              key={tip.id}
+              className="group cursor-pointer p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-all duration-300 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-md"
+              data-testid={`card-travel-tip-${tip.id}`}
             >
-              <div className="relative aspect-video rounded-xl overflow-hidden mb-2">
-                <img
-                  src={video.image}
-                  alt={video.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                {/* Enhanced overlay for better text contrast in both modes */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-black/10 dark:from-black/70 dark:via-black/40 dark:to-black/20 transition-opacity duration-300 group-hover:from-black/60 dark:group-hover:from-black/80" />
-                {/* Play button overlay */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 bg-white/90 dark:bg-white/95 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:bg-white">
-                    <Play className="w-5 h-5 text-slate-900 ml-1" fill="currentColor" />
-                  </div>
-                </div>
-                {/* Duration badge */}
-                <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 dark:bg-black/90 text-white text-xs font-medium rounded">
-                  {video.duration}
-                </div>
+              <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center mb-3">
+                <tip.icon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h3 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
-                {video.title}
+              <span className="inline-block px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold rounded mb-2">
+                {tip.category}
+              </span>
+              <h3 className="font-semibold text-sm text-slate-900 dark:text-white leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors mb-1">
+                {tip.title}
               </h3>
-              <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                <Eye className="w-3 h-3" />
-                {formatViews(video.views)} views
-              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                {tip.description}
+              </p>
             </article>
           ))}
         </div>
