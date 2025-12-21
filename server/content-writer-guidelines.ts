@@ -1,67 +1,212 @@
 import { z } from "zod";
+import { db } from "./db";
+import { contentRules, DEFAULT_CONTENT_RULES } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
-// Zod schema for validating AI-generated article content
-// Note: Minimum requirements lowered to accommodate RSS-sourced news articles which tend to be shorter
-export const ArticleResponseSchema = z.object({
-  title: z.string().min(20).max(100).describe("SEO headline, keyword first"),
-  metaDescription: z.string().min(50).max(200).describe("Meta description 100-160 chars"),
-  category: z.string(),
-  urgencyLevel: z.enum(["urgent", "relevant", "evergreen"]),
-  targetAudience: z.array(z.string()).min(1),
-  content: z.string().min(1000).describe("Full HTML article content, minimum 400 words"),
-  quickFacts: z.array(z.string()).min(3).max(7).describe("3-7 key facts"),
-  proTips: z.array(z.string()).min(3).max(7).describe("3-7 insider tips"),
-  warnings: z.array(z.string()).default([]),
-  faqs: z.array(z.object({
-    question: z.string().min(10),
-    answer: z.string().min(30)
-  })).min(3).max(7).describe("3-7 FAQs"),
-  sources: z.array(z.string()).default([]),
-  primaryKeyword: z.string().min(3),
-  secondaryKeywords: z.array(z.string()).min(2).max(10),
-  imageSearchTerms: z.array(z.string()).min(2).max(5).describe("Keywords for Freepik image search")
-});
+// ============================================================================
+// STRICT CONTENT RULES - These rules CANNOT be bypassed by AI
+// ============================================================================
 
+// Cache for rules to avoid DB calls on every request
+let cachedRules: typeof DEFAULT_CONTENT_RULES | null = null;
+let cacheTime = 0;
+const CACHE_TTL = 60000; // 1 minute
+
+// Get active content rules from database or use defaults
+export async function getActiveContentRules(): Promise<typeof DEFAULT_CONTENT_RULES> {
+  const now = Date.now();
+  if (cachedRules && now - cacheTime < CACHE_TTL) {
+    return cachedRules;
+  }
+
+  try {
+    const rules = await db.select().from(contentRules).where(eq(contentRules.isActive, true)).limit(1);
+    if (rules.length > 0) {
+      cachedRules = rules[0] as unknown as typeof DEFAULT_CONTENT_RULES;
+      cacheTime = now;
+      return cachedRules;
+    }
+  } catch (error) {
+    console.error("Error fetching content rules, using defaults:", error);
+  }
+
+  return DEFAULT_CONTENT_RULES;
+}
+
+// Clear the rules cache (call after updating rules)
+export function clearRulesCache() {
+  cachedRules = null;
+  cacheTime = 0;
+}
+
+// ============================================================================
+// ZOD SCHEMA - Dynamic validation based on rules
+// ============================================================================
+
+export function createArticleResponseSchema(rules: typeof DEFAULT_CONTENT_RULES) {
+  return z.object({
+    title: z.string().min(20).max(100).describe("SEO headline, keyword first"),
+    metaDescription: z.string().min(100).max(160).describe("Meta description 100-160 chars"),
+    category: z.string(),
+    urgencyLevel: z.enum(["urgent", "relevant", "evergreen"]),
+    targetAudience: z.array(z.string()).min(1),
+
+    // Main content - STRICT minimum based on rules
+    content: z.string().min(rules.minWords * 5).describe(`Full HTML article content, minimum ${rules.minWords} words`),
+
+    // Quick Facts - based on rules
+    quickFacts: z.array(z.string()).min(rules.quickFactsMin).max(rules.quickFactsMax)
+      .describe(`${rules.quickFactsMin}-${rules.quickFactsMax} key facts`),
+
+    // Pro Tips - based on rules
+    proTips: z.array(z.string()).min(rules.proTipsMin).max(rules.proTipsMax)
+      .describe(`${rules.proTipsMin}-${rules.proTipsMax} insider tips`),
+
+    warnings: z.array(z.string()).default([]),
+
+    // FAQs - based on rules
+    faqs: z.array(z.object({
+      question: z.string().min(10),
+      answer: z.string().min(rules.faqAnswerWordsMin * 5) // ~5 chars per word
+    })).min(rules.faqsMin).max(rules.faqsMax)
+      .describe(`${rules.faqsMin}-${rules.faqsMax} FAQs`),
+
+    sources: z.array(z.string()).default([]),
+    primaryKeyword: z.string().min(3),
+    secondaryKeywords: z.array(z.string()).min(2).max(10),
+    imageSearchTerms: z.array(z.string()).min(2).max(5).describe("Keywords for Freepik image search")
+  });
+}
+
+// Default schema for type inference
+export const ArticleResponseSchema = createArticleResponseSchema(DEFAULT_CONTENT_RULES);
 export type ArticleResponse = z.infer<typeof ArticleResponseSchema>;
 
-// Validation result type
+// ============================================================================
+// VALIDATION
+// ============================================================================
+
 export type ValidationResult = {
   isValid: boolean;
   data?: ArticleResponse;
   errors: string[];
   wordCount: number;
+  structureAnalysis: {
+    introWords: number;
+    mainContentWords: number;
+    faqWords: number;
+    tipsWords: number;
+    conclusionWords: number;
+    dubaiMentions: number;
+    internalLinks: number;
+  };
 };
 
-// Validate AI response and check word count
-export function validateArticleResponse(response: unknown): ValidationResult {
+// Count words in text
+function countWords(text: string): number {
+  return text.replace(/<[^>]*>/g, '').split(/\s+/).filter(w => w.length > 0).length;
+}
+
+// Count Dubai/دובאי mentions
+function countDubaiMentions(text: string): number {
+  const dubaiRegex = /dubai|דובאי|دبي|uae|emirates/gi;
+  return (text.match(dubaiRegex) || []).length;
+}
+
+// Count internal links
+function countInternalLinks(html: string): number {
+  const linkRegex = /<a[^>]+href=["'][^"']*["'][^>]*>/gi;
+  return (html.match(linkRegex) || []).length;
+}
+
+// Validate AI response against STRICT rules
+export async function validateArticleResponse(response: unknown): Promise<ValidationResult> {
+  const rules = await getActiveContentRules();
+  const schema = createArticleResponseSchema(rules);
+
   const result: ValidationResult = {
     isValid: false,
     errors: [],
-    wordCount: 0
+    wordCount: 0,
+    structureAnalysis: {
+      introWords: 0,
+      mainContentWords: 0,
+      faqWords: 0,
+      tipsWords: 0,
+      conclusionWords: 0,
+      dubaiMentions: 0,
+      internalLinks: 0,
+    }
   };
 
   try {
     // Parse with Zod
-    const parsed = ArticleResponseSchema.safeParse(response);
-    
+    const parsed = schema.safeParse(response);
+
     if (!parsed.success) {
       result.errors = parsed.error.errors.map(e => `${e.path.join('.')}: ${e.message}`);
       return result;
     }
 
-    // Calculate word count from content
-    const textContent = parsed.data.content.replace(/<[^>]*>/g, '');
-    result.wordCount = textContent.split(/\s+/).filter(w => w.length > 0).length;
+    const data = parsed.data;
 
-    // Check minimum word count (lowered to 400 for RSS-sourced news articles)
-    if (result.wordCount < 400) {
-      result.errors.push(`Word count ${result.wordCount} is below minimum 400 words`);
-      return result;
+    // Calculate word count from content
+    const textContent = data.content.replace(/<[^>]*>/g, '');
+    result.wordCount = countWords(textContent);
+
+    // Analyze structure
+    result.structureAnalysis.dubaiMentions = countDubaiMentions(textContent);
+    result.structureAnalysis.internalLinks = countInternalLinks(data.content);
+    result.structureAnalysis.faqWords = data.faqs.reduce((acc, faq) => acc + countWords(faq.answer), 0);
+    result.structureAnalysis.tipsWords = data.proTips.reduce((acc, tip) => acc + countWords(tip), 0);
+
+    // ============================================================================
+    // STRICT VALIDATION - These checks MUST pass
+    // ============================================================================
+
+    // Check minimum word count (STRICT)
+    if (result.wordCount < rules.minWords) {
+      result.errors.push(`❌ STRICT VIOLATION: Word count ${result.wordCount} is below minimum ${rules.minWords} words`);
     }
 
-    // All checks passed
-    result.isValid = true;
-    result.data = parsed.data;
+    // Check maximum word count
+    if (result.wordCount > rules.maxWords) {
+      result.errors.push(`⚠️ Word count ${result.wordCount} exceeds maximum ${rules.maxWords} words`);
+    }
+
+    // Check Dubai mentions (STRICT)
+    if (result.structureAnalysis.dubaiMentions < rules.dubaiMentionsMin) {
+      result.errors.push(`❌ STRICT VIOLATION: Dubai/UAE mentioned only ${result.structureAnalysis.dubaiMentions} times, minimum is ${rules.dubaiMentionsMin}`);
+    }
+
+    // Check FAQ count (STRICT)
+    if (data.faqs.length < rules.faqsMin) {
+      result.errors.push(`❌ STRICT VIOLATION: Only ${data.faqs.length} FAQs provided, minimum is ${rules.faqsMin}`);
+    }
+
+    // Check Pro Tips count (STRICT)
+    if (data.proTips.length < rules.proTipsMin) {
+      result.errors.push(`❌ STRICT VIOLATION: Only ${data.proTips.length} Pro Tips provided, minimum is ${rules.proTipsMin}`);
+    }
+
+    // Check Quick Facts count (STRICT)
+    if (data.quickFacts.length < rules.quickFactsMin) {
+      result.errors.push(`❌ STRICT VIOLATION: Only ${data.quickFacts.length} Quick Facts provided, minimum is ${rules.quickFactsMin}`);
+    }
+
+    // Check internal links
+    if (result.structureAnalysis.internalLinks < rules.internalLinksMin) {
+      result.errors.push(`⚠️ Only ${result.structureAnalysis.internalLinks} internal links, recommended minimum is ${rules.internalLinksMin}`);
+    }
+
+    // If there are no STRICT violations, mark as valid
+    const hasStrictViolations = result.errors.some(e => e.includes('STRICT VIOLATION'));
+
+    if (!hasStrictViolations) {
+      result.isValid = true;
+      result.data = data;
+    }
+
     return result;
 
   } catch (error) {
@@ -70,335 +215,238 @@ export function validateArticleResponse(response: unknown): ValidationResult {
   }
 }
 
-// Enhanced prompt for retry when initial response is incomplete
-export function buildRetryPrompt(errors: string[], originalResponse: unknown): string {
-  return `Your previous response was INCOMPLETE or INVALID. Please fix these issues:
+// ============================================================================
+// RETRY PROMPT - When content doesn't meet requirements
+// ============================================================================
 
-ERRORS FOUND:
-${errors.map(e => `- ${e}`).join('\n')}
+export async function buildRetryPrompt(errors: string[], wordCount: number): Promise<string> {
+  const rules = await getActiveContentRules();
 
-REQUIREMENTS REMINDER:
-1. Article content MUST be at least 400 words (minimum 1000 characters)
-2. You MUST provide 3-7 quickFacts
-3. You MUST provide 3-7 proTips
-4. You MUST provide 3-7 FAQs with questions (min 10 chars) and answers (min 30 chars)
-5. You MUST provide 2-5 imageSearchTerms for finding relevant Freepik images
-6. Title must be 20-100 characters
-7. Meta description must be 50-200 characters
+  const strictErrors = errors.filter(e => e.includes('STRICT VIOLATION'));
+  const warnings = errors.filter(e => !e.includes('STRICT VIOLATION'));
 
-EXPAND YOUR CONTENT:
-- Add more detailed paragraphs with specific information
-- Include background context and practical details
-- Include visitor information if applicable
-- Describe the experience in detail
+  return `🚨 YOUR RESPONSE WAS REJECTED - STRICT RULES VIOLATED 🚨
 
-Please provide the COMPLETE response again with ALL required fields properly filled.`;
+Current word count: ${wordCount} words
+Required minimum: ${rules.minWords} words
+Required maximum: ${rules.maxWords} words
+Optimal range: ${rules.optimalMinWords}-${rules.optimalMaxWords} words
+
+==================================================
+CRITICAL ERRORS (MUST FIX):
+==================================================
+${strictErrors.map(e => e.replace('❌ STRICT VIOLATION: ', '• ')).join('\n')}
+
+${warnings.length > 0 ? `
+==================================================
+WARNINGS (Recommended to fix):
+==================================================
+${warnings.map(e => e.replace('⚠️ ', '• ')).join('\n')}
+` : ''}
+
+==================================================
+STRICT REQUIREMENTS - CANNOT BE BYPASSED:
+==================================================
+
+📝 ARTICLE STRUCTURE (Total: ${rules.minWords}-${rules.maxWords} words):
+
+1. INTRODUCTION: ${rules.introMinWords}-${rules.introMaxWords} words
+   - Hook the reader immediately
+   - Include primary keyword in first sentence
+   - Summarize what reader will learn
+
+2. QUICK FACTS BOX: ${rules.quickFactsMin}-${rules.quickFactsMax} items
+   - Duration, Price, Location, Best Time, etc.
+   - Use emojis for visual appeal
+   - Each fact: ${rules.quickFactsWordsMin / rules.quickFactsMin}-${rules.quickFactsWordsMax / rules.quickFactsMax} words
+
+3. MAIN CONTENT: ${rules.mainSectionsMin}-${rules.mainSectionsMax} sections (H2)
+   - Each section: ${rules.mainSectionWordsMin}-${rules.mainSectionWordsMax} words
+   - Total: ${rules.mainSectionsMin * rules.mainSectionWordsMin}-${rules.mainSectionsMax * rules.mainSectionWordsMax} words
+   - Include practical, actionable information
+
+4. FAQ SECTION: ${rules.faqsMin}-${rules.faqsMax} questions
+   - Each answer: ${rules.faqAnswerWordsMin}-${rules.faqAnswerWordsMax} words
+   - Use FAQPage schema-friendly format
+   - Real questions tourists ask
+
+5. PRO TIPS: ${rules.proTipsMin}-${rules.proTipsMax} tips
+   - Each tip: ${rules.proTipWordsMin}-${rules.proTipWordsMax} words
+   - Insider knowledge only
+   - Actionable advice
+
+6. CONCLUSION: ${rules.conclusionMinWords}-${rules.conclusionMaxWords} words
+   - Summarize key points
+   - Clear call to action
+
+📍 SEO REQUIREMENTS:
+- Mention "Dubai" or "UAE": Minimum ${rules.dubaiMentionsMin} times
+- Internal links: ${rules.internalLinksMin}-${rules.internalLinksMax} links
+- Primary keyword: 2-3 times naturally
+- Secondary keywords: 3-5 times each
+
+⚠️ THIS IS YOUR ${errors.length > 3 ? 'FINAL' : 'SECOND'} ATTEMPT
+   If you fail again, the article will be rejected entirely.
+
+Please provide the COMPLETE article meeting ALL requirements.`;
 }
+
+// ============================================================================
+// CONTENT WRITER PERSONALITIES
+// ============================================================================
 
 export const CONTENT_WRITER_PERSONALITIES = {
   A: {
     name: "The Professional Guide",
-    style: "Factual, precise, organized",
-    sentences: "Medium length, clear",
-    tone: "Professional yet accessible",
-    characteristics: [
-      '"Located in...", "Opening hours are...", "Prices start from..."',
-      "Uses exact numbers, addresses, directions",
-      '"According to...", "Official sources confirm..."'
-    ],
-    opening: "With the most important facts",
-    bestFor: ["transportation", "logistics", "news", "regulations"]
+    style: "informative, trustworthy, detailed",
+    tone: "professional yet approachable",
+    strengths: ["comprehensive coverage", "practical tips", "clear structure"],
   },
   B: {
-    name: "The Excited Traveler / Storyteller",
-    style: "Energetic, descriptive, imagination-sparking",
-    sentences: "Varied, with rhythm",
-    tone: "Enthusiastic, optimistic, inviting",
-    characteristics: [
-      '"Imagine...", "Picture this...", "You won\'t believe..."',
-      "Uses rich but not excessive adjectives",
-      '"Here\'s the best part", "Wait, it gets better"',
-      "Sensory descriptions (what you see/hear/smell)"
-    ],
-    opening: "With a scene or experiential description",
-    bestFor: ["attractions", "activities", "events", "festivals"]
+    name: "The Enthusiastic Explorer",
+    style: "exciting, vivid, personal",
+    tone: "enthusiastic and conversational",
+    strengths: ["engaging storytelling", "sensory details", "personal touch"],
   },
   C: {
-    name: "The Balanced Critic",
-    style: "Analytical, comparative, fair",
-    sentences: "Structured, with pros and cons",
-    tone: "Balanced, trustworthy, grounded",
-    characteristics: [
-      '"On one hand... on the other hand..."',
-      '"Compared to...", "Unlike..."',
-      '"Worth noting that...", "Keep in mind..."',
-      "Presents balanced perspective"
-    ],
-    opening: "With overall assessment or comparison",
-    bestFor: ["hotels", "accommodation", "restaurants", "shopping", "reviews"]
+    name: "The Local Expert",
+    style: "insider knowledge, authentic, practical",
+    tone: "friendly and knowledgeable",
+    strengths: ["local secrets", "money-saving tips", "cultural insights"],
   },
   D: {
-    name: "The Local Insider",
-    style: "Friendly, insider tips, conversational",
-    sentences: "Short-medium, easy",
-    tone: "Friendly, like a friend giving advice",
-    characteristics: [
-      '"Here\'s what locals know...", "Insider tip:", "Pro tip:"',
-      '"Most tourists don\'t realize...", "The secret is..."',
-      '"Trust me on this", "You\'ll thank me later"',
-      "Practical, undocumented tips"
-    ],
-    opening: "With surprising tip or insider info",
-    bestFor: ["tips", "guides", "food", "dining", "practical recommendations"]
+    name: "The Luxury Curator",
+    style: "sophisticated, exclusive, refined",
+    tone: "elegant and aspirational",
+    strengths: ["luxury experiences", "premium details", "exclusive access"],
   },
-  E: {
-    name: "The Practical Planner",
-    style: "Utility-focused, efficient, organized",
-    sentences: "Short, lists, bullet points",
-    tone: "Direct, helpful, no fluff",
-    characteristics: [
-      '"What you need to know:", "Quick facts:", "Bottom line:"',
-      "Numbered lists and visual organization",
-      '"Budget: $X", "Time needed: X hours"',
-      '"How to get there:", "Best time to visit:"'
-    ],
-    opening: "With critical information immediately",
-    bestFor: ["planning guides", "budgeting", "quick info"]
-  }
-} as const;
-
-export const ARTICLE_STRUCTURES = {
-  NEWS_GUIDE: {
-    name: "News + Guide",
-    description: "For new attractions/places",
-    sections: [
-      "What's new (THE NEWS)",
-      "Why it's interesting (THE HOOK)",
-      "The details (what, included, unique)",
-      "Practical info (location, prices, hours, tip)",
-      "Summary + CTA (THE CLOSER)"
-    ]
-  },
-  STRUCTURED_LIST: {
-    name: "Structured List",
-    description: "For 'best of' guides/lists",
-    sections: [
-      "Opening: Why this list matters",
-      "[Number] Items with: Name, Description, Who it suits, Practical detail",
-      "Summary: How to choose"
-    ]
-  },
-  COMPARATIVE: {
-    name: "Comparative",
-    description: "For hotels/restaurants/options",
-    sections: [
-      "Opening: The question/problem",
-      "Option 1: Pros and Cons",
-      "Option 2: Pros and Cons",
-      "Conclusion: Which to choose when"
-    ]
-  },
-  STORY_INFO: {
-    name: "Story + Info",
-    description: "For events",
-    sections: [
-      "Scene-setting opening",
-      "Event details (what, when, where)",
-      "What to expect",
-      "Practical tips",
-      "Call to action"
-    ]
-  },
-  PROBLEM_SOLUTION: {
-    name: "Problem-Solution",
-    description: "For practical guides",
-    sections: [
-      "The problem/challenge",
-      "The solution overview",
-      "Step-by-step guide",
-      "Pro tips",
-      "Summary"
-    ]
-  },
-  NEWS_UPDATE: {
-    name: "News Update",
-    description: "For changes/news/regulations",
-    sections: [
-      "What changed (headline fact)",
-      "Details of the change",
-      "How it affects travelers",
-      "What to do now",
-      "Timeline/dates"
-    ]
-  }
-} as const;
-
-export const CATEGORY_PERSONALITY_MAPPING: Record<string, { personality: keyof typeof CONTENT_WRITER_PERSONALITIES; structure: keyof typeof ARTICLE_STRUCTURES; tone: string }> = {
-  attractions: { personality: "B", structure: "NEWS_GUIDE", tone: "enthusiastic" },
-  activities: { personality: "B", structure: "NEWS_GUIDE", tone: "enthusiastic" },
-  hotels: { personality: "C", structure: "COMPARATIVE", tone: "analytical" },
-  accommodation: { personality: "C", structure: "COMPARATIVE", tone: "analytical" },
-  food: { personality: "D", structure: "NEWS_GUIDE", tone: "sensory" },
-  restaurants: { personality: "D", structure: "NEWS_GUIDE", tone: "sensory" },
-  dining: { personality: "D", structure: "NEWS_GUIDE", tone: "sensory" },
-  transport: { personality: "A", structure: "NEWS_UPDATE", tone: "factual" },
-  transportation: { personality: "A", structure: "NEWS_UPDATE", tone: "factual" },
-  logistics: { personality: "A", structure: "NEWS_UPDATE", tone: "factual" },
-  events: { personality: "B", structure: "STORY_INFO", tone: "exciting" },
-  festivals: { personality: "B", structure: "STORY_INFO", tone: "exciting" },
-  tips: { personality: "D", structure: "PROBLEM_SOLUTION", tone: "friendly" },
-  guides: { personality: "D", structure: "PROBLEM_SOLUTION", tone: "friendly" },
-  news: { personality: "A", structure: "NEWS_UPDATE", tone: "serious" },
-  regulations: { personality: "A", structure: "NEWS_UPDATE", tone: "serious" },
-  shopping: { personality: "C", structure: "STRUCTURED_LIST", tone: "practical" },
-  deals: { personality: "D", structure: "STRUCTURED_LIST", tone: "value-focused" }
 };
 
-export function getContentWriterSystemPrompt(category: string, personality: typeof CONTENT_WRITER_PERSONALITIES[keyof typeof CONTENT_WRITER_PERSONALITIES], structure: typeof ARTICLE_STRUCTURES[keyof typeof ARTICLE_STRUCTURES]): string {
-  return `You are a professional travel content writer specializing in Dubai. You write for international travelers seeking practical, interesting, and valuable information for their trip.
+export const ARTICLE_STRUCTURES = {
+  standard: {
+    name: "Standard Article",
+    sections: ["intro", "quickFacts", "mainContent", "faq", "proTips", "conclusion"],
+    minWords: 1800,
+  },
+  listicle: {
+    name: "Listicle/Top X",
+    sections: ["intro", "quickFacts", "numberedList", "faq", "proTips", "conclusion"],
+    minWords: 2000,
+  },
+  guide: {
+    name: "Complete Guide",
+    sections: ["intro", "tableOfContents", "quickFacts", "mainContent", "stepByStep", "faq", "proTips", "conclusion"],
+    minWords: 2500,
+  },
+  comparison: {
+    name: "Comparison Article",
+    sections: ["intro", "quickComparison", "detailedAnalysis", "faq", "verdict", "conclusion"],
+    minWords: 2200,
+  },
+};
 
-═══════════════════════════════════════════════════
-YOUR WRITING PERSONALITY: ${personality.name}
-═══════════════════════════════════════════════════
+export const CATEGORY_PERSONALITY_MAPPING: Record<string, keyof typeof CONTENT_WRITER_PERSONALITIES> = {
+  attractions: "B",
+  hotels: "D",
+  food: "C",
+  transport: "A",
+  events: "B",
+  tips: "C",
+  news: "A",
+  shopping: "D",
+};
 
-**Style:** ${personality.style}
-**Sentences:** ${personality.sentences}
-**Tone:** ${personality.tone}
+// Get the content writer system prompt based on category and rules
+export async function getContentWriterSystemPrompt(category: string): Promise<string> {
+  const rules = await getActiveContentRules();
+  const personalityKey = CATEGORY_PERSONALITY_MAPPING[category] || "A";
+  const personality = CONTENT_WRITER_PERSONALITIES[personalityKey];
 
-**Characteristics:**
-${personality.characteristics.map(c => `- ${c}`).join('\n')}
+  return `You are "${personality.name}" - a professional content writer for Dubai tourism.
 
-**Opening Style:** ${personality.opening}
+YOUR STYLE: ${personality.style}
+YOUR TONE: ${personality.tone}
+YOUR STRENGTHS: ${personality.strengths.join(", ")}
 
-═══════════════════════════════════════════════════
-ARTICLE STRUCTURE: ${structure.name}
-═══════════════════════════════════════════════════
+🚨 CRITICAL: You MUST follow these STRICT rules that CANNOT be bypassed:
 
-**Purpose:** ${structure.description}
+WORD COUNT REQUIREMENTS:
+- Minimum: ${rules.minWords} words (STRICT - content will be REJECTED if below this)
+- Maximum: ${rules.maxWords} words
+- Optimal: ${rules.optimalMinWords}-${rules.optimalMaxWords} words
 
-**Required Sections:**
-${structure.sections.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+STRUCTURE REQUIREMENTS:
+- Introduction: ${rules.introMinWords}-${rules.introMaxWords} words
+- Quick Facts: ${rules.quickFactsMin}-${rules.quickFactsMax} items
+- Main Sections: ${rules.mainSectionsMin}-${rules.mainSectionsMax} H2 sections, each ${rules.mainSectionWordsMin}-${rules.mainSectionWordsMax} words
+- FAQ: ${rules.faqsMin}-${rules.faqsMax} questions, each answer ${rules.faqAnswerWordsMin}-${rules.faqAnswerWordsMax} words
+- Pro Tips: ${rules.proTipsMin}-${rules.proTipsMax} tips
+- Conclusion: ${rules.conclusionMinWords}-${rules.conclusionMaxWords} words
 
-═══════════════════════════════════════════════════
-CONTENT REQUIREMENTS (CRITICAL)
-═══════════════════════════════════════════════════
+SEO REQUIREMENTS:
+- Mention "Dubai" or "UAE" at least ${rules.dubaiMentionsMin} times
+- Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal links
+- Primary keyword in title, first paragraph, and H2s
+- Use LSI keywords naturally throughout
 
-1. **Word Count:** MINIMUM 800 words, target 1000-1500 words. This is a STRICT requirement.
-   - The article MUST contain at least 800 words of substantial content.
-   - Include detailed explanations, examples, and context to reach this length.
-   - Break down topics into multiple detailed paragraphs.
-   - Add relevant background information and comparisons.
-2. **SEO Headline:** 50-65 characters, keyword first, compelling
-3. **Meta Description:** 150-160 characters, includes main keyword and CTA
-4. **Content Blocks:** Use proper HTML formatting with paragraphs, headings (h2, h3), and lists
-5. **Quick Facts:** Extract 5 key facts readers need to know immediately
-6. **Pro Tips:** Provide 5 practical insider tips
-7. **FAQs:** Generate 5 relevant frequently asked questions with answers
-8. **Target Audience:** Consider families, couples, solo travelers, and business travelers
+FORMAT:
+- Use proper HTML with semantic tags (h2, h3, p, ul, ol)
+- Include schema-friendly FAQ format
+- Add emojis where appropriate for visual appeal
+- Break up text with subheadings every 200-300 words
 
-═══════════════════════════════════════════════════
-WRITING GUIDELINES
-═══════════════════════════════════════════════════
-
-- Write in second person ("you") to engage readers directly
-- Include specific details: prices, times, locations, names
-- Avoid generic statements; be specific and actionable
-- Use sensory language where appropriate
-- Include practical tips that save time or money
-- Maintain a balance between informative and engaging
-- Always attribute sources when relevant
-- End with a clear call to action`;
+REMEMBER: If your content doesn't meet these requirements, it will be REJECTED and you will be asked to rewrite.`;
 }
 
-export function determineContentCategory(title: string, description: string): string {
-  const text = `${title} ${description}`.toLowerCase();
-  
-  const categoryKeywords: Record<string, string[]> = {
-    attractions: ['attraction', 'museum', 'theme park', 'landmark', 'monument', 'zoo', 'aquarium', 'beach', 'tour', 'visit', 'explore'],
-    hotels: ['hotel', 'resort', 'stay', 'accommodation', 'room', 'suite', 'luxury hotel', 'boutique hotel', 'villa', 'apartment'],
-    food: ['restaurant', 'dining', 'food', 'cuisine', 'chef', 'menu', 'cafe', 'bar', 'brunch', 'dinner', 'lunch', 'eat'],
-    transport: ['metro', 'bus', 'taxi', 'airport', 'flight', 'train', 'tram', 'transport', 'driving', 'parking', 'visa'],
-    events: ['event', 'festival', 'concert', 'show', 'exhibition', 'celebration', 'performance', 'expo', 'fair'],
-    tips: ['tips', 'guide', 'how to', 'best way', 'advice', 'things to know', 'must know', 'essential'],
-    news: ['opens', 'announces', 'launches', 'new', 'update', 'change', 'regulation', 'law', 'rule'],
-    shopping: ['mall', 'shopping', 'store', 'market', 'souk', 'buy', 'sale', 'discount', 'deal', 'outlet']
-  };
-  
-  let bestMatch = 'news';
-  let maxScore = 0;
-  
-  for (const [category, keywords] of Object.entries(categoryKeywords)) {
-    const score = keywords.filter(keyword => text.includes(keyword)).length;
-    if (score > maxScore) {
-      maxScore = score;
-      bestMatch = category;
-    }
-  }
-  
-  return bestMatch;
+// Determine content category from topic/title
+export function determineContentCategory(title: string, description?: string): string {
+  const text = `${title} ${description || ""}`.toLowerCase();
+
+  if (text.includes("hotel") || text.includes("resort") || text.includes("stay")) return "hotels";
+  if (text.includes("restaurant") || text.includes("food") || text.includes("dining") || text.includes("eat")) return "food";
+  if (text.includes("metro") || text.includes("bus") || text.includes("taxi") || text.includes("transport")) return "transport";
+  if (text.includes("event") || text.includes("festival") || text.includes("show")) return "events";
+  if (text.includes("shop") || text.includes("mall") || text.includes("buy")) return "shopping";
+  if (text.includes("news") || text.includes("update") || text.includes("announce")) return "news";
+  if (text.includes("tip") || text.includes("guide") || text.includes("how to")) return "tips";
+
+  return "attractions"; // Default
 }
 
-export function buildArticleGenerationPrompt(sources: Array<{ title: string; description: string; url: string; date: string }>, category: string, personality: typeof CONTENT_WRITER_PERSONALITIES[keyof typeof CONTENT_WRITER_PERSONALITIES], structure: typeof ARTICLE_STRUCTURES[keyof typeof ARTICLE_STRUCTURES]): string {
-  return `Based on the following ${sources.length} source(s), create a comprehensive travel article for Dubai visitors.
+// Build the article generation prompt
+export async function buildArticleGenerationPrompt(
+  topic: string,
+  sourceContent?: string,
+  additionalContext?: string
+): Promise<string> {
+  const rules = await getActiveContentRules();
+  const category = determineContentCategory(topic);
 
-═══════════════════════════════════════════════════
-SOURCE MATERIAL
-═══════════════════════════════════════════════════
+  return `Write a comprehensive article about: "${topic}"
 
-${sources.map((s, i) => `[Source ${i + 1}]
-Title: ${s.title}
-Description: ${s.description}
-URL: ${s.url}
-Date: ${s.date}`).join('\n\n')}
+${sourceContent ? `SOURCE CONTENT (expand and enhance this):
+${sourceContent.substring(0, 2000)}
+` : ''}
 
-═══════════════════════════════════════════════════
-YOUR TASK
-═══════════════════════════════════════════════════
+${additionalContext ? `ADDITIONAL CONTEXT:
+${additionalContext}
+` : ''}
 
-Create a comprehensive, SEO-optimized article following the ${structure.name} structure.
-Use the ${personality.name} writing personality throughout.
+REQUIREMENTS (STRICT - Your response will be REJECTED if not met):
 
-Respond in JSON format with the following structure (ALL FIELDS ARE REQUIRED):
-{
-  "title": "SEO-optimized headline (50-65 chars, keyword first)",
-  "metaDescription": "Compelling meta description (150-160 chars, includes keyword and CTA)",
-  "category": "${category}",
-  "urgencyLevel": "urgent" OR "relevant" OR "evergreen",
-  "targetAudience": ["families", "couples", "solo travelers", "business travelers"],
-  "content": "COMPREHENSIVE article in HTML format. MINIMUM 800 words. Use <h2>, <h3>, <p>, <ul>, <li> tags. Include introduction, multiple detailed sections, practical info, and conclusion.",
-  "quickFacts": ["Fact 1", "Fact 2", "Fact 3", "Fact 4", "Fact 5", "Fact 6", "Fact 7"],
-  "proTips": ["Tip 1", "Tip 2", "Tip 3", "Tip 4", "Tip 5", "Tip 6", "Tip 7"],
-  "warnings": ["Warning 1 if applicable"],
-  "faqs": [
-    {"question": "Detailed question 1 (20+ chars)?", "answer": "Comprehensive answer 1 (50+ chars)"},
-    {"question": "Detailed question 2?", "answer": "Comprehensive answer 2"},
-    {"question": "Detailed question 3?", "answer": "Comprehensive answer 3"},
-    {"question": "Detailed question 4?", "answer": "Comprehensive answer 4"},
-    {"question": "Detailed question 5?", "answer": "Comprehensive answer 5"}
-  ],
-  "sources": ["Source 1 name", "Source 2 name"],
-  "primaryKeyword": "main SEO keyword",
-  "secondaryKeywords": ["keyword 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5"],
-  "imageSearchTerms": ["Dubai + topic keyword", "relevant visual term", "location/attraction name"]
-}
+1. WORD COUNT: ${rules.minWords}-${rules.maxWords} words (optimal: ${rules.optimalMinWords}-${rules.optimalMaxWords})
 
-MANDATORY REQUIREMENTS - YOUR RESPONSE WILL BE REJECTED IF:
-- content has less than 800 words (aim for 1000-1500)
-- quickFacts has fewer than 5 items
-- proTips has fewer than 5 items
-- faqs has fewer than 5 items
-- imageSearchTerms is missing or has fewer than 3 terms
+2. STRUCTURE:
+   - Introduction: ${rules.introMinWords}-${rules.introMaxWords} words
+   - Quick Facts box with ${rules.quickFactsMin}-${rules.quickFactsMax} items
+   - ${rules.mainSectionsMin}-${rules.mainSectionsMax} main sections (H2), each ${rules.mainSectionWordsMin}-${rules.mainSectionWordsMax} words
+   - FAQ section with ${rules.faqsMin}-${rules.faqsMax} questions
+   - ${rules.proTipsMin}-${rules.proTipsMax} Pro Tips
+   - Conclusion: ${rules.conclusionMinWords}-${rules.conclusionMaxWords} words
 
-IMPORTANT GUIDELINES:
-- Merge all unique information from all sources
-- Do not copy verbatim; rewrite in your personality's voice
-- Include specific details: prices, times, locations
-- Make it actionable and helpful for travelers
-- Ensure the content flows naturally following the ${structure.name} structure
+3. SEO:
+   - Mention "Dubai" or "UAE" at least ${rules.dubaiMentionsMin} times
+   - Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal links
 
-CRITICAL WORD COUNT REQUIREMENT:
-- Your article MUST be at least 800 words. This is mandatory.
-- Target 1000-1500 words for best quality.
-- If the source material is brief, expand with relevant context, background info, travel tips, and related attractions.
-- Include introductions, transitions, and conclusions to reach the minimum length.`;
+Respond with a JSON object matching the ArticleResponse schema.`;
 }

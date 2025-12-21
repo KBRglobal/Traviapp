@@ -28,6 +28,7 @@ import {
   insertHomepagePromotionSchema,
   insertTagSchema,
   newsletterSubscribers,
+  contentRules,
   ROLE_PERMISSIONS,
   SUPPORTED_LOCALES,
   type UserRole,
@@ -7959,6 +7960,69 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // CUSTOMER JOURNEY ANALYTICS (Page views, clicks, scroll, conversions, heatmaps)
   // ============================================================================
   registerCustomerJourneyRoutes(app);
+
+  // ============================================================================
+  // CONTENT RULES - Strict rules for AI content generation
+  // ============================================================================
+
+  // Get active content rules
+  app.get("/api/content-rules", requireAuth, async (req, res) => {
+    try {
+      const rules = await db.select().from(contentRules).where(eq(contentRules.isActive, true)).limit(1);
+      if (rules.length === 0) {
+        // Return default rules if none exist
+        const { DEFAULT_CONTENT_RULES } = await import("@shared/schema");
+        return res.json({ id: null, ...DEFAULT_CONTENT_RULES });
+      }
+      res.json(rules[0]);
+    } catch (error) {
+      console.error("Error fetching content rules:", error);
+      res.status(500).json({ error: "Failed to fetch content rules" });
+    }
+  });
+
+  // Save/update content rules
+  app.post("/api/content-rules", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const data = req.body;
+
+      // First, deactivate all existing rules
+      await db.update(contentRules).set({ isActive: false });
+
+      // Check if rule with this name exists
+      const existing = await db.select().from(contentRules).where(eq(contentRules.name, data.name)).limit(1);
+
+      if (existing.length > 0) {
+        // Update existing rule
+        await db.update(contentRules)
+          .set({ ...data, isActive: true, updatedAt: new Date() })
+          .where(eq(contentRules.name, data.name));
+        res.json({ success: true, updated: true });
+      } else {
+        // Insert new rule
+        await db.insert(contentRules).values({
+          ...data,
+          isActive: true,
+          createdBy: (req as any).user?.id,
+        });
+        res.json({ success: true, created: true });
+      }
+    } catch (error) {
+      console.error("Error saving content rules:", error);
+      res.status(500).json({ error: "Failed to save content rules" });
+    }
+  });
+
+  // Get all content rules (including inactive)
+  app.get("/api/content-rules/all", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const rules = await db.select().from(contentRules).orderBy(desc(contentRules.createdAt));
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching all content rules:", error);
+      res.status(500).json({ error: "Failed to fetch content rules" });
+    }
+  });
 
   // ============================================================================
   // DOC/DOCX UPLOAD (Import content directly from Word documents)

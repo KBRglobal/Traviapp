@@ -31,6 +31,7 @@ import {
   Home,
   BarChart3,
   ClipboardList,
+  Shield,
   Mail,
   Send,
   Calendar,
@@ -211,6 +212,12 @@ const systemItems: Array<{
     title: "Settings",
     url: "/admin/settings",
     icon: Settings,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Content Rules",
+    url: "/admin/content-rules",
+    icon: Shield,
     requiredPermission: "canManageSettings",
   },
   {

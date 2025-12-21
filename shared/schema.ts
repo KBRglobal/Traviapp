@@ -1746,3 +1746,108 @@ export const telegramConversations = pgTable("telegram_conversations", {
 export type TelegramUserProfile = typeof telegramUserProfiles.$inferSelect;
 export type TelegramConversation = typeof telegramConversations.$inferSelect;
 
+// ============================================================================
+// CONTENT RULES - Strict rules for AI content generation (cannot be bypassed)
+// ============================================================================
+
+export const contentRules = pgTable("content_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+
+  // Word count rules (STRICT - cannot be bypassed)
+  minWords: integer("min_words").default(1800).notNull(),
+  maxWords: integer("max_words").default(3500).notNull(),
+  optimalMinWords: integer("optimal_min_words").default(2000).notNull(),
+  optimalMaxWords: integer("optimal_max_words").default(2500).notNull(),
+
+  // Structure rules
+  introMinWords: integer("intro_min_words").default(150).notNull(),
+  introMaxWords: integer("intro_max_words").default(200).notNull(),
+
+  quickFactsMin: integer("quick_facts_min").default(5).notNull(),
+  quickFactsMax: integer("quick_facts_max").default(8).notNull(),
+  quickFactsWordsMin: integer("quick_facts_words_min").default(80).notNull(),
+  quickFactsWordsMax: integer("quick_facts_words_max").default(120).notNull(),
+
+  mainSectionsMin: integer("main_sections_min").default(4).notNull(),
+  mainSectionsMax: integer("main_sections_max").default(6).notNull(),
+  mainSectionWordsMin: integer("main_section_words_min").default(200).notNull(),
+  mainSectionWordsMax: integer("main_section_words_max").default(300).notNull(),
+
+  faqsMin: integer("faqs_min").default(6).notNull(),
+  faqsMax: integer("faqs_max").default(10).notNull(),
+  faqAnswerWordsMin: integer("faq_answer_words_min").default(50).notNull(),
+  faqAnswerWordsMax: integer("faq_answer_words_max").default(100).notNull(),
+
+  proTipsMin: integer("pro_tips_min").default(5).notNull(),
+  proTipsMax: integer("pro_tips_max").default(8).notNull(),
+  proTipWordsMin: integer("pro_tip_words_min").default(20).notNull(),
+  proTipWordsMax: integer("pro_tip_words_max").default(35).notNull(),
+
+  conclusionMinWords: integer("conclusion_min_words").default(100).notNull(),
+  conclusionMaxWords: integer("conclusion_max_words").default(150).notNull(),
+
+  // Internal linking rules
+  internalLinksMin: integer("internal_links_min").default(5).notNull(),
+  internalLinksMax: integer("internal_links_max").default(10).notNull(),
+
+  // SEO rules
+  keywordDensityMin: integer("keyword_density_min").default(1).notNull(), // percentage * 10
+  keywordDensityMax: integer("keyword_density_max").default(3).notNull(), // percentage * 10
+  dubaiMentionsMin: integer("dubai_mentions_min").default(5).notNull(),
+
+  // Retry rules
+  maxRetries: integer("max_retries").default(3).notNull(),
+
+  // Content type this rule applies to (null = all types)
+  contentType: contentTypeEnum("content_type"),
+
+  // Metadata
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertContentRulesSchema = createInsertSchema(contentRules).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertContentRules = z.infer<typeof insertContentRulesSchema>;
+export type ContentRules = typeof contentRules.$inferSelect;
+
+// Default rules that will be seeded
+export const DEFAULT_CONTENT_RULES = {
+  name: "dubai-seo-standard",
+  description: "Standard SEO rules for Dubai tourism content - STRICT enforcement",
+  isActive: true,
+  minWords: 1800,
+  maxWords: 3500,
+  optimalMinWords: 2000,
+  optimalMaxWords: 2500,
+  introMinWords: 150,
+  introMaxWords: 200,
+  quickFactsMin: 5,
+  quickFactsMax: 8,
+  quickFactsWordsMin: 80,
+  quickFactsWordsMax: 120,
+  mainSectionsMin: 4,
+  mainSectionsMax: 6,
+  mainSectionWordsMin: 200,
+  mainSectionWordsMax: 300,
+  faqsMin: 6,
+  faqsMax: 10,
+  faqAnswerWordsMin: 50,
+  faqAnswerWordsMax: 100,
+  proTipsMin: 5,
+  proTipsMax: 8,
+  proTipWordsMin: 20,
+  proTipWordsMax: 35,
+  conclusionMinWords: 100,
+  conclusionMaxWords: 150,
+  internalLinksMin: 5,
+  internalLinksMax: 10,
+  keywordDensityMin: 10, // 1.0%
+  keywordDensityMax: 30, // 3.0%
+  dubaiMentionsMin: 5,
+  maxRetries: 3,
+};
+
