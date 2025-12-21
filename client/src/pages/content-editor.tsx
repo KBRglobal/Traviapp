@@ -59,6 +59,15 @@ import {
   DollarSign,
   Plus,
   GripHorizontal,
+  Map,
+  Heading1,
+  Share2,
+  ChevronRight,
+  Layers,
+  Code,
+  ExternalLink,
+  ArrowUpDown,
+  Palette,
 } from "lucide-react";
 import type {
   ContentWithRelations,
@@ -96,20 +105,28 @@ const blockTypes: BlockTypeConfig[] = [
   { type: "image", label: "Image", icon: ImagePlus, description: "Single image with caption", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
   { type: "gallery", label: "Gallery", icon: LayoutGrid, description: "Image gallery grid", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
   { type: "video", label: "Video", icon: Video, description: "YouTube/Vimeo embed", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  { type: "map", label: "Map", icon: Map, description: "Google Maps location", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
 
   // Content blocks
+  { type: "heading", label: "Heading", icon: Heading1, description: "Section heading H2/H3", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
   { type: "text", label: "Text", icon: Type, description: "Rich text paragraph", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
   { type: "highlights", label: "Highlights", icon: Star, description: "Key feature highlights", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
   { type: "tips", label: "Tips", icon: Lightbulb, description: "Pro tips & advice", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
   { type: "quote", label: "Quote", icon: Quote, description: "Blockquote / testimonial", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  { type: "social", label: "Social", icon: Share2, description: "Social media links", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
 
   // Layout blocks
   { type: "info_grid", label: "Info Grid", icon: LayoutGrid, description: "Quick facts grid", category: "layout", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
   { type: "divider", label: "Divider", icon: Minus, description: "Section separator", category: "layout", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
+  { type: "spacer", label: "Spacer", icon: ArrowUpDown, description: "Vertical spacing", category: "layout", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
+  { type: "columns", label: "Columns", icon: Layers, description: "Two column layout", category: "layout", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
 
   // Interactive blocks
   { type: "faq", label: "FAQ", icon: HelpCircle, description: "Question & answer", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  { type: "accordion", label: "Accordion", icon: ChevronRight, description: "Collapsible sections", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  { type: "tabs", label: "Tabs", icon: Layers, description: "Tabbed content", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
   { type: "cta", label: "CTA", icon: MousePointer, description: "Call to action button", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  { type: "html", label: "HTML", icon: Code, description: "Custom HTML/embed", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
 ];
 
 const blockCategories = [
@@ -1211,6 +1228,8 @@ export default function ContentEditor() {
     switch (type) {
       case "hero":
         return { image: "", alt: "", title: "" };
+      case "heading":
+        return { text: "", level: "h2" };
       case "text":
         return { content: "" };
       case "image":
@@ -1233,6 +1252,20 @@ export default function ContentEditor() {
         return { text: "", author: "", role: "" };
       case "divider":
         return { style: "line" };
+      case "spacer":
+        return { height: 40 };
+      case "map":
+        return { address: "", lat: 25.2048, lng: 55.2708, zoom: 14 }; // Dubai default
+      case "social":
+        return { links: [] };
+      case "accordion":
+        return { items: [{ title: "", content: "" }] };
+      case "tabs":
+        return { tabs: [{ title: "Tab 1", content: "" }] };
+      case "columns":
+        return { left: "", right: "" };
+      case "html":
+        return { code: "" };
       default:
         return {};
     }
@@ -1924,6 +1957,30 @@ function CanvasBlock({
         )}
         {block.type === "divider" && (
           <DividerBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "heading" && (
+          <HeadingBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "spacer" && (
+          <SpacerBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "map" && (
+          <MapBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "social" && (
+          <SocialBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "accordion" && (
+          <AccordionBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "tabs" && (
+          <TabsBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "columns" && (
+          <ColumnsBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "html" && (
+          <HtmlBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
         )}
       </div>
     </div>
@@ -2657,6 +2714,418 @@ function DividerBlockCanvas({
               <SelectItem value="space">Space</SelectItem>
             </SelectContent>
           </Select>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Heading Block Canvas
+function HeadingBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const text = String(block.data?.text || "");
+  const level = String(block.data?.level || "h2");
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-3">
+        <Input
+          value={text}
+          onChange={(e) => onUpdate({ text: e.target.value })}
+          placeholder="Enter heading text..."
+          className={`flex-1 border-none bg-transparent focus-visible:ring-0 ${level === "h2" ? "text-2xl font-bold" : "text-xl font-semibold"}`}
+          data-testid={`heading-text-${block.id}`}
+        />
+        {isSelected && (
+          <Select value={level} onValueChange={(val) => onUpdate({ level: val })}>
+            <SelectTrigger className="w-20 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="h2">H2</SelectItem>
+              <SelectItem value="h3">H3</SelectItem>
+              <SelectItem value="h4">H4</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Spacer Block Canvas
+function SpacerBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const height = Number(block.data?.height || 40);
+
+  return (
+    <div className={`px-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        className="border-2 border-dashed border-muted-foreground/20 rounded flex items-center justify-center transition-all"
+        style={{ height: `${height}px` }}
+      >
+        {isSelected && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{height}px</span>
+            <input
+              type="range"
+              min="20"
+              max="200"
+              value={height}
+              onChange={(e) => onUpdate({ height: Number(e.target.value) })}
+              className="w-24"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Map Block Canvas
+function MapBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const address = String(block.data?.address || "");
+  const lat = Number(block.data?.lat || 25.2048);
+  const lng = Number(block.data?.lng || 55.2708);
+
+  const mapUrl = address
+    ? `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(address)}`
+    : `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${lat},${lng}&zoom=14`;
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      {address ? (
+        <div className="space-y-3">
+          <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+            <iframe
+              src={mapUrl}
+              className="w-full h-full border-0"
+              allowFullScreen
+              loading="lazy"
+            />
+          </div>
+          <p className="text-sm text-muted-foreground flex items-center gap-1">
+            <MapPin className="h-3 w-3" /> {address}
+          </p>
+        </div>
+      ) : (
+        <div className="aspect-video rounded-lg bg-gradient-to-br from-muted to-muted/50 flex flex-col items-center justify-center">
+          <Map className="h-12 w-12 text-muted-foreground/50 mb-3" />
+          <Input
+            value={address}
+            onChange={(e) => onUpdate({ address: e.target.value })}
+            placeholder="Enter location address..."
+            className="max-w-md text-center"
+            data-testid={`map-address-${block.id}`}
+          />
+          <p className="text-xs text-muted-foreground mt-2">e.g., Burj Khalifa, Dubai</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Social Block Canvas
+function SocialBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const links = (block.data?.links as Array<{ platform: string; url: string }>) || [];
+
+  const addLink = () => {
+    onUpdate({ links: [...links, { platform: "instagram", url: "" }] });
+  };
+
+  const updateLink = (index: number, field: string, value: string) => {
+    const newLinks = [...links];
+    newLinks[index] = { ...newLinks[index], [field]: value };
+    onUpdate({ links: newLinks });
+  };
+
+  const removeLink = (index: number) => {
+    onUpdate({ links: links.filter((_, i) => i !== index) });
+  };
+
+  const platforms = ["instagram", "facebook", "twitter", "youtube", "tiktok", "linkedin", "whatsapp"];
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-3">
+        {links.map((link, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <Select value={link.platform} onValueChange={(val) => updateLink(index, "platform", val)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {platforms.map((p) => (
+                  <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              value={link.url}
+              onChange={(e) => updateLink(index, "url", e.target.value)}
+              placeholder="Profile URL..."
+              className="flex-1"
+            />
+            <Button variant="ghost" size="icon" onClick={() => removeLink(index)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addLink} className="w-full">
+          <Plus className="h-4 w-4 mr-2" /> Add Social Link
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Accordion Block Canvas
+function AccordionBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const items = (block.data?.items as Array<{ title: string; content: string }>) || [];
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const addItem = () => {
+    onUpdate({ items: [...items, { title: "", content: "" }] });
+  };
+
+  const updateItem = (index: number, field: string, value: string) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    onUpdate({ items: newItems });
+  };
+
+  const removeItem = (index: number) => {
+    onUpdate({ items: items.filter((_, i) => i !== index) });
+  };
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-2">
+        {items.map((item, index) => (
+          <div key={index} className="border rounded-lg overflow-hidden">
+            <div
+              className="flex items-center gap-2 p-3 bg-muted/50 cursor-pointer"
+              onClick={() => setOpenIndex(openIndex === index ? null : index)}
+            >
+              <ChevronRight className={`h-4 w-4 transition-transform ${openIndex === index ? "rotate-90" : ""}`} />
+              <Input
+                value={item.title}
+                onChange={(e) => { e.stopPropagation(); updateItem(index, "title", e.target.value); }}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="Accordion title..."
+                className="flex-1 border-none bg-transparent p-0 h-auto focus-visible:ring-0"
+              />
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); removeItem(index); }}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            {openIndex === index && (
+              <div className="p-3 border-t">
+                <Textarea
+                  value={item.content}
+                  onChange={(e) => updateItem(index, "content", e.target.value)}
+                  placeholder="Accordion content..."
+                  className="min-h-[80px]"
+                />
+              </div>
+            )}
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-4 w-4 mr-2" /> Add Accordion Item
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Tabs Block Canvas
+function TabsBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const tabs = (block.data?.tabs as Array<{ title: string; content: string }>) || [];
+  const [activeTab, setActiveTab] = useState(0);
+
+  const addTab = () => {
+    onUpdate({ tabs: [...tabs, { title: `Tab ${tabs.length + 1}`, content: "" }] });
+  };
+
+  const updateTab = (index: number, field: string, value: string) => {
+    const newTabs = [...tabs];
+    newTabs[index] = { ...newTabs[index], [field]: value };
+    onUpdate({ tabs: newTabs });
+  };
+
+  const removeTab = (index: number) => {
+    if (tabs.length > 1) {
+      onUpdate({ tabs: tabs.filter((_, i) => i !== index) });
+      if (activeTab >= tabs.length - 1) setActiveTab(Math.max(0, tabs.length - 2));
+    }
+  };
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-3">
+        <div className="flex items-center gap-1 border-b">
+          {tabs.map((tab, index) => (
+            <div key={index} className="relative group">
+              <button
+                className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === index ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}
+                onClick={() => setActiveTab(index)}
+              >
+                <Input
+                  value={tab.title}
+                  onChange={(e) => updateTab(index, "title", e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-20 border-none bg-transparent p-0 h-auto text-center focus-visible:ring-0"
+                />
+              </button>
+              {tabs.length > 1 && (
+                <button
+                  className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                  onClick={(e) => { e.stopPropagation(); removeTab(index); }}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          ))}
+          <Button variant="ghost" size="sm" onClick={addTab} className="h-8">
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+        {tabs[activeTab] && (
+          <Textarea
+            value={tabs[activeTab].content}
+            onChange={(e) => updateTab(activeTab, "content", e.target.value)}
+            placeholder="Tab content..."
+            className="min-h-[120px]"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Columns Block Canvas
+function ColumnsBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const left = String(block.data?.left || "");
+  const right = String(block.data?.right || "");
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Left Column</Label>
+          <Textarea
+            value={left}
+            onChange={(e) => onUpdate({ left: e.target.value })}
+            placeholder="Left column content..."
+            className="min-h-[100px]"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Right Column</Label>
+          <Textarea
+            value={right}
+            onChange={(e) => onUpdate({ right: e.target.value })}
+            placeholder="Right column content..."
+            className="min-h-[100px]"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// HTML Block Canvas
+function HtmlBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const code = String(block.data?.code || "");
+  const [showPreview, setShowPreview] = useState(false);
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-muted-foreground flex items-center gap-1">
+            <Code className="h-3 w-3" /> Custom HTML / Embed
+          </Label>
+          <Button variant="ghost" size="sm" onClick={() => setShowPreview(!showPreview)}>
+            {showPreview ? "Edit" : "Preview"}
+          </Button>
+        </div>
+        {showPreview ? (
+          <div
+            className="border rounded-lg p-4 min-h-[100px] bg-background"
+            dangerouslySetInnerHTML={{ __html: code }}
+          />
+        ) : (
+          <Textarea
+            value={code}
+            onChange={(e) => onUpdate({ code: e.target.value })}
+            placeholder="<iframe>...</iframe> or custom HTML..."
+            className="min-h-[150px] font-mono text-sm"
+          />
         )}
       </div>
     </div>
