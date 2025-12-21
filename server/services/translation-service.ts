@@ -1,6 +1,23 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import crypto from "crypto";
 import { SUPPORTED_LOCALES, type Locale, type ContentBlock } from "@shared/schema";
+
+// Generate a hash of the content for tracking translation freshness
+export function generateContentHash(content: {
+  title?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  blocks?: ContentBlock[];
+}): string {
+  const data = JSON.stringify({
+    title: content.title || "",
+    metaTitle: content.metaTitle || "",
+    metaDescription: content.metaDescription || "",
+    blocks: content.blocks || [],
+  });
+  return crypto.createHash("md5").update(data).digest("hex");
+}
 
 // ============================================================================
 // TRANSLATION PROVIDERS - COST OPTIMIZED (December 2025)
@@ -252,6 +269,7 @@ interface ContentTranslation {
   metaTitle?: string;
   metaDescription?: string;
   blocks?: ContentBlock[];
+  sourceHash?: string;
 }
 
 // Translate a single piece of text
@@ -505,6 +523,9 @@ export async function translateContent(
       content.blocks.map((block) => translateBlock(block, sourceLocale, targetLocale))
     );
   }
+
+  // Add source hash for tracking translation freshness
+  result.sourceHash = generateContentHash(content);
 
   return result;
 }

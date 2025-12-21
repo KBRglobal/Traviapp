@@ -1498,8 +1498,8 @@ export default function ContentEditor() {
               History
             </Button>
           )}
-          {/* Translation Manager - Translate to 50 languages */}
-          {contentId && title && (
+          {/* Translation Manager - Only for PUBLISHED content */}
+          {contentId && title && status === "published" && (
             <TranslationManager contentId={contentId} contentTitle={title} />
           )}
           <Button variant="outline" size="sm" onClick={handleSave} disabled={saveMutation.isPending} data-testid="button-save-draft">

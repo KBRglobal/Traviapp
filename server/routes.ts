@@ -1131,9 +1131,10 @@ async function translateArticleToAllLanguages(contentId: string, content: {
   const result = { success: 0, failed: 0, errors: [] as string[] };
   
   try {
-    const { translateContent, generateContentHash } = await import("./services/deepl-service");
-    
-    console.log(`[Auto-Translation] Starting translation for content ${contentId} to ${TARGET_LOCALES.length} languages...`);
+    // Use translation-service (Claude Haiku) instead of deepl-service
+    const { translateContent, generateContentHash } = await import("./services/translation-service");
+
+    console.log(`[Auto-Translation] Starting translation for content ${contentId} to ${TARGET_LOCALES.length} languages using Claude Haiku...`);
     
     const BATCH_SIZE = 3;
     for (let i = 0; i < TARGET_LOCALES.length; i += BATCH_SIZE) {
@@ -1144,6 +1145,7 @@ async function translateArticleToAllLanguages(contentId: string, content: {
           try {
             console.log(`[Auto-Translation] Translating to ${locale}...`);
             
+            // Note: translation-service uses (content, sourceLocale, targetLocale) order
             const translatedContent = await translateContent(
               {
                 title: content.title,
@@ -1151,12 +1153,12 @@ async function translateArticleToAllLanguages(contentId: string, content: {
                 metaDescription: content.metaDescription || undefined,
                 blocks: content.blocks || [],
               },
-              locale as any,
-              "en"
+              "en" as any,
+              locale as any
             );
-            
+
             const existingTranslation = await storage.getTranslation(contentId, locale as any);
-            
+
             const isRtl = RTL_LOCALES.includes(locale);
             const translationData = {
               contentId,
@@ -1167,8 +1169,8 @@ async function translateArticleToAllLanguages(contentId: string, content: {
               metaDescription: translatedContent.metaDescription || null,
               blocks: translatedContent.blocks || [],
               sourceHash: translatedContent.sourceHash,
-              translatedBy: "deepl-auto",
-              translationProvider: "deepl",
+              translatedBy: "claude-auto",
+              translationProvider: "claude",
               isManualOverride: false,
             };
             
@@ -7643,8 +7645,10 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         return res.status(404).json({ error: "Content not found" });
       }
 
-      const { translateContent, generateContentHash } = await import("./services/deepl-service");
-      
+      // Use translation-service (Claude Haiku) instead of deepl-service
+      const { translateContent, generateContentHash } = await import("./services/translation-service");
+
+      // Note: translation-service uses (content, sourceLocale, targetLocale) order
       const translatedContent = await translateContent(
         {
           title: content.title,
@@ -7652,16 +7656,16 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
           metaDescription: content.metaDescription || undefined,
           blocks: content.blocks || [],
         },
-        targetLocale,
-        sourceLocale
+        sourceLocale,
+        targetLocale
       );
 
       const existingTranslation = await storage.getTranslation(contentId, targetLocale);
-      
+
       if (existingTranslation && existingTranslation.isManualOverride) {
-        return res.status(409).json({ 
+        return res.status(409).json({
           error: "Manual override exists. Use force=true to overwrite.",
-          existingTranslation 
+          existingTranslation
         });
       }
 
@@ -7674,8 +7678,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         metaDescription: translatedContent.metaDescription || null,
         blocks: translatedContent.blocks || [],
         sourceHash: translatedContent.sourceHash,
-        translatedBy: "deepl",
-        translationProvider: "deepl",
+        translatedBy: "claude",
+        translationProvider: "claude",
         isManualOverride: false,
       };
 
@@ -7704,28 +7708,25 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         return res.status(404).json({ error: "Content not found" });
       }
 
-      const { translateToMultipleLanguages, generateContentHash, getDeepLSupportedLocales } = await import("./services/deepl-service");
-      
-      const supportedLocales = getDeepLSupportedLocales().filter(locale => {
-        const localeInfo = SUPPORTED_LOCALES.find(l => l.code === locale);
-        return localeInfo && targetTiers.includes(localeInfo.tier) && locale !== sourceLocale;
-      });
+      // Use translation-service (Claude Haiku) instead of deepl-service
+      const { translateToAllLanguages, generateContentHash } = await import("./services/translation-service");
 
-      const translations = await translateToMultipleLanguages(
+      // translateToAllLanguages handles tier filtering internally
+      const translations = await translateToAllLanguages(
         {
           title: content.title,
           metaTitle: content.metaTitle || undefined,
           metaDescription: content.metaDescription || undefined,
           blocks: content.blocks || [],
         },
-        supportedLocales,
-        sourceLocale
+        sourceLocale as any,
+        targetTiers
       );
 
       const savedTranslations = [];
       for (const [locale, translatedContent] of translations) {
         const existingTranslation = await storage.getTranslation(contentId, locale);
-        
+
         if (existingTranslation?.isManualOverride) {
           continue;
         }
@@ -7739,8 +7740,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
           metaDescription: translatedContent.metaDescription || null,
           blocks: translatedContent.blocks || [],
           sourceHash: translatedContent.sourceHash,
-          translatedBy: "deepl",
-          translationProvider: "deepl",
+          translatedBy: "claude",
+          translationProvider: "claude",
           isManualOverride: false,
         };
 
