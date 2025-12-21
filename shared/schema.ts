@@ -9,6 +9,10 @@ export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "a
 export const contentStatusEnum = pgEnum("content_status", ["draft", "in_review", "approved", "scheduled", "published"]);
 export const articleCategoryEnum = pgEnum("article_category", ["attractions", "hotels", "food", "transport", "events", "tips", "news", "shopping"]);
 export const userRoleEnum = pgEnum("user_role", ["admin", "editor", "author", "contributor", "viewer"]);
+export const viralPotentialEnum = pgEnum("viral_potential", ["1", "2", "3", "4", "5"]);
+export const topicTypeEnum = pgEnum("topic_type", ["trending", "evergreen", "seasonal"]);
+export const topicFormatEnum = pgEnum("topic_format", ["video_tour", "photo_gallery", "pov_video", "cost_breakdown", "lifestyle_vlog", "documentary", "explainer", "comparison", "walking_tour", "food_tour", "interview", "tutorial", "asmr", "drone_footage", "night_photography", "infographic", "reaction_video", "challenge", "list_video", "guide", "review"]);
+export const topicCategoryEnum = pgEnum("topic_category", ["luxury_lifestyle", "food_dining", "bizarre_unique", "experiences_activities", "money_cost", "expat_living", "dark_side", "myth_busting", "comparisons", "records_superlatives", "future_development", "seasonal_events", "practical_tips"]);
 
 // Role-based permissions
 export const ROLE_PERMISSIONS = {
@@ -391,7 +395,12 @@ export const internalLinks = pgTable("internal_links", {
 export const topicBank = pgTable("topic_bank", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
+  headlineAngle: text("headline_angle"), // The hook/headline for viral content
   category: articleCategoryEnum("category"),
+  mainCategory: topicCategoryEnum("main_category"), // Main topic category (luxury, food, etc.)
+  viralPotential: viralPotentialEnum("viral_potential").default("3"), // 1-5 stars
+  format: topicFormatEnum("format"), // video_tour, photo_gallery, etc.
+  topicType: topicTypeEnum("topic_type").default("evergreen"), // trending, evergreen, seasonal
   keywords: jsonb("keywords").$type<string[]>().default([]),
   outline: text("outline"),
   priority: integer("priority").default(0),

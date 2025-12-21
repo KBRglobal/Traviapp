@@ -3564,6 +3564,177 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
     }
   });
 
+  // Generate NEWS from Topic Bank item and DELETE the topic after
+  app.post("/api/topic-bank/:id/generate-news", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      }
+
+      const topic = await storage.getTopicBankItem(req.params.id);
+      if (!topic) {
+        return res.status(404).json({ error: "Topic not found" });
+      }
+
+      const keywordsContext = topic.keywords?.length
+        ? `Target Keywords: ${topic.keywords.join(", ")}`
+        : "";
+
+      const systemPrompt = `You are an expert Dubai news and viral content writer. Generate a news/trending article based on the topic.
+
+This should be written in a NEWS/trending format - engaging, timely-feeling, and shareable.
+
+Topic Details:
+- Title: ${topic.title}
+- Headline Angle: ${topic.headlineAngle || 'Create an engaging hook'}
+- Format: ${topic.format || 'article'}
+- Viral Potential: ${topic.viralPotential}/5 stars
+- Category: ${topic.mainCategory || topic.category}
+
+OUTPUT FORMAT - Return valid JSON:
+{
+  "title": "Attention-grabbing news headline (50-70 chars)",
+  "metaDescription": "Compelling meta description (150-160 chars)",
+  "slug": "url-friendly-slug",
+  "heroImageAlt": "Descriptive alt text",
+  "blocks": [
+    {
+      "type": "hero",
+      "data": {
+        "title": "Main headline",
+        "subtitle": "Breaking/Trending subheader",
+        "overlayText": "Dubai 2025"
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "heading": "The Story",
+        "content": "Lead paragraph with the key news/trend (200-300 words)..."
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "heading": "Why It Matters",
+        "content": "Context and significance (200-250 words)..."
+      }
+    },
+    {
+      "type": "highlights",
+      "data": {
+        "title": "Key Takeaways",
+        "items": ["Point 1", "Point 2", "Point 3", "Point 4", "Point 5"]
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "heading": "What Travelers Need to Know",
+        "content": "Practical info for visitors (200-250 words)..."
+      }
+    },
+    {
+      "type": "tips",
+      "data": {
+        "title": "Quick Tips",
+        "tips": ["Tip 1", "Tip 2", "Tip 3", "Tip 4", "Tip 5"]
+      }
+    },
+    {
+      "type": "faq",
+      "data": {
+        "title": "FAQs",
+        "faqs": [
+          {"question": "Q1?", "answer": "Answer..."},
+          {"question": "Q2?", "answer": "Answer..."},
+          {"question": "Q3?", "answer": "Answer..."}
+        ]
+      }
+    }
+  ]
+}
+
+RULES:
+1. Write 800-1200 words total - news articles are shorter
+2. Use the headline angle: "${topic.headlineAngle || topic.title}"
+3. Make it feel current and newsworthy
+4. Include social-media-friendly quotes/stats
+5. No invented facts or fake statistics`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Generate a viral news article for: ${topic.title}\n${keywordsContext}` },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 3000,
+      });
+
+      const generated = JSON.parse(response.choices[0].message.content || "{}");
+      const blocks = validateAndNormalizeBlocks(generated.blocks || [], generated.title || topic.title);
+
+      const slug = generated.slug || topic.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      // Generate hero image
+      let heroImageUrl = null;
+      try {
+        const generatedImages = await generateContentImages({
+          contentType: 'article',
+          title: generated.title || topic.title,
+          description: generated.metaDescription || topic.title,
+          generateHero: true,
+          generateContentImages: false,
+        });
+
+        if (generatedImages.length > 0) {
+          const heroImage = generatedImages.find(img => img.type === 'hero');
+          if (heroImage) {
+            const persistedUrl = await persistImageToStorage(heroImage.url, heroImage.filename);
+            heroImageUrl = persistedUrl || heroImage.url;
+          }
+        }
+      } catch (imageError) {
+        console.error("Error generating images for news article:", imageError);
+      }
+
+      // Create news article
+      const content = await storage.createContent({
+        title: generated.title || topic.title,
+        slug: `${slug}-${Date.now()}`,
+        type: "article",
+        status: "draft",
+        metaDescription: generated.metaDescription || null,
+        heroImage: heroImageUrl,
+        heroImageAlt: generated.heroImageAlt || `${topic.title} - Dubai News`,
+        blocks: blocks,
+        primaryKeyword: topic.keywords?.[0] || null,
+        secondaryKeywords: topic.keywords?.slice(1) || [],
+      });
+
+      // Create with "news" category
+      await storage.createArticle({ contentId: content.id, category: "news" });
+
+      // DELETE the topic after successful generation
+      await storage.deleteTopicBankItem(req.params.id);
+
+      res.status(201).json({
+        content,
+        generated,
+        topicDeleted: true,
+        message: "News article generated and topic removed from bank"
+      });
+    } catch (error) {
+      console.error("Error generating news from topic:", error);
+      res.status(500).json({ error: "Failed to generate news from topic" });
+    }
+  });
+
   // Batch auto-generate from priority topics (for when RSS lacks content)
   app.post("/api/topic-bank/auto-generate", requirePermission("canCreate"), async (req, res) => {
     try {
@@ -5488,6 +5659,95 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     } catch (error) {
       console.error("Error deleting tag:", error);
       res.status(500).json({ error: "Failed to delete tag" });
+    }
+  });
+
+  // Sync tags from content - auto-extract tags from site content
+  app.post("/api/tags/sync", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const allContent = await storage.getAllContent();
+      const existingTags = await storage.getTags();
+      const existingTagSlugs = new Set(existingTags.map(t => t.slug));
+
+      // Collect unique tags from content
+      const tagCandidates = new Map<string, { name: string; count: number; color: string }>();
+
+      // Color palette for auto-generated tags
+      const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6366f1", "#14b8a6"];
+      let colorIndex = 0;
+
+      // Extract tags from content types
+      for (const content of allContent) {
+        // From content type
+        const typeTag = content.type;
+        if (typeTag) {
+          const slug = typeTag.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+          if (!tagCandidates.has(slug)) {
+            tagCandidates.set(slug, { name: typeTag.charAt(0).toUpperCase() + typeTag.slice(1), count: 0, color: colors[colorIndex++ % colors.length] });
+          }
+          tagCandidates.get(slug)!.count++;
+        }
+
+        // From primary keywords
+        if (content.primaryKeyword) {
+          const kw = content.primaryKeyword;
+          const slug = kw.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
+          if (slug.length > 2 && !tagCandidates.has(slug)) {
+            tagCandidates.set(slug, { name: kw.slice(0, 50), count: 0, color: colors[colorIndex++ % colors.length] });
+          }
+          if (tagCandidates.has(slug)) tagCandidates.get(slug)!.count++;
+        }
+
+        // From secondary keywords (top 3)
+        if (content.secondaryKeywords && Array.isArray(content.secondaryKeywords)) {
+          for (const kw of content.secondaryKeywords.slice(0, 3)) {
+            const slug = String(kw).toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
+            if (slug.length > 2 && !tagCandidates.has(slug)) {
+              tagCandidates.set(slug, { name: String(kw).slice(0, 50), count: 0, color: colors[colorIndex++ % colors.length] });
+            }
+            if (tagCandidates.has(slug)) tagCandidates.get(slug)!.count++;
+          }
+        }
+      }
+
+      // Create tags that don't exist yet (only those used 2+ times to avoid noise)
+      const created: string[] = [];
+      const skipped: string[] = [];
+
+      for (const [slug, data] of tagCandidates) {
+        if (existingTagSlugs.has(slug)) {
+          skipped.push(slug);
+          continue;
+        }
+        if (data.count >= 2 || slug.length <= 15) { // Create if used 2+ times or short/common
+          try {
+            await storage.createTag({
+              name: data.name,
+              slug,
+              description: `Auto-generated tag from content (${data.count} items)`,
+              color: data.color,
+            });
+            created.push(data.name);
+          } catch (e: any) {
+            if (!e.message?.includes("duplicate")) {
+              console.error(`Error creating tag ${slug}:`, e.message);
+            }
+          }
+        }
+      }
+
+      await logAuditEvent(req, "sync", "tags", "bulk", `Synced tags from content`, { created: created.length, skipped: skipped.length });
+
+      res.json({
+        success: true,
+        created,
+        skipped: skipped.length,
+        total: tagCandidates.size,
+        message: `Created ${created.length} new tags from ${allContent.length} content items`
+      });
+    } catch (error) {
+      console.error("Error syncing tags:", error);
+      res.status(500).json({ error: "Failed to sync tags" });
     }
   });
 

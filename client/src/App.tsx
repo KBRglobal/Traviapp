@@ -258,8 +258,7 @@ const publicRoutes = [
   { path: "/hotels/:slug", component: PublicContentViewer },
   { path: "/dining", component: PublicDining },
   { path: "/dining/:slug", component: PublicContentViewer },
-  { path: "/districts", component: PublicDistricts },
-  { path: "/districts/:slug", component: PublicContentViewer },
+  // Districts now handled by DistrictsGateway and specific district pages below
   { path: "/transport/:slug", component: PublicContentViewer },
   { path: "/articles", component: PublicArticles },
   { path: "/articles/:slug", component: PublicContentViewer },
