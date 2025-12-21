@@ -87,6 +87,13 @@ import {
   ExternalLink,
   ArrowUpDown,
   Palette,
+  Undo2,
+  Redo2,
+  EyeOff,
+  Tablet,
+  AlertTriangle,
+  CheckCircle,
+  Keyboard,
 } from "lucide-react";
 import type {
   ContentWithRelations,
@@ -482,6 +489,237 @@ export default function ContentEditor() {
   const [lastAutosaveTime, setLastAutosaveTime] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
 
+  // NEW: Enhanced Editor Features
+  const [blockSearchQuery, setBlockSearchQuery] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
+
+  // Undo/Redo History
+  const [history, setHistory] = useState<ContentBlock[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const maxHistorySize = 50;
+
+  // Save state to history (called when blocks change significantly)
+  const pushToHistory = useCallback((newBlocks: ContentBlock[]) => {
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(JSON.parse(JSON.stringify(newBlocks)));
+      if (newHistory.length > maxHistorySize) {
+        newHistory.shift();
+        return newHistory;
+      }
+      return newHistory;
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, maxHistorySize - 1));
+  }, [historyIndex]);
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      setHistoryIndex(prev => prev - 1);
+      setBlocks(JSON.parse(JSON.stringify(history[historyIndex - 1])));
+    }
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(prev => prev + 1);
+      setBlocks(JSON.parse(JSON.stringify(history[historyIndex + 1])));
+    }
+  }, [history, historyIndex]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Undo: Ctrl+Z
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+      // Redo: Ctrl+Y or Ctrl+Shift+Z
+      if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+        e.preventDefault();
+        redo();
+      }
+      // Save: Ctrl+S
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+      // Preview: Ctrl+P
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        setShowPreview(prev => !prev);
+      }
+      // Delete selected block: Delete or Backspace
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockId && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        removeBlock(selectedBlockId);
+      }
+      // Duplicate: Ctrl+D
+      if (e.ctrlKey && e.key === 'd' && selectedBlockId) {
+        e.preventDefault();
+        duplicateBlock(selectedBlockId);
+      }
+      // Escape: Close preview or deselect
+      if (e.key === 'Escape') {
+        if (showPreview) setShowPreview(false);
+        else if (contextMenu) setContextMenu(null);
+        else setSelectedBlockId(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, selectedBlockId, showPreview, contextMenu]);
+
+  // Live SEO Score calculation
+  const seoScore = useMemo(() => {
+    let score = 0;
+    const issues: string[] = [];
+    const passed: string[] = [];
+
+    // Title (15 points)
+    if (title) {
+      score += 5;
+      passed.push("Title exists");
+      if (title.length >= 30 && title.length <= 60) {
+        score += 5;
+        passed.push("Title length optimal (30-60)");
+      } else {
+        issues.push(`Title length: ${title.length} (optimal: 30-60)`);
+      }
+      if (primaryKeyword && title.toLowerCase().includes(primaryKeyword.toLowerCase())) {
+        score += 5;
+        passed.push("Keyword in title");
+      } else if (primaryKeyword) {
+        issues.push("Primary keyword not in title");
+      }
+    } else {
+      issues.push("Missing title");
+    }
+
+    // Meta Description (15 points)
+    if (metaDescription) {
+      score += 5;
+      passed.push("Meta description exists");
+      if (metaDescription.length >= 120 && metaDescription.length <= 160) {
+        score += 5;
+        passed.push("Meta description length optimal");
+      } else {
+        issues.push(`Meta description: ${metaDescription.length} chars (optimal: 120-160)`);
+      }
+      if (primaryKeyword && metaDescription.toLowerCase().includes(primaryKeyword.toLowerCase())) {
+        score += 5;
+        passed.push("Keyword in meta description");
+      } else if (primaryKeyword) {
+        issues.push("Primary keyword not in meta description");
+      }
+    } else {
+      issues.push("Missing meta description");
+    }
+
+    // Hero Image (15 points)
+    if (heroImage) {
+      score += 10;
+      passed.push("Hero image exists");
+      if (heroImage.includes('.webp')) {
+        score += 5;
+        passed.push("Image is WebP format");
+      } else {
+        issues.push("Hero image not WebP format");
+      }
+    } else {
+      issues.push("Missing hero image");
+    }
+
+    // Content (15 points)
+    const textBlocks = blocks.filter(b => b.type === 'text' || b.type === 'hero');
+    const totalWords = textBlocks.reduce((acc, b) => {
+      const text = String(b.data?.content || b.data?.text || '');
+      return acc + text.split(/\s+/).filter(w => w.length > 0).length;
+    }, 0);
+
+    if (totalWords >= 300) { score += 5; passed.push("Content ≥300 words"); }
+    else issues.push(`Content: ${totalWords} words (min: 300)`);
+
+    if (totalWords >= 600) { score += 5; passed.push("Content ≥600 words"); }
+    if (totalWords >= 1000) { score += 5; passed.push("Content ≥1000 words"); }
+
+    // Structure (15 points)
+    if (blocks.length > 0) { score += 5; passed.push("Has content blocks"); }
+    else issues.push("No content blocks");
+
+    const hasHeading = blocks.some(b => b.type === 'heading' || b.type === 'hero');
+    if (hasHeading) { score += 5; passed.push("Has headings"); }
+    else issues.push("No headings found");
+
+    const hasImages = blocks.some(b => b.type === 'image' || b.type === 'gallery');
+    if (hasImages) { score += 5; passed.push("Has images"); }
+    else issues.push("No images in content");
+
+    // Keyword (15 points)
+    if (primaryKeyword) {
+      score += 5;
+      passed.push("Primary keyword defined");
+
+      const contentText = blocks.map(b => JSON.stringify(b.data || {})).join(' ').toLowerCase();
+      if (contentText.includes(primaryKeyword.toLowerCase())) {
+        score += 5;
+        passed.push("Keyword in content");
+      } else {
+        issues.push("Keyword not found in content");
+      }
+    } else {
+      issues.push("No primary keyword set");
+    }
+
+    // Slug (10 points)
+    if (slug) {
+      score += 3;
+      passed.push("Slug exists");
+      if (slug.length <= 75) { score += 3; passed.push("Slug length OK"); }
+      if (primaryKeyword && slug.toLowerCase().includes(primaryKeyword.toLowerCase().replace(/\s+/g, '-'))) {
+        score += 4;
+        passed.push("Keyword in slug");
+      }
+    } else {
+      issues.push("Missing slug");
+    }
+
+    return { score, maxScore: 100, percentage: score, issues, passed, totalWords };
+  }, [title, metaDescription, heroImage, blocks, primaryKeyword, slug]);
+
+  // Filter blocks by search
+  const filteredBlockTypes = useMemo(() => {
+    if (!blockSearchQuery.trim()) return blockTypes;
+    const query = blockSearchQuery.toLowerCase();
+    return blockTypes.filter(bt =>
+      bt.label.toLowerCase().includes(query) ||
+      bt.description.toLowerCase().includes(query) ||
+      bt.type.toLowerCase().includes(query)
+    );
+  }, [blockSearchQuery]);
+
+  // Context menu handler
+  const handleContextMenu = useCallback((e: React.MouseEvent, blockId: string) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, blockId });
+    setSelectedBlockId(blockId);
+  }, []);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    if (contextMenu) {
+      window.addEventListener('click', handleClick);
+      return () => window.removeEventListener('click', handleClick);
+    }
+  }, [contextMenu]);
+
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -504,6 +742,7 @@ export default function ContentEditor() {
 
     if (over && active.id !== over.id) {
       setBlocks((items) => {
+        pushToHistory(items); // Save before drag reorder
         const oldIndex = items.findIndex((b) => b.id === active.id);
         const newIndex = items.findIndex((b) => b.id === over.id);
         const newItems = arrayMove(items, oldIndex, newIndex);
@@ -512,7 +751,7 @@ export default function ContentEditor() {
     }
 
     setActiveBlockId(null);
-  }, []);
+  }, [pushToHistory]);
 
   const activeBlock = activeBlockId ? blocks.find(b => b.id === activeBlockId) : null;
 
@@ -705,18 +944,23 @@ export default function ContentEditor() {
 
       // Check if blocks are empty but extension data exists - auto-generate blocks
       const existingBlocks = content.blocks || [];
+      let initialBlocks: ContentBlock[];
       if (existingBlocks.length === 0) {
         const generatedBlocks = generateBlocksFromExtensionData(content);
-        if (generatedBlocks.length > 0) {
-          setBlocks(generatedBlocks);
-        } else {
-          setBlocks([]);
-        }
+        initialBlocks = generatedBlocks.length > 0 ? generatedBlocks : [];
       } else {
-        setBlocks(existingBlocks);
+        initialBlocks = existingBlocks;
       }
+      setBlocks(initialBlocks);
+      // Initialize history with loaded blocks
+      setHistory([JSON.parse(JSON.stringify(initialBlocks))]);
+      setHistoryIndex(0);
     } else if (isNew && blocks.length === 0) {
-      setBlocks(defaultTemplateBlocks.map(b => ({ ...b, id: generateId() })));
+      const newBlocks = defaultTemplateBlocks.map(b => ({ ...b, id: generateId() }));
+      setBlocks(newBlocks);
+      // Initialize history for new content
+      setHistory([JSON.parse(JSON.stringify(newBlocks))]);
+      setHistoryIndex(0);
     }
   }, [content, isNew]);
 
@@ -1346,6 +1590,7 @@ export default function ContentEditor() {
   };
 
   const addBlock = (type: ContentBlock["type"], insertAfterIndex?: number) => {
+    pushToHistory(blocks); // Save before adding
     const newBlock: ContentBlock = {
       id: generateId(),
       type,
@@ -1362,11 +1607,23 @@ export default function ContentEditor() {
     setSelectedBlockId(newBlock.id ?? null);
   };
 
+  // Track last history push time for debouncing text updates
+  const lastHistoryPushRef = useRef<number>(0);
+  const historyDebounceMs = 500;
+
   const updateBlock = (id: string, data: Record<string, unknown>) => {
-    setBlocks(blocks.map((b) => (b.id === id ? { ...b, data: { ...b.data, ...data } } : b)));
+    const newBlocks = blocks.map((b) => (b.id === id ? { ...b, data: { ...b.data, ...data } } : b));
+    // Debounce history push for text updates
+    const now = Date.now();
+    if (now - lastHistoryPushRef.current > historyDebounceMs) {
+      pushToHistory(blocks); // Save current state before change
+      lastHistoryPushRef.current = now;
+    }
+    setBlocks(newBlocks);
   };
 
   const removeBlock = (id: string) => {
+    pushToHistory(blocks); // Save before delete
     setBlocks(blocks.filter((b) => b.id !== id));
     if (selectedBlockId === id) setSelectedBlockId(null);
   };
@@ -1374,6 +1631,7 @@ export default function ContentEditor() {
   const duplicateBlock = (id: string) => {
     const blockIndex = blocks.findIndex((b) => b.id === id);
     if (blockIndex !== -1) {
+      pushToHistory(blocks); // Save before duplicate
       const block = blocks[blockIndex];
       const newBlock: ContentBlock = {
         ...block,
@@ -1391,6 +1649,7 @@ export default function ContentEditor() {
     const index = blocks.findIndex((b) => b.id === id);
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex >= 0 && targetIndex < blocks.length) {
+      pushToHistory(blocks); // Save before move
       const newBlocks = [...blocks];
       [newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]];
       setBlocks(newBlocks.map((b, i) => ({ ...b, order: i })));
@@ -1478,9 +1737,37 @@ export default function ContentEditor() {
           <Button variant="ghost" size="icon" onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)} data-testid="button-toggle-panel">
             <PanelLeft className="h-4 w-4" />
           </Button>
+
+          {/* Undo/Redo Controls */}
+          <div className="flex items-center border rounded-md">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-r-none" onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <div className="w-px h-4 bg-border" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-l-none" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)">
+              <Redo2 className="h-4 w-4" />
+            </Button>
+          </div>
+
           <div className="flex items-center gap-2">
             <StatusBadge status={status as "draft" | "in_review" | "approved" | "scheduled" | "published"} />
-            <span className="text-sm text-muted-foreground">{wordCount} words</span>
+            {/* Live Word Count */}
+            <span className="text-sm text-muted-foreground">{seoScore.totalWords} words</span>
+          </div>
+
+          {/* Live SEO Score Indicator */}
+          <div
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+              seoScore.percentage >= 70
+                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                : seoScore.percentage >= 50
+                  ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                  : "bg-red-100 text-red-700 hover:bg-red-200"
+            }`}
+            title={`SEO Score: ${seoScore.percentage}%\n\nPassed:\n${seoScore.passed.map(p => '✓ ' + p).join('\n')}\n\nIssues:\n${seoScore.issues.map(i => '✗ ' + i).join('\n')}`}
+          >
+            {seoScore.percentage >= 70 ? <CheckCircle className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+            <span>SEO: {seoScore.percentage}%</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1488,10 +1775,51 @@ export default function ContentEditor() {
             <Sparkles className="h-4 w-4 mr-2" />
             AI Generate
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setPreviewMode("desktop")} data-testid="button-preview">
-            <Eye className="h-4 w-4 mr-2" />
-            Preview
-          </Button>
+          {/* Enhanced Preview with Device Toggle */}
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={showPreview ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-r-none gap-1.5"
+              onClick={() => setShowPreview(!showPreview)}
+              data-testid="button-preview"
+            >
+              {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPreview ? "Exit" : "Preview"}
+            </Button>
+            {showPreview && (
+              <>
+                <div className="w-px h-6 bg-border" />
+                <Button
+                  variant={previewDevice === "desktop" ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8 rounded-none"
+                  onClick={() => setPreviewDevice("desktop")}
+                  title="Desktop"
+                >
+                  <Monitor className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={previewDevice === "tablet" ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8 rounded-none"
+                  onClick={() => setPreviewDevice("tablet")}
+                  title="Tablet"
+                >
+                  <Tablet className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={previewDevice === "mobile" ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8 rounded-l-none"
+                  onClick={() => setPreviewDevice("mobile")}
+                  title="Mobile"
+                >
+                  <Smartphone className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
           {contentId && (
             <Button variant="outline" size="sm" onClick={() => setVersionHistoryOpen(true)} data-testid="button-history">
               <History className="h-4 w-4 mr-2" />
@@ -1562,11 +1890,42 @@ export default function ContentEditor() {
                 Add Block
               </h3>
               <p className="text-xs text-muted-foreground mt-1">Drag or click to add</p>
+              {/* Search blocks */}
+              <div className="relative mt-3">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search blocks..."
+                  value={blockSearchQuery}
+                  onChange={(e) => setBlockSearchQuery(e.target.value)}
+                  className="pl-8 h-9 text-sm"
+                />
+                {blockSearchQuery && (
+                  <button
+                    onClick={() => setBlockSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
             <ScrollArea className="flex-1">
               <div className="p-3 space-y-4">
+                {filteredBlockTypes.length === 0 && blockSearchQuery && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No blocks match "{blockSearchQuery}"</p>
+                    <button
+                      onClick={() => setBlockSearchQuery("")}
+                      className="text-xs text-primary mt-1 hover:underline"
+                    >
+                      Clear search
+                    </button>
+                  </div>
+                )}
                 {blockCategories.map((category) => {
-                  const categoryBlocks = blockTypes.filter(b => b.category === category.id);
+                  const categoryBlocks = filteredBlockTypes.filter(b => b.category === category.id);
                   if (categoryBlocks.length === 0) return null;
                   return (
                     <div key={category.id} className="space-y-2">
@@ -1636,6 +1995,7 @@ export default function ContentEditor() {
                         onTitleChange={setTitle}
                         onGenerateImage={() => handleGenerateImage(blockId, block.type === "hero" ? "hero" : "image")}
                         isGeneratingImage={imageGeneratingBlock === blockId}
+                        onContextMenu={(e) => handleContextMenu(e, blockId)}
                       />
                     );
                   })}
@@ -1663,6 +2023,57 @@ export default function ContentEditor() {
                 ) : null}
               </DragOverlay>
             </DndContext>
+
+            {/* Context Menu */}
+            {contextMenu && (
+              <div
+                className="fixed bg-popover border rounded-lg shadow-xl py-1 z-50 min-w-[180px] animate-in fade-in-0 zoom-in-95"
+                style={{ left: contextMenu.x, top: contextMenu.y }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center gap-2"
+                  onClick={() => {
+                    duplicateBlock(contextMenu.blockId);
+                    setContextMenu(null);
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                  Duplicate Block
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center gap-2"
+                  onClick={() => {
+                    moveBlock(contextMenu.blockId, "up");
+                    setContextMenu(null);
+                  }}
+                >
+                  <ChevronUp className="h-4 w-4" />
+                  Move Up
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center gap-2"
+                  onClick={() => {
+                    moveBlock(contextMenu.blockId, "down");
+                    setContextMenu(null);
+                  }}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                  Move Down
+                </button>
+                <div className="h-px bg-border my-1" />
+                <button
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-destructive hover:text-destructive-foreground flex items-center gap-2 text-destructive"
+                  onClick={() => {
+                    removeBlock(contextMenu.blockId);
+                    setContextMenu(null);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Block
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2101,6 +2512,7 @@ function SortableCanvasBlock({
   onTitleChange,
   onGenerateImage,
   isGeneratingImage,
+  onContextMenu,
 }: {
   id: string;
   block: ContentBlock;
@@ -2118,6 +2530,7 @@ function SortableCanvasBlock({
   onTitleChange: (title: string) => void;
   onGenerateImage: () => void;
   isGeneratingImage: boolean;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }) {
   const {
     attributes,
@@ -2148,6 +2561,7 @@ function SortableCanvasBlock({
         e.stopPropagation();
         onSelect();
       }}
+      onContextMenu={onContextMenu}
       data-testid={`canvas-block-${block.id}`}
     >
       {/* Block header - visible on hover/select */}
