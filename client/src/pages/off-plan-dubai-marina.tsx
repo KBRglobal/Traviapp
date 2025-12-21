@@ -40,7 +40,7 @@ const projects = [
     developer: "LIV Developers",
     type: "Luxury Apartments",
     priceFrom: "AED 1,900,000",
-    completion: "Q4 2025",
+    completion: "Q4 2026",
     paymentPlan: "50/50",
     roi: "17-21%",
     highlights: ["Yacht club", "Rooftop infinity pool", "Smart home"]
@@ -101,7 +101,7 @@ export default function OffPlanDubaiMarina() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "Dubai Marina Off-Plan Properties 2025 | Waterfront Living & Investment",
+    title: "Dubai Marina Off-Plan Properties 2026 | Waterfront Living & Investment",
     description: "Explore Dubai Marina off-plan properties: iconic waterfront towers, marina views, 6.5% yields. Complete guide with best projects from AED 1.9M and payment plans.",
     ogType: "article"
   });

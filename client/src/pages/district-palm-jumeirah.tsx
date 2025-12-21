@@ -337,7 +337,7 @@ function HotelsSection() {
       price: "AED 3,000+",
       features: ["Only 90 rooms", "Guerlain Spa", "Private marina", "Michelin-starred STAY"],
       bestFor: "Honeymooners",
-      image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400",
+      image: "https://images.unsplash.com/photo-1520260497591-112f2f40a3f4?w=400",
     },
     {
       name: "Anantara",

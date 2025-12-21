@@ -30,7 +30,7 @@ const projects = [
     developer: "DAMAC",
     type: "Apartments",
     priceFrom: "AED 680,000",
-    completion: "Q4 2025",
+    completion: "Q4 2026",
     paymentPlan: "60/40",
     roi: "19-23%",
     highlights: ["Near Expo 2020", "Metro access", "Modern design"]
@@ -60,7 +60,7 @@ const projects = [
     developer: "Ellington",
     type: "Premium Apartments",
     priceFrom: "AED 850,000",
-    completion: "Q3 2025",
+    completion: "Q3 2026",
     paymentPlan: "60/40",
     roi: "18-22%",
     highlights: ["Quality finishes", "Green spaces", "Smart home"]
@@ -101,7 +101,7 @@ export default function OffPlanAlFurjan() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "Al Furjan Off-Plan Properties Dubai 2025 | Family Living from AED 550K",
+    title: "Al Furjan Off-Plan Properties Dubai 2026 | Family Living from AED 550K",
     description: "Al Furjan Dubai off-plan properties: family-friendly community, 7.5% yields, near metro and Expo City. Complete guide with townhouses and apartments from AED 550K.",
     ogType: "article"
   });

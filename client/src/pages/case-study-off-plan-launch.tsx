@@ -37,7 +37,7 @@ export default function CaseStudyOffPlanLaunch() {
     { stage: "Launch Day Price", price: "AED 1,850,000", timing: "March 2023" },
     { stage: "Price After 3 Months", price: "AED 2,100,000", timing: "June 2023" },
     { stage: "Current Resale Price", price: "AED 2,180,000", timing: "Dec 2024" },
-    { stage: "Projected Handover Value", price: "AED 2,400,000", timing: "Q4 2025" }
+    { stage: "Projected Handover Value", price: "AED 2,400,000", timing: "Q4 2026" }
   ];
 
   const investorTips = [
@@ -115,7 +115,7 @@ export default function CaseStudyOffPlanLaunch() {
             <CardContent className="pt-6 text-center">
               <p className="text-3xl font-bold text-blue-600">30%</p>
               <p className="font-medium">Projected ROI</p>
-              <p className="text-xs text-muted-foreground">By handover Q4 2025</p>
+              <p className="text-xs text-muted-foreground">By handover Q4 2026</p>
             </CardContent>
           </Card>
         </div>

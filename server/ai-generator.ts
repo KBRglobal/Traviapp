@@ -1825,13 +1825,33 @@ OUTPUT JSON STRUCTURE:
         "order": 3
       },
       {
+        "id": "image_1",
+        "type": "image",
+        "data": {
+          "searchQuery": "Specific search query for Freepik/stock image relevant to this section (e.g., 'Dubai Marina yacht sunset view', 'Burj Khalifa observation deck visitors')",
+          "alt": "Descriptive alt text for SEO with location context (under 125 chars)",
+          "caption": "Engaging caption describing what's shown and adding value for reader"
+        },
+        "order": 4
+      },
+      {
         "id": "main_content_2",
         "type": "text",
         "data": {
           "heading": "H2 for second major section",
           "content": "250-350 words. Develop the topic further. Add depth with examples, comparisons, or detailed descriptions. Include secondary keyword naturally. Vary paragraph length (mix 2-3 sentence paragraphs with 5-6 sentence ones). Add another internal link."
         },
-        "order": 4
+        "order": 5
+      },
+      {
+        "id": "image_2",
+        "type": "image",
+        "data": {
+          "searchQuery": "Specific search query for second image relevant to content (e.g., 'traditional Dubai souk market spices', 'Dubai Metro station interior modern')",
+          "alt": "Descriptive alt text with specific subject and Dubai location",
+          "caption": "Caption providing context or helpful information about the image"
+        },
+        "order": 6
       },
       {
         "id": "quote_block",

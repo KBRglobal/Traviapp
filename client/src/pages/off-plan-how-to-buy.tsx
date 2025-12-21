@@ -165,7 +165,7 @@ const FAQS = [
 const RELATED_LINKS = [
   { title: "Investment Guide", href: "/dubai-off-plan-investment-guide", description: "ROI strategies and analysis" },
   { title: "Understanding Payment Plans", href: "/dubai-off-plan-payment-plans", description: "80/20, post-handover options" },
-  { title: "Best Projects 2025", href: "/best-off-plan-projects-dubai-2025", description: "Top opportunities this year" },
+  { title: "Best Projects 2026", href: "/best-off-plan-projects-dubai-2026", description: "Top opportunities this year" },
   { title: "Crypto Payments", href: "/dubai-off-plan-crypto-payments", description: "BTC, USDT, ETH accepted" },
   { title: "Escrow Protection", href: "/dubai-off-plan-escrow-accounts", description: "How your funds are protected" },
 ];
@@ -174,8 +174,8 @@ export default function OffPlanHowToBuy() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "How to Buy Off-Plan Property in Dubai 2025 | Step-by-Step Guide",
-    description: "Complete guide to buying off-plan property in Dubai: 7-step purchase process, required documents, costs, and legal protection. Updated for 2025 with crypto payment options.",
+    title: "How to Buy Off-Plan Property in Dubai 2026 | Step-by-Step Guide",
+    description: "Complete guide to buying off-plan property in Dubai: 7-step purchase process, required documents, costs, and legal protection. Updated for 2026 with crypto payment options.",
     ogType: "article"
   });
 
@@ -193,7 +193,7 @@ export default function OffPlanHowToBuy() {
         {/* Hero */}
         <section className="py-12 md:py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <Badge variant="secondary" className="mb-4">Purchase Guide 2025</Badge>
+            <Badge variant="secondary" className="mb-4">Purchase Guide 2026</Badge>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
               How to Buy Off-Plan Property in Dubai
             </h1>

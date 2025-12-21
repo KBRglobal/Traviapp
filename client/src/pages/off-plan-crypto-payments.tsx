@@ -36,7 +36,7 @@ const benefits = [
 
 export default function OffPlanCryptoPayments() {
   useDocumentMeta({
-    title: "Buy Dubai Property with Crypto | BTC, ETH, USDT Accepted 2025",
+    title: "Buy Dubai Property with Crypto | BTC, ETH, USDT Accepted 2026",
     description: "Purchase Dubai off-plan properties using Bitcoin, Ethereum, and USDT. VARA-licensed crypto gateway with instant AED conversion. Secure, regulated, and fast property transactions.",
     ogType: "website"
   });

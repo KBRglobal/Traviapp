@@ -115,9 +115,9 @@ export default function Dashboard() {
               icon={Building2}
             />
             <StatsCard
-              title="Articles"
+              title="News"
               value={stats?.articles ?? 0}
-              description="Total travel articles"
+              description="Total news articles"
               icon={FileText}
             />
             <StatsCard
@@ -286,7 +286,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm">Articles (~1200-2000 words)</span>
+                  <span className="text-sm">News (~1200-2000 words)</span>
                   <span className="text-sm text-muted-foreground">{stats?.articles ?? 0} pages</span>
                 </div>
                 <div className="h-2 rounded-full bg-muted overflow-hidden">

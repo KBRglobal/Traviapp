@@ -122,7 +122,7 @@ export default function PublicSearch() {
               <Link href="/dining" className="text-foreground/80 hover:text-primary font-medium transition-colors">Dining</Link>
               <Link href="/districts" className="text-foreground/80 hover:text-primary font-medium transition-colors">Districts</Link>
               <Link href="/transport" className="text-foreground/80 hover:text-primary font-medium transition-colors">Transport</Link>
-              <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">Articles</Link>
+              <Link href="/articles" className="text-foreground/80 hover:text-primary font-medium transition-colors">News</Link>
             </div>
           </div>
         </div>
@@ -193,7 +193,7 @@ export default function PublicSearch() {
                       <Button variant="outline">Attractions</Button>
                     </Link>
                     <Link href={localePath("/articles")}>
-                      <Button variant="outline">Articles</Button>
+                      <Button variant="outline">News</Button>
                     </Link>
                   </div>
                 </div>
@@ -210,7 +210,7 @@ export default function PublicSearch() {
             <div className="flex items-center gap-6 text-muted-foreground text-sm">
               <Link href="/hotels" className="hover:text-foreground transition-colors">Hotels</Link>
               <Link href="/attractions" className="hover:text-foreground transition-colors">Attractions</Link>
-              <Link href="/articles" className="hover:text-foreground transition-colors">Articles</Link>
+              <Link href="/articles" className="hover:text-foreground transition-colors">News</Link>
             </div>
             <div className="flex items-center gap-4 text-muted-foreground text-sm">
               <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>

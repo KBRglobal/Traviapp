@@ -10,7 +10,7 @@ import QRCode from "qrcode";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { Resend } from "resend";
-import { eq } from "drizzle-orm";
+import { eq, like, or, desc, and, sql } from "drizzle-orm";
 import {
   insertContentSchema,
   insertAttractionSchema,
@@ -504,6 +504,23 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
     if (normalized) {
       normalizedBlocks.push(normalized);
       blockTypes.add(normalized.type);
+      
+      // If FAQ block has remaining FAQs, expand them into separate blocks
+      if (normalized.type === 'faq' && (normalized.data as any)._remainingFaqs) {
+        const remainingFaqs = (normalized.data as any)._remainingFaqs as Array<{ question?: string; answer?: string; q?: string; a?: string }>;
+        // Clean up the _remainingFaqs from the first block
+        delete (normalized.data as any)._remainingFaqs;
+        
+        // Add remaining FAQs as separate blocks
+        for (const faq of remainingFaqs) {
+          const q = faq.question || faq.q || 'Question?';
+          const a = faq.answer || faq.a || 'Answer pending.';
+          normalizedBlocks.push({
+            type: 'faq' as const,
+            data: { question: q, answer: a }
+          });
+        }
+      }
     }
   }
 
@@ -519,8 +536,7 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
     normalizedBlocks.push({
       type: 'highlights',
       data: {
-        title: 'Key Highlights',
-        items: ['Key attraction feature', 'Unique experience offered', 'Must-see element', 'Popular activity', 'Essential stop', 'Notable landmark']
+        content: 'Key attraction feature\nUnique experience offered\nMust-see element\nPopular activity\nEssential stop\nNotable landmark'
       }
     });
   }
@@ -529,26 +545,24 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
     normalizedBlocks.push({
       type: 'tips',
       data: {
-        title: 'Expert Tips',
-        tips: ['Plan your visit during cooler months', 'Book tickets in advance', 'Arrive early to avoid crowds', 'Bring comfortable walking shoes', 'Stay hydrated', 'Check dress codes beforehand', 'Consider guided tours for insights']
+        content: 'Plan your visit during cooler months\nBook tickets in advance\nArrive early to avoid crowds\nBring comfortable walking shoes\nStay hydrated\nCheck dress codes beforehand\nConsider guided tours for insights'
       }
     });
   }
 
   if (!blockTypes.has('faq')) {
-    normalizedBlocks.push({
-      type: 'faq',
-      data: {
-        title: 'Frequently Asked Questions',
-        faqs: [
-          { question: 'What are the opening hours?', answer: 'Opening hours vary by season. Check the official website for current timings.' },
-          { question: 'How much does entry cost?', answer: 'Pricing varies depending on the package selected. Visit the official website for current rates.' },
-          { question: 'Is parking available?', answer: 'Yes, parking is available on-site for visitors.' },
-          { question: 'Are there any accessibility options?', answer: 'Wheelchair access and accessibility services are available.' },
-          { question: 'Can I bring food and drinks?', answer: 'Outside food may be restricted. Check venue policies before visiting.' }
-        ]
-      }
-    });
+    // Add individual FAQ blocks (editor expects question/answer format)
+    const defaultFaqs = [
+      { question: 'What are the opening hours?', answer: 'Opening hours vary by season. Check the official website for current timings.' },
+      { question: 'How much does entry cost?', answer: 'Pricing varies depending on the package selected. Visit the official website for current rates.' },
+      { question: 'Is parking available?', answer: 'Yes, parking is available on-site for visitors.' }
+    ];
+    for (const faq of defaultFaqs) {
+      normalizedBlocks.push({
+        type: 'faq',
+        data: { question: faq.question, answer: faq.answer }
+      });
+    }
   }
 
   if (!blockTypes.has('cta')) {
@@ -644,52 +658,62 @@ function normalizeBlock(type: string, data: Record<string, unknown>): Omit<Conte
       return { type: 'text' as const, data };
 
     case 'highlights':
-      // Ensure items array exists with at least 4 items
-      let items = (data as any).items;
-      if (!Array.isArray(items) || items.length < 4) {
-        items = items && Array.isArray(items) ? items : [];
-        while (items.length < 4) {
-          (items as string[]).push(`Key highlight ${items.length + 1}`);
-        }
+      // Convert items array to content string (one per line) for editor compatibility
+      let highlightItems = (data as any).items || (data as any).highlights;
+      if (Array.isArray(highlightItems) && highlightItems.length > 0) {
+        // Convert array to newline-separated string for textarea editing
+        const highlightContent = highlightItems.map((item: unknown) => {
+          if (typeof item === 'string') return item;
+          if (typeof item === 'object' && item && (item as any).title) {
+            // Handle {title, description} format
+            const t = item as { title?: string; description?: string };
+            return t.description ? `${t.title}: ${t.description}` : t.title;
+          }
+          return String(item);
+        }).join('\n');
+        return { type: 'highlights' as const, data: { ...data, content: highlightContent } };
       }
-      return { type: 'highlights' as const, data: { ...data, items } };
+      // If already has content, use it
+      if (typeof (data as any).content === 'string' && (data as any).content.length > 0) {
+        return { type: 'highlights' as const, data };
+      }
+      // Default highlights
+      return { type: 'highlights' as const, data: { ...data, content: 'Key attraction feature\nUnique experience offered\nMust-see element\nPopular activity' } };
 
     case 'tips':
-      // Normalize tips array - accept "tips" or "items"
-      let tips = (data as any).tips || (data as any).items;
-      if (!Array.isArray(tips) || tips.length < 5) {
-        tips = tips && Array.isArray(tips) ? tips : [];
-        const defaultTips = ['Visit during off-peak hours', 'Book in advance', 'Wear comfortable clothing', 'Stay hydrated', 'Check local customs', 'Download offline maps', 'Carry local currency'];
-        while (tips.length < 5) {
-          (tips as string[]).push(defaultTips[tips.length] || `Tip ${tips.length + 1}`);
-        }
+      // Convert tips array to content string (one per line) for editor compatibility
+      let tipsArray = (data as any).tips || (data as any).items;
+      if (Array.isArray(tipsArray) && tipsArray.length > 0) {
+        // Convert array to newline-separated string for textarea editing
+        const tipsContent = tipsArray.map((tip: unknown) => String(tip)).join('\n');
+        return { type: 'tips' as const, data: { ...data, content: tipsContent } };
       }
-      return { type: 'tips' as const, data: { ...data, tips } };
+      // If already has content, use it
+      if (typeof (data as any).content === 'string' && (data as any).content.length > 0) {
+        return { type: 'tips' as const, data };
+      }
+      // Default tips
+      return { type: 'tips' as const, data: { ...data, content: 'Visit during off-peak hours\nBook in advance\nWear comfortable clothing\nStay hydrated\nCheck local customs' } };
 
     case 'faq':
-      // Normalize FAQ structure - accept "faqs" or "items"
-      let faqs = (data as any).faqs || (data as any).items;
-      if (!Array.isArray(faqs) || faqs.length < 3) {
-        faqs = faqs && Array.isArray(faqs) ? faqs : [];
-        const defaultFaqs = [
-          { question: 'What is the best time to visit?', answer: 'The best time to visit is during the cooler months from November to March.' },
-          { question: 'How do I get there?', answer: 'You can reach the destination via taxi, metro, or private transfer.' },
-          { question: 'What should I wear?', answer: 'Dress modestly and wear comfortable shoes for walking.' }
-        ];
-        while (faqs.length < 3) {
-          (faqs as Array<{question: string; answer: string}>).push(defaultFaqs[faqs.length] || { question: `Question ${faqs.length + 1}?`, answer: 'Please check with the venue for more details.' });
+      // For FAQ, editor expects individual blocks with question/answer strings
+      // If data has question/answer directly, use it
+      if (typeof (data as any).question === 'string' && (data as any).question.length > 0) {
+        return { type: 'faq' as const, data };
+      }
+      // If data has faqs array, take the first one (other FAQs handled by validateAndNormalizeBlocks)
+      let faqsArray = (data as any).faqs || (data as any).items || (data as any).questions;
+      if (Array.isArray(faqsArray) && faqsArray.length > 0) {
+        const firstFaq = faqsArray[0];
+        if (typeof firstFaq === 'object' && firstFaq) {
+          const q = (firstFaq as any).question || (firstFaq as any).q || 'Question?';
+          const a = (firstFaq as any).answer || (firstFaq as any).a || 'Answer pending.';
+          // Store the remaining FAQs for later extraction
+          return { type: 'faq' as const, data: { question: q, answer: a, _remainingFaqs: faqsArray.slice(1) } };
         }
       }
-      // Ensure each FAQ has question and answer
-      const normalizedFaqs = faqs.map((faq: unknown) => {
-        if (typeof faq !== 'object' || !faq) return { question: 'Question?', answer: 'Answer pending.' };
-        const f = faq as Record<string, unknown>;
-        return {
-          question: f.question || f.q || 'Question?',
-          answer: f.answer || f.a || 'Answer pending.'
-        };
-      });
-      return { type: 'faq' as const, data: { ...data, faqs } };
+      // Default FAQ
+      return { type: 'faq' as const, data: { question: 'What are the opening hours?', answer: 'Check the official website for current timings.' } };
 
     case 'cta':
       return { type: 'cta' as const, data };
@@ -760,15 +784,893 @@ function createDefaultBlocks(title: string): ContentBlock[] {
   return [
     { id: `hero-${timestamp}-0`, type: 'hero', data: { title, subtitle: 'Discover Dubai Travel', overlayText: '' }, order: 0 },
     { id: `text-${timestamp}-1`, type: 'text', data: { heading: 'Overview', content: 'Content generation incomplete. Please edit this article to add more details.' }, order: 1 },
-    { id: `highlights-${timestamp}-2`, type: 'highlights', data: { title: 'Key Highlights', items: ['Feature 1', 'Feature 2', 'Feature 3', 'Feature 4', 'Feature 5', 'Feature 6'] }, order: 2 },
-    { id: `tips-${timestamp}-3`, type: 'tips', data: { title: 'Expert Tips', tips: ['Plan ahead', 'Book in advance', 'Visit early morning', 'Stay hydrated', 'Respect local customs', 'Bring camera', 'Check weather'] }, order: 3 },
-    { id: `faq-${timestamp}-4`, type: 'faq', data: { title: 'FAQ', faqs: [
-      { question: 'What are the opening hours?', answer: 'Check official website for current hours.' },
-      { question: 'Is there parking?', answer: 'Yes, parking is available.' },
-      { question: 'What should I bring?', answer: 'Comfortable shoes, sunscreen, and water.' }
-    ] }, order: 4 },
-    { id: `cta-${timestamp}-5`, type: 'cta', data: { title: 'Book Your Visit', content: 'Plan your trip today!', buttonText: 'Book Now', buttonLink: '#' }, order: 5 }
+    { id: `highlights-${timestamp}-2`, type: 'highlights', data: { content: 'Feature 1\nFeature 2\nFeature 3\nFeature 4\nFeature 5\nFeature 6' }, order: 2 },
+    { id: `tips-${timestamp}-3`, type: 'tips', data: { content: 'Plan ahead\nBook in advance\nVisit early morning\nStay hydrated\nRespect local customs\nBring camera\nCheck weather' }, order: 3 },
+    { id: `faq-${timestamp}-4`, type: 'faq', data: { question: 'What are the opening hours?', answer: 'Check official website for current hours.' }, order: 4 },
+    { id: `faq-${timestamp}-5`, type: 'faq', data: { question: 'Is there parking?', answer: 'Yes, parking is available.' }, order: 5 },
+    { id: `faq-${timestamp}-6`, type: 'faq', data: { question: 'What should I bring?', answer: 'Comfortable shoes, sunscreen, and water.' }, order: 6 },
+    { id: `cta-${timestamp}-7`, type: 'cta', data: { title: 'Book Your Visit', content: 'Plan your trip today!', buttonText: 'Book Now', buttonLink: '#' }, order: 7 }
   ];
+}
+
+function generateFingerprint(title: string, url?: string): string {
+  const normalizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalizedUrl = url ? url.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+  return crypto
+    .createHash("sha256")
+    .update(`${normalizedTitle}-${normalizedUrl}`)
+    .digest("hex")
+    .substring(0, 32);
+}
+
+interface ArticleImageResult {
+  url: string;
+  altText: string;
+  imageId: string;
+  source: 'library' | 'freepik';
+}
+
+async function findOrCreateArticleImage(
+  topic: string,
+  keywords: string[],
+  category: string
+): Promise<ArticleImageResult | null> {
+  console.log(`[Image Finder] Searching for image: topic="${topic}", category="${category}", keywords=${JSON.stringify(keywords)}`);
+  
+  try {
+    const { aiGeneratedImages } = await import("@shared/schema");
+    
+    const searchTerms = [topic, ...keywords].filter(Boolean);
+    const searchConditions = searchTerms.map(term => 
+      or(
+        like(aiGeneratedImages.topic, `%${term}%`),
+        like(aiGeneratedImages.altText, `%${term}%`),
+        like(aiGeneratedImages.category, `%${term}%`)
+      )
+    );
+    
+    let foundImage = null;
+    
+    if (searchConditions.length > 0) {
+      const approvedImages = await db.select()
+        .from(aiGeneratedImages)
+        .where(and(
+          eq(aiGeneratedImages.isApproved, true),
+          or(...searchConditions)
+        ))
+        .orderBy(desc(aiGeneratedImages.usageCount))
+        .limit(1);
+      
+      if (approvedImages.length > 0) {
+        foundImage = approvedImages[0];
+        console.log(`[Image Finder] Found approved library image: ${foundImage.id}`);
+      } else {
+        const anyImages = await db.select()
+          .from(aiGeneratedImages)
+          .where(or(...searchConditions))
+          .orderBy(desc(aiGeneratedImages.createdAt))
+          .limit(1);
+        
+        if (anyImages.length > 0) {
+          foundImage = anyImages[0];
+          console.log(`[Image Finder] Found library image (not approved): ${foundImage.id}`);
+        }
+      }
+    }
+    
+    if (!foundImage) {
+      const categoryImages = await db.select()
+        .from(aiGeneratedImages)
+        .where(eq(aiGeneratedImages.category, category))
+        .orderBy(desc(aiGeneratedImages.isApproved), desc(aiGeneratedImages.createdAt))
+        .limit(1);
+      
+      if (categoryImages.length > 0) {
+        foundImage = categoryImages[0];
+        console.log(`[Image Finder] Found category fallback image: ${foundImage.id}`);
+      }
+    }
+    
+    if (foundImage) {
+      await db.update(aiGeneratedImages)
+        .set({ usageCount: (foundImage.usageCount || 0) + 1, updatedAt: new Date() })
+        .where(eq(aiGeneratedImages.id, foundImage.id));
+      
+      return {
+        url: foundImage.url,
+        altText: foundImage.altText || `${topic} - Dubai Travel`,
+        imageId: foundImage.id,
+        source: 'library'
+      };
+    }
+    
+    console.log(`[Image Finder] No library images found, trying Freepik...`);
+    
+    const freepikApiKey = process.env.FREEPIK_API_KEY;
+    if (!freepikApiKey) {
+      console.log(`[Image Finder] Freepik API key not configured, skipping`);
+      return null;
+    }
+    
+    const searchQuery = `dubai ${topic} tourism`.substring(0, 100);
+    const searchUrl = new URL("https://api.freepik.com/v1/resources");
+    searchUrl.searchParams.set("term", searchQuery);
+    searchUrl.searchParams.set("page", "1");
+    searchUrl.searchParams.set("limit", "5");
+    searchUrl.searchParams.set("filters[content_type][photo]", "1");
+    
+    const freepikResponse = await fetch(searchUrl.toString(), {
+      headers: {
+        "Accept-Language": "en-US",
+        "Accept": "application/json",
+        "x-freepik-api-key": freepikApiKey,
+      },
+    });
+    
+    if (!freepikResponse.ok) {
+      console.error(`[Image Finder] Freepik search failed: ${freepikResponse.status}`);
+      return null;
+    }
+    
+    const freepikData = await freepikResponse.json();
+    const results = freepikData.data || [];
+    
+    if (results.length === 0) {
+      console.log(`[Image Finder] No Freepik results found for: ${searchQuery}, trying AI generation...`);
+      
+      // Fallback to AI image generation
+      try {
+        const aiImages = await generateContentImages({
+          contentType: 'article',
+          title: topic,
+          description: `Dubai travel article about ${topic}`,
+          style: 'photorealistic',
+          generateHero: true,
+          generateContentImages: false,
+        });
+        
+        if (aiImages && aiImages.length > 0) {
+          const aiImage = aiImages[0];
+          console.log(`[Image Finder] AI generated image: ${aiImage.url}`);
+          
+          // Store the AI generated image
+          const [savedImage] = await db.insert(aiGeneratedImages).values({
+            filename: aiImage.filename,
+            url: aiImage.url,
+            topic: topic,
+            category: category || "general",
+            imageType: "hero",
+            source: "openai" as const,
+            prompt: `Dubai travel image for: ${topic}`,
+            keywords: keywords.slice(0, 10),
+            altText: aiImage.alt || `${topic} - Dubai Travel`,
+            caption: aiImage.caption || topic,
+            size: 0,
+            usageCount: 1,
+          }).returning();
+          
+          return {
+            url: aiImage.url,
+            altText: aiImage.alt || `${topic} - Dubai Travel`,
+            imageId: savedImage.id,
+            source: 'library' as const
+          };
+        }
+      } catch (aiError) {
+        console.error(`[Image Finder] AI image generation failed:`, aiError);
+      }
+      
+      return null;
+    }
+    
+    const bestResult = results[0];
+    const imageUrl = bestResult.image?.source?.url || bestResult.preview?.url || bestResult.thumbnail?.url;
+    
+    if (!imageUrl) {
+      console.log(`[Image Finder] No usable image URL from Freepik result`);
+      return null;
+    }
+    
+    console.log(`[Image Finder] Importing Freepik image: ${bestResult.id}`);
+    
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      console.error(`[Image Finder] Failed to fetch Freepik image: ${imageResponse.status}`);
+      return null;
+    }
+    
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const filename = `freepik-${Date.now()}.jpg`;
+    let persistedUrl = imageUrl;
+    
+    const storageClient = getObjectStorageClient();
+    let uploadedSuccessfully = false;
+    
+    if (storageClient) {
+      try {
+        const objectPath = `public/images/${filename}`;
+        await storageClient.uploadFromBytes(objectPath, Buffer.from(imageBuffer));
+        persistedUrl = `/object-storage/${objectPath}`;
+        uploadedSuccessfully = true;
+      } catch (storageError) {
+        console.log(`[Image Finder] Object storage upload failed, falling back to local: ${storageError}`);
+      }
+    }
+    
+    if (!uploadedSuccessfully) {
+      const uploadsDir = path.join(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(uploadsDir, filename), Buffer.from(imageBuffer));
+      persistedUrl = `/uploads/${filename}`;
+    }
+    
+    const altText = bestResult.title || `${topic} - Dubai Travel`;
+    
+    const [savedImage] = await db.insert(aiGeneratedImages).values({
+      filename,
+      url: persistedUrl,
+      topic: topic,
+      category: category || "general",
+      imageType: "hero",
+      source: "freepik" as const,
+      prompt: null,
+      keywords: keywords.slice(0, 10),
+      altText: altText,
+      caption: bestResult.title || topic,
+      size: imageBuffer.byteLength,
+      usageCount: 1,
+    }).returning();
+    
+    console.log(`[Image Finder] Successfully imported Freepik image: ${savedImage.id}`);
+    
+    return {
+      url: persistedUrl,
+      altText: altText,
+      imageId: savedImage.id,
+      source: 'freepik'
+    };
+    
+  } catch (error) {
+    console.error(`[Image Finder] Error finding/creating article image:`, error);
+    return null;
+  }
+}
+
+// Process image blocks in generated content - fetch images from Freepik/AI based on searchQuery
+async function processImageBlocks(blocks: ContentBlock[], category: string = "general"): Promise<ContentBlock[]> {
+  console.log(`[Image Processor] Processing ${blocks.length} blocks for images...`);
+  
+  const processedBlocks: ContentBlock[] = [];
+  
+  for (const block of blocks) {
+    if (block.type === 'image' && block.data) {
+      const searchQuery = block.data.searchQuery || block.data.query || block.data.alt || 'dubai travel';
+      console.log(`[Image Processor] Fetching image for: "${searchQuery}"`);
+      
+      try {
+        // Use existing image finder function
+        const imageResult = await findOrCreateArticleImage(searchQuery, [searchQuery, category], category);
+        
+        if (imageResult) {
+          processedBlocks.push({
+            ...block,
+            data: {
+              ...block.data,
+              url: imageResult.url,
+              imageUrl: imageResult.url,
+              alt: block.data.alt || imageResult.altText,
+              imageId: imageResult.imageId,
+            }
+          });
+          console.log(`[Image Processor] Image fetched: ${imageResult.url}`);
+        } else {
+          // Fallback to Unsplash placeholder
+          const unsplashQuery = encodeURIComponent(searchQuery.replace(/dubai/gi, '').trim() || 'travel');
+          processedBlocks.push({
+            ...block,
+            data: {
+              ...block.data,
+              url: `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&q=80`,
+              imageUrl: `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&q=80`,
+              alt: block.data.alt || `${searchQuery} - Dubai`,
+            }
+          });
+          console.log(`[Image Processor] Using fallback Unsplash image`);
+        }
+      } catch (error) {
+        console.error(`[Image Processor] Error fetching image:`, error);
+        // Keep block as-is with placeholder
+        processedBlocks.push({
+          ...block,
+          data: {
+            ...block.data,
+            url: `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&q=80`,
+            imageUrl: `https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200&q=80`,
+          }
+        });
+      }
+    } else {
+      processedBlocks.push(block);
+    }
+  }
+  
+  console.log(`[Image Processor] Finished processing, ${processedBlocks.length} blocks returned`);
+  return processedBlocks;
+}
+
+// RTL languages that need special handling
+const RTL_LOCALES = ["ar", "fa", "ur"];
+
+// All target languages for translation (excluding English which is source)
+// Note: DeepL does NOT support: Bengali (bn), Filipino (fil), Hebrew (he), Hindi (hi), Urdu (ur), Persian (fa)
+// For unsupported languages, we use GPT as fallback translator
+const DEEPL_SUPPORTED_LOCALES = ["ar", "zh", "ru", "fr", "de", "es", "tr", "it", "ja", "ko", "pt"] as const;
+const GPT_FALLBACK_LOCALES = ["hi", "ur", "fa"] as const; // Languages supported by GPT but not DeepL
+const TARGET_LOCALES = [...DEEPL_SUPPORTED_LOCALES, ...GPT_FALLBACK_LOCALES] as const;
+
+async function translateArticleToAllLanguages(contentId: string, content: {
+  title: string;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  blocks?: any[];
+}): Promise<{ success: number; failed: number; errors: string[] }> {
+  const result = { success: 0, failed: 0, errors: [] as string[] };
+  
+  try {
+    const { translateContent, generateContentHash } = await import("./services/deepl-service");
+    
+    console.log(`[Auto-Translation] Starting translation for content ${contentId} to ${TARGET_LOCALES.length} languages...`);
+    
+    const BATCH_SIZE = 3;
+    for (let i = 0; i < TARGET_LOCALES.length; i += BATCH_SIZE) {
+      const batch = TARGET_LOCALES.slice(i, i + BATCH_SIZE);
+      
+      const batchResults = await Promise.allSettled(
+        batch.map(async (locale) => {
+          try {
+            console.log(`[Auto-Translation] Translating to ${locale}...`);
+            
+            const translatedContent = await translateContent(
+              {
+                title: content.title,
+                metaTitle: content.metaTitle || undefined,
+                metaDescription: content.metaDescription || undefined,
+                blocks: content.blocks || [],
+              },
+              locale as any,
+              "en"
+            );
+            
+            const existingTranslation = await storage.getTranslation(contentId, locale as any);
+            
+            const isRtl = RTL_LOCALES.includes(locale);
+            const translationData = {
+              contentId,
+              locale: locale as any,
+              status: "completed" as const,
+              title: translatedContent.title || null,
+              metaTitle: translatedContent.metaTitle || null,
+              metaDescription: translatedContent.metaDescription || null,
+              blocks: translatedContent.blocks || [],
+              sourceHash: translatedContent.sourceHash,
+              translatedBy: "deepl-auto",
+              translationProvider: "deepl",
+              isManualOverride: false,
+            };
+            
+            if (existingTranslation && !existingTranslation.isManualOverride) {
+              await storage.updateTranslation(existingTranslation.id, translationData);
+            } else if (!existingTranslation) {
+              await storage.createTranslation(translationData);
+            }
+            
+            console.log(`[Auto-Translation] Successfully translated to ${locale}${isRtl ? ' (RTL)' : ''}`);
+            return { locale, success: true };
+          } catch (error) {
+            const errorMsg = `Failed to translate to ${locale}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            console.error(`[Auto-Translation] ${errorMsg}`);
+            return { locale, success: false, error: errorMsg };
+          }
+        })
+      );
+      
+      for (const batchResult of batchResults) {
+        if (batchResult.status === 'fulfilled') {
+          if (batchResult.value.success) {
+            result.success++;
+          } else {
+            result.failed++;
+            if (batchResult.value.error) {
+              result.errors.push(batchResult.value.error);
+            }
+          }
+        } else {
+          result.failed++;
+          result.errors.push(`Batch error: ${batchResult.reason}`);
+        }
+      }
+      
+      if (i + BATCH_SIZE < TARGET_LOCALES.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    console.log(`[Auto-Translation] Complete for content ${contentId}: ${result.success} successful, ${result.failed} failed`);
+  } catch (error) {
+    const errorMsg = `Translation process error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    console.error(`[Auto-Translation] ${errorMsg}`);
+    result.errors.push(errorMsg);
+  }
+  
+  return result;
+}
+
+export type AutoProcessResult = {
+  feedsProcessed: number;
+  itemsFound: number;
+  clustersCreated: number;
+  articlesGenerated: number;
+  errors: string[];
+};
+
+export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
+  const result: AutoProcessResult = {
+    feedsProcessed: 0,
+    itemsFound: 0,
+    clustersCreated: 0,
+    articlesGenerated: 0,
+    errors: [],
+  };
+
+  try {
+    const feeds = await storage.getRssFeeds();
+    const activeFeeds = feeds.filter(f => f.isActive);
+    
+    if (activeFeeds.length === 0) {
+      console.log("[RSS Auto-Process] No active RSS feeds found");
+      return result;
+    }
+
+    console.log(`[RSS Auto-Process] Processing ${activeFeeds.length} active feeds...`);
+
+    for (const feed of activeFeeds) {
+      try {
+        const items = await parseRssFeed(feed.url);
+        result.feedsProcessed++;
+        result.itemsFound += items.length;
+
+        console.log(`[RSS Auto-Process] Feed "${feed.name}" returned ${items.length} items`);
+
+        for (const item of items) {
+          const fingerprint = generateFingerprint(item.title, item.link);
+          const existingFp = await storage.getContentFingerprintByHash(fingerprint);
+          if (existingFp) {
+            continue;
+          }
+
+          let cluster = await storage.findSimilarCluster(item.title);
+          
+          if (!cluster) {
+            cluster = await storage.createTopicCluster({
+              topic: item.title,
+              status: "pending",
+              articleCount: 0,
+            });
+            result.clustersCreated++;
+          }
+
+          await storage.createTopicClusterItem({
+            clusterId: cluster.id,
+            sourceTitle: item.title,
+            sourceDescription: item.description || null,
+            sourceUrl: item.link || null,
+            rssFeedId: feed.id || null,
+            pubDate: item.pubDate ? new Date(item.pubDate) : null,
+          });
+
+          try {
+            await storage.createContentFingerprint({
+              contentId: null,
+              fingerprint: fingerprint,
+              sourceUrl: item.link || null,
+              sourceTitle: item.title,
+              rssFeedId: feed.id || null,
+            });
+          } catch (e) {
+            // Fingerprint might already exist
+          }
+
+          const clusterItems = await storage.getTopicClusterItems(cluster.id);
+          await storage.updateTopicCluster(cluster.id, {
+            articleCount: clusterItems.length,
+            similarityScore: clusterItems.length > 1 ? Math.min(90, 50 + clusterItems.length * 10) : 50,
+          });
+        }
+      } catch (feedError) {
+        const errorMsg = `Failed to process feed "${feed.name}": ${feedError}`;
+        console.error(`[RSS Auto-Process] ${errorMsg}`);
+        result.errors.push(errorMsg);
+      }
+    }
+
+    const pendingClusters = await storage.getTopicClusters({ status: "pending" });
+    const openai = getOpenAIClient();
+    
+    if (!openai) {
+      console.log("[RSS Auto-Process] OpenAI not configured, skipping article generation");
+      return result;
+    }
+
+    console.log(`[RSS Auto-Process] Found ${pendingClusters.length} pending clusters to process`);
+
+    for (const cluster of pendingClusters) {
+      try {
+        const items = await storage.getTopicClusterItems(cluster.id);
+        if (items.length === 0) continue;
+
+        const sources = items.map(item => ({
+          title: item.sourceTitle,
+          description: item.sourceDescription || '',
+          url: item.sourceUrl || '',
+          date: item.pubDate?.toISOString() || '',
+        }));
+
+        const combinedText = sources.map(s => `${s.title} ${s.description}`).join(' ');
+        const category = determineContentCategory(combinedText, '');
+        const mapping = CATEGORY_PERSONALITY_MAPPING[category] || CATEGORY_PERSONALITY_MAPPING.news;
+        const personality = CONTENT_WRITER_PERSONALITIES[mapping.personality];
+        const structure = ARTICLE_STRUCTURES[mapping.structure];
+
+        const systemPrompt = getContentWriterSystemPrompt(category, personality, structure);
+        const userPrompt = buildArticleGenerationPrompt(sources, category, personality, structure);
+
+        // Generate article with validation and retries
+        let validatedData: ArticleResponse | null = null;
+        let attempts = 0;
+        const maxAttempts = 3;
+        let lastResponse: unknown = null;
+        let lastErrors: string[] = [];
+
+        while (!validatedData && attempts < maxAttempts) {
+          attempts++;
+          console.log(`[RSS Auto-Process] Article generation attempt ${attempts}/${maxAttempts} for cluster: ${cluster.topic}`);
+
+          const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ];
+
+          // Add retry prompt if this is a retry
+          if (attempts > 1 && lastErrors.length > 0) {
+            messages.push({ 
+              role: "user", 
+              content: buildRetryPrompt(lastErrors, lastResponse) 
+            });
+          }
+
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages,
+            response_format: { type: "json_object" },
+            temperature: attempts === 1 ? 0.7 : 0.5, // Lower temp on retries for more predictable output
+            max_tokens: 6000, // Increased for longer articles
+          });
+
+          lastResponse = JSON.parse(completion.choices[0].message.content || "{}");
+          const validation = validateArticleResponse(lastResponse);
+
+          if (validation.isValid && validation.data) {
+            validatedData = validation.data;
+            console.log(`[RSS Auto-Process] Validation passed on attempt ${attempts} - ${validation.wordCount} words`);
+          } else {
+            lastErrors = validation.errors;
+            console.log(`[RSS Auto-Process] Validation failed (attempt ${attempts}): ${validation.errors.join(", ")}`);
+          }
+        }
+
+        // If validation never passed, skip this cluster
+        if (!validatedData) {
+          const errorMsg = `Failed to generate valid article after ${maxAttempts} attempts for "${cluster.topic}". Last errors: ${lastErrors.join(", ")}`;
+          console.error(`[RSS Auto-Process] ${errorMsg}`);
+          result.errors.push(errorMsg);
+          continue;
+        }
+
+        const mergedData = validatedData;
+
+        const slug = (mergedData.title || cluster.topic)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .substring(0, 80);
+
+        const textContent = mergedData.content || '';
+        const wordCount = textContent.replace(/<[^>]*>/g, '').split(/\s+/).filter((w: string) => w.length > 0).length;
+
+        // STEP 1: Fetch hero image BEFORE creating blocks
+        const imageSearchTerms = mergedData.imageSearchTerms || [];
+        const articleKeywords = mergedData.secondaryKeywords || [];
+        const articleTopic = mergedData.title || cluster.topic;
+        
+        console.log(`[RSS Auto-Process] Finding image for article: "${articleTopic}" with terms: ${imageSearchTerms.join(", ")}`);
+        
+        let heroImageUrl: string | null = null;
+        let heroImageAlt: string | null = null;
+        
+        const searchAttempts = [
+          imageSearchTerms, // AI-generated terms first
+          [articleTopic], // Article title
+          articleKeywords.slice(0, 3), // Top keywords
+          [`Dubai ${category}`], // Category fallback
+        ];
+        
+        for (const searchTerms of searchAttempts) {
+          if (heroImageUrl) break;
+          if (searchTerms.length === 0) continue;
+          
+          const searchQuery = searchTerms.join(" ");
+          console.log(`[RSS Auto-Process] Image search attempt: "${searchQuery}"`);
+          
+          const articleImage = await findOrCreateArticleImage(
+            searchQuery,
+            searchTerms as string[],
+            category
+          );
+          
+          if (articleImage) {
+            heroImageUrl = articleImage.url;
+            heroImageAlt = articleImage.altText;
+            console.log(`[RSS Auto-Process] Attached image from ${articleImage.source}: ${articleImage.url}`);
+          }
+        }
+        
+        if (!heroImageUrl) {
+          console.log(`[RSS Auto-Process] No image found after all attempts, creating article without hero image`);
+        }
+
+        // STEP 2: Create all content blocks with validated data
+        // Provide BOTH formats to ensure compatibility with editor AND renderer
+        let blocks: ContentBlock[] = [];
+        let blockOrder = 0;
+        const timestamp = Date.now();
+
+        // Hero block - uses 'image' for renderer
+        blocks.push({
+          id: `hero-${timestamp}-${blockOrder}`,
+          type: "hero",
+          data: {
+            title: mergedData.title || cluster.topic,
+            subtitle: mergedData.metaDescription || '',
+            image: heroImageUrl || '',
+            alt: heroImageAlt || ''
+          },
+          order: blockOrder++
+        });
+
+        // Split main content into 3 sections for interspersed images
+        const mainContent = mergedData.content || '';
+        const paragraphs = mainContent.split(/\n\n+/).filter((p: string) => p.trim().length > 0);
+        const sectionSize = Math.ceil(paragraphs.length / 3);
+        
+        const section1 = paragraphs.slice(0, sectionSize).join('\n\n');
+        const section2 = paragraphs.slice(sectionSize, sectionSize * 2).join('\n\n');
+        const section3 = paragraphs.slice(sectionSize * 2).join('\n\n');
+
+        // Highlights block - provide BOTH formats for compatibility
+        blocks.push({
+          id: `highlights-${timestamp}-${blockOrder}`,
+          type: "highlights",
+          data: { 
+            title: "Quick Facts",
+            content: mergedData.quickFacts.join('\n'),
+            items: mergedData.quickFacts
+          },
+          order: blockOrder++
+        });
+
+        // Content section 1
+        blocks.push({
+          id: `text-${timestamp}-${blockOrder}`,
+          type: "text",
+          data: { heading: '', content: section1 },
+          order: blockOrder++
+        });
+
+        // Image block 1
+        blocks.push({
+          id: `image-${timestamp}-${blockOrder}`,
+          type: "image",
+          data: { 
+            searchQuery: `Dubai ${category} tourism ${(mergedData.secondaryKeywords || [])[0] || 'travel'}`,
+            alt: `Dubai ${category} - ${mergedData.title}`,
+            caption: `Explore the best of Dubai ${category}`
+          },
+          order: blockOrder++
+        });
+
+        // Content section 2
+        blocks.push({
+          id: `text-${timestamp}-${blockOrder}`,
+          type: "text",
+          data: { heading: '', content: section2 },
+          order: blockOrder++
+        });
+
+        // Image block 2
+        blocks.push({
+          id: `image-${timestamp}-${blockOrder}`,
+          type: "image",
+          data: { 
+            searchQuery: `Dubai ${(mergedData.secondaryKeywords || [])[1] || 'attractions'} experience`,
+            alt: `Dubai travel experience - ${mergedData.title}`,
+            caption: `Discover Dubai's unique experiences`
+          },
+          order: blockOrder++
+        });
+
+        // Content section 3
+        blocks.push({
+          id: `text-${timestamp}-${blockOrder}`,
+          type: "text",
+          data: { heading: '', content: section3 },
+          order: blockOrder++
+        });
+
+        // Image block 3
+        blocks.push({
+          id: `image-${timestamp}-${blockOrder}`,
+          type: "image",
+          data: { 
+            searchQuery: `Dubai ${(mergedData.secondaryKeywords || [])[2] || 'landmarks'} skyline`,
+            alt: `Dubai skyline and landmarks - ${mergedData.title}`,
+            caption: `The stunning Dubai skyline`
+          },
+          order: blockOrder++
+        });
+
+        // Tips block - provide BOTH formats for compatibility
+        blocks.push({
+          id: `tips-${timestamp}-${blockOrder}`,
+          type: "tips",
+          data: { 
+            title: "Pro Tips",
+            content: mergedData.proTips.join('\n'),
+            tips: mergedData.proTips
+          },
+          order: blockOrder++
+        });
+
+        // FAQ block - single block with questions array (for proper heading/accordion display)
+        blocks.push({
+          id: `faq-${timestamp}-${blockOrder}`,
+          type: "faq",
+          data: {
+            title: "Frequently Asked Questions",
+            questions: mergedData.faqs.map((faq) => ({
+              question: faq.question,
+              answer: faq.answer
+            }))
+          },
+          order: blockOrder++
+        });
+
+        // CTA block
+        blocks.push({
+          id: `cta-${timestamp}-${blockOrder}`,
+          type: "cta",
+          data: {
+            title: "Plan Your Visit",
+            content: "Ready to experience this? Start planning your Dubai adventure today!",
+            buttonText: "Explore More",
+            buttonLink: "/articles"
+          },
+          order: blockOrder++
+        });
+
+        // Process image blocks to fetch real images from Freepik/AI
+        console.log(`[RSS Auto-Process] Fetching images for ${blocks.filter(b => b.type === 'image').length} image blocks...`);
+        blocks = await processImageBlocks(blocks, category);
+
+        const content = await storage.createContent({
+          title: mergedData.title || cluster.topic,
+          slug: `${slug}-${Date.now()}`,
+          type: "article",
+          status: "draft",
+          metaTitle: mergedData.title || cluster.topic,
+          metaDescription: mergedData.metaDescription || null,
+          primaryKeyword: mergedData.primaryKeyword || null,
+          secondaryKeywords: mergedData.secondaryKeywords || [],
+          blocks: blocks as any,
+          wordCount: wordCount,
+          heroImage: heroImageUrl,
+          heroImageAlt: heroImageAlt,
+        });
+
+        const articleCategory = category === 'food' || category === 'restaurants' || category === 'dining' 
+          ? 'food' 
+          : category === 'attractions' || category === 'activities' 
+            ? 'attractions'
+            : category === 'hotels' || category === 'accommodation'
+              ? 'hotels'
+              : category === 'transport' || category === 'transportation' || category === 'logistics'
+                ? 'transport'
+                : category === 'events' || category === 'festivals'
+                  ? 'events'
+                  : category === 'tips' || category === 'guides'
+                    ? 'tips'
+                    : category === 'shopping' || category === 'deals'
+                      ? 'shopping'
+                      : 'news';
+
+        await storage.createArticle({
+          contentId: content.id,
+          category: articleCategory as any,
+          urgencyLevel: mergedData.urgencyLevel || 'relevant',
+          targetAudience: mergedData.targetAudience || [],
+          personality: mapping.personality,
+          tone: mapping.tone,
+          quickFacts: mergedData.quickFacts || [],
+          proTips: mergedData.proTips || [],
+          warnings: mergedData.warnings || [],
+          faq: mergedData.faqs || [],
+        });
+
+        for (const item of items) {
+          if (item.sourceUrl) {
+            const fp = generateFingerprint(item.sourceTitle, item.sourceUrl);
+            try {
+              await storage.createContentFingerprint({
+                contentId: content.id,
+                fingerprint: fp,
+                sourceUrl: item.sourceUrl,
+                sourceTitle: item.sourceTitle,
+                rssFeedId: item.rssFeedId || null,
+              });
+            } catch (e) {
+              // Already exists
+            }
+          }
+          await storage.updateTopicClusterItem(item.id, { isUsedInMerge: true });
+        }
+
+        await storage.updateTopicCluster(cluster.id, {
+          status: "merged",
+          mergedContentId: content.id,
+        });
+
+        result.articlesGenerated++;
+        console.log(`[RSS Auto-Process] Generated article: "${mergedData.title}" (${wordCount} words)`);
+
+        // Auto-translate to all 16 target languages (background, non-blocking)
+        console.log(`[RSS Auto-Process] Starting automatic translation for article: ${content.id}`);
+        translateArticleToAllLanguages(content.id, {
+          title: content.title,
+          metaTitle: content.metaTitle,
+          metaDescription: content.metaDescription,
+          blocks: content.blocks as any[],
+        }).then((translationResult) => {
+          console.log(`[RSS Auto-Process] Translation complete for ${content.id}: ${translationResult.success} successful, ${translationResult.failed} failed`);
+        }).catch((err) => {
+          console.error(`[RSS Auto-Process] Translation error for ${content.id}:`, err);
+        });
+
+      } catch (clusterError) {
+        const errorMsg = `Failed to generate article for cluster "${cluster.topic}": ${clusterError}`;
+        console.error(`[RSS Auto-Process] ${errorMsg}`);
+        result.errors.push(errorMsg);
+      }
+    }
+
+  } catch (error) {
+    const errorMsg = `Auto-process failed: ${error}`;
+    console.error(`[RSS Auto-Process] ${errorMsg}`);
+    result.errors.push(errorMsg);
+  }
+
+  console.log(`[RSS Auto-Process] Complete - Feeds: ${result.feedsProcessed}, Items: ${result.itemsFound}, New Clusters: ${result.clustersCreated}, Articles: ${result.articlesGenerated}`);
+  return result;
 }
 
 export async function registerRoutes(
@@ -1700,9 +2602,13 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/translations/:id", async (req, res) => {
+  app.get("/api/translations/:id", async (req, res, next) => {
+    // Skip to next route if this is a reserved path
+    if (["stats"].includes(req.params.id)) {
+      return next('route');
+    }
     try {
-      const translation = await storage.getTranslation(req.params.id);
+      const translation = await storage.getTranslationById(req.params.id);
       if (!translation) {
         return res.status(404).json({ error: "Translation not found" });
       }
@@ -1887,6 +2793,34 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching translation status:", error);
       res.status(500).json({ error: "Failed to fetch translation status" });
+    }
+  });
+
+  // Cancel in-progress translations for content
+  app.post("/api/contents/:id/cancel-translation", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const content = await storage.getContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      const translations = await storage.getTranslationsByContentId(req.params.id);
+      const pendingTranslations = translations.filter(t => t.status === "pending" || t.status === "in_progress");
+      
+      let cancelledCount = 0;
+      for (const translation of pendingTranslations) {
+        await storage.updateTranslation(translation.id, { status: "cancelled" });
+        cancelledCount++;
+      }
+
+      res.json({
+        message: "Translation cancelled",
+        cancelledCount,
+        contentId: req.params.id
+      });
+    } catch (error) {
+      console.error("Error cancelling translation:", error);
+      res.status(500).json({ error: "Failed to cancel translation" });
     }
   });
 
@@ -2283,6 +3217,437 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== Topic Clusters API (RSS Aggregation) ====================
+  
+  // Get all topic clusters
+  app.get("/api/topic-clusters", requireAuth, async (req, res) => {
+    try {
+      const { status } = req.query;
+      const clusters = await storage.getTopicClusters(status ? { status: status as string } : undefined);
+      
+      // Get items for each cluster
+      const clustersWithItems = await Promise.all(
+        clusters.map(async (cluster) => {
+          const items = await storage.getTopicClusterItems(cluster.id);
+          return { ...cluster, items };
+        })
+      );
+      
+      res.json(clustersWithItems);
+    } catch (error) {
+      console.error("Error fetching topic clusters:", error);
+      res.status(500).json({ error: "Failed to fetch topic clusters" });
+    }
+  });
+
+  // Add articles to aggregation queue (smart dedup + clustering)
+  const rssAggregateSchema = z.object({
+    items: z.array(z.object({
+      title: z.string().min(1),
+      description: z.string().optional(),
+      link: z.string().url().optional(),
+      pubDate: z.string().optional(),
+      rssFeedId: z.string().optional(),
+    })).min(1).max(100),
+  });
+
+  app.post("/api/rss-aggregate", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const parsed = rssAggregateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid data", details: parsed.error.errors });
+      }
+
+      const { items } = parsed.data;
+      const clustered: { clusterId: string; topic: string; itemCount: number }[] = [];
+      const newClusters: { clusterId: string; topic: string }[] = [];
+      const skippedDuplicates: string[] = [];
+
+      for (const item of items) {
+        // Check if this exact article was already processed (fingerprint check)
+        const fingerprint = generateFingerprint(item.title, item.link);
+        const existingFp = await storage.getContentFingerprintByHash(fingerprint);
+        if (existingFp) {
+          skippedDuplicates.push(item.title);
+          continue;
+        }
+
+        // Find or create a topic cluster for this article
+        let cluster = await storage.findSimilarCluster(item.title);
+        
+        if (!cluster) {
+          // Create new cluster
+          cluster = await storage.createTopicCluster({
+            topic: item.title,
+            status: "pending",
+            articleCount: 0,
+          });
+          newClusters.push({ clusterId: cluster.id, topic: cluster.topic });
+        }
+
+        // Add item to cluster
+        const clusterItem = await storage.createTopicClusterItem({
+          clusterId: cluster.id,
+          sourceTitle: item.title,
+          sourceDescription: item.description || null,
+          sourceUrl: item.link || null,
+          rssFeedId: item.rssFeedId || null,
+          pubDate: item.pubDate ? new Date(item.pubDate) : null,
+        });
+
+        // Record fingerprint immediately to prevent re-adding the same item
+        try {
+          await storage.createContentFingerprint({
+            contentId: null, // Not yet merged into content
+            fingerprint: fingerprint,
+            sourceUrl: item.link || null,
+            sourceTitle: item.title,
+            rssFeedId: item.rssFeedId || null,
+          });
+        } catch (e) {
+          // Fingerprint might already exist in rare edge case
+        }
+
+        // Update cluster article count
+        const clusterItems = await storage.getTopicClusterItems(cluster.id);
+        await storage.updateTopicCluster(cluster.id, {
+          articleCount: clusterItems.length,
+          similarityScore: clusterItems.length > 1 ? Math.min(90, 50 + clusterItems.length * 10) : 50,
+        });
+
+        const existing = clustered.find(c => c.clusterId === cluster!.id);
+        if (existing) {
+          existing.itemCount++;
+        } else {
+          clustered.push({ clusterId: cluster.id, topic: cluster.topic, itemCount: 1 });
+        }
+      }
+
+      res.status(201).json({
+        message: `Processed ${items.length} articles`,
+        clustered,
+        newClusters,
+        skippedDuplicates,
+        summary: {
+          totalProcessed: items.length,
+          clustersAffected: clustered.length,
+          newClustersCreated: newClusters.length,
+          duplicatesSkipped: skippedDuplicates.length,
+        }
+      });
+    } catch (error) {
+      console.error("Error aggregating RSS items:", error);
+      res.status(500).json({ error: "Failed to aggregate RSS items" });
+    }
+  });
+
+  // AI-powered merge cluster into single article with enhanced content writer guidelines
+  app.post("/api/topic-clusters/:id/merge", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const cluster = await storage.getTopicCluster(req.params.id);
+      if (!cluster) {
+        return res.status(404).json({ error: "Topic cluster not found" });
+      }
+
+      const items = await storage.getTopicClusterItems(cluster.id);
+      if (items.length === 0) {
+        return res.status(400).json({ error: "No items in cluster to merge" });
+      }
+
+      // Prepare sources for AI merging
+      const sources = items.map(item => ({
+        title: item.sourceTitle,
+        description: item.sourceDescription || '',
+        url: item.sourceUrl || '',
+        date: item.pubDate?.toISOString() || '',
+      }));
+
+      // Determine content category based on source material
+      const combinedText = sources.map(s => `${s.title} ${s.description}`).join(' ');
+      const category = determineContentCategory(combinedText, '');
+      
+      // Get the appropriate personality and structure for this category
+      const mapping = CATEGORY_PERSONALITY_MAPPING[category] || CATEGORY_PERSONALITY_MAPPING.news;
+      const personality = CONTENT_WRITER_PERSONALITIES[mapping.personality];
+      const structure = ARTICLE_STRUCTURES[mapping.structure];
+
+      // Use OpenAI to merge the articles with enhanced prompting
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(503).json({ error: "OpenAI API not configured. Please set OPENAI_API_KEY." });
+      }
+
+      // Build the enhanced system and user prompts
+      const systemPrompt = getContentWriterSystemPrompt(category, personality, structure);
+      const userPrompt = buildArticleGenerationPrompt(sources, category, personality, structure);
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+        max_tokens: 4000,
+      });
+
+      const mergedData = JSON.parse(completion.choices[0].message.content || "{}");
+
+      // Create merged content with enhanced data
+      const slug = (mergedData.title || cluster.topic)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .substring(0, 80);
+
+      // Build content blocks from the generated content
+      const blocks: ContentBlock[] = [];
+      let blockOrder = 0;
+
+      // Hero block
+      blocks.push({
+        id: `hero-${Date.now()}-${blockOrder}`,
+        type: "hero",
+        data: {
+          title: mergedData.title || cluster.topic,
+          subtitle: mergedData.metaDescription || '',
+          overlayText: ''
+        },
+        order: blockOrder++
+      });
+
+      // Main content text block
+      if (mergedData.content) {
+        blocks.push({
+          id: `text-${Date.now()}-${blockOrder}`,
+          type: "text",
+          data: {
+            heading: '',
+            content: mergedData.content,
+          },
+          order: blockOrder++
+        });
+      }
+
+      // Quick Facts / Highlights block
+      if (mergedData.quickFacts?.length > 0) {
+        blocks.push({
+          id: `highlights-${Date.now()}-${blockOrder}`,
+          type: "highlights",
+          data: {
+            title: "Quick Facts",
+            items: mergedData.quickFacts,
+          },
+          order: blockOrder++
+        });
+      }
+
+      // Pro Tips block
+      if (mergedData.proTips?.length > 0) {
+        blocks.push({
+          id: `tips-${Date.now()}-${blockOrder}`,
+          type: "tips",
+          data: {
+            title: "Pro Tips",
+            tips: mergedData.proTips,
+          },
+          order: blockOrder++
+        });
+      }
+
+      // FAQ block
+      if (mergedData.faqs?.length > 0) {
+        blocks.push({
+          id: `faq-${Date.now()}-${blockOrder}`,
+          type: "faq",
+          data: {
+            title: "Frequently Asked Questions",
+            faqs: mergedData.faqs.map((faq: { question: string; answer: string }) => ({
+              question: faq.question,
+              answer: faq.answer
+            })),
+          },
+          order: blockOrder++
+        });
+      }
+
+      // CTA block
+      blocks.push({
+        id: `cta-${Date.now()}-${blockOrder}`,
+        type: "cta",
+        data: {
+          title: "Plan Your Visit",
+          content: "Ready to experience this? Start planning your Dubai adventure today!",
+          buttonText: "Explore More",
+          buttonLink: "/articles"
+        },
+        order: blockOrder++
+      });
+
+      // Calculate word count
+      const textContent = mergedData.content || '';
+      const wordCount = textContent.replace(/<[^>]*>/g, '').split(/\s+/).filter((w: string) => w.length > 0).length;
+
+      const content = await storage.createContent({
+        title: mergedData.title || cluster.topic,
+        slug: `${slug}-${Date.now()}`,
+        type: "article",
+        status: "draft",
+        metaTitle: mergedData.title || cluster.topic,
+        metaDescription: mergedData.metaDescription || null,
+        primaryKeyword: mergedData.primaryKeyword || null,
+        secondaryKeywords: mergedData.secondaryKeywords || [],
+        blocks: blocks as any,
+        wordCount: wordCount,
+      });
+
+      // Create article entry with enhanced fields
+      const articleCategory = category === 'food' || category === 'restaurants' || category === 'dining' 
+        ? 'food' 
+        : category === 'attractions' || category === 'activities' 
+          ? 'attractions'
+          : category === 'hotels' || category === 'accommodation'
+            ? 'hotels'
+            : category === 'transport' || category === 'transportation' || category === 'logistics'
+              ? 'transport'
+              : category === 'events' || category === 'festivals'
+                ? 'events'
+                : category === 'tips' || category === 'guides'
+                  ? 'tips'
+                  : category === 'shopping' || category === 'deals'
+                    ? 'shopping'
+                    : 'news';
+
+      await storage.createArticle({
+        contentId: content.id,
+        category: articleCategory as any,
+        urgencyLevel: mergedData.urgencyLevel || 'relevant',
+        targetAudience: mergedData.targetAudience || [],
+        personality: mapping.personality,
+        tone: mapping.tone,
+        quickFacts: mergedData.quickFacts || [],
+        proTips: mergedData.proTips || [],
+        warnings: mergedData.warnings || [],
+        faq: mergedData.faqs || [],
+      });
+
+      // Create fingerprints for all source items
+      for (const item of items) {
+        if (item.sourceUrl) {
+          const fp = generateFingerprint(item.sourceTitle, item.sourceUrl);
+          try {
+            await storage.createContentFingerprint({
+              contentId: content.id,
+              fingerprint: fp,
+              sourceUrl: item.sourceUrl,
+              sourceTitle: item.sourceTitle,
+              rssFeedId: item.rssFeedId || null,
+            });
+          } catch (e) {
+            // Fingerprint might already exist
+          }
+        }
+        await storage.updateTopicClusterItem(item.id, { isUsedInMerge: true });
+      }
+
+      // Update cluster status
+      await storage.updateTopicCluster(cluster.id, {
+        status: "merged",
+        mergedContentId: content.id,
+      });
+
+      // Auto-translate to all 16 target languages (background, non-blocking)
+      console.log(`[Merge] Starting automatic translation for article: ${content.id}`);
+      translateArticleToAllLanguages(content.id, {
+        title: content.title,
+        metaTitle: content.metaTitle,
+        metaDescription: content.metaDescription,
+        blocks: content.blocks as any[],
+      }).then((translationResult) => {
+        console.log(`[Merge] Translation complete for ${content.id}: ${translationResult.success} successful, ${translationResult.failed} failed`);
+      }).catch((err) => {
+        console.error(`[Merge] Translation error for ${content.id}:`, err);
+      });
+
+      res.status(201).json({
+        message: `Successfully merged ${items.length} articles using ${personality.name} personality`,
+        content,
+        mergedFrom: items.length,
+        sources: mergedData.sources || [],
+        category,
+        personality: mapping.personality,
+        structure: mapping.structure,
+        wordCount,
+        translationsQueued: TARGET_LOCALES.length,
+      });
+    } catch (error) {
+      console.error("Error merging cluster:", error);
+      res.status(500).json({ error: "Failed to merge articles" });
+    }
+  });
+
+  // Dismiss a cluster (mark as not needing merge)
+  app.post("/api/topic-clusters/:id/dismiss", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const cluster = await storage.updateTopicCluster(req.params.id, { status: "dismissed" });
+      if (!cluster) {
+        return res.status(404).json({ error: "Topic cluster not found" });
+      }
+      res.json({ message: "Cluster dismissed", cluster });
+    } catch (error) {
+      console.error("Error dismissing cluster:", error);
+      res.status(500).json({ error: "Failed to dismiss cluster" });
+    }
+  });
+
+  // Delete a topic cluster
+  app.delete("/api/topic-clusters/:id", requirePermission("canDelete"), checkReadOnlyMode, async (req, res) => {
+    try {
+      await storage.deleteTopicCluster(req.params.id);
+      res.json({ message: "Cluster deleted" });
+    } catch (error) {
+      console.error("Error deleting cluster:", error);
+      res.status(500).json({ error: "Failed to delete cluster" });
+    }
+  });
+
+  // ==================== Automatic RSS Processing ====================
+  
+  // POST /api/rss/auto-process - Manual trigger for automatic RSS processing
+  app.post("/api/rss/auto-process", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
+    try {
+      console.log("[RSS Auto-Process] Manual trigger started...");
+      const result = await autoProcessRssFeeds();
+      res.status(200).json({
+        message: "RSS auto-processing completed",
+        ...result,
+      });
+    } catch (error) {
+      console.error("[RSS Auto-Process] Manual trigger failed:", error);
+      res.status(500).json({ error: "Failed to auto-process RSS feeds" });
+    }
+  });
+
+  // GET /api/rss/auto-process/status - Check last run status (no auth required for monitoring)
+  app.get("/api/rss/auto-process/status", async (req, res) => {
+    try {
+      const feeds = await storage.getRssFeeds();
+      const activeFeeds = feeds.filter(f => f.isActive);
+      const pendingClusters = await storage.getTopicClusters({ status: "pending" });
+      
+      res.json({
+        activeFeedsCount: activeFeeds.length,
+        pendingClustersCount: pendingClusters.length,
+        lastCheckTimestamp: new Date().toISOString(),
+        autoProcessIntervalMinutes: 30,
+      });
+    } catch (error) {
+      console.error("[RSS Auto-Process] Status check failed:", error);
+      res.status(500).json({ error: "Failed to get auto-process status" });
+    }
+  });
+
   app.get("/api/affiliate-links", requireAuth, async (req, res) => {
     try {
       const { contentId } = req.query;
@@ -2651,14 +4016,17 @@ Format the response as JSON with the following structure:
         return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
       }
 
-      const { title, summary, sourceUrl, sourceText, inputType = "title_only" } = req.body;
+      const { title, topic, summary, sourceUrl, sourceText, inputType = "title_only" } = req.body;
 
-      if (!title) {
+      // Accept either 'title' or 'topic' for flexibility
+      const articleTitle = title || topic;
+      
+      if (!articleTitle) {
         return res.status(400).json({ error: "Title is required" });
       }
 
       // Build context based on input type
-      let contextInfo = `Title: "${title}"`;
+      let contextInfo = `Title: "${articleTitle}"`;
       if (summary) contextInfo += `\nSummary: ${summary}`;
       if (sourceText) contextInfo += `\nSource text: ${sourceText}`;
       if (sourceUrl) contextInfo += `\nSource URL: ${sourceUrl}`;
@@ -2785,7 +4153,47 @@ Return valid JSON only.`;
       });
 
       const generatedArticle = JSON.parse(response.choices[0].message.content || "{}");
-      res.json(generatedArticle);
+      
+      // Fetch image from Freepik or AI after article generation
+      let heroImage = null;
+      try {
+        const keywords = generatedArticle.meta?.keywords || [];
+        const category = generatedArticle.analysis?.category?.charAt(0) || "F";
+        const categoryMap: Record<string, string> = {
+          "A": "attractions",
+          "B": "hotels", 
+          "C": "food",
+          "D": "transport",
+          "E": "events",
+          "F": "tips",
+          "G": "news",
+          "H": "shopping",
+        };
+        const mappedCategory = categoryMap[category] || "general";
+        
+        console.log(`[AI Article] Fetching image for: "${articleTitle}", category: ${mappedCategory}`);
+        
+        const imageResult = await findOrCreateArticleImage(articleTitle, keywords, mappedCategory);
+        if (imageResult) {
+          heroImage = {
+            url: imageResult.url,
+            alt: imageResult.altText,
+            source: imageResult.source,
+            imageId: imageResult.imageId
+          };
+          console.log(`[AI Article] Found image from ${imageResult.source}: ${imageResult.url}`);
+        } else {
+          console.log(`[AI Article] No image found for article`);
+        }
+      } catch (imageError) {
+        console.error("[AI Article] Error fetching image:", imageError);
+      }
+      
+      // Add image to response
+      res.json({
+        ...generatedArticle,
+        heroImage
+      });
     } catch (error) {
       console.error("Error generating AI article:", error);
       res.status(500).json({ error: "Failed to generate article" });
@@ -3007,7 +4415,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const { topic, category } = req.body;
+      const { topic, category, fetchImages } = req.body;
       if (!topic || typeof topic !== "string" || topic.trim().length === 0) {
         return res.status(400).json({ error: "Article topic is required" });
       }
@@ -3015,6 +4423,15 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       const result = await generateArticleContent(topic.trim(), category);
       if (!result) {
         return res.status(500).json({ error: "Failed to generate article content" });
+      }
+
+      // Process image blocks to fetch real images from Freepik/AI if requested
+      if (fetchImages !== false && result.content?.blocks) {
+        console.log(`[Article Generator] Processing image blocks for: ${topic}`);
+        result.content.blocks = await processImageBlocks(
+          result.content.blocks as ContentBlock[], 
+          result.article?.category || category || "general"
+        );
       }
 
       res.json(result);
@@ -5992,6 +7409,359 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     } catch (error) {
       console.error("Error applying template:", error);
       res.status(500).json({ error: "Failed to apply template" });
+    }
+  });
+
+  // ============================================================================
+  // TRANSLATIONS - DeepL Multi-Language SEO System
+  // ============================================================================
+
+  // Get translation statistics for admin dashboard
+  app.get("/api/translations/stats", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const contents = await storage.getContents();
+      const publishedContents = contents.filter(c => c.status === "published");
+      const allTranslations = await storage.getAllTranslations();
+      
+      const supportedLocales = ["ar", "hi", "zh", "ru", "ur", "fr", "de", "fa", "bn", "fil", "es", "tr", "it", "ja", "ko", "he"];
+      
+      const languageStats = supportedLocales.map(locale => {
+        const localeTranslations = allTranslations.filter(t => t.locale === locale && t.status === "completed");
+        const translated = localeTranslations.length;
+        const pending = publishedContents.length - translated;
+        const percentage = publishedContents.length > 0 ? Math.round((translated / publishedContents.length) * 100) : 0;
+        return { locale, translated, pending: Math.max(0, pending), percentage };
+      });
+
+      const totalTranslated = new Set(allTranslations.filter(t => t.status === "completed").map(t => t.contentId)).size;
+      
+      res.json({
+        totalContent: publishedContents.length,
+        translatedContent: totalTranslated,
+        pendingContent: publishedContents.length - totalTranslated,
+        languageStats,
+      });
+    } catch (error) {
+      console.error("Error fetching translation stats:", error);
+      res.status(500).json({ error: "Failed to fetch translation stats" });
+    }
+  });
+
+  // Get all translations with content info (admin list view)
+  app.get("/api/translations", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const contents = await storage.getContents();
+      const publishedContents = contents.filter(c => c.status === "published");
+      const allTranslations = await storage.getAllTranslations();
+
+      const contentTranslations = publishedContents.map(content => {
+        const contentTrans = allTranslations.filter(t => t.contentId === content.id);
+        const completedLocales = contentTrans.filter(t => t.status === "completed").map(t => t.locale);
+        return {
+          contentId: content.id,
+          title: content.title,
+          slug: content.slug,
+          type: content.type,
+          completedLocales,
+          translationCount: completedLocales.length,
+        };
+      });
+
+      res.json(contentTranslations);
+    } catch (error) {
+      console.error("Error fetching translations:", error);
+      res.status(500).json({ error: "Failed to fetch translations" });
+    }
+  });
+
+  // Get translations for a content item
+  app.get("/api/translations/:contentId", async (req, res) => {
+    try {
+      const translations = await storage.getTranslationsByContentId(req.params.contentId);
+      res.json(translations);
+    } catch (error) {
+      console.error("Error fetching translations:", error);
+      res.status(500).json({ error: "Failed to fetch translations" });
+    }
+  });
+
+  // Get a specific translation
+  app.get("/api/translations/:contentId/:locale", async (req, res) => {
+    try {
+      const { contentId, locale } = req.params;
+      const translation = await storage.getTranslation(contentId, locale as any);
+      if (!translation) {
+        return res.status(404).json({ error: "Translation not found" });
+      }
+      res.json(translation);
+    } catch (error) {
+      console.error("Error fetching translation:", error);
+      res.status(500).json({ error: "Failed to fetch translation" });
+    }
+  });
+
+  // Translate content to a specific language using DeepL
+  app.post("/api/translations/:contentId/translate", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { contentId } = req.params;
+      const { targetLocale, sourceLocale = "en" } = req.body;
+
+      if (!targetLocale) {
+        return res.status(400).json({ error: "Target locale is required" });
+      }
+
+      const content = await storage.getContent(contentId);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      const { translateContent, generateContentHash } = await import("./services/deepl-service");
+      
+      const translatedContent = await translateContent(
+        {
+          title: content.title,
+          metaTitle: content.metaTitle || undefined,
+          metaDescription: content.metaDescription || undefined,
+          blocks: content.blocks || [],
+        },
+        targetLocale,
+        sourceLocale
+      );
+
+      const existingTranslation = await storage.getTranslation(contentId, targetLocale);
+      
+      if (existingTranslation && existingTranslation.isManualOverride) {
+        return res.status(409).json({ 
+          error: "Manual override exists. Use force=true to overwrite.",
+          existingTranslation 
+        });
+      }
+
+      const translationData = {
+        contentId,
+        locale: targetLocale,
+        status: "completed" as const,
+        title: translatedContent.title || null,
+        metaTitle: translatedContent.metaTitle || null,
+        metaDescription: translatedContent.metaDescription || null,
+        blocks: translatedContent.blocks || [],
+        sourceHash: translatedContent.sourceHash,
+        translatedBy: "deepl",
+        translationProvider: "deepl",
+        isManualOverride: false,
+      };
+
+      let translation;
+      if (existingTranslation) {
+        translation = await storage.updateTranslation(existingTranslation.id, translationData);
+      } else {
+        translation = await storage.createTranslation(translationData);
+      }
+
+      res.json(translation);
+    } catch (error) {
+      console.error("Error translating content:", error);
+      res.status(500).json({ error: "Failed to translate content" });
+    }
+  });
+
+  // Batch translate content to multiple languages
+  app.post("/api/translations/:contentId/translate-all", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { contentId } = req.params;
+      const { targetTiers = [1, 2], sourceLocale = "en" } = req.body;
+
+      const content = await storage.getContent(contentId);
+      if (!content) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      const { translateToMultipleLanguages, generateContentHash, getDeepLSupportedLocales } = await import("./services/deepl-service");
+      
+      const supportedLocales = getDeepLSupportedLocales().filter(locale => {
+        const localeInfo = SUPPORTED_LOCALES.find(l => l.code === locale);
+        return localeInfo && targetTiers.includes(localeInfo.tier) && locale !== sourceLocale;
+      });
+
+      const translations = await translateToMultipleLanguages(
+        {
+          title: content.title,
+          metaTitle: content.metaTitle || undefined,
+          metaDescription: content.metaDescription || undefined,
+          blocks: content.blocks || [],
+        },
+        supportedLocales,
+        sourceLocale
+      );
+
+      const savedTranslations = [];
+      for (const [locale, translatedContent] of translations) {
+        const existingTranslation = await storage.getTranslation(contentId, locale);
+        
+        if (existingTranslation?.isManualOverride) {
+          continue;
+        }
+
+        const translationData = {
+          contentId,
+          locale,
+          status: "completed" as const,
+          title: translatedContent.title || null,
+          metaTitle: translatedContent.metaTitle || null,
+          metaDescription: translatedContent.metaDescription || null,
+          blocks: translatedContent.blocks || [],
+          sourceHash: translatedContent.sourceHash,
+          translatedBy: "deepl",
+          translationProvider: "deepl",
+          isManualOverride: false,
+        };
+
+        let translation;
+        if (existingTranslation) {
+          translation = await storage.updateTranslation(existingTranslation.id, translationData);
+        } else {
+          translation = await storage.createTranslation(translationData);
+        }
+        savedTranslations.push(translation);
+      }
+
+      res.json({
+        success: true,
+        translatedCount: savedTranslations.length,
+        targetLocales: supportedLocales,
+        translations: savedTranslations,
+      });
+    } catch (error) {
+      console.error("Error batch translating content:", error);
+      res.status(500).json({ error: "Failed to batch translate content" });
+    }
+  });
+
+  // Manual translation override
+  app.put("/api/translations/:contentId/:locale", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { contentId, locale } = req.params;
+      const { title, metaTitle, metaDescription, blocks } = req.body;
+
+      const existingTranslation = await storage.getTranslation(contentId, locale as any);
+      
+      const translationData = {
+        contentId,
+        locale: locale as any,
+        status: "completed" as const,
+        title: title || null,
+        metaTitle: metaTitle || null,
+        metaDescription: metaDescription || null,
+        blocks: blocks || [],
+        translatedBy: "manual",
+        translationProvider: "manual",
+        isManualOverride: true,
+      };
+
+      let translation;
+      if (existingTranslation) {
+        translation = await storage.updateTranslation(existingTranslation.id, translationData);
+      } else {
+        translation = await storage.createTranslation(translationData);
+      }
+
+      res.json(translation);
+    } catch (error) {
+      console.error("Error saving manual translation:", error);
+      res.status(500).json({ error: "Failed to save translation" });
+    }
+  });
+
+  // Get DeepL usage stats
+  app.get("/api/translations/usage", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const { getDeepLUsage, getDeepLSupportedLocales, getUnsupportedLocales } = await import("./services/deepl-service");
+      const usage = await getDeepLUsage();
+      
+      res.json({
+        usage,
+        supportedLocales: getDeepLSupportedLocales(),
+        unsupportedLocales: getUnsupportedLocales(),
+        totalLocales: SUPPORTED_LOCALES.length,
+      });
+    } catch (error) {
+      console.error("Error fetching DeepL usage:", error);
+      res.status(500).json({ error: "Failed to fetch usage stats" });
+    }
+  });
+
+  // Get public translated content
+  app.get("/api/public/content/:slug/:locale", async (req, res) => {
+    try {
+      const { slug, locale } = req.params;
+      
+      const content = await storage.getContentBySlug(slug);
+      if (!content || content.status !== "published") {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      if (locale === "en") {
+        return res.json(content);
+      }
+
+      const translation = await storage.getTranslation(content.id, locale as any);
+      if (!translation || translation.status !== "completed") {
+        return res.json(content);
+      }
+
+      res.json({
+        ...content,
+        title: translation.title || content.title,
+        metaTitle: translation.metaTitle || content.metaTitle,
+        metaDescription: translation.metaDescription || content.metaDescription,
+        blocks: translation.blocks || content.blocks,
+        locale,
+        isTranslated: true,
+      });
+    } catch (error) {
+      console.error("Error fetching translated content:", error);
+      res.status(500).json({ error: "Failed to fetch content" });
+    }
+  });
+
+  // Get all translations status for admin dashboard
+  app.get("/api/admin/translation-status", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const contents = await storage.getContents({ status: "published" });
+      
+      const status = await Promise.all(
+        contents.map(async (content) => {
+          const translations = await storage.getTranslationsByContentId(content.id);
+          const translatedLocales = translations
+            .filter(t => t.status === "completed")
+            .map(t => t.locale);
+          
+          return {
+            contentId: content.id,
+            title: content.title,
+            type: content.type,
+            translatedLocales,
+            totalTranslations: translatedLocales.length,
+            missingLocales: SUPPORTED_LOCALES
+              .filter(l => l.code !== "en" && !translatedLocales.includes(l.code))
+              .map(l => l.code),
+          };
+        })
+      );
+
+      res.json({
+        totalContent: contents.length,
+        items: status,
+        localeStats: SUPPORTED_LOCALES.map(locale => ({
+          code: locale.code,
+          name: locale.name,
+          tier: locale.tier,
+          translatedCount: status.filter(s => s.translatedLocales.includes(locale.code)).length,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching translation status:", error);
+      res.status(500).json({ error: "Failed to fetch translation status" });
     }
   });
 

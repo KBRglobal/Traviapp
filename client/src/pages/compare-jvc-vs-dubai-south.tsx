@@ -42,7 +42,7 @@ const dubaiSouthHighlights = [
 
 export default function CompareJVCvsDubaiSouth() {
   useDocumentMeta({
-    title: "JVC vs Dubai South | Best Value Off-Plan Investment 2025",
+    title: "JVC vs Dubai South | Best Value Off-Plan Investment 2026",
     description: "Compare JVC and Dubai South for off-plan investment. JVC offers mature community from AED 420K. Dubai South provides higher yields from AED 380K. Complete analysis.",
     ogType: "article"
   });
@@ -71,11 +71,11 @@ export default function CompareJVCvsDubaiSouth() {
                   Location Comparison
                 </Badge>
                 <Badge variant="secondary" className="bg-cyan-500/20 text-cyan-200 border-cyan-400/30">
-                  Best Value 2025
+                  Best Value 2026
                 </Badge>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-                JVC vs Dubai South: Best Value Investment 2025
+                JVC vs Dubai South: Best Value Investment 2026
               </h1>
               <p className="text-lg md:text-xl text-emerald-100 mb-6 max-w-3xl">
                 Both JVC and Dubai South offer affordable entry points for Dubai property investment. 
@@ -305,7 +305,7 @@ export default function CompareJVCvsDubaiSouth() {
                 </table>
               </div>
               <p className="text-xs text-muted-foreground mt-4">
-                Prices from PropertyFinder.ae as of December 2025. Actual prices vary by project and developer.
+                Prices from PropertyFinder.ae as of December 2026. Actual prices vary by project and developer.
               </p>
             </CardContent>
           </Card>
@@ -325,7 +325,7 @@ export default function CompareJVCvsDubaiSouth() {
             { href: "/off-plan-dubai-south", title: "Dubai South" },
             { href: "/off-plan-business-bay", title: "Business Bay" },
             { href: "/dubai-off-plan-investment-guide", title: "Investment Guide" },
-            { href: "/best-off-plan-projects-dubai-2025", title: "Best Projects 2025" },
+            { href: "/best-off-plan-projects-dubai-2026", title: "Best Projects 2026" },
             { href: "/off-plan-golden-visa", title: "Golden Visa" }
           ]}
         />

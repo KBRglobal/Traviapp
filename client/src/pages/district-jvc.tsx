@@ -44,7 +44,7 @@ const faqs = [
   },
   {
     question: "How far is JVC from Dubai Marina?",
-    answer: "10-15 minutes by car (7 km). Direct access via Al Khail Road. No Metro connection — car or taxi essential."
+    answer: "10-15 minutes by car (7 km). Direct access via Al Khail Road. No Metro connection   car or taxi essential."
   },
   {
     question: "Is JVC safe?",
@@ -93,12 +93,12 @@ function HeroSection() {
           <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             JVC
             <span className="block text-3xl md:text-4xl font-normal text-orange-200 mt-2">
-              Jumeirah Village Circle Guide 2025
+              Jumeirah Village Circle Guide 2026
             </span>
           </motion.h1>
           
           <motion.p variants={fadeInUp} className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-8">
-            Dubai's affordable family hub — 40-50% cheaper than Marina, modern apartments, 
+            Dubai's affordable family hub   40-50% cheaper than Marina, modern apartments, 
             Circle Mall, and a tight-knit community. Where smart expats start.
           </motion.p>
           
@@ -181,7 +181,7 @@ function OverviewSection() {
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Where Smart Expats Start</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              JVC is Dubai's fastest-growing affordable community — modern apartments, 
+              JVC is Dubai's fastest-growing affordable community   modern apartments, 
               family amenities, and 40-50% savings vs. premium areas.
             </p>
           </motion.div>
@@ -377,7 +377,7 @@ function TransportSection() {
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
           <motion.div variants={fadeInUp} className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">Getting Around</h2>
-            <p className="text-xl text-muted-foreground">Car essential — no Metro yet</p>
+            <p className="text-xl text-muted-foreground">Car essential   no Metro yet</p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -431,9 +431,9 @@ function TipsSection() {
                 {[
                   "Negotiate rent (landlords flexible, especially off-peak)",
                   "Get a car or budget for Uber/Careem",
-                  "Check building age — newer = better maintained",
+                  "Check building age   newer = better maintained",
                   "Visit Circle Mall for groceries (Carrefour)",
-                  "Consider JVT (Jumeirah Village Triangle) too — similar, quieter"
+                  "Consider JVT (Jumeirah Village Triangle) too   similar, quieter"
                 ].map((tip, idx) => (
                   <li key={idx} className="flex items-start gap-3">
                     <Check className="w-4 h-4 text-green-600 shrink-0 mt-1" />
@@ -508,7 +508,7 @@ function CTASection() {
           </h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Save AED 30-50K/year while enjoying modern apartments, family amenities, 
-            and central location. JVC — where smart expats start.
+            and central location. JVC   where smart expats start.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/districts">

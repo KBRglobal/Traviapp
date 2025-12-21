@@ -2332,18 +2332,113 @@ function GalleryBlockCanvas({
   onUpdate: (data: Record<string, unknown>) => void;
   isSelected: boolean;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const images = (block.data?.images as Array<{ url: string; alt: string }>) || [];
+
+  const uploadFile = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) throw new Error("Upload failed");
+      const result = await response.json();
+      const newImages = [...images, { url: result.url, alt: file.name.replace(/\.[^/.]+$/, "") }];
+      onUpdate({ images: newImages });
+    } catch (error) {
+      console.error("Upload error:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      for (const file of Array.from(files)) {
+        await uploadFile(file);
+      }
+    }
+    e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = images.filter((_, i) => i !== index);
+    onUpdate({ images: newImages });
+  };
+
+  const updateImageAlt = (index: number, alt: string) => {
+    const newImages = [...images];
+    newImages[index] = { ...newImages[index], alt };
+    onUpdate({ images: newImages });
+  };
+
   return (
     <div className="p-6">
-      <div className="flex items-center gap-2 mb-3">
-        <LayoutGrid className="h-5 w-5 text-muted-foreground" />
-        <span className="font-semibold">Gallery</span>
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2">
+          <LayoutGrid className="h-5 w-5 text-muted-foreground" />
+          <span className="font-semibold">Gallery ({images.length} images)</span>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+          disabled={isUploading}
+          data-testid={`gallery-add-image-${block.id}`}
+        >
+          {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+          <span className="ml-1">Add Image</span>
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileSelect}
+          className="hidden"
+          data-testid={`gallery-file-input-${block.id}`}
+        />
       </div>
       <div className="grid grid-cols-3 gap-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="aspect-square rounded-md bg-muted flex items-center justify-center">
-            <ImagePlus className="h-6 w-6 text-muted-foreground/50" />
+        {images.map((img, index) => (
+          <div key={index} className="relative group aspect-square rounded-md bg-muted overflow-hidden">
+            <img src={img.url} alt={img.alt} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+              <Button
+                size="icon"
+                variant="destructive"
+                className="h-7 w-7"
+                onClick={(e) => { e.stopPropagation(); removeImage(index); }}
+                data-testid={`gallery-remove-image-${block.id}-${index}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <input
+              type="text"
+              value={img.alt}
+              onChange={(e) => updateImageAlt(index, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              placeholder="Alt text..."
+              className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs px-2 py-1 border-none outline-none"
+              data-testid={`gallery-alt-input-${block.id}-${index}`}
+            />
           </div>
         ))}
+        {images.length === 0 && (
+          <div
+            className="aspect-square rounded-md bg-muted flex flex-col items-center justify-center cursor-pointer hover-elevate"
+            onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+          >
+            <ImagePlus className="h-8 w-8 text-muted-foreground/50 mb-2" />
+            <span className="text-xs text-muted-foreground">Click to add images</span>
+          </div>
+        )}
       </div>
     </div>
   );

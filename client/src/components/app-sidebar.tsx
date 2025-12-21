@@ -37,6 +37,7 @@ import {
   Route,
   Network,
   Tags,
+  Languages,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -92,7 +93,7 @@ const contentItems = [
     icon: Train,
   },
   {
-    title: "Articles",
+    title: "News",
     url: "/admin/articles",
     icon: FileText,
   },
@@ -185,6 +186,18 @@ const managementItems: Array<{
     url: "/admin/media",
     icon: Image,
     requiredPermission: "canAccessMediaLibrary",
+  },
+  {
+    title: "Image Engine",
+    url: "/admin/image-engine",
+    icon: Sparkles,
+    requiredPermission: "canAccessMediaLibrary",
+  },
+  {
+    title: "Translations",
+    url: "/admin/translations",
+    icon: Languages,
+    requiredPermission: "canManageSettings",
   },
 ];
 

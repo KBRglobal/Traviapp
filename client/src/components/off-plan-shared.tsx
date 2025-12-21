@@ -76,7 +76,7 @@ const OFF_PLAN_NAV_ITEMS = [
   { label: "Investment Guide", href: "/dubai-off-plan-investment-guide" },
   { label: "How to Buy", href: "/how-to-buy-dubai-off-plan" },
   { label: "Payment Plans", href: "/dubai-off-plan-payment-plans" },
-  { label: "Best 2025", href: "/best-off-plan-projects-dubai-2025" },
+  { label: "Best 2026", href: "/best-off-plan-projects-dubai-2026" },
 ];
 
 export function OffPlanSubNav({ activeHref }: { activeHref: string }) {

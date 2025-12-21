@@ -43,7 +43,7 @@ const faqs = [
   },
   {
     question: "How do I get to Bluewaters Island?",
-    answer: "Walk via the pedestrian bridge from JBR (5 mins), take Dubai Tram to Bluewaters station, or taxi. The island is car-free — park at the entrance or use valet."
+    answer: "Walk via the pedestrian bridge from JBR (5 mins), take Dubai Tram to Bluewaters station, or taxi. The island is car-free   park at the entrance or use valet."
   },
   {
     question: "Can you swim at Bluewaters Beach?",
@@ -88,12 +88,12 @@ function HeroSection() {
           <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             Bluewaters Island
             <span className="block text-3xl md:text-4xl font-normal text-blue-200 mt-2">
-              Beach, Dining & Entertainment 2025
+              Beach, Dining & Entertainment 2026
             </span>
           </motion.h1>
           
           <motion.p variants={fadeInUp} className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-8">
-            Compact island destination — Caesars Palace, 50+ restaurants, beach access, 
+            Compact island destination   Caesars Palace, 50+ restaurants, beach access, 
             and The Wharf waterfront dining. 5 mins from JBR.
           </motion.p>
           
@@ -176,7 +176,7 @@ function OverviewSection() {
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Marina's Island Extension</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              A 0.4 sq km man-made island built as Dubai's urban beach resort — 
+              A 0.4 sq km man-made island built as Dubai's urban beach resort   
               pedestrian-only, waterfront dining, and easy JBR connection.
             </p>
           </motion.div>
@@ -221,7 +221,7 @@ function AinDubaiSection() {
                   <h3 className="font-bold text-xl mb-4">The Elephant in the Room</h3>
                   <div className="space-y-4 text-muted-foreground">
                     <p>
-                      <strong>Ain Dubai</strong> — the 250-meter observation wheel meant to be the world's tallest — 
+                      <strong>Ain Dubai</strong>   the 250-meter observation wheel meant to be the world's tallest   
                       opened in October 2021 to massive fanfare. It closed in March 2022 for "routine maintenance" 
                       and has remained closed with no reopening date announced.
                     </p>
@@ -486,7 +486,7 @@ function CTASection() {
             Marina's Island Escape
           </h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Beach, dining, and waterfront vibes — all within walking distance of JBR and Dubai Marina.
+            Beach, dining, and waterfront vibes   all within walking distance of JBR and Dubai Marina.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/districts">

@@ -28,7 +28,7 @@ const comparisonTable = [
 
 export default function CompareBusinessBayVsJLT() {
   useDocumentMeta({
-    title: "Business Bay vs JLT | Dubai Location Comparison 2025",
+    title: "Business Bay vs JLT | Dubai Location Comparison 2026",
     description: "Compare Business Bay and JLT for property investment. Business Bay near Downtown from AED 1.1M. JLT offers better yields from AED 850K. Full analysis.",
     ogType: "article"
   });

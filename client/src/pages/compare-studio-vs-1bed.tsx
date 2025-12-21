@@ -13,7 +13,7 @@ import { useDocumentMeta } from "@/hooks/use-document-meta";
 
 export default function CompareStudioVs1Bed() {
   useDocumentMeta({
-    title: "Studio vs 1-Bedroom Dubai | Investment Comparison 2025",
+    title: "Studio vs 1-Bedroom Dubai | Investment Comparison 2026",
     description: "Compare studio apartments vs 1-bedroom units in Dubai. Which offers better ROI, rental yields, and capital appreciation? Data-driven investment analysis.",
     ogType: "article"
   });
@@ -89,7 +89,7 @@ export default function CompareStudioVs1Bed() {
                   Investment Guide
                 </Badge>
                 <Badge variant="secondary" className="bg-purple-500/20 text-purple-200 border-purple-400/30">
-                  2025 Analysis
+                  2026 Analysis
                 </Badge>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">

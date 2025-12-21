@@ -28,7 +28,7 @@ const comparisonTable = [
 
 export default function CompareDowntownVsMarina() {
   useDocumentMeta({
-    title: "Downtown Dubai vs Marina | Premium Location Comparison 2025",
+    title: "Downtown Dubai vs Marina | Premium Location Comparison 2026",
     description: "Compare Downtown Dubai and Dubai Marina for luxury off-plan investment. Downtown offers Burj views from AED 1.8M. Marina provides beach lifestyle from AED 1.5M.",
     ogType: "article"
   });
@@ -61,7 +61,7 @@ export default function CompareDowntownVsMarina() {
                 </Badge>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-                Downtown Dubai vs Marina: Luxury Investment 2025
+                Downtown Dubai vs Marina: Luxury Investment 2026
               </h1>
               <p className="text-lg md:text-xl text-rose-100 mb-6 max-w-3xl">
                 Two of Dubai's most prestigious addresses offer different lifestyle propositions. 
@@ -287,7 +287,7 @@ export default function CompareDowntownVsMarina() {
             { href: "/compare-jvc-vs-dubai-south", title: "JVC vs Dubai South" },
             { href: "/dubai-off-plan-investment-guide", title: "Investment Guide" },
             { href: "/tools-roi-calculator", title: "ROI Calculator" },
-            { href: "/best-off-plan-projects-dubai-2025", title: "Best 2025 Projects" }
+            { href: "/best-off-plan-projects-dubai-2026", title: "Best 2026 Projects" }
           ]}
         />
 

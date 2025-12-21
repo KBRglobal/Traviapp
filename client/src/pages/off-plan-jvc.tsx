@@ -30,7 +30,7 @@ const projects = [
     developer: "Binghatti",
     type: "Apartments",
     priceFrom: "AED 550,000",
-    completion: "Q3 2025",
+    completion: "Q3 2026",
     paymentPlan: "70/30",
     roi: "22-26%",
     highlights: ["Affordable entry", "High yield", "Post-handover"]
@@ -40,7 +40,7 @@ const projects = [
     developer: "Ellington Properties",
     type: "Premium Apartments",
     priceFrom: "AED 780,000",
-    completion: "Q4 2025",
+    completion: "Q4 2026",
     paymentPlan: "60/40",
     roi: "19-23%",
     highlights: ["Quality finishes", "Community park", "Modern design"]
@@ -101,8 +101,8 @@ export default function OffPlanJVC() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   useDocumentMeta({
-    title: "JVC Off-Plan Properties Dubai 2025 | Highest Yields from AED 450K",
-    description: "JVC Dubai off-plan properties: highest rental yields at 8.2%, affordable entry from AED 450K, flexible 1% monthly payment plans. Complete 2025 investment guide.",
+    title: "JVC Off-Plan Properties Dubai 2026 | Highest Yields from AED 450K",
+    description: "JVC Dubai off-plan properties: highest rental yields at 8.2%, affordable entry from AED 450K, flexible 1% monthly payment plans. Complete 2026 investment guide.",
     ogType: "article"
   });
 

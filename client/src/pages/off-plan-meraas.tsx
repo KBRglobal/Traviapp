@@ -19,7 +19,7 @@ const meraasProjects = [
   { name: "The Address Jumeirah", location: "City Walk", type: "Hotel Residences", price: "AED 3.5M", completion: "Q4 2026", roi: "21%" },
   { name: "Bvlgari Marina Lofts", location: "Bvlgari Resort", type: "Ultra-Luxury", price: "AED 8M", completion: "Q1 2027", roi: "18%" },
   { name: "Cherrywoods Townhouses", location: "Al Qudra", type: "Townhouses", price: "AED 1.5M", completion: "Q3 2026", roi: "24%" },
-  { name: "Nad Al Sheba Gardens", location: "Nad Al Sheba", type: "Villas", price: "AED 2.8M", completion: "Q4 2025", roi: "23%" }
+  { name: "Nad Al Sheba Gardens", location: "Nad Al Sheba", type: "Villas", price: "AED 2.8M", completion: "Q4 2026", roi: "23%" }
 ];
 
 const lifestyleDestinations = [
@@ -33,7 +33,7 @@ const lifestyleDestinations = [
 
 export default function OffPlanMeraas() {
   useDocumentMeta({
-    title: "Meraas Dubai | Lifestyle Developer - Off-Plan Projects 2025",
+    title: "Meraas Dubai | Lifestyle Developer - Off-Plan Projects 2026",
     description: "Discover Meraas lifestyle-focused off-plan properties in Dubai. Creators of City Walk, Bluewaters & La Mer. 92% on-time delivery. Premium destinations from AED 1.5M.",
     ogType: "website"
   });

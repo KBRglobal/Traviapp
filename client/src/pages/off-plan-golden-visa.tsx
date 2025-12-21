@@ -54,7 +54,7 @@ const familyBenefits = [
 
 export default function OffPlanGoldenVisa() {
   useDocumentMeta({
-    title: "Dubai Golden Visa Through Property | AED 2M Investment Guide 2025",
+    title: "Dubai Golden Visa Through Property | AED 2M Investment Guide 2026",
     description: "Get UAE Golden Visa through Dubai off-plan property investment. AED 2M minimum for 10-year residency. Sponsor family, work freely, no employer required. Complete guide.",
     ogType: "website"
   });
@@ -292,7 +292,7 @@ export default function OffPlanGoldenVisa() {
             { href: "/dubai-off-plan-investment-guide", title: "Investment Guide" },
             { href: "/dubai-off-plan-payment-plans", title: "Payment Plans" },
             { href: "/off-plan-crypto-payments", title: "Crypto Payments" },
-            { href: "/best-off-plan-projects-dubai-2025", title: "Best Projects 2025" },
+            { href: "/best-off-plan-projects-dubai-2026", title: "Best Projects 2026" },
             { href: "/how-to-buy-dubai-off-plan", title: "How to Buy" },
             { href: "/off-plan-emaar", title: "Emaar Properties" }
           ]}

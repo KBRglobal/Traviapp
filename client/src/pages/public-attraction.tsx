@@ -635,7 +635,7 @@ export default function PublicAttraction() {
                   <li><Link href="/attractions" className="text-white/70 hover:text-white text-sm">Attractions</Link></li>
                   <li><Link href="/hotels" className="text-white/70 hover:text-white text-sm">Hotels</Link></li>
                   <li><Link href="/dining" className="text-white/70 hover:text-white text-sm">Dining</Link></li>
-                  <li><Link href="/articles" className="text-white/70 hover:text-white text-sm">Articles</Link></li>
+                  <li><Link href="/articles" className="text-white/70 hover:text-white text-sm">News</Link></li>
                 </ul>
               </div>
 

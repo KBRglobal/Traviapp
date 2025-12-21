@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ type TopicCategory = "attractions" | "hotels" | "food" | "transport" | "events" 
 
 export default function TopicBankPage() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<TopicBank | null>(null);
   const [generatingTopicId, setGeneratingTopicId] = useState<string | null>(null);
@@ -92,6 +94,10 @@ export default function TopicBankPage() {
         title: "Article Generated",
         description: `Created draft article: ${data.content?.title}`
       });
+      // Navigate to the editor to view/edit the generated article
+      if (data.content?.id) {
+        navigate(`/admin/articles/${data.content.id}`);
+      }
     },
     onError: () => {
       setGeneratingTopicId(null);

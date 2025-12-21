@@ -27,7 +27,7 @@ export default function ToolsROICalculator() {
   const [propertyType, setPropertyType] = useState("apartment");
 
   useDocumentMeta({
-    title: "Dubai Off-Plan ROI Calculator | Free Investment Tool 2025",
+    title: "Dubai Off-Plan ROI Calculator | Free Investment Tool 2026",
     description: "Calculate your Dubai off-plan property ROI. Estimate capital appreciation, rental yields, and total returns. Free interactive calculator with real market data.",
     ogType: "website"
   });
@@ -389,7 +389,7 @@ export default function ToolsROICalculator() {
             { href: "/compare-off-plan-vs-ready", title: "Off-Plan vs Ready" },
             { href: "/off-plan-jvc", title: "JVC Properties" },
             { href: "/off-plan-business-bay", title: "Business Bay" },
-            { href: "/best-off-plan-projects-dubai-2025", title: "Best Projects 2025" }
+            { href: "/best-off-plan-projects-dubai-2026", title: "Best Projects 2026" }
           ]}
         />
 

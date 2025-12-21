@@ -49,14 +49,14 @@ const emaarProjects = [
 
 const damacProjects = [
   { name: "Damac Lagoons Santorini", location: "Damac Lagoons", price: "AED 1.2M", handover: "Q3 2026" },
-  { name: "Damac Hills 2", location: "Akoya", price: "AED 550K", handover: "Q4 2025" },
+  { name: "Damac Hills 2", location: "Akoya", price: "AED 550K", handover: "Q4 2026" },
   { name: "Damac Bay", location: "Dubai Harbour", price: "AED 1.8M", handover: "Q1 2027" },
   { name: "Damac Safa Two", location: "Business Bay", price: "AED 1.4M", handover: "Q2 2026" }
 ];
 
 export default function CompareEmaarVsDamac() {
   useDocumentMeta({
-    title: "Emaar vs DAMAC | Dubai Developer Comparison 2025",
+    title: "Emaar vs DAMAC | Dubai Developer Comparison 2026",
     description: "Compare Emaar and DAMAC properties in Dubai. Emaar offers 95% on-time delivery with 24% ROI. DAMAC provides flexible payments from AED 550K. Complete developer analysis.",
     ogType: "article"
   });
@@ -85,11 +85,11 @@ export default function CompareEmaarVsDamac() {
                   Developer Comparison
                 </Badge>
                 <Badge variant="secondary" className="bg-orange-500/20 text-orange-200 border-orange-400/30">
-                  2025 Analysis
+                  2026 Analysis
                 </Badge>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-                Emaar vs DAMAC: Developer Comparison 2025
+                Emaar vs DAMAC: Developer Comparison 2026
               </h1>
               <p className="text-lg md:text-xl text-amber-100 mb-6 max-w-3xl">
                 Emaar and DAMAC are Dubai's leading property developers with different strengths. 
@@ -354,7 +354,7 @@ export default function CompareEmaarVsDamac() {
             { href: "/off-plan-nakheel", title: "Nakheel" },
             { href: "/off-plan-sobha", title: "Sobha Realty" },
             { href: "/dubai-off-plan-investment-guide", title: "Investment Guide" },
-            { href: "/best-off-plan-projects-dubai-2025", title: "Best Projects 2025" }
+            { href: "/best-off-plan-projects-dubai-2026", title: "Best Projects 2026" }
           ]}
         />
 

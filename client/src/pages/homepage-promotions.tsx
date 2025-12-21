@@ -55,7 +55,7 @@ const SECTIONS: { value: HomepageSection; label: string; icon: typeof Star }[] =
   { value: "featured", label: "Featured", icon: Star },
   { value: "attractions", label: "Attractions", icon: MapPin },
   { value: "hotels", label: "Hotels", icon: Building2 },
-  { value: "articles", label: "Articles", icon: FileText },
+  { value: "articles", label: "News", icon: FileText },
   { value: "trending", label: "Trending", icon: TrendingUp },
 ];
 

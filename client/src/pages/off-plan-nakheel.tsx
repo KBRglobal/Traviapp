@@ -18,7 +18,7 @@ const nakheelProjects = [
   { name: "Como Residences", location: "Palm Jumeirah", type: "Ultra-Luxury", price: "AED 21M", completion: "Q2 2027", roi: "18%" },
   { name: "Rixos Hotel Residences", location: "Palm Jumeirah", type: "Hotel Apartments", price: "AED 4.5M", completion: "Q3 2026", roi: "20%" },
   { name: "Palm Beach Towers 3", location: "Palm Jumeirah", type: "Beachfront Apartments", price: "AED 3.8M", completion: "Q1 2027", roi: "19%" },
-  { name: "Dragon City Phase 2", location: "International City", type: "Apartments", price: "AED 550K", completion: "Q4 2025", roi: "23%" },
+  { name: "Dragon City Phase 2", location: "International City", type: "Apartments", price: "AED 550K", completion: "Q4 2026", roi: "23%" },
   { name: "Veneto", location: "Jumeirah Village Circle", type: "Apartments", price: "AED 850K", completion: "Q2 2026", roi: "21%" }
 ];
 
@@ -32,7 +32,7 @@ const iconicProjects = [
 
 export default function OffPlanNakheel() {
   useDocumentMeta({
-    title: "Nakheel Dubai | Palm Jumeirah Developer - Off-Plan Projects 2025",
+    title: "Nakheel Dubai | Palm Jumeirah Developer - Off-Plan Projects 2026",
     description: "Explore Nakheel off-plan properties in Dubai. Creators of Palm Jumeirah and The World Islands. 91% on-time delivery. Premium waterfront villas and apartments from AED 550K.",
     ogType: "website"
   });
