@@ -52,6 +52,9 @@ import {
   Download,
   ChevronDown,
   AlertTriangle,
+  Megaphone,
+  FileBarChart2,
+  Building,
 } from "lucide-react";
 import type { ContentWithRelations, Tag as TagType } from "@shared/schema";
 
@@ -63,7 +66,7 @@ interface DeleteWarning {
 }
 
 interface ContentListProps {
-  type: "attraction" | "hotel" | "article" | "dining" | "district" | "transport" | "event" | "itinerary";
+  type: "attraction" | "hotel" | "article" | "dining" | "district" | "transport" | "event" | "itinerary" | "landing_page" | "case_study" | "off_plan";
 }
 
 const typeConfig = {
@@ -122,6 +125,27 @@ const typeConfig = {
     icon: Route,
     basePath: "/admin/itineraries",
     wordTarget: "~1500 words",
+  },
+  landing_page: {
+    title: "Landing Pages",
+    singular: "Landing Page",
+    icon: Megaphone,
+    basePath: "/admin/landing-pages",
+    wordTarget: "~1800-2500 words",
+  },
+  case_study: {
+    title: "Case Studies",
+    singular: "Case Study",
+    icon: FileBarChart2,
+    basePath: "/admin/case-studies",
+    wordTarget: "~2000-3000 words",
+  },
+  off_plan: {
+    title: "Off-Plan Properties",
+    singular: "Off-Plan Property",
+    icon: Building,
+    basePath: "/admin/off-plan",
+    wordTarget: "~2500-3500 words",
   },
 };
 
@@ -307,6 +331,9 @@ export default function ContentList({ type }: ContentListProps) {
           transport: "transport",
           event: "events",
           itinerary: "itineraries",
+          landing_page: "landing",
+          case_study: "case-studies",
+          off_plan: "off-plan",
         };
         window.open(`/${pathMap[type]}/${item.slug}`, "_blank");
       },

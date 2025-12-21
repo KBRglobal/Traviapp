@@ -162,6 +162,15 @@ function AdminEvents() {
 function AdminItineraries() {
   return <ContentList type="itinerary" />;
 }
+function AdminLandingPages() {
+  return <ContentList type="landing_page" />;
+}
+function AdminCaseStudies() {
+  return <ContentList type="case_study" />;
+}
+function AdminOffPlan() {
+  return <ContentList type="off_plan" />;
+}
 
 function AdminRouter() {
   return (
@@ -192,6 +201,15 @@ function AdminRouter() {
         <Route path="/admin/itineraries" component={AdminItineraries} />
         <Route path="/admin/itineraries/new" component={ContentEditor} />
         <Route path="/admin/itineraries/:id" component={ContentEditor} />
+        <Route path="/admin/landing-pages" component={AdminLandingPages} />
+        <Route path="/admin/landing-pages/new" component={ContentEditor} />
+        <Route path="/admin/landing-pages/:id" component={ContentEditor} />
+        <Route path="/admin/case-studies" component={AdminCaseStudies} />
+        <Route path="/admin/case-studies/new" component={ContentEditor} />
+        <Route path="/admin/case-studies/:id" component={ContentEditor} />
+        <Route path="/admin/off-plan" component={AdminOffPlan} />
+        <Route path="/admin/off-plan/new" component={ContentEditor} />
+        <Route path="/admin/off-plan/:id" component={ContentEditor} />
         <Route path="/admin/rss-feeds" component={RssFeeds} />
         <Route path="/admin/ai-generator" component={AIArticleGenerator} />
         <Route path="/admin/topic-bank" component={TopicBankPage} />

@@ -39,6 +39,9 @@ import {
   Network,
   Tags,
   Languages,
+  Megaphone,
+  FileBarChart2,
+  Building,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -107,6 +110,21 @@ const contentItems = [
     title: "Itineraries",
     url: "/admin/itineraries",
     icon: Route,
+  },
+  {
+    title: "Landing Pages",
+    url: "/admin/landing-pages",
+    icon: Megaphone,
+  },
+  {
+    title: "Case Studies",
+    url: "/admin/case-studies",
+    icon: FileBarChart2,
+  },
+  {
+    title: "Off-Plan",
+    url: "/admin/off-plan",
+    icon: Building,
   },
 ];
 

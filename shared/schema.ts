@@ -5,7 +5,7 @@ import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 // Enums
-export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport", "event", "itinerary"]);
+export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport", "event", "itinerary", "landing_page", "case_study", "off_plan"]);
 export const contentStatusEnum = pgEnum("content_status", ["draft", "in_review", "approved", "scheduled", "published"]);
 export const articleCategoryEnum = pgEnum("article_category", ["attractions", "hotels", "food", "transport", "events", "tips", "news", "shopping"]);
 export const userRoleEnum = pgEnum("user_role", ["admin", "editor", "author", "contributor", "viewer"]);
