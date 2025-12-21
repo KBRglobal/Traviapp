@@ -98,6 +98,8 @@ const LandingFreeDubai = lazy(() => import("@/pages/landing-free-dubai"));
 const LandingDubaiLaws = lazy(() => import("@/pages/landing-dubai-laws"));
 const LandingSheikhMohammed = lazy(() => import("@/pages/landing-sheikh-mohammed"));
 const LandingDubai247 = lazy(() => import("@/pages/landing-dubai-247"));
+const PublicShopping = lazy(() => import("@/pages/public-shopping"));
+const PublicNews = lazy(() => import("@/pages/public-news"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -375,6 +377,10 @@ const publicRoutes = [
   { path: "/dubai/laws-for-tourists", component: LandingDubaiLaws },
   { path: "/dubai/sheikh-mohammed-bin-rashid", component: LandingSheikhMohammed },
   { path: "/dubai/24-hours-open", component: LandingDubai247 },
+  // Shopping page
+  { path: "/shopping", component: PublicShopping },
+  // News portal
+  { path: "/news", component: PublicNews },
   // District pages
   { path: "/districts", component: DistrictsGateway },
   { path: "/districts/downtown-dubai", component: DistrictDowntownDubai },
