@@ -1646,6 +1646,7 @@ export const aiGeneratedImages = pgTable("ai_generated_images", {
   size: integer("size"),
   isApproved: boolean("is_approved").default(false),
   usageCount: integer("usage_count").default(0),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1672,6 +1673,7 @@ export const topicClusters = pgTable("topic_clusters", {
 export const topicClusterItems = pgTable("topic_cluster_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clusterId: varchar("cluster_id").notNull().references(() => topicClusters.id, { onDelete: "cascade" }),
+  contentId: varchar("content_id").references(() => contents.id, { onDelete: "set null" }),
   rssFeedId: varchar("rss_feed_id").references(() => rssFeeds.id, { onDelete: "set null" }),
   sourceUrl: text("source_url"),
   sourceTitle: text("source_title"),
