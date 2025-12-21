@@ -224,11 +224,11 @@ export default function PublicHome() {
             />
           </div>
 
-          {/* Interactive Mascot */}
+          {/* Interactive Mascot - Hidden on mobile, shown in fixed position on desktop */}
           {isInitialized && (
             <div
               ref={mascotRef}
-              className="absolute z-20 cursor-pointer select-none"
+              className="hidden md:block absolute z-20 cursor-pointer select-none"
               style={{
                 left: `${mascotPosition.x}px`,
                 top: `${mascotPosition.y}px`,
@@ -244,7 +244,7 @@ export default function PublicHome() {
               <img 
                 src={mascotImage} 
                 alt="Travi the Duck"
-                className="w-24 h-24 md:w-32 md:h-32 drop-shadow-lg hover:scale-110 transition-transform"
+                className="w-28 h-28 lg:w-32 lg:h-32 drop-shadow-lg hover:scale-110 transition-transform"
                 draggable={false}
               />
               
@@ -263,6 +263,40 @@ export default function PublicHome() {
               )}
             </div>
           )}
+          
+          {/* Mobile Mascot - Fixed bottom right corner, small and non-intrusive */}
+          <div
+            className="md:hidden fixed bottom-20 right-4 z-30 cursor-pointer select-none"
+            onClick={handleMascotHover}
+            data-testid="mascot-mobile"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && handleMascotHover()}
+            aria-label={t("home.mascotLabel") || "Interactive mascot - tap to play!"}
+          >
+            <div className="relative">
+              <img 
+                src={mascotImage} 
+                alt="Travi the Duck"
+                className="w-16 h-16 drop-shadow-lg active:scale-110 transition-transform"
+                draggable={false}
+              />
+              
+              {/* Mobile Speech Bubble - appears above mascot */}
+              {showPhrase && currentPhraseIndex >= 0 && (
+                <div 
+                  className="absolute -top-14 right-0 bg-white rounded-xl px-3 py-2 shadow-lg max-w-[200px]"
+                  dir={isRTL ? "rtl" : "ltr"}
+                  data-testid="mascot-speech-bubble-mobile"
+                >
+                  <span className="text-xs font-medium text-foreground">
+                    {t(`home.${mascotPhrases[currentPhraseIndex]}`)}
+                  </span>
+                  <div className="absolute -bottom-2 right-4 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-white" />
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Main Content - Centered layout */}
           <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 w-full text-center">

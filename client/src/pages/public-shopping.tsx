@@ -244,51 +244,92 @@ export default function PublicShopping() {
     <div className="min-h-screen bg-background">
       <PublicNav variant="transparent" />
 
-      {/* Hero Section */}
-      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#6C5CE7] via-[#F94498] to-[#FF9327]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50" />
+      {/* Hero Section - Enhanced Shopping Theme */}
+      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden" data-testid="section-hero">
+        {/* Layered Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#6C5CE7] via-[#8B5CF6] to-[#A855F7]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(236,72,153,0.5)_0%,_transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(249,115,22,0.4)_0%,_transparent_50%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/40" />
         
-        <div className="relative z-10 max-w-7xl mx-auto px-6 py-32 text-center">
-          <Badge className="mb-6 bg-white/10 backdrop-blur-sm border-white/20 text-white px-4 py-2">
-            <ShoppingBag className="w-4 h-4 mr-2" />
-            Premium Shopping Destination
-          </Badge>
+        {/* Decorative Shopping Icons - floating in background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <ShoppingBag className="absolute top-[15%] left-[10%] w-16 h-16 text-white/10 rotate-12" />
+          <Gift className="absolute top-[25%] right-[15%] w-20 h-20 text-white/10 -rotate-12" />
+          <Crown className="absolute bottom-[30%] left-[8%] w-14 h-14 text-white/10 rotate-6" />
+          <Gem className="absolute top-[40%] right-[8%] w-12 h-12 text-white/10 -rotate-6" />
+          <Package className="absolute bottom-[25%] right-[20%] w-18 h-18 text-white/10 rotate-12" />
+          <Store className="absolute top-[60%] left-[15%] w-16 h-16 text-white/10 -rotate-12" />
+        </div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 md:py-32 text-center">
+          {/* Badge */}
+          <div className="flex justify-center mb-8">
+            <Badge className="bg-white/15 backdrop-blur-md border-white/25 text-white px-5 py-2.5 text-sm font-medium shadow-lg">
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              Premium Shopping Destination
+            </Badge>
+          </div>
           
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight" data-testid="text-hero-title">
-            Dubai Shopping Malls & Souks
+          {/* Main Title */}
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight drop-shadow-lg" data-testid="text-hero-title">
+            Dubai Shopping
+            <span className="block bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-yellow-300 to-orange-300">
+              Malls & Souks
+            </span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto" data-testid="text-hero-tagline">
-            From Mega Malls to Traditional Markets
+          {/* Subtitle */}
+          <p className="text-lg sm:text-xl md:text-2xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed" data-testid="text-hero-tagline">
+            From world-class mega malls to centuries-old traditional markets - discover the ultimate shopping paradise
           </p>
 
-          <div className="flex flex-wrap justify-center gap-4 md:gap-8 mb-12">
+          {/* Stats Grid */}
+          <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-12">
             {[
-              { label: "50+ Malls", icon: Building2 },
-              { label: "10,000+ Stores", icon: Store },
-              { label: "Traditional Souks", icon: Landmark },
-              { label: "Tax-Free Shopping", icon: Percent }
+              { label: "50+ Malls", icon: Building2, color: "#A855F7" },
+              { label: "10,000+ Stores", icon: Store, color: "#EC4899" },
+              { label: "Historic Souks", icon: Landmark, color: "#F59E0B" },
+              { label: "Tax-Free", icon: Percent, color: "#10B981" }
             ].map((stat) => (
-              <div key={stat.label} className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2" data-testid={`stat-${stat.label.toLowerCase().replace(/[+\s]/g, '-')}`}>
-                <stat.icon className="w-5 h-5 text-[#FF9327]" />
-                <span className="text-white font-medium">{stat.label}</span>
+              <div 
+                key={stat.label} 
+                className="flex items-center gap-2.5 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/20 shadow-lg" 
+                data-testid={`stat-${stat.label.toLowerCase().replace(/[+\s]/g, '-')}`}
+              >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${stat.color}30` }}>
+                  <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
+                </div>
+                <span className="text-white font-semibold text-sm md:text-base">{stat.label}</span>
               </div>
             ))}
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="bg-gradient-to-r from-[#6C5CE7] to-[#F94498] text-white border-0" data-testid="button-explore-malls">
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Button 
+              size="lg" 
+              className="bg-white text-[#6C5CE7] font-semibold shadow-xl shadow-black/20 border-0 px-8" 
+              data-testid="button-explore-malls"
+            >
+              <Building2 className="w-5 h-5 mr-2" />
               Explore Mega Malls
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
-            <Button size="lg" variant="outline" className="border-white/30 text-white bg-white/10 backdrop-blur-sm" data-testid="button-discover-souks">
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="border-2 border-white/40 text-white bg-white/10 backdrop-blur-md font-semibold px-8" 
+              data-testid="button-discover-souks"
+            >
+              <Landmark className="w-5 h-5 mr-2" />
               Discover Souks
             </Button>
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+        {/* Bottom Gradient Fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background via-background/50 to-transparent" />
       </section>
 
       {/* Mega Malls Section */}

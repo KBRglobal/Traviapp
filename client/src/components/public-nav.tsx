@@ -155,59 +155,103 @@ export function PublicNav({ className = "", variant = "default" }: PublicNavProp
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        <div 
-          id="mobile-menu" 
-          className={`lg:hidden overflow-hidden transition-all duration-300 ${
-            mobileMenuOpen ? "max-h-[80vh] opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          <nav 
-            className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/50 dark:border-slate-700/50" 
-            aria-label="Mobile navigation"
-          >
-            <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-2">
-              {navLinks.map((link) => {
-                const IconComponent = link.icon;
-                const active = isActive(link.href) || isActive(localePath(link.href));
-                return (
-                  <Link
-                    key={link.href}
-                    href={localePath(link.href)}
-                    className={`py-3 px-4 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${
-                      active
-                        ? "bg-gradient-to-r from-[#6C5CE7]/10 to-[#EC4899]/10 text-[#6C5CE7]"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                    data-testid={`link-${link.href.slice(1)}-mobile`}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <IconComponent className="w-5 h-5" />
-                    {t(link.labelKey)}
-                  </Link>
-                );
-              })}
-              
-              {/* Real Estate - Mobile */}
-              <Link
-                href={localePath("/dubai-off-plan-properties")}
-                className="py-3 px-4 rounded-xl text-sm font-medium bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] text-white flex items-center gap-3 mt-2"
-                data-testid="link-off-plan-mobile"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Sparkles className="w-5 h-5" />
-                {t("nav.realEstate")}
-              </Link>
+      </nav>
 
-              {/* Language Switcher - Mobile */}
-              <div className="mt-4 pt-4 border-t border-slate-200/50">
-                <span className="px-4 text-xs font-medium text-slate-400 uppercase tracking-wide">{t("nav.language") || "Language"}</span>
-                <div className="px-4 mt-3">
-                  <LanguageSelectorMobile className="w-full" />
-                </div>
+      {/* Mobile Menu Overlay */}
+      <div 
+        className={`lg:hidden fixed inset-0 z-40 transition-opacity duration-300 ${
+          mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden="true"
+      >
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      </div>
+
+      {/* Mobile Menu Drawer - Slides from right */}
+      <nav 
+        id="mobile-menu"
+        className={`lg:hidden fixed top-0 ${isRTL ? 'left-0' : 'right-0'} h-full w-[85%] max-w-[320px] z-50 bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-300 ease-out ${
+          mobileMenuOpen 
+            ? "translate-x-0" 
+            : isRTL ? "-translate-x-full" : "translate-x-full"
+        }`}
+        aria-label="Mobile navigation"
+        dir={isRTL ? "rtl" : "ltr"}
+      >
+        {/* Drawer Header */}
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
+          <Logo variant="primary" height={28} linkTo={localePath("/")} />
+          <button 
+            onClick={() => setMobileMenuOpen(false)}
+            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label={t("common.close") || "Close menu"}
+            data-testid="button-close-mobile-menu"
+          >
+            <X className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+          </button>
+        </div>
+
+        {/* Navigation Links */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex flex-col gap-1">
+            {navLinks.map((link) => {
+              const IconComponent = link.icon;
+              const active = isActive(link.href) || isActive(localePath(link.href));
+              return (
+                <Link
+                  key={link.href}
+                  href={localePath(link.href)}
+                  className={`py-3.5 px-4 rounded-xl text-base font-medium transition-all flex items-center gap-3 ${
+                    active
+                      ? "bg-gradient-to-r from-[#6C5CE7]/15 to-[#EC4899]/15 text-[#6C5CE7] dark:text-[#A29BFE]"
+                      : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }`}
+                  data-testid={`link-${link.href.slice(1)}-mobile`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    active 
+                      ? "bg-gradient-to-br from-[#6C5CE7] to-[#EC4899] text-white" 
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                  }`}>
+                    <IconComponent className="w-5 h-5" />
+                  </div>
+                  <span>{t(link.labelKey)}</span>
+                </Link>
+              );
+            })}
+            
+            {/* Real Estate - Mobile (Highlighted) */}
+            <Link
+              href={localePath("/dubai-off-plan-properties")}
+              className="mt-2 py-3.5 px-4 rounded-xl text-base font-medium bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] text-white flex items-center gap-3 shadow-lg shadow-purple-500/25"
+              data-testid="link-off-plan-mobile"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/20">
+                <Sparkles className="w-5 h-5" />
               </div>
+              <span>{t("nav.realEstate")}</span>
+            </Link>
+          </div>
+
+          {/* Language Section */}
+          <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+            <span className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              {t("nav.language") || "Language"}
+            </span>
+            <div className="mt-3">
+              <LanguageSelectorMobile className="w-full" />
             </div>
-          </nav>
+          </div>
+        </div>
+
+        {/* Drawer Footer */}
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+          <p className="text-xs text-center text-slate-400">
+            {t("home.multiLanguageDesc") || "Read in your native language"}
+          </p>
         </div>
       </nav>
     </header>
