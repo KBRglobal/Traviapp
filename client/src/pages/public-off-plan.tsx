@@ -31,6 +31,239 @@ import {
 } from "@/components/ui/accordion";
 import { motion, AnimatePresence } from "framer-motion";
 
+// ===== 2024-2025 COMPREHENSIVE MARKET DATA =====
+
+// Market Overview Stats (2024)
+const MARKET_STATS = [
+  { value: "226,000", label: "Transactions", subtext: "+36% YoY", icon: Building2 },
+  { value: "AED 761B", label: "Total Value", subtext: "$207 billion", icon: DollarSign },
+  { value: "110,000", label: "New Investors", subtext: "+55% increase", icon: Users },
+  { value: "60-68%", label: "Off-Plan Share", subtext: "Of all deals", icon: TrendingUp },
+  { value: "200.7", label: "Price Index", subtext: "Doubled since 2021", icon: TrendingUp },
+];
+
+// Top Real Estate Agencies (Tier 1)
+const TOP_AGENCIES = [
+  { name: "fäm Properties", founded: "2009", agents: "650+", specialty: "Full-service, off-plan", achievement: "Largest brokerage; AED 1.8B+ revenue" },
+  { name: "Allsopp & Allsopp", founded: "2008", agents: "300-500", specialty: "UK-style residential", achievement: "Bayut Agency of Year 2024 & 2023" },
+  { name: "Betterhomes", founded: "1986", agents: "166+", specialty: "Residential, commercial", achievement: "Oldest major agency; 4.8/5 TrustPilot" },
+  { name: "Driven Properties", founded: "-", agents: "100+", specialty: "Luxury, off-plan", achievement: "AED 175M villa record sale" },
+  { name: "Haus & Haus", founded: "2013", agents: "150+", specialty: "Residential, property mgmt", achievement: "Emaar Broker Awards Top 10" },
+  { name: "Dubai Sotheby's", founded: "2013", agents: "50+", specialty: "Ultra-luxury (AED 30M+)", achievement: "AED 5B+ Dubai portfolio" },
+];
+
+// Expanded Developers Data
+const EXPANDED_DEVELOPERS = [
+  {
+    name: "Emaar",
+    tier: 1,
+    unitsDelivered: "108,000+",
+    landReserve: "405M sqft",
+    marketCap: "AED 70.09B",
+    investment: "AED 65B (5-year plan)",
+    flagships: "Burj Khalifa, Dubai Mall, Downtown Dubai, Dubai Hills Estate, Dubai Creek Harbour",
+    priceRange: "1BR from AED 1.3M | Townhouses from AED 2.9M | Villas from AED 8.1M+",
+    paymentPlans: "80/20, 60/40, 90/10",
+    quality: 5,
+    onTimeRate: "90%+",
+  },
+  {
+    name: "DAMAC",
+    tier: 1,
+    unitsDelivered: "48,000-50,000",
+    pipeline: "50,000-54,000 units",
+    masterCommunities: "7 (targeting 70)",
+    partnerships: "Versace, Fendi, Trump, Mercedes-Benz (2026)",
+    flagships: "DAMAC Hills, DAMAC Lagoons (42M sqft), DAMAC Islands (45M sqft)",
+    priceRange: "Apartments from AED 980K | Villas from AED 2.25M | Branded from AED 2.5M+",
+    paymentPlans: "75/25, 70/30, 80/20, Crypto accepted",
+    quality: 4,
+    onTimeRate: "70-75%",
+  },
+  {
+    name: "Nakheel",
+    tier: 1,
+    unitsDelivered: "Government-backed",
+    flagships: "Palm Jumeirah, Palm Jebel Ali (2x size, 35,000 families), Dubai Islands, Como Residences",
+    recentLaunches: "Palm Jebel Ali Beach Villas (AED 5B+ contracts)",
+    priceRange: "Premium waterfront pricing",
+    paymentPlans: "60/40, 70/30",
+    quality: 5,
+    onTimeRate: "91%",
+  },
+  {
+    name: "Sobha",
+    tier: 1,
+    unitsDelivered: "Premium quality focus",
+    flagship: "Sobha Hartland (8M sqft, AED 55B valuation)",
+    hartland2: "22 towers, 37-70 floors",
+    differentiator: "Backward integration—controls entire construction",
+    priceRange: "1BR from AED 1.3M | 5BR villas from AED 22.7M",
+    paymentPlans: "70/30, Post-handover available",
+    quality: 5,
+    onTimeRate: "95%+",
+  },
+  {
+    name: "Meraas",
+    tier: 1,
+    flagships: "Bluewaters Island (Ain Dubai), City Walk, La Mer, Madinat Jumeirah Living",
+    priceRange: "City Walk from AED 2.6M | Bluewaters from AED 2.8M | Jumeira Bay from AED 63M+",
+    paymentPlans: "50/50, 60/40",
+    quality: 5,
+    positioning: "Ultra-premium lifestyle destinations",
+  },
+  {
+    name: "Omniyat",
+    tier: 1,
+    specialty: "Ultra-luxury specialist",
+    flagships: "The Opus (Zaha Hadid), One at Palm Jumeirah, ORLA/VELA/ELA (Dorchester)",
+    priceRange: "ELA from ~AED 43M | ORLA Sky Palaces AED 75M+",
+    target: "Ultra-high-net-worth individuals only",
+    quality: 5,
+  },
+];
+
+// Tier 2 Developers
+const TIER2_DEVELOPERS = [
+  { name: "Binghatti", stats: "80+ projects, AED 70B portfolio", startingPrice: "AED 520K (JVC)", paymentPlan: "70/30" },
+  { name: "Danube Properties", stats: "31 projects, 15,000+ units", startingPrice: "AED 399K (Arjan)", paymentPlan: "1% monthly (exclusive)" },
+  { name: "Azizi Developments", stats: "40,000 units pipeline", startingPrice: "AED 561K (Al Furjan)", paymentPlan: "50/50 or 60/40" },
+  { name: "Ellington Properties", stats: "34+ design-led projects", startingPrice: "AED 420K (JVC)", paymentPlan: "70/30" },
+  { name: "Samana Developers", stats: "44 projects, pools in every unit", startingPrice: "AED 570K", paymentPlan: "8.5-year extended" },
+  { name: "Dubai Holding", stats: "Madinat Jumeirah Living", startingPrice: "AED 1.5M+", paymentPlan: "50/50 + DLD waiver" },
+];
+
+// Area Analysis with Pricing
+const AREA_ANALYSIS = [
+  { 
+    area: "Palm Jumeirah", 
+    category: "Premium/Luxury",
+    pricePerSqft: "AED 2,500-6,000+",
+    rentalYield: "5-6%",
+    appreciation3Y: "45-68%",
+    entryPrice: "1BR from AED 2.5M",
+    recordSale: "AED 161M villa (2025)",
+    bestFor: "UHNWIs, celebrities, short-term rental"
+  },
+  { 
+    area: "Downtown Dubai", 
+    category: "Premium/Luxury",
+    pricePerSqft: "AED 2,700-3,500",
+    rentalYield: "6.2-7.9%",
+    appreciation3Y: "45-50%",
+    entryPrice: "1BR from AED 1.8M",
+    bestFor: "Business executives, luxury lifestyle, Airbnb"
+  },
+  { 
+    area: "Dubai Marina", 
+    category: "Premium/Luxury",
+    pricePerSqft: "AED 2,000-2,800",
+    rentalYield: "5.5-7.5%",
+    appreciation3Y: "40-45%",
+    entryPrice: "1BR from AED 1.3M",
+    bestFor: "Young professionals, digital nomads"
+  },
+  { 
+    area: "Business Bay", 
+    category: "Mid-Premium",
+    pricePerSqft: "AED 2,300-2,600",
+    rentalYield: "6-7%",
+    appreciation3Y: "35-45%",
+    entryPrice: "Studio from AED 640K",
+    bestFor: "First-time buyers, professionals",
+    note: "69+ off-plan projects"
+  },
+  { 
+    area: "JVC (Jumeirah Village Circle)", 
+    category: "High-Yield Mid-Range",
+    pricePerSqft: "AED 1,469-1,496",
+    rentalYield: "7-8.64%",
+    appreciation3Y: "35-45%",
+    entryPrice: "Studio from AED 400K",
+    transactionVolume: "AED 14.7-16.6B (Q4 2024)",
+    bestFor: "Buy-to-let investors, first-time buyers"
+  },
+  { 
+    area: "Dubai Silicon Oasis", 
+    category: "High-Yield",
+    pricePerSqft: "AED 939-1,512",
+    rentalYield: "7.7-9.8%",
+    appreciation3Y: "57-80%",
+    entryPrice: "Studio from AED 410K",
+    bestFor: "Tech workers, yield-focused investors"
+  },
+  { 
+    area: "Discovery Gardens", 
+    category: "Affordable High-Yield",
+    pricePerSqft: "AED 1,042-1,270",
+    rentalYield: "9-9.8%",
+    entryPrice: "From AED 350K",
+    bestFor: "Cash flow focused investors"
+  },
+  { 
+    area: "Dubai South", 
+    category: "Emerging Growth",
+    pricePerSqft: "AED 800-1,200",
+    rentalYield: "7.5-9.5%",
+    projectedGrowth: "35-45% by 2030",
+    entryPrice: "Studio from AED 450K",
+    catalyst: "AED 128B Al Maktoum Airport expansion",
+    bestFor: "Long-term appreciation"
+  },
+];
+
+// Payment Plans Comparison
+const PAYMENT_PLANS = [
+  { type: "1% Monthly", structure: "20% down + 1%/month + balance handover", developers: "Danube (exclusive)", highlight: true },
+  { type: "Extended 8.5-Year", structure: "1% monthly + 0.5% post-handover", developers: "Samana" },
+  { type: "50/50", structure: "50% construction, 50% handover", developers: "Emaar (select), QUBE" },
+  { type: "60/40", structure: "60% construction, 40% handover", developers: "Emaar, Nakheel, MAF" },
+  { type: "70/30", structure: "70% construction, 30% handover", developers: "Binghatti, Ellington" },
+  { type: "Post-Handover", structure: "20-40% after completion, 2-5 years", developers: "Samana, Sobha, DAMAC" },
+];
+
+// Golden Visa Requirements
+const GOLDEN_VISA_INFO = {
+  minimumInvestment: "AED 2 million (~USD 545,000)",
+  propertyType: "Freehold only (DIFC excluded)",
+  canCombine: true,
+  offPlanAccepted: "If fully paid and registered",
+  mortgageEligible: "If AED 2M+ equity paid",
+  duration: "10-year renewable residence",
+  familySponsorship: "Automatic (spouse & children)",
+  processing: "7-10 working days via DLD Cube",
+  cost: "~AED 9,884.75 total",
+  benefits: [
+    "No sponsor required",
+    "Live/work anywhere in UAE",
+    "Renewable indefinitely",
+    "No 6-month UAE visit requirement",
+  ],
+};
+
+// Historical Price Growth
+const PRICE_HISTORY = [
+  { year: "2021", avgPrice: 794, yoyChange: "+7.8%", cumulative: "Baseline" },
+  { year: "2022", avgPrice: 1039, yoyChange: "+30.9%", cumulative: "+31%" },
+  { year: "2023", avgPrice: 1365, yoyChange: "+14.1%", cumulative: "+72%" },
+  { year: "2024", avgPrice: 1524, yoyChange: "+11.6%", cumulative: "+92%" },
+  { year: "2025", avgPrice: 1750, yoyChange: "+15-20%", cumulative: "+120%" },
+];
+
+// Top Performers 2024
+const TOP_PERFORMERS = {
+  villas: [
+    { area: "Jumeirah Islands", growth: "+42.5%" },
+    { area: "Palm Jumeirah", growth: "+42.3%" },
+    { area: "Emirates Hills", growth: "+32.3%" },
+  ],
+  apartments: [
+    { area: "The Greens", growth: "+31%" },
+    { area: "Palm Jumeirah", growth: "+28.3%" },
+    { area: "The Views", growth: "+27.1%" },
+  ],
+};
+
 // Quick info items
 const QUICK_INFO = [
   { label: "From AED 450K", icon: DollarSign },
@@ -1047,6 +1280,492 @@ export default function PublicOffPlan() {
       </section>
 
       <main className="flex-1">
+        {/* ===== 2024 MARKET OVERVIEW STATS SECTION ===== */}
+        <section className="py-16 md:py-20 bg-gradient-to-b from-slate-50/50 to-transparent dark:from-slate-900/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <Badge className="mb-4 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">2024 Record Year</Badge>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="heading-market-overview">Dubai Real Estate Market Overview</h2>
+              <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
+                Dubai's property market surpassed all records in 2024, with the ValuStrat Price Index doubling since January 2021.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
+              {MARKET_STATS.map((stat) => {
+                const Icon = stat.icon;
+                return (
+                  <Card key={stat.label} className="p-5 text-center bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm" data-testid={`stat-${stat.label.toLowerCase().replace(/\s/g, '-')}`}>
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C5CE7]/10 to-[#EC4899]/10 flex items-center justify-center mx-auto mb-3">
+                      <Icon className="w-6 h-6 text-[#6C5CE7]" />
+                    </div>
+                    <p className="text-2xl md:text-3xl font-bold text-[#6C5CE7]">{stat.value}</p>
+                    <p className="text-sm font-medium mt-1">{stat.label}</p>
+                    <p className="text-xs text-muted-foreground">{stat.subtext}</p>
+                  </Card>
+                );
+              })}
+            </div>
+            
+            <p className="text-center text-sm text-muted-foreground mt-8">
+              Source: Dubai Land Department, ValuStrat, Knight Frank Dubai 2024
+            </p>
+          </div>
+        </section>
+
+        {/* ===== TOP AGENCIES SECTION ===== */}
+        <section className="py-16 md:py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="heading-top-agencies">Tier 1 Real Estate Agencies</h2>
+              <p className="text-muted-foreground text-lg">Industry leaders serving 110,000 new investors in 2024</p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {TOP_AGENCIES.map((agency, index) => (
+                <Card key={agency.name} className="p-5" data-testid={`card-agency-${index}`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-bold text-lg">{agency.name}</h3>
+                      <p className="text-sm text-muted-foreground">Est. {agency.founded}</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">{agency.agents} agents</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">{agency.specialty}</p>
+                  <div className="pt-3 border-t">
+                    <p className="text-xs text-[#6C5CE7] font-medium">{agency.achievement}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            
+            <div className="mt-8 p-4 rounded-lg bg-muted/50 text-center">
+              <p className="text-sm text-muted-foreground">
+                Off-Plan Leaders: fäm Properties, H&S Real Estate, Sky View Real Estate | 
+                Luxury Segment (AED 10M+): 4,600+ units transacted in 2024 (+23% YoY)
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== EXPANDED DEVELOPERS SECTION ===== */}
+        <section className="py-16 md:py-20 bg-muted/30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="heading-developers">Major Developer Ecosystem</h2>
+              <p className="text-muted-foreground text-lg">From market leaders to emerging specialists</p>
+            </div>
+            
+            {/* Tier 1 Developers */}
+            <div className="mb-12">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <Badge className="bg-[#6C5CE7]">Tier 1</Badge>
+                Market Leaders
+              </h3>
+              
+              <div className="space-y-4">
+                {EXPANDED_DEVELOPERS.map((dev, index) => (
+                  <Card key={dev.name} className="p-6" data-testid={`card-developer-${index}`}>
+                    <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+                      <div className="lg:w-1/4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#6C5CE7] to-[#EC4899] flex items-center justify-center text-white font-bold text-lg">
+                            {dev.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-lg">{dev.name}</h4>
+                            {dev.quality && (
+                              <div className="flex gap-0.5">
+                                {Array.from({ length: dev.quality }).map((_, i) => (
+                                  <span key={i} className="text-amber-500 text-xs">★</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {dev.onTimeRate && (
+                          <Badge variant="outline" className="text-xs">{dev.onTimeRate} on-time</Badge>
+                        )}
+                      </div>
+                      
+                      <div className="lg:w-3/4 grid md:grid-cols-2 gap-4 text-sm">
+                        {dev.unitsDelivered && (
+                          <div>
+                            <span className="text-muted-foreground">Units Delivered:</span>
+                            <span className="ml-2 font-medium">{dev.unitsDelivered}</span>
+                          </div>
+                        )}
+                        {dev.marketCap && (
+                          <div>
+                            <span className="text-muted-foreground">Market Cap:</span>
+                            <span className="ml-2 font-medium">{dev.marketCap}</span>
+                          </div>
+                        )}
+                        {dev.landReserve && (
+                          <div>
+                            <span className="text-muted-foreground">Land Reserve:</span>
+                            <span className="ml-2 font-medium">{dev.landReserve}</span>
+                          </div>
+                        )}
+                        {dev.investment && (
+                          <div>
+                            <span className="text-muted-foreground">Investment:</span>
+                            <span className="ml-2 font-medium">{dev.investment}</span>
+                          </div>
+                        )}
+                        {dev.pipeline && (
+                          <div>
+                            <span className="text-muted-foreground">Pipeline:</span>
+                            <span className="ml-2 font-medium">{dev.pipeline}</span>
+                          </div>
+                        )}
+                        {dev.masterCommunities && (
+                          <div>
+                            <span className="text-muted-foreground">Communities:</span>
+                            <span className="ml-2 font-medium">{dev.masterCommunities}</span>
+                          </div>
+                        )}
+                        {dev.partnerships && (
+                          <div className="md:col-span-2">
+                            <span className="text-muted-foreground">Partnerships:</span>
+                            <span className="ml-2 font-medium">{dev.partnerships}</span>
+                          </div>
+                        )}
+                        {dev.flagships && (
+                          <div className="md:col-span-2">
+                            <span className="text-muted-foreground">Flagships:</span>
+                            <span className="ml-2 font-medium">{dev.flagships}</span>
+                          </div>
+                        )}
+                        {dev.flagship && (
+                          <div className="md:col-span-2">
+                            <span className="text-muted-foreground">Flagship:</span>
+                            <span className="ml-2 font-medium">{dev.flagship}</span>
+                          </div>
+                        )}
+                        {dev.differentiator && (
+                          <div className="md:col-span-2">
+                            <span className="text-muted-foreground">Differentiator:</span>
+                            <span className="ml-2 font-medium">{dev.differentiator}</span>
+                          </div>
+                        )}
+                        {dev.priceRange && (
+                          <div className="md:col-span-2">
+                            <span className="text-muted-foreground">Prices:</span>
+                            <span className="ml-2 font-medium text-[#6C5CE7]">{dev.priceRange}</span>
+                          </div>
+                        )}
+                        {dev.paymentPlans && (
+                          <div className="md:col-span-2">
+                            <span className="text-muted-foreground">Payment Plans:</span>
+                            <span className="ml-2 font-medium">{dev.paymentPlans}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+            
+            {/* Tier 2 Developers */}
+            <div>
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <Badge variant="outline">Tier 2</Badge>
+                Value & Emerging Developers
+              </h3>
+              
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {TIER2_DEVELOPERS.map((dev, index) => (
+                  <Card key={dev.name} className="p-5" data-testid={`card-tier2-dev-${index}`}>
+                    <h4 className="font-bold mb-2">{dev.name}</h4>
+                    <p className="text-sm text-muted-foreground mb-3">{dev.stats}</p>
+                    <div className="flex justify-between items-center pt-3 border-t">
+                      <span className="text-sm font-medium text-[#6C5CE7]">{dev.startingPrice}</span>
+                      <Badge variant="secondary" className="text-xs">{dev.paymentPlan}</Badge>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== AREA ANALYSIS SECTION ===== */}
+        <section className="py-16 md:py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="heading-area-analysis">Area Analysis & Investment Yields</h2>
+              <p className="text-muted-foreground text-lg">Comprehensive pricing and yield data by location</p>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="table-area-analysis">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-4 font-semibold">Area</th>
+                    <th className="text-left p-4 font-semibold">Category</th>
+                    <th className="text-left p-4 font-semibold">Price/sqft</th>
+                    <th className="text-left p-4 font-semibold">Rental Yield</th>
+                    <th className="text-left p-4 font-semibold">Entry Price</th>
+                    <th className="text-left p-4 font-semibold">Best For</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {AREA_ANALYSIS.map((area, index) => (
+                    <tr key={area.area} className={`border-b ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`} data-testid={`row-area-${index}`}>
+                      <td className="p-4 font-medium">{area.area}</td>
+                      <td className="p-4">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${
+                            area.category.includes('Premium') ? 'border-amber-500 text-amber-600' :
+                            area.category.includes('High-Yield') ? 'border-green-500 text-green-600' :
+                            area.category.includes('Emerging') ? 'border-[#6C5CE7] text-[#6C5CE7]' :
+                            ''
+                          }`}
+                        >
+                          {area.category}
+                        </Badge>
+                      </td>
+                      <td className="p-4">{area.pricePerSqft}</td>
+                      <td className="p-4 font-semibold text-green-600">{area.rentalYield}</td>
+                      <td className="p-4 text-[#6C5CE7] font-medium">{area.entryPrice}</td>
+                      <td className="p-4 text-muted-foreground text-xs">{area.bestFor}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="mt-8 grid md:grid-cols-3 gap-4">
+              <Card className="p-5 border-green-500/30 bg-green-50/50 dark:bg-green-900/10">
+                <h4 className="font-bold text-green-700 dark:text-green-400 mb-2">Highest Yields</h4>
+                <ul className="text-sm space-y-1">
+                  <li>Discovery Gardens: 9-9.8%</li>
+                  <li>Dubai Silicon Oasis: 7.7-9.8%</li>
+                  <li>Dubai South: 7.5-9.5%</li>
+                </ul>
+              </Card>
+              <Card className="p-5 border-amber-500/30 bg-amber-50/50 dark:bg-amber-900/10">
+                <h4 className="font-bold text-amber-700 dark:text-amber-400 mb-2">Best Appreciation</h4>
+                <ul className="text-sm space-y-1">
+                  <li>Jumeirah Islands: +42.5%</li>
+                  <li>Palm Jumeirah: +42.3%</li>
+                  <li>Emirates Hills: +32.3%</li>
+                </ul>
+              </Card>
+              <Card className="p-5 border-[#6C5CE7]/30 bg-purple-50/50 dark:bg-purple-900/10">
+                <h4 className="font-bold text-[#6C5CE7] mb-2">Lowest Entry</h4>
+                <ul className="text-sm space-y-1">
+                  <li>International City: AED 310K</li>
+                  <li>Discovery Gardens: AED 350K</li>
+                  <li>JVC: AED 400K</li>
+                </ul>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== PAYMENT PLANS COMPARISON ===== */}
+        <section className="py-16 md:py-20 bg-muted/30">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="heading-payment-plans">Payment Plan Comparison</h2>
+              <p className="text-muted-foreground text-lg">Developer payment structures for off-plan purchases</p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {PAYMENT_PLANS.map((plan, index) => (
+                <Card 
+                  key={plan.type} 
+                  className={`p-5 ${plan.highlight ? 'border-[#6C5CE7] bg-[#6C5CE7]/5' : ''}`}
+                  data-testid={`card-payment-plan-${index}`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="font-bold text-lg">{plan.type}</h4>
+                    {plan.highlight && <Badge className="bg-[#6C5CE7]">Popular</Badge>}
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">{plan.structure}</p>
+                  <div className="pt-3 border-t">
+                    <p className="text-xs text-muted-foreground">Offered by:</p>
+                    <p className="text-sm font-medium">{plan.developers}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== GOLDEN VISA SECTION ===== */}
+        <section className="py-16 md:py-20">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <Badge className="mb-4 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">UAE Golden Visa</Badge>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="heading-golden-visa">Golden Visa Through Real Estate</h2>
+              <p className="text-muted-foreground text-lg">10-year renewable residence for property investors</p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              <Card className="p-6">
+                <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
+                  <BadgeCheck className="w-6 h-6 text-amber-500" />
+                  Requirements
+                </h3>
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Minimum Investment</p>
+                      <p className="text-sm text-muted-foreground">{GOLDEN_VISA_INFO.minimumInvestment}</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Property Type</p>
+                      <p className="text-sm text-muted-foreground">{GOLDEN_VISA_INFO.propertyType}</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Multiple Properties</p>
+                      <p className="text-sm text-muted-foreground">Can combine properties to reach threshold</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Off-Plan Accepted</p>
+                      <p className="text-sm text-muted-foreground">{GOLDEN_VISA_INFO.offPlanAccepted}</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Mortgage Eligible</p>
+                      <p className="text-sm text-muted-foreground">{GOLDEN_VISA_INFO.mortgageEligible}</p>
+                    </div>
+                  </li>
+                </ul>
+              </Card>
+              
+              <Card className="p-6 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-900/10">
+                <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-amber-500" />
+                  Benefits
+                </h3>
+                <ul className="space-y-4 mb-6">
+                  {GOLDEN_VISA_INFO.benefits.map((benefit, i) => (
+                    <li key={i} className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-amber-500" />
+                      <span>{benefit}</span>
+                    </li>
+                  ))}
+                  <li className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span>{GOLDEN_VISA_INFO.familySponsorship}</span>
+                  </li>
+                </ul>
+                
+                <div className="pt-4 border-t space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Duration:</span>
+                    <span className="font-medium">{GOLDEN_VISA_INFO.duration}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Processing:</span>
+                    <span className="font-medium">{GOLDEN_VISA_INFO.processing}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total Cost:</span>
+                    <span className="font-medium">{GOLDEN_VISA_INFO.cost}</span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== HISTORICAL PRICE GROWTH ===== */}
+        <section className="py-16 md:py-20 bg-muted/30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="heading-price-history">Historical Price Growth</h2>
+              <p className="text-muted-foreground text-lg">Market-wide appreciation from 2021 to 2025</p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Price History Table */}
+              <Card className="p-6">
+                <h3 className="font-bold text-lg mb-4">Average Price/sqft (AED)</h3>
+                <div className="space-y-3">
+                  {PRICE_HISTORY.map((row, index) => (
+                    <div 
+                      key={row.year}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      data-testid={`row-price-history-${index}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="font-bold text-lg">{row.year}</span>
+                        <span className="text-xl font-bold text-[#6C5CE7]">AED {row.avgPrice}</span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-green-600">{row.yoyChange}</p>
+                        <p className="text-xs text-muted-foreground">{row.cumulative}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-center mt-6 text-2xl font-bold text-green-600">+120% Total Growth</p>
+              </Card>
+              
+              {/* Top Performers */}
+              <div className="space-y-6">
+                <Card className="p-6">
+                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <Home className="w-5 h-5 text-[#6C5CE7]" />
+                    Top Villa Performers 2024
+                  </h3>
+                  <div className="space-y-3">
+                    {TOP_PERFORMERS.villas.map((item, index) => (
+                      <div key={item.area} className="flex justify-between items-center" data-testid={`row-top-villa-${index}`}>
+                        <span>{item.area}</span>
+                        <Badge className="bg-green-600">{item.growth}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+                
+                <Card className="p-6">
+                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-[#6C5CE7]" />
+                    Top Apartment Performers 2024
+                  </h3>
+                  <div className="space-y-3">
+                    {TOP_PERFORMERS.apartments.map((item, index) => (
+                      <div key={item.area} className="flex justify-between items-center" data-testid={`row-top-apt-${index}`}>
+                        <span>{item.area}</span>
+                        <Badge className="bg-green-600">{item.growth}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+                
+                <Card className="p-5 bg-gradient-to-r from-[#6C5CE7]/10 to-[#EC4899]/10">
+                  <p className="text-center">
+                    <span className="text-muted-foreground">2025 Forecast:</span>
+                    <span className="font-bold ml-2">+5-10% Price Growth</span>
+                    <span className="mx-2">|</span>
+                    <span className="font-bold">+10-18% Rental Growth</span>
+                  </p>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Brief Intro */}
         <section className="py-16 md:py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
