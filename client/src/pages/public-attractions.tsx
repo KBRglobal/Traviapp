@@ -368,7 +368,7 @@ const FEATURED_ATTRACTIONS = [
   {
     name: "Burj Khalifa",
     tagline: "World's Tallest Building at 828m",
-    image: "https://images.unsplash.com/photo-1546412414-e1885259563a?w=800&h=1000&fit=crop",
+    image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800&h=1000&fit=crop",
     tags: ["Iconic", "Must See"],
     label: "Editor's Pick"
   },
@@ -482,7 +482,7 @@ function FeaturedCard({
       }`}
       data-testid={`card-featured-${attraction.name.toLowerCase().replace(/\s+/g, '-')}`}
     >
-      <div className={`overflow-hidden rounded-lg ${featured ? 'aspect-[4/5]' : 'aspect-[4/3]'}`}>
+      <div className={`overflow-hidden rounded-lg ${featured ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
         <img 
           src={attraction.image} 
           alt={attraction.name}

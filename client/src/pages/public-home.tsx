@@ -1,4 +1,4 @@
-import { Search, Star, MapPin, ChevronRight, Mail, BookOpen, Users, Globe, Building, UtensilsCrossed, Calendar, Clock, DollarSign, ArrowRight, Check, Newspaper } from "lucide-react";
+import { Search, Star, MapPin, ChevronRight, Mail, BookOpen, Users, Globe, Building, UtensilsCrossed, Calendar, Clock, DollarSign, ArrowRight, Check, Newspaper, TrendingUp } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -604,7 +604,7 @@ export default function PublicHome() {
               </div>
 
               {/* Popular Guides Sidebar */}
-              <div>
+              <div className="space-y-6">
                 <Card className="p-6">
                   <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-primary" />
@@ -623,6 +623,32 @@ export default function PublicHome() {
                       </li>
                     ))}
                   </ul>
+                </Card>
+
+                {/* Quick Stats Card */}
+                <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10">
+                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                    {t("home.dubaiStats") || "Dubai Quick Facts"}
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">Annual Visitors</span>
+                      <span className="font-semibold">17.15M+</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">World's Tallest Tower</span>
+                      <span className="font-semibold">828m</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">Year-Round Sunshine</span>
+                      <span className="font-semibold">340+ days</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">Nationalities Living</span>
+                      <span className="font-semibold">200+</span>
+                    </div>
+                  </div>
                 </Card>
               </div>
             </div>
