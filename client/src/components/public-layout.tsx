@@ -14,12 +14,15 @@ interface PageContainerProps {
   children: React.ReactNode;
   className?: string;
   navVariant?: "default" | "transparent";
+  /** When navVariant is "transparent", specify if hero background is light or dark */
+  navTone?: "light" | "dark";
 }
 
 export function PageContainer({
   children,
   className,
   navVariant = "default",
+  navTone = "dark",
 }: PageContainerProps) {
   const { isRTL } = useLocale();
 
@@ -29,7 +32,7 @@ export function PageContainer({
       dir={isRTL ? "rtl" : "ltr"}
       data-testid="page-container"
     >
-      <PublicNav variant={navVariant} />
+      <PublicNav variant={navVariant} transparentTone={navTone} />
       <main className="flex-1" data-testid="page-main">
         {children}
       </main>

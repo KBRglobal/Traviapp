@@ -10,6 +10,8 @@ import mascotImage from "@assets/Mascot_for_Dark_Background_1766314766064.png";
 interface PublicNavProps {
   className?: string;
   variant?: "default" | "transparent";
+  /** When variant is "transparent", specify if hero background is light or dark */
+  transparentTone?: "light" | "dark";
   hideOnMobile?: boolean;
   onMobileMenuToggle?: (isOpen: boolean) => void;
   externalMobileMenuOpen?: boolean;
@@ -18,6 +20,7 @@ interface PublicNavProps {
 export function PublicNav({ 
   className = "", 
   variant = "default",
+  transparentTone = "dark",
   hideOnMobile = false,
   onMobileMenuToggle,
   externalMobileMenuOpen
@@ -55,6 +58,13 @@ export function PublicNav({
   const showGlassEffect = isTransparent && scrolled;
   const normalizedLocation = location.split('?')[0].split('#')[0].replace(/\/$/, '') || '/';
   const isActive = (href: string) => normalizedLocation === href || normalizedLocation.startsWith(href + '/');
+  
+  // When transparent and not scrolled, use tone to determine text colors
+  // Dark tone = white text (for dark hero backgrounds like photos)
+  // Light tone = dark text (for light hero backgrounds like sky)
+  const isDarkTone = transparentTone === "dark";
+  const useWhiteText = isTransparent && !showGlassEffect && isDarkTone;
+  const useDarkText = isTransparent && !showGlassEffect && !isDarkTone;
 
   return (
     <header className={className}>
@@ -75,7 +85,7 @@ export function PublicNav({
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Logo 
-              variant={isTransparent && !scrolled ? "dark-bg" : "primary"} 
+              variant={useWhiteText ? "dark-bg" : "primary"} 
               height={32}
               linkTo={localePath("/")}
             />
@@ -91,10 +101,14 @@ export function PublicNav({
                     href={localePath(link.href)}
                     className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
                       active
-                        ? "bg-travi-purple/10 text-travi-purple"
+                        ? useWhiteText
+                          ? "bg-white/20 text-white"
+                          : "bg-travi-purple/10 text-travi-purple"
                         : showGlassEffect || !isTransparent
                           ? "text-muted-foreground hover:text-travi-purple hover:bg-muted"
-                          : "text-gray-700 dark:text-white/80 hover:text-travi-purple hover:bg-white/50 dark:hover:bg-white/10"
+                          : useWhiteText
+                            ? "text-white/90 hover:text-white hover:bg-white/10"
+                            : "text-gray-700 hover:text-travi-purple hover:bg-gray-100/50"
                     }`}
                     data-testid={`link-${link.href.slice(1)}`}
                   >
@@ -127,7 +141,9 @@ export function PublicNav({
                   className={`rounded-full ${
                     showGlassEffect || !isTransparent
                       ? "border-border text-muted-foreground hover:bg-muted"
-                      : "border-gray-300 dark:border-white/30 text-gray-700 dark:text-white hover:bg-white/50 dark:hover:bg-white/10"
+                      : useWhiteText
+                        ? "border-white/30 text-white hover:bg-white/10"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-100/50"
                   }`}
                 />
               </div>
@@ -140,7 +156,9 @@ export function PublicNav({
                   className={`rounded-full ${
                     showGlassEffect || !isTransparent
                       ? "text-muted-foreground hover:bg-muted"
-                      : "text-gray-700 dark:text-white hover:bg-white/50 dark:hover:bg-white/10"
+                      : useWhiteText
+                        ? "text-white hover:bg-white/10"
+                        : "text-gray-700 hover:bg-gray-100/50"
                   }`}
                   data-testid="button-search-nav"
                   aria-label="Search"
@@ -154,7 +172,9 @@ export function PublicNav({
                 className={`lg:hidden p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
                   showGlassEffect || !isTransparent
                     ? "text-muted-foreground hover:bg-muted focus:ring-travi-purple" 
-                    : "text-gray-700 dark:text-white hover:bg-white/50 dark:hover:bg-white/10 focus:ring-travi-purple"
+                    : useWhiteText
+                      ? "text-white hover:bg-white/10 focus:ring-white/50"
+                      : "text-gray-700 hover:bg-gray-100/50 focus:ring-travi-purple"
                 }`}
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 data-testid="button-mobile-menu"

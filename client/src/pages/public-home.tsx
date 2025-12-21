@@ -207,6 +207,8 @@ export default function PublicHome() {
       </a>
 
       <PublicNav 
+        variant="transparent"
+        transparentTone="light"
         hideOnMobile={true}
         externalMobileMenuOpen={mobileMenuOpen}
         onMobileMenuToggle={setMobileMenuOpen}
