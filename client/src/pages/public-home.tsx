@@ -269,30 +269,6 @@ export default function PublicHome() {
             </div>
           )}
           
-          {/* Mobile Menu Trigger - Just the Duck with MENU text below */}
-          <button
-            type="button"
-            className={`md:hidden fixed bottom-6 z-50 flex flex-col items-center gap-0.5 ${isRTL ? 'left-4' : 'right-4'}`}
-            onClick={() => setMobileMenuOpen(true)}
-            data-testid="button-mobile-menu-mascot"
-            aria-label={t("nav.menu") || "Open menu"}
-            aria-expanded={mobileMenuOpen}
-            aria-controls="mobile-menu"
-          >
-            {/* Duck Mascot - no frame */}
-            <img 
-              src={mascotImage} 
-              alt="Travi"
-              className="w-16 h-16 drop-shadow-xl active:scale-95 transition-transform"
-              draggable={false}
-            />
-            
-            {/* MENU Text below duck - purple pill for visibility */}
-            <span className="text-[10px] font-bold text-white uppercase tracking-wider bg-[#6C5CE7] px-2 py-0.5 rounded-full shadow-md">
-              {t("nav.menu") || "Menu"}
-            </span>
-          </button>
-
           {/* Main Content - Centered layout */}
           <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 w-full text-center">
             <div className="flex flex-col items-center" dir={isRTL ? "rtl" : "ltr"}>

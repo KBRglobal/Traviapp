@@ -5,6 +5,7 @@ import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher, LanguageSelectorMobile } from "./language-switcher";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import mascotImage from "@assets/Mascot_for_Dark_Background_1766314766064.png";
 
 interface PublicNavProps {
   className?: string;
@@ -272,6 +273,30 @@ export function PublicNav({
           </p>
         </div>
       </nav>
+
+      {/* Mobile Menu Trigger - Duck Mascot (visible on all pages) */}
+      <button
+        type="button"
+        className={`lg:hidden fixed bottom-6 z-50 flex flex-col items-center gap-0.5 ${isRTL ? 'left-4' : 'right-4'}`}
+        onClick={() => setMobileMenuOpen(true)}
+        data-testid="button-mobile-menu-mascot"
+        aria-label={t("nav.menu") || "Open menu"}
+        aria-expanded={mobileMenuOpen}
+        aria-controls="mobile-menu"
+      >
+        {/* Duck Mascot - no frame */}
+        <img 
+          src={mascotImage} 
+          alt="Travi"
+          className="w-16 h-16 drop-shadow-xl active:scale-95 transition-transform"
+          draggable={false}
+        />
+        
+        {/* MENU Text below duck - purple pill for visibility */}
+        <span className="text-[10px] font-bold text-white uppercase tracking-wider bg-[#6C5CE7] px-2 py-0.5 rounded-full shadow-md">
+          {t("nav.menu") || "Menu"}
+        </span>
+      </button>
     </header>
   );
 }
