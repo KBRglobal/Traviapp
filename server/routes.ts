@@ -79,6 +79,7 @@ import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-q
 import { registerEnterpriseRoutes } from "./enterprise-routes";
 import { registerImageRoutes } from "./routes/image-routes";
 import { registerLogRoutes } from "./routes/log-routes";
+import { registerSEORoutes } from "./routes/seo-routes";
 import { registerAutomationRoutes } from "./automation-routes";
 import { registerContentIntelligenceRoutes } from "./content-intelligence-routes";
 import { registerAutoPilotRoutes } from "./auto-pilot-routes";
@@ -8074,6 +8075,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // LOG ROUTES (Admin Panel log viewer)
   // ============================================================================
   registerLogRoutes(app);
+
+  // ============================================================================
+  // SEO ROUTES (Validation, Auto-fix, Publishing gates)
+  // ============================================================================
+  registerSEORoutes(app);
 
   // ============================================================================
   // AUTOMATION ROUTES (Auto SEO, linking, freshness, etc.)

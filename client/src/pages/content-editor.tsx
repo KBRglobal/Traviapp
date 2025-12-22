@@ -100,6 +100,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Keyboard,
+  Lock,
 } from "lucide-react";
 import type {
   ContentWithRelations,
@@ -112,6 +113,7 @@ import type {
   RelatedItem
 } from "@shared/schema";
 import { SeoScore } from "@/components/seo-score";
+import { SEOValidationGate } from "@/components/seo-validation-gate";
 import { SchemaPreview } from "@/components/schema-preview";
 import { AttractionSeoEditor } from "@/components/attraction-seo-editor";
 import { HotelSeoEditor } from "@/components/hotel-seo-editor";
@@ -530,6 +532,9 @@ export default function ContentEditor() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
+
+  // SEO Validation Gate state
+  const [seoCanPublish, setSeoCanPublish] = useState(true);
 
   // Undo/Redo History
   const [history, setHistory] = useState<ContentBlock[][]>([]);
@@ -1768,6 +1773,21 @@ export default function ContentEditor() {
     return images;
   }, [blocks, heroImage, heroImageAlt]);
 
+  // Handler for SEO auto-fix results
+  const handleSeoAutoFix = useCallback((fixedData: Record<string, unknown>) => {
+    if (fixedData.metaTitle) setMetaTitle(fixedData.metaTitle as string);
+    if (fixedData.metaDescription) setMetaDescription(fixedData.metaDescription as string);
+    if (fixedData.primaryKeyword) setPrimaryKeyword(fixedData.primaryKeyword as string);
+    if (fixedData.heroAlt) setHeroImageAlt(fixedData.heroAlt as string);
+    if (fixedData.slug) setSlug(fixedData.slug as string);
+    toast({ title: "SEO Auto-Fixed", description: "Fields have been automatically updated." });
+  }, [toast]);
+
+  // Handler for SEO validation complete
+  const handleSeoValidationComplete = useCallback((canPublishResult: boolean) => {
+    setSeoCanPublish(canPublishResult);
+  }, []);
+
   const handleSave = () => {
     const saveData: Record<string, unknown> = {
       title,
@@ -2170,10 +2190,24 @@ export default function ContentEditor() {
             )}
           </div>
           {canPublish && (
-            <Button size="sm" onClick={handlePublish} disabled={publishMutation.isPending} data-testid="button-publish">
-              {publishMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
-              Publish
-            </Button>
+            <div className="flex items-center gap-2">
+              {!seoCanPublish && (
+                <div className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                  <Lock className="h-3 w-3" />
+                  <span>SEO Blocked</span>
+                </div>
+              )}
+              <Button
+                size="sm"
+                onClick={handlePublish}
+                disabled={publishMutation.isPending || !seoCanPublish}
+                data-testid="button-publish"
+                title={!seoCanPublish ? "Fix critical SEO issues before publishing" : undefined}
+              >
+                {publishMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+                Publish
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -2465,6 +2499,23 @@ export default function ContentEditor() {
                       headings={seoHeadings}
                       images={seoImages}
                     />
+                    <Separator />
+                    <SEOValidationGate
+                      title={title}
+                      metaTitle={metaTitle}
+                      metaDescription={metaDescription}
+                      primaryKeyword={primaryKeyword}
+                      heroImage={heroImage}
+                      heroImageAlt={heroImageAlt}
+                      content={seoContentText}
+                      headings={seoHeadings.map(h => h.text)}
+                      blocks={blocks}
+                      slug={slug}
+                      contentType={contentType}
+                      contentId={contentId}
+                      onAutoFix={handleSeoAutoFix}
+                      onValidationComplete={handleSeoValidationComplete}
+                    />
                   </TabsContent>
                   <TabsContent value="seo" className="mt-4">
                     {contentType === "attraction" && (
@@ -2522,6 +2573,23 @@ export default function ContentEditor() {
                     content={seoContentText}
                     headings={seoHeadings}
                     images={seoImages}
+                  />
+                  <Separator />
+                  <SEOValidationGate
+                    title={title}
+                    metaTitle={metaTitle}
+                    metaDescription={metaDescription}
+                    primaryKeyword={primaryKeyword}
+                    heroImage={heroImage}
+                    heroImageAlt={heroImageAlt}
+                    content={seoContentText}
+                    headings={seoHeadings.map(h => h.text)}
+                    blocks={blocks}
+                    slug={slug}
+                    contentType={contentType}
+                    contentId={contentId}
+                    onAutoFix={handleSeoAutoFix}
+                    onValidationComplete={handleSeoValidationComplete}
                   />
                 </div>
               )}
