@@ -3821,13 +3821,16 @@ Output valid JSON only, no markdown code blocks.`
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
-    
+
     if (result.content?.blocks) {
       result.content.blocks = result.content.blocks.map((block: ContentBlock, index: number) => ({
         ...block,
         id: block.id || generateBlockId(),
         order: index
       }));
+
+      // Validate and ensure all mandatory blocks exist
+      result.content.blocks = ensureRequiredArticleBlocks(result.content.blocks, topic);
     }
 
     return result as GeneratedArticleContent;
@@ -3835,6 +3838,97 @@ Output valid JSON only, no markdown code blocks.`
     console.error("Error generating article content:", error);
     throw error;
   }
+}
+
+// Helper function to ensure all required blocks exist in article content
+function ensureRequiredArticleBlocks(blocks: ContentBlock[], topic: string): ContentBlock[] {
+  const blockTypes = blocks.map(b => b.type);
+  const existingBlocks = [...blocks];
+
+  // Check for required block types and add placeholders if missing
+  const requiredBlocks: { type: string; template: () => ContentBlock }[] = [
+    {
+      type: 'hero',
+      template: () => ({
+        id: generateBlockId(),
+        type: 'hero' as const,
+        data: { title: topic, subtitle: `Complete guide to ${topic}`, overlayText: 'Travel Guide' },
+        order: 0
+      })
+    },
+    {
+      type: 'highlights',
+      template: () => ({
+        id: generateBlockId(),
+        type: 'highlights' as const,
+        data: {
+          title: 'Quick Facts',
+          items: [
+            '📍 Location: Dubai, UAE',
+            '💰 Price: Varies',
+            '⏰ Hours: Check official website',
+            '🎫 Booking: Recommended',
+            '⏱️ Duration: 2-3 hours'
+          ]
+        },
+        order: 2
+      })
+    },
+    {
+      type: 'tips',
+      template: () => ({
+        id: generateBlockId(),
+        type: 'tips' as const,
+        data: {
+          title: `Pro Tips for ${topic}`,
+          tips: [
+            'Book tickets online in advance to skip queues and often save 10-15%',
+            'Visit during weekday mornings for fewer crowds',
+            'Wear comfortable shoes as there is significant walking involved',
+            'Bring sunscreen and water, especially during summer months',
+            'Check for combo deals with nearby attractions',
+            'Download the official app for navigation and updates',
+            'Consider visiting during golden hour for the best photos'
+          ]
+        },
+        order: 9
+      })
+    },
+    {
+      type: 'faq',
+      template: () => ({
+        id: generateBlockId(),
+        type: 'faq' as const,
+        data: {
+          title: 'Frequently Asked Questions',
+          faqs: [
+            { question: `What is the best time to visit ${topic}?`, answer: `The best time to visit ${topic} is during the cooler months from October to April. Morning visits (9-11 AM) typically offer the best experience with fewer crowds. Avoid visiting during peak afternoon hours when temperatures are highest and crowds are at their maximum.` },
+            { question: `How much does ${topic} cost?`, answer: `Prices vary depending on the type of experience you choose. Standard admission typically ranges from AED 100-300 per person. Premium experiences and packages can cost more. Children and seniors often receive discounts. Check the official website for current pricing.` },
+            { question: `How do I get to ${topic}?`, answer: `You can reach ${topic} by metro, taxi, or car. The nearest metro station is usually within walking distance. Taxis and ride-sharing services like Uber and Careem are widely available. Parking is available for those driving.` },
+            { question: `Is ${topic} suitable for families with children?`, answer: `Yes, ${topic} is family-friendly with activities and facilities for all ages. Stroller access is available, and there are rest areas and family restrooms throughout. Some attractions may have age or height restrictions.` },
+            { question: `Do I need to book in advance for ${topic}?`, answer: `Advance booking is highly recommended, especially during weekends and peak tourist season. Online booking often provides discounts and guaranteed entry. Walk-ins are accepted but may face longer wait times.` },
+            { question: `What should I bring to ${topic}?`, answer: `Bring comfortable walking shoes, sunscreen, a hat, and water. A camera or smartphone for photos is essential. Check the dress code requirements as some areas may require modest clothing. Bags may be subject to security screening.` },
+            { question: `How long should I spend at ${topic}?`, answer: `Plan for 2-4 hours to fully experience ${topic}. A quick visit can be done in 1-2 hours, but to enjoy all features and take photos without rushing, allocate at least half a day.` },
+            { question: `Are there restaurants or cafes at ${topic}?`, answer: `Yes, there are multiple dining options available ranging from quick snacks to full-service restaurants. Prices are typically higher than outside, so budget accordingly. Some venues also allow outside food in designated areas.` }
+          ]
+        },
+        order: 11
+      })
+    }
+  ];
+
+  let orderOffset = existingBlocks.length;
+  for (const required of requiredBlocks) {
+    if (!blockTypes.includes(required.type)) {
+      console.log(`[AI Generator] Missing required block type: ${required.type}, adding placeholder`);
+      const newBlock = required.template();
+      newBlock.order = orderOffset++;
+      existingBlocks.push(newBlock);
+    }
+  }
+
+  // Re-order all blocks
+  return existingBlocks.map((block, index) => ({ ...block, order: index }));
 }
 
 export async function generateDiningContent(
