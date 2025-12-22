@@ -2009,6 +2009,31 @@ export default function ContentEditor() {
 
         {/* Center - Canvas */}
         <div className="flex-1 overflow-auto bg-muted/50" ref={canvasRef} onClick={handleCanvasClick}>
+          {/* Preview Mode Container */}
+          {showPreview ? (
+            <div className="flex justify-center py-8 px-4">
+              <div
+                className={`bg-background rounded-lg shadow-lg overflow-hidden transition-all duration-300 ${
+                  previewDevice === "mobile"
+                    ? "w-[375px]"
+                    : previewDevice === "tablet"
+                      ? "w-[768px]"
+                      : "w-full max-w-4xl"
+                }`}
+              >
+                <div className="space-y-0">
+                  {blocks.map((block) => (
+                    <PreviewBlock key={block.id} block={block} title={title} />
+                  ))}
+                  {blocks.length === 0 && (
+                    <div className="text-center py-20 text-muted-foreground">
+                      <p>No content to preview</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="max-w-3xl mx-auto py-8 px-4">
             {/* Canvas blocks with Drag & Drop */}
             <DndContext
@@ -2123,6 +2148,7 @@ export default function ContentEditor() {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Right Panel - Settings */}
