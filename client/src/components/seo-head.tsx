@@ -300,3 +300,187 @@ export function generateAttractionStructuredData(attraction: {
     },
   };
 }
+
+// ==================== Image SEO Structured Data ====================
+
+export interface ImageSeoStructuredData {
+  contentUrl: string;
+  name: string;
+  description: string;
+  width?: number;
+  height?: number;
+  datePublished?: string;
+  author?: string;
+  license?: string;
+  contentLocation?: {
+    name: string;
+    addressLocality?: string;
+    addressRegion?: string;
+    addressCountry?: string;
+    latitude?: string;
+    longitude?: string;
+  };
+  caption?: string;
+  keywords?: string[];
+}
+
+/**
+ * Generate ImageObject schema markup
+ */
+export function generateImageObjectStructuredData(image: ImageSeoStructuredData, pageUrl?: string) {
+  const schema: Record<string, unknown> = {
+    "@type": "ImageObject",
+    contentUrl: image.contentUrl,
+    name: image.name,
+    description: image.description,
+  };
+
+  if (pageUrl) {
+    schema.url = pageUrl;
+  }
+
+  if (image.width && image.height) {
+    schema.width = String(image.width);
+    schema.height = String(image.height);
+  }
+
+  if (image.datePublished) {
+    schema.datePublished = image.datePublished;
+  }
+
+  if (image.author) {
+    schema.author = {
+      "@type": "Organization",
+      name: image.author,
+    };
+  }
+
+  if (image.license) {
+    schema.license = image.license;
+  }
+
+  // Detect format from URL
+  const formatMatch = image.contentUrl.match(/\.(webp|jpg|jpeg|png|gif)(\?|$)/i);
+  if (formatMatch) {
+    const format = formatMatch[1].toLowerCase();
+    schema.encodingFormat = `image/${format === 'jpg' ? 'jpeg' : format}`;
+  }
+
+  if (image.contentLocation) {
+    schema.contentLocation = {
+      "@type": "Place",
+      name: image.contentLocation.name,
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: image.contentLocation.addressLocality || "Dubai",
+        addressRegion: image.contentLocation.addressRegion || "Dubai",
+        addressCountry: image.contentLocation.addressCountry || "AE",
+      },
+    };
+
+    if (image.contentLocation.latitude && image.contentLocation.longitude) {
+      (schema.contentLocation as Record<string, unknown>).geo = {
+        "@type": "GeoCoordinates",
+        latitude: image.contentLocation.latitude,
+        longitude: image.contentLocation.longitude,
+      };
+    }
+  }
+
+  if (image.caption) {
+    schema.caption = image.caption;
+  }
+
+  if (image.keywords && image.keywords.length > 0) {
+    schema.keywords = image.keywords.join(", ");
+  }
+
+  return schema;
+}
+
+/**
+ * Generate multiple ImageObject schemas for a gallery
+ */
+export function generateGalleryStructuredData(
+  images: ImageSeoStructuredData[],
+  pageUrl?: string
+) {
+  return images.map((image) => generateImageObjectStructuredData(image, pageUrl));
+}
+
+/**
+ * Component to inject ImageObject structured data
+ */
+interface ImageStructuredDataProps {
+  image: ImageSeoStructuredData;
+  pageUrl?: string;
+}
+
+export function ImageStructuredData({ image, pageUrl }: ImageStructuredDataProps) {
+  const { locale } = useLocale();
+
+  useEffect(() => {
+    const scriptId = `structured-data-image-${image.contentUrl.replace(/[^a-z0-9]/gi, '')}`;
+    let script = document.getElementById(scriptId) as HTMLScriptElement;
+
+    if (!script) {
+      script = document.createElement("script");
+      script.id = scriptId;
+      script.type = "application/ld+json";
+      document.head.appendChild(script);
+    }
+
+    const structuredData = {
+      "@context": "https://schema.org",
+      inLanguage: locale,
+      ...generateImageObjectStructuredData(image, pageUrl),
+    };
+
+    script.textContent = JSON.stringify(structuredData);
+
+    return () => {
+      script.remove();
+    };
+  }, [image, pageUrl, locale]);
+
+  return null;
+}
+
+/**
+ * Component to inject multiple ImageObject structured data (gallery)
+ */
+interface GalleryStructuredDataProps {
+  images: ImageSeoStructuredData[];
+  pageUrl?: string;
+}
+
+export function GalleryStructuredData({ images, pageUrl }: GalleryStructuredDataProps) {
+  const { locale } = useLocale();
+
+  useEffect(() => {
+    const scriptId = `structured-data-gallery`;
+    let script = document.getElementById(scriptId) as HTMLScriptElement;
+
+    if (!script) {
+      script = document.createElement("script");
+      script.id = scriptId;
+      script.type = "application/ld+json";
+      document.head.appendChild(script);
+    }
+
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "ImageGallery",
+      inLanguage: locale,
+      image: generateGalleryStructuredData(images, pageUrl),
+    };
+
+    script.textContent = JSON.stringify(structuredData);
+
+    return () => {
+      script.remove();
+    };
+  }, [images, pageUrl, locale]);
+
+  return null;
+}
