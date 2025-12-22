@@ -401,6 +401,8 @@ export class DatabaseStorage implements IStorage {
           firstName: userData.firstName,
           lastName: userData.lastName,
           profileImageUrl: userData.profileImageUrl,
+          // Update role if provided (preserves existing role when explicitly passed)
+          ...(userData.role && { role: userData.role }),
           updatedAt: new Date(),
         },
       })
