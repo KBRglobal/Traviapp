@@ -3829,13 +3829,16 @@ export async function registerRoutes(
   });
 
   app.post("/api/media/upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.single("file"), validateMediaUpload, async (req, res) => {
+    console.log("[Media Upload] Request received");
     let localPath: string | null = null;
     let objectPath: string | null = null;
 
     try {
       if (!req.file) {
+        console.log("[Media Upload] ERROR: No file in request");
         return res.status(400).json({ error: "No file uploaded" });
       }
+      console.log(`[Media Upload] Processing file: ${req.file.originalname}, size: ${req.file.size}`)
 
       // Convert images to WebP for optimization
       const converted = await convertToWebP(
@@ -3875,12 +3878,13 @@ export async function registerRoutes(
       });
 
       await logAuditEvent(req, "media_upload", "media", mediaFile.id, `Uploaded media: ${mediaFile.originalFilename}`, undefined, { filename: mediaFile.originalFilename, mimeType: mediaFile.mimeType, size: mediaFile.size, originalSize: req.file.size });
+      console.log(`[Media Upload] SUCCESS: ${mediaFile.filename} -> ${mediaFile.url}`);
       res.status(201).json(mediaFile);
     } catch (error) {
       if (localPath && fs.existsSync(localPath)) {
         try { fs.unlinkSync(localPath); } catch (e) { console.log("Cleanup failed:", e); }
       }
-      console.error("Error uploading media file:", error);
+      console.error("[Media Upload] ERROR:", error);
       res.status(500).json({ error: "Failed to upload media file" });
     }
   });

@@ -316,7 +316,7 @@ async function generateWithFlux(
   }
 }
 
-// Generate image using DALL-E 3
+// Generate image using DALL-E 3 with fallback to DALL-E 2
 async function generateWithDalle(
   prompt: string,
   options: {
@@ -328,7 +328,9 @@ async function generateWithDalle(
   const openai = getOpenAIClient();
   if (!openai) return null;
 
+  // Try DALL-E 3 first
   try {
+    console.log("[DALL-E] Trying DALL-E 3...");
     const response = await openai.images.generate({
       model: "dall-e-3",
       prompt: prompt,
@@ -338,10 +340,31 @@ async function generateWithDalle(
       style: options.style || 'natural',
     });
 
+    console.log("[DALL-E] DALL-E 3 succeeded");
     return response.data?.[0]?.url || null;
-  } catch (error) {
-    console.error("Error generating image with DALL-E:", error);
-    return null;
+  } catch (error: any) {
+    console.error("[DALL-E] DALL-E 3 failed:", error?.message || error);
+
+    // If DALL-E 3 fails (unknown model, etc.), try DALL-E 2
+    console.log("[DALL-E] Falling back to DALL-E 2...");
+    try {
+      // DALL-E 2 only supports 256x256, 512x512, 1024x1024
+      // Truncate prompt to 1000 chars (DALL-E 2 limit)
+      const truncatedPrompt = prompt.length > 1000 ? prompt.substring(0, 997) + "..." : prompt;
+
+      const response = await openai.images.generate({
+        model: "dall-e-2",
+        prompt: truncatedPrompt,
+        n: 1,
+        size: '1024x1024', // DALL-E 2 max size
+      });
+
+      console.log("[DALL-E] DALL-E 2 succeeded");
+      return response.data?.[0]?.url || null;
+    } catch (error2: any) {
+      console.error("[DALL-E] DALL-E 2 also failed:", error2?.message || error2);
+      return null;
+    }
   }
 }
 
