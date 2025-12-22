@@ -1014,6 +1014,28 @@ export interface NearbyItem {
 export interface GalleryImage {
   image: string;
   alt: string;
+  // SEO enhancements
+  title?: string;
+  caption?: string;
+  // Multilingual support
+  altHe?: string;
+  altAr?: string;
+  captionHe?: string;
+  captionAr?: string;
+  // Technical specs
+  width?: number;
+  height?: number;
+  // Schema metadata
+  keywords?: string[];
+  datePublished?: string;
+  contentLocation?: {
+    name: string;
+    addressLocality?: string;
+    addressRegion?: string;
+    addressCountry?: string;
+    latitude?: string;
+    longitude?: string;
+  };
 }
 
 export interface MenuHighlightItem {
