@@ -6,6 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
@@ -380,6 +384,7 @@ export default function ContentEditor() {
   const [heroImageAlt, setHeroImageAlt] = useState("");
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [status, setStatus] = useState<string>("draft");
+  const [scheduledAt, setScheduledAt] = useState<Date | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | null>(null);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
@@ -495,6 +500,9 @@ export default function ContentEditor() {
       setHeroImage(content.heroImage || "");
       setHeroImageAlt(content.heroImageAlt || "");
       setStatus(content.status || "draft");
+      if (content.scheduledAt) {
+        setScheduledAt(new Date(content.scheduledAt));
+      }
 
       // Load attraction-specific SEO data if it exists
       if (content.attraction) {
@@ -643,6 +651,7 @@ export default function ContentEditor() {
           blocks,
           wordCount: currentWordCount,
           status,
+          scheduledAt: scheduledAt?.toISOString() || null,
         };
 
         // Include attraction-specific SEO data if this is an attraction
@@ -1133,6 +1142,7 @@ export default function ContentEditor() {
       blocks,
       wordCount,
       status,
+      scheduledAt: scheduledAt?.toISOString() || null,
     };
 
     // Include content-type-specific SEO data
@@ -1490,6 +1500,8 @@ export default function ContentEditor() {
                       onSlugChange={setSlug}
                       status={status}
                       onStatusChange={setStatus}
+                      scheduledAt={scheduledAt}
+                      onScheduledAtChange={setScheduledAt}
                       metaTitle={metaTitle}
                       onMetaTitleChange={setMetaTitle}
                       metaDescription={metaDescription}
@@ -1545,6 +1557,8 @@ export default function ContentEditor() {
                     onSlugChange={setSlug}
                     status={status}
                     onStatusChange={setStatus}
+                    scheduledAt={scheduledAt}
+                    onScheduledAtChange={setScheduledAt}
                     metaTitle={metaTitle}
                     onMetaTitleChange={setMetaTitle}
                     metaDescription={metaDescription}
@@ -2580,6 +2594,8 @@ function PageSettingsPanel({
   onSlugChange,
   status,
   onStatusChange,
+  scheduledAt,
+  onScheduledAtChange,
   metaTitle,
   onMetaTitleChange,
   metaDescription,
@@ -2594,6 +2610,8 @@ function PageSettingsPanel({
   onSlugChange: (v: string) => void;
   status: string;
   onStatusChange: (v: string) => void;
+  scheduledAt: Date | undefined;
+  onScheduledAtChange: (v: Date | undefined) => void;
   metaTitle: string;
   onMetaTitleChange: (v: string) => void;
   metaDescription: string;
@@ -2649,6 +2667,45 @@ function PageSettingsPanel({
             </SelectContent>
           </Select>
         </div>
+        {status === "scheduled" && (
+          <div className="space-y-2">
+            <Label>Schedule Date & Time</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {scheduledAt ? format(scheduledAt, "PPP p") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={scheduledAt}
+                  onSelect={onScheduledAtChange}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                />
+                <div className="p-3 border-t">
+                  <Label className="text-sm">Time</Label>
+                  <Input
+                    type="time"
+                    value={scheduledAt ? format(scheduledAt, "HH:mm") : ""}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(":").map(Number);
+                      const newDate = scheduledAt ? new Date(scheduledAt) : new Date();
+                      newDate.setHours(hours, minutes);
+                      onScheduledAtChange(newDate);
+                    }}
+                    className="mt-1"
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
 
       <Separator />
