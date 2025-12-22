@@ -11,14 +11,30 @@ import type {
   NearbyItem,
 } from "@shared/schema";
 
+// Client for text generation (GPT models) - can use proxy
 function getOpenAIClient(): OpenAI | null {
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
+    console.warn("[AI Generator] No OpenAI API key configured");
     return null;
   }
   return new OpenAI({
     apiKey,
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
+  });
+}
+
+// Client for image generation (DALL-E) - must use direct API, no proxy
+function getOpenAIClientForImages(): OpenAI | null {
+  // Prefer direct OPENAI_API_KEY for DALL-E (proxy doesn't support image models)
+  const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  if (!apiKey) {
+    console.warn("[AI Generator] No OpenAI API key for DALL-E");
+    return null;
+  }
+  return new OpenAI({
+    apiKey,
+    // No baseURL - DALL-E requires direct OpenAI API
   });
 }
 
@@ -325,7 +341,8 @@ async function generateWithDalle(
     style?: 'vivid' | 'natural';
   } = {}
 ): Promise<string | null> {
-  const openai = getOpenAIClient();
+  // Use dedicated image client (direct API, no proxy)
+  const openai = getOpenAIClientForImages();
   if (!openai) return null;
 
   // Try DALL-E 3 first
