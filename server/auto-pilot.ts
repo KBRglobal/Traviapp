@@ -22,7 +22,7 @@ import {
 import { eq, desc, and, sql, lt, gt, or, ne, isNull, inArray } from "drizzle-orm";
 import { automation } from "./automation";
 import { contentIntelligence } from "./content-intelligence";
-import { imageLogic, DUBAI_AREAS } from "./image-logic";
+import { DUBAI_AREAS } from "./services/image-seo-service";
 import { jobQueue } from "./job-queue";
 import { cache } from "./cache";
 
@@ -392,7 +392,7 @@ export const autoTagger = {
 
     // Detect Dubai area
     for (const [areaKey, areaData] of Object.entries(DUBAI_AREAS)) {
-      if (areaData.identifiers.some(id => contentText.includes(id.toLowerCase()))) {
+      if (areaData.landmarks.some((id: string) => contentText.includes(id.toLowerCase()))) {
         tagsToAdd.push(areaData.name);
         break;
       }
@@ -492,7 +492,7 @@ export const autoCluster = {
     // Detect Dubai area
     let detectedArea: string | null = null;
     for (const [areaKey, areaData] of Object.entries(DUBAI_AREAS)) {
-      if (areaData.identifiers.some(id => contentText.includes(id.toLowerCase()))) {
+      if (areaData.landmarks.some((id: string) => contentText.includes(id.toLowerCase()))) {
         detectedArea = areaKey;
         break;
       }

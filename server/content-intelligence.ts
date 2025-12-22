@@ -6,7 +6,7 @@
 import { db } from "./db";
 import { contents, translations, tags, contentTags, siteSettings } from "@shared/schema";
 import { eq, desc, and, sql, like, or, ne, gt, lt, inArray } from "drizzle-orm";
-import { DUBAI_AREAS } from "./image-logic";
+import { DUBAI_AREAS } from "./services/image-seo-service";
 
 // ============================================================================
 // TOPIC CLUSTER BUILDER
@@ -379,7 +379,7 @@ export const articleRecommendations = {
     // Detect area from content
     let detectedArea: string | null = null;
     for (const [areaKey, areaData] of Object.entries(DUBAI_AREAS)) {
-      if (areaData.identifiers.some(id => contentText.includes(id.toLowerCase()))) {
+      if (areaData.landmarks.some((id: string) => contentText.includes(id.toLowerCase()))) {
         detectedArea = areaKey;
         break;
       }
@@ -408,7 +408,7 @@ export const articleRecommendations = {
       // Same area bonus
       if (detectedArea) {
         const areaData = DUBAI_AREAS[detectedArea as keyof typeof DUBAI_AREAS];
-        if (areaData && areaData.identifiers.some(id => otherText.includes(id.toLowerCase()))) {
+        if (areaData && areaData.landmarks.some((id: string) => otherText.includes(id.toLowerCase()))) {
           score += 40;
           reasons.push(`Same area: ${areaData.name}`);
         }
