@@ -53,6 +53,7 @@ export default function MediaLibrary() {
       const response = await fetch("/api/media/upload", {
         method: "POST",
         body: formData,
+        credentials: "include", // Include auth cookies
       });
       if (!response.ok) throw new Error("Upload failed");
       return response.json();
