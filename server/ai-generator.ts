@@ -369,11 +369,9 @@ export async function generateImage(
     const fluxResult = await generateWithFlux(prompt, aspectRatio);
     if (fluxResult) return fluxResult;
 
-    // Fallback to DALL-E if Flux fails
-    if (provider === 'auto') {
-      console.log("Flux failed, falling back to DALL-E");
-      return generateWithDalle(prompt, options);
-    }
+    // Always fallback to DALL-E if Flux fails (regardless of provider setting)
+    console.log("Flux failed or not configured, falling back to DALL-E");
+    return generateWithDalle(prompt, options);
   }
 
   return generateWithDalle(prompt, options);
@@ -389,13 +387,14 @@ export async function generateContentImages(
 
   // Generate hero image
   if (options.generateHero !== false) {
-    console.log(`Generating hero image for: ${options.title}`);
+    console.log(`[AI Images] Generating hero image for: ${options.title}`);
     const heroPrompt = await generateImagePrompt({
       ...options,
       generateHero: true,
     });
 
     if (heroPrompt) {
+      console.log(`[AI Images] Got prompt, generating image...`);
       const heroUrl = await generateImage(heroPrompt, {
         size: '1792x1024',
         quality: 'hd',
@@ -404,6 +403,7 @@ export async function generateContentImages(
       });
 
       if (heroUrl) {
+        console.log(`[AI Images] Hero image generated successfully`);
         images.push({
           url: heroUrl,
           filename: `${slug}-hero-${timestamp}.jpg`,
@@ -411,7 +411,11 @@ export async function generateContentImages(
           caption: `Explore ${options.title} in Dubai`,
           type: 'hero',
         });
+      } else {
+        console.error(`[AI Images] Failed to generate hero image - both Flux and DALL-E failed`);
       }
+    } else {
+      console.error(`[AI Images] Failed to generate image prompt - check OpenAI API key`);
     }
   }
 
