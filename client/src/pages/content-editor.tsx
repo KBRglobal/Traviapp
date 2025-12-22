@@ -1441,7 +1441,10 @@ export default function ContentEditor() {
         // contentType === "itinerary" ? "/api/ai/generate-itinerary" :
         "/api/ai/generate-article";
 
-      const body = contentType === "article" ? { topic: input } : { name: input };
+      // Build request body with primaryKeyword for better SEO
+      const body = contentType === "article"
+        ? { topic: input, primaryKeyword: primaryKeyword || input }
+        : { name: input, primaryKeyword: primaryKeyword || input };
       // Note: When itinerary is re-enabled, use: contentType === "itinerary" ? { duration: input } : { name: input }
 
       const res = await apiRequest("POST", endpoint, body);

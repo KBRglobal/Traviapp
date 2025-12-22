@@ -3940,76 +3940,83 @@ Output valid JSON only, no markdown code blocks.`
   }
 }
 
-export async function generateAttractionContent(attractionName: string): Promise<GeneratedAttractionContent | null> {
+export async function generateAttractionContent(attractionName: string, options?: { primaryKeyword?: string }): Promise<GeneratedAttractionContent | null> {
   const openai = getOpenAIClient();
   if (!openai) {
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
-  const modelConfig = getModelConfig('premium'); // Attractions = premium content
+  const primaryKeyword = options?.primaryKeyword || attractionName;
+
+  // Use GPT-4o directly for attractions to ensure quality and word count
   try {
     const response = await openai.chat.completions.create({
-      model: modelConfig.model,
+      model: "gpt-4o",  // Force GPT-4o for attractions to ensure word count
       max_tokens: 16000,
-      temperature: 0.8, // Slightly higher for more creative, longer content
+      temperature: 0.8,
       messages: [
         { role: "system", content: ATTRACTION_SYSTEM_PROMPT + `
 
-CRITICAL WORD COUNT ENFORCEMENT:
-You MUST generate AT LEAST 2000 words of content. This is non-negotiable.
-- Each text block content must be MINIMUM 200-400 words
-- The "About" section MUST be 400-500 words
-- The "Complete Experience" section MUST be 300-400 words
-- The "Planning Your Visit" section MUST be 200-300 words
-- Each FAQ answer MUST be 100-150 words (8 FAQs = 800-1200 words)
-- Tips section MUST have 7-8 detailed tips
-Count your words before finalizing. Articles under 2000 words will be REJECTED.` },
+CRITICAL REQUIREMENTS - READ CAREFULLY:
+
+1. WORD COUNT - MANDATORY 2500+ WORDS:
+   - This is a HARD requirement. Generate AT LEAST 2500 words of actual content.
+   - Each text block must be SUBSTANTIAL - 300-500 words each
+   - You will write 8-10 detailed text blocks
+   - Count your words. If under 2500, ADD MORE CONTENT.
+
+2. KEYWORD OPTIMIZATION - MANDATORY:
+   - Primary keyword: "${primaryKeyword}"
+   - Use "${primaryKeyword}" naturally 15-25 times throughout the content
+   - Include in: title, first paragraph, headings, throughout body, conclusion
+   - Target keyword density: 1.5-2.5%
+   - Also use variations and related terms
+
+3. CONTENT DEPTH:
+   - Write like a professional travel journalist
+   - Include specific details, numbers, facts
+   - Describe sights, sounds, experiences vividly
+   - Provide actionable tips and insider knowledge
+
+FAILURE TO MEET 2500 WORD COUNT = REJECTION` },
         {
           role: "user",
-          content: `Generate comprehensive content for a Dubai attraction called "${attractionName}".
+          content: `Generate comprehensive content for a Dubai attraction: "${attractionName}"
 
-⚠️ CRITICAL WORD COUNT REQUIREMENTS (IRON RULE - MUST FOLLOW) ⚠️
-TOTAL WORD COUNT: 2000-3500 words MINIMUM - Articles under 2000 words will be REJECTED.
+PRIMARY KEYWORD FOR SEO: "${primaryKeyword}"
+- Use this keyword 15-25 times naturally throughout the content
+- Include in title, headings, first/last paragraphs
+- Target 1.5-2.5% keyword density
 
-Word count distribution (MANDATORY):
-- Opening/Introduction: 150-200 words (~8% of total)
-- Quick Facts section: 80-120 words (~5% of total)
-- Main Content Sections (4-6 sections): 800-1800 words combined (~60% of total)
-- FAQ Section (6-10 questions): 300-1000 words combined (~20% of total)
-- Pro Tips (5-8 tips): 100-280 words combined (~7% of total)
-- Summary/Conclusion: 100-150 words (~5% of total)
+⚠️ IRON RULE: MINIMUM 2500 WORDS - NO EXCEPTIONS ⚠️
 
-Write engaging, SEO-optimized content that helps tourists plan their visit.
-All information must be accurate and realistic for Dubai.
+Required content structure (ALL blocks mandatory):
 
-MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
-1. hero block - with title, subtitle, overlayText
-2. text block - "About [Attraction Name]" (400-500 words MINIMUM, detailed introduction covering what makes it special)
-3. highlights block - with 6 items, each with 60-100 word descriptions (REQUIRED)
-4. text block - "The Complete Experience" (350-450 words, comprehensive visitor journey)
-5. text block - "Planning Your Visit" (250-350 words, detailed practical info)
-6. text block - "What Makes It Unique" (200-300 words, differentiators)
-7. text block - "Nearby Attractions" (150-200 words)
-8. tips block - with 7-8 detailed, actionable visitor tips, each 30-40 words (this is REQUIRED, do NOT skip)
-9. faq block - with 8-10 FAQ items, each answer 100-150 words (this is REQUIRED, do NOT skip)
-10. text block - "Final Thoughts" (100-150 words, summary with CTA)
-11. cta block - with booking call to action
+1. hero - title containing "${primaryKeyword}", subtitle, overlayText
+2. text - "About ${attractionName}" - MINIMUM 500 words, comprehensive introduction
+3. highlights - 6 items with 80-100 word descriptions each (480-600 words)
+4. text - "The Complete ${attractionName} Experience" - MINIMUM 450 words
+5. text - "Planning Your ${attractionName} Visit" - MINIMUM 350 words
+6. text - "What Makes ${attractionName} Unique" - MINIMUM 300 words
+7. text - "Nearby Attractions" - MINIMUM 200 words
+8. tips - 8 detailed tips, each 40-50 words (320-400 words total)
+9. faq - 10 FAQ items, each answer 120-180 words (1200-1800 words total)
+10. text - "Final Thoughts on ${attractionName}" - MINIMUM 200 words
+11. cta - booking call to action
 
-ALSO REQUIRED in attraction object:
-- 6 highlights with 60-100 word descriptions each
-- 4 ticket options with detailed descriptions and pricing
-- 12 essential info items
-- 8 quick info bar items
-- 7-8 visitor tips (each 30-40 words for 100-280 words total)
-- 8-10 FAQ items with detailed 100-150 word answers (300-1000 words total)
-- 4 nearby attractions with descriptions
-- 5 image descriptions with SEO alt text and captions
-- Comprehensive TouristAttraction JSON-LD schema with geo coordinates
-- Trust signals and related keywords
+WORD COUNT BREAKDOWN:
+- Text blocks: ~2000 words
+- Highlights: ~550 words
+- Tips: ~360 words
+- FAQ: ~1500 words
+- TOTAL: ~4400 words (this is your target)
 
-⚠️ IMPORTANT: Count your words! The total MUST be between 2000-3500 words. DO NOT produce less.
-DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
-Output valid JSON only, no markdown code blocks.`
+Also include in attraction object:
+- primaryKeyword: "${primaryKeyword}"
+- All required fields with detailed content
+- Comprehensive JSON-LD schema
+
+Output valid JSON only.`
         }
       ],
       response_format: { type: "json_object" }

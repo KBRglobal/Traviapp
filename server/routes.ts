@@ -4345,12 +4345,14 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const { name } = req.body;
+      const { name, primaryKeyword } = req.body;
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return res.status(400).json({ error: "Attraction name is required" });
       }
 
-      const result = await generateAttractionContent(name.trim());
+      const result = await generateAttractionContent(name.trim(), {
+        primaryKeyword: primaryKeyword?.trim() || name.trim()
+      });
       if (!result) {
         return res.status(500).json({ error: "Failed to generate attraction content" });
       }
