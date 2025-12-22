@@ -56,13 +56,28 @@ export interface FreepikSearchOptions {
 
 let openaiClient: OpenAI | null = null;
 
+// Helper to get a valid API key (skips dummy keys from Replit)
+function getValidOpenAIKey(): string | null {
+  // Check OPENAI_API_KEY first (user's direct key)
+  const directKey = process.env.OPENAI_API_KEY;
+  if (directKey && !directKey.includes('DUMMY')) {
+    return directKey;
+  }
+
+  // Fallback to AI integrations key
+  const integrationsKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  if (integrationsKey && !integrationsKey.includes('DUMMY')) {
+    return integrationsKey;
+  }
+
+  return null;
+}
+
 function getOpenAIClient(): OpenAI | null {
-  // For image generation, prefer direct OPENAI_API_KEY (not proxied)
-  // Replit AI integrations proxy doesn't support DALL-E models
-  const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const apiKey = getValidOpenAIKey();
 
   if (!apiKey) {
-    console.warn("[ExternalImageService] OpenAI API key not configured (checked OPENAI_API_KEY and AI_INTEGRATIONS_OPENAI_API_KEY)");
+    console.warn("[ExternalImageService] No valid OpenAI API key configured (OPENAI_API_KEY)");
     return null;
   }
 

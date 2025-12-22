@@ -11,11 +11,28 @@ import type {
   NearbyItem,
 } from "@shared/schema";
 
+// Helper to get a valid API key (skips dummy keys)
+function getValidOpenAIKey(): string | null {
+  // Check OPENAI_API_KEY first (user's direct key)
+  const directKey = process.env.OPENAI_API_KEY;
+  if (directKey && !directKey.includes('DUMMY')) {
+    return directKey;
+  }
+
+  // Fallback to AI integrations key
+  const integrationsKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  if (integrationsKey && !integrationsKey.includes('DUMMY')) {
+    return integrationsKey;
+  }
+
+  return null;
+}
+
 // Client for text generation (GPT models) - can use proxy
 function getOpenAIClient(): OpenAI | null {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+  const apiKey = getValidOpenAIKey();
   if (!apiKey) {
-    console.warn("[AI Generator] No OpenAI API key configured");
+    console.warn("[AI Generator] No valid OpenAI API key configured");
     return null;
   }
   return new OpenAI({
@@ -26,10 +43,9 @@ function getOpenAIClient(): OpenAI | null {
 
 // Client for image generation (DALL-E) - must use direct API, no proxy
 function getOpenAIClientForImages(): OpenAI | null {
-  // Prefer direct OPENAI_API_KEY for DALL-E (proxy doesn't support image models)
-  const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const apiKey = getValidOpenAIKey();
   if (!apiKey) {
-    console.warn("[AI Generator] No OpenAI API key for DALL-E");
+    console.warn("[AI Generator] No valid OpenAI API key for DALL-E");
     return null;
   }
   return new OpenAI({
