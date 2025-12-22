@@ -681,12 +681,25 @@ export default function ContentEditor() {
       issues.push("Missing hero image");
     }
 
-    // Content (15 points)
-    const textBlocks = blocks.filter(b => b.type === 'text' || b.type === 'hero');
-    const totalWords = textBlocks.reduce((acc, b) => {
-      const text = String(b.data?.content || b.data?.text || '');
-      return acc + text.split(/\s+/).filter(w => w.length > 0).length;
-    }, 0);
+    // Content (15 points) - count all text content, not just text blocks
+    const allTextContent = blocks.map(b => {
+      if (b.type === "text") return String(b.data?.content || '');
+      if (b.type === "hero") return String(b.data?.title || '');
+      if (b.type === "faq" && b.data?.faqs) {
+        return (b.data.faqs as Array<{question?: string; answer?: string}>)
+          .map(f => `${f.question || ''} ${f.answer || ''}`).join(' ');
+      }
+      if (b.type === "highlights" && b.data?.items) {
+        return (b.data.items as Array<{title?: string; description?: string}>)
+          .map(i => `${i.title || ''} ${i.description || ''}`).join(' ');
+      }
+      if (b.type === "tips" && b.data?.tips) {
+        return (b.data.tips as string[]).join(' ');
+      }
+      if (b.type === "cta") return String(b.data?.text || '');
+      return '';
+    }).join(' ');
+    const totalWords = allTextContent.split(/\s+/).filter(w => w.length > 0).length;
 
     if (totalWords >= 300) { score += 5; passed.push("Content ≥300 words"); }
     else issues.push(`Content: ${totalWords} words (min: 300)`);
@@ -1680,12 +1693,27 @@ export default function ContentEditor() {
     },
   });
 
-  const wordCount = blocks.reduce((count, block) => {
-    if (block.type === "text" && typeof block.data?.content === "string") {
-      return count + block.data.content.split(/\s+/).filter(Boolean).length;
-    }
-    return count;
-  }, 0);
+  // Word count - use same logic as SEO calculation for consistency
+  const wordCount = useMemo(() => {
+    const allText = blocks.map(b => {
+      if (b.type === "text") return String(b.data?.content || '');
+      if (b.type === "hero") return String(b.data?.title || '');
+      if (b.type === "faq" && b.data?.faqs) {
+        return (b.data.faqs as Array<{question?: string; answer?: string}>)
+          .map(f => `${f.question || ''} ${f.answer || ''}`).join(' ');
+      }
+      if (b.type === "highlights" && b.data?.items) {
+        return (b.data.items as Array<{title?: string; description?: string}>)
+          .map(i => `${i.title || ''} ${i.description || ''}`).join(' ');
+      }
+      if (b.type === "tips" && b.data?.tips) {
+        return (b.data.tips as string[]).join(' ');
+      }
+      if (b.type === "cta") return String(b.data?.text || '');
+      return '';
+    }).join(' ');
+    return allText.split(/\s+/).filter(w => w.length > 0).length;
+  }, [blocks]);
 
   const seoContentText = useMemo(() => {
     return blocks.map(b => {
