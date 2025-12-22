@@ -1529,58 +1529,48 @@ export default function ContentEditor() {
 
       // Populate hotel-specific SEO data if available
       if (result.hotel && contentType === "hotel") {
-        setHotelSeoData({
-          introText: result.hotel.introText || "",
-          expandedIntroText: result.hotel.expandedIntroText || "",
-          quickInfoBar: result.hotel.quickInfoBar || [],
-          highlights: result.hotel.highlights || [],
-          roomTypes: result.hotel.roomTypes || [],
-          amenities: result.hotel.amenities || [],
-          diningOptions: result.hotel.diningOptions || [],
-          nearbyAttractions: result.hotel.nearbyAttractions || [],
-          trustSignals: result.hotel.trustSignals || [],
-          primaryCta: result.hotel.primaryCta || "",
-          location: result.hotel.location || "",
-          priceFrom: result.hotel.priceFrom || "",
-          starRating: result.hotel.starRating || 5,
-        });
+        setHotelSeoData(prev => ({
+          ...prev,
+          quickInfoBar: result.hotel.quickInfoBar || prev.quickInfoBar,
+          highlights: result.hotel.highlights || prev.highlights,
+          roomTypes: result.hotel.roomTypes || prev.roomTypes,
+          amenities: result.hotel.amenities || prev.amenities,
+          trustSignals: result.hotel.trustSignals || prev.trustSignals,
+          primaryCta: result.hotel.primaryCta || prev.primaryCta,
+          location: result.hotel.location || prev.location,
+          starRating: result.hotel.starRating || prev.starRating,
+        }));
       }
 
       // Populate dining-specific SEO data if available
       if (result.dining && contentType === "dining") {
-        setDiningSeoData({
-          introText: result.dining.introText || "",
-          expandedIntroText: result.dining.expandedIntroText || "",
-          quickInfoBar: result.dining.quickInfoBar || [],
-          highlights: result.dining.highlights || [],
-          menuHighlights: result.dining.menuHighlights || [],
-          atmosphere: result.dining.atmosphere || [],
-          practicalInfo: result.dining.practicalInfo || [],
-          nearbyAttractions: result.dining.nearbyAttractions || [],
-          trustSignals: result.dining.trustSignals || [],
-          primaryCta: result.dining.primaryCta || "",
-          location: result.dining.location || "",
-          priceRange: result.dining.priceRange || "",
-          cuisineType: result.dining.cuisineType || "",
-        });
+        setDiningSeoData(prev => ({
+          ...prev,
+          quickInfoBar: result.dining.quickInfoBar || prev.quickInfoBar,
+          highlights: result.dining.highlights || prev.highlights,
+          menuHighlights: result.dining.menuHighlights || prev.menuHighlights,
+          trustSignals: result.dining.trustSignals || prev.trustSignals,
+          primaryCta: result.dining.primaryCta || prev.primaryCta,
+          location: result.dining.location || prev.location,
+          priceRange: result.dining.priceRange || prev.priceRange,
+          cuisineType: result.dining.cuisineType || prev.cuisineType,
+        }));
       }
 
       // Populate district-specific SEO data if available
       if (result.district && contentType === "district") {
-        setDistrictSeoData({
-          introText: result.district.introText || "",
-          expandedIntroText: result.district.expandedIntroText || "",
-          quickInfoBar: result.district.quickInfoBar || [],
-          highlights: result.district.highlights || [],
-          topAttractions: result.district.topAttractions || [],
-          diningOptions: result.district.diningOptions || [],
-          shoppingOptions: result.district.shoppingOptions || [],
-          transportation: result.district.transportation || [],
-          trustSignals: result.district.trustSignals || [],
-          primaryCta: result.district.primaryCta || "",
-          location: result.district.location || "",
-          bestTimeToVisit: result.district.bestTimeToVisit || "",
-        });
+        setDistrictSeoData(prev => ({
+          ...prev,
+          introText: result.district.introText || prev.introText,
+          expandedIntroText: result.district.expandedIntroText || prev.expandedIntroText,
+          quickInfoBar: result.district.quickInfoBar || prev.quickInfoBar,
+          highlights: result.district.highlights || prev.highlights,
+          thingsToDo: result.district.topAttractions || prev.thingsToDo,
+          diningHighlights: result.district.diningOptions || prev.diningHighlights,
+          trustSignals: result.district.trustSignals || prev.trustSignals,
+          primaryCta: result.district.primaryCta || prev.primaryCta,
+          location: result.district.location || prev.location,
+        }));
       }
 
       setAiGenerateDialogOpen(false);
@@ -2431,6 +2421,7 @@ export default function ContentEditor() {
                       primaryKeyword={primaryKeyword}
                       onPrimaryKeywordChange={setPrimaryKeyword}
                       contentId={contentId}
+                      contentType={contentType}
                     />
                     <Separator />
                     <SeoScore
@@ -2488,6 +2479,7 @@ export default function ContentEditor() {
                     primaryKeyword={primaryKeyword}
                     onPrimaryKeywordChange={setPrimaryKeyword}
                     contentId={contentId}
+                    contentType={contentType}
                   />
                   <Separator />
                   <SeoScore
@@ -4309,7 +4301,7 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     return (
       <div className="p-8">
         <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full rounded-lg" />
-        {block.data?.caption && <p className="text-sm text-muted-foreground text-center mt-2">{String(block.data.caption)}</p>}
+        {block.data?.caption ? <p className="text-sm text-muted-foreground text-center mt-2">{String(block.data.caption)}</p> : null}
       </div>
     );
   }
@@ -4345,7 +4337,7 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
       <div className="p-8">
         <blockquote className="border-l-4 border-primary pl-6 italic text-lg">
           <p>{String(block.data?.content || "")}</p>
-          {block.data?.author && <cite className="block mt-2 text-sm text-muted-foreground">— {String(block.data.author)}</cite>}
+          {block.data?.author ? <cite className="block mt-2 text-sm text-muted-foreground">— {String(block.data.author)}</cite> : null}
         </blockquote>
       </div>
     );
@@ -4635,6 +4627,7 @@ function PageSettingsPanel({
   primaryKeyword,
   onPrimaryKeywordChange,
   contentId,
+  contentType = "article",
 }: {
   title: string;
   onTitleChange: (v: string) => void;
@@ -4651,6 +4644,7 @@ function PageSettingsPanel({
   primaryKeyword: string;
   onPrimaryKeywordChange: (v: string) => void;
   contentId?: string;
+  contentType?: string;
 }) {
   return (
     <div className="space-y-6">
@@ -4662,7 +4656,8 @@ function PageSettingsPanel({
             <Label>Title</Label>
             <AITitleSuggestions
               currentTitle={title}
-              onSelect={(newTitle) => {
+              contentType={contentType}
+              onSelectTitle={(newTitle: string) => {
                 onTitleChange(newTitle);
                 if (!slug || slug === generateSlug(title)) {
                   onSlugChange(generateSlug(newTitle));
