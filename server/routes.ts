@@ -4360,6 +4360,102 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     }
   });
 
+  // Generate partial content for a specific section based on existing content
+  app.post("/api/ai/generate-section", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+    try {
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      }
+
+      const { sectionType, title, existingContent, contentType } = req.body;
+
+      if (!sectionType || !title) {
+        return res.status(400).json({ error: "Section type and title are required" });
+      }
+
+      const validSections = ["faq", "tips", "highlights"];
+      if (!validSections.includes(sectionType)) {
+        return res.status(400).json({ error: "Invalid section type. Must be: faq, tips, or highlights" });
+      }
+
+      let prompt = "";
+      const systemPrompt = `You are a Dubai travel content expert. Generate high-quality, SEO-optimized content for the "${title}" page.
+Based on the existing content context, generate ONLY the requested section. Output valid JSON.`;
+
+      const contextInfo = existingContent ? `\n\nExisting content context:\n${existingContent.substring(0, 3000)}` : "";
+
+      if (sectionType === "faq") {
+        prompt = `Generate 8 frequently asked questions with detailed answers for "${title}" (${contentType || "attraction"}).
+${contextInfo}
+
+Generate practical, helpful FAQs that visitors would actually ask.
+Each answer should be 100-150 words with specific, actionable information.
+
+Output format:
+{
+  "faqs": [
+    {"question": "What are the opening hours of ${title}?", "answer": "Detailed 100-150 word answer..."},
+    {"question": "How much do tickets cost?", "answer": "Detailed answer with prices..."},
+    ...8 total FAQs
+  ]
+}`;
+      } else if (sectionType === "tips") {
+        prompt = `Generate 7-8 insider tips for visiting "${title}" (${contentType || "attraction"}).
+${contextInfo}
+
+Tips should be practical, specific, and actionable - not generic advice.
+Each tip should be 30-50 words.
+
+Output format:
+{
+  "tips": [
+    "Book tickets online at least 2 days in advance to skip the queue and save 15% on entry fees.",
+    "Visit during weekday mornings (9-11 AM) for smaller crowds and better photo opportunities.",
+    ...7-8 total tips
+  ]
+}`;
+      } else if (sectionType === "highlights") {
+        prompt = `Generate 6 key highlights/experiences for "${title}" (${contentType || "attraction"}).
+${contextInfo}
+
+Each highlight should describe a specific experience or feature that visitors can enjoy.
+Include the highlight title and a 50-80 word description.
+
+Output format:
+{
+  "highlights": [
+    {"title": "Observation Deck Experience", "description": "50-80 word detailed description of this highlight..."},
+    {"title": "Interactive Exhibits", "description": "Description..."},
+    ...6 total highlights
+  ]
+}`;
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        max_tokens: 4000,
+        temperature: 0.7,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || "{}");
+      console.log(`[AI Section] Generated ${sectionType} for "${title}"`);
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating section content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate section content";
+      res.status(500).json({ error: message });
+    }
+  });
+
   app.post("/api/ai/generate-dining", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });

@@ -1559,6 +1559,67 @@ export default function ContentEditor() {
     },
   });
 
+  // Generate individual sections (FAQ, Tips, Highlights) when empty
+  const [generatingSectionId, setGeneratingSectionId] = useState<string | null>(null);
+
+  const generateSectionMutation = useMutation({
+    mutationFn: async ({ sectionType, blockId }: { sectionType: string; blockId: string }) => {
+      // Collect existing content for context
+      const existingContent = blocks
+        .filter(b => b.type === "text" || b.type === "hero")
+        .map(b => b.data?.content || b.data?.title || "")
+        .join("\n");
+
+      const res = await apiRequest("POST", "/api/ai/generate-section", {
+        sectionType,
+        title: title || "Dubai Attraction",
+        existingContent,
+        contentType,
+      });
+      return { result: await res.json(), sectionType, blockId };
+    },
+    onSuccess: ({ result, sectionType, blockId }) => {
+      if (sectionType === "faq" && result.faqs) {
+        // Replace the empty FAQ block with generated FAQs
+        const newBlocks = blocks.filter(b => b.id !== blockId);
+        let orderIndex = newBlocks.length;
+        const faqBlocks = result.faqs.map((faq: { question: string; answer: string }) => ({
+          id: `faq-${Math.random().toString(36).substring(2, 9)}`,
+          type: "faq" as const,
+          data: { question: faq.question, answer: faq.answer },
+          order: orderIndex++,
+        }));
+        setBlocks([...newBlocks, ...faqBlocks]);
+        toast({ title: "FAQ Generated", description: `Generated ${result.faqs.length} FAQ items.` });
+      } else if (sectionType === "tips" && result.tips) {
+        // Update the tips block with generated content
+        updateBlock(blockId, { content: result.tips.join("\n") });
+        toast({ title: "Tips Generated", description: `Generated ${result.tips.length} tips.` });
+      } else if (sectionType === "highlights" && result.highlights) {
+        // Update the highlights block with generated content
+        const highlightText = result.highlights
+          .map((h: { title: string; description: string }) => `${h.title}: ${h.description}`)
+          .join("\n");
+        updateBlock(blockId, { content: highlightText });
+        toast({ title: "Highlights Generated", description: `Generated ${result.highlights.length} highlights.` });
+      }
+      setGeneratingSectionId(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Generation Failed", description: error.message || "Failed to generate section.", variant: "destructive" });
+      setGeneratingSectionId(null);
+    },
+  });
+
+  const handleGenerateSection = (sectionType: string, blockId: string) => {
+    if (!title) {
+      toast({ title: "Title Required", description: "Please enter a title before generating sections.", variant: "destructive" });
+      return;
+    }
+    setGeneratingSectionId(blockId);
+    generateSectionMutation.mutate({ sectionType, blockId });
+  };
+
   const { data: versions = [], isLoading: isLoadingVersions } = useQuery<ContentVersion[]>({
     queryKey: ['/api/contents', contentId, 'versions'],
     enabled: !!contentId && versionHistoryOpen,
@@ -2203,6 +2264,8 @@ export default function ContentEditor() {
                         onTitleChange={setTitle}
                         onGenerateImage={() => handleGenerateImage(blockId, block.type === "hero" ? "hero" : "image")}
                         isGeneratingImage={imageGeneratingBlock === blockId}
+                        onGenerateSection={(sectionType) => handleGenerateSection(sectionType, blockId)}
+                        isGeneratingSection={generatingSectionId === blockId}
                         onContextMenu={(e) => handleContextMenu(e, blockId)}
                       />
                     );
@@ -2725,6 +2788,8 @@ function SortableCanvasBlock({
   onTitleChange,
   onGenerateImage,
   isGeneratingImage,
+  onGenerateSection,
+  isGeneratingSection,
   onContextMenu,
 }: {
   id: string;
@@ -2743,6 +2808,8 @@ function SortableCanvasBlock({
   onTitleChange: (title: string) => void;
   onGenerateImage: () => void;
   isGeneratingImage: boolean;
+  onGenerateSection?: (sectionType: string) => void;
+  isGeneratingSection?: boolean;
   onContextMenu?: (e: React.MouseEvent) => void;
 }) {
   const {
@@ -2830,6 +2897,8 @@ function SortableCanvasBlock({
         onUpdate={onUpdate}
         onGenerateImage={onGenerateImage}
         isGeneratingImage={isGeneratingImage}
+        onGenerateSection={onGenerateSection}
+        isGeneratingSection={isGeneratingSection}
       />
     </div>
   );
@@ -2844,6 +2913,8 @@ function CanvasBlockContent({
   onUpdate,
   onGenerateImage,
   isGeneratingImage,
+  onGenerateSection,
+  isGeneratingSection,
 }: {
   block: ContentBlock;
   isSelected: boolean;
@@ -2852,12 +2923,16 @@ function CanvasBlockContent({
   onUpdate?: (data: Record<string, unknown>) => void;
   onGenerateImage?: () => void;
   isGeneratingImage?: boolean;
+  onGenerateSection?: (sectionType: string) => void;
+  isGeneratingSection?: boolean;
 }) {
   // Provide no-op fallbacks for optional handlers (used in DragOverlay)
   const handleUpdate = onUpdate || (() => {});
   const handleTitleChange = onTitleChange || (() => {});
   const handleGenerateImage = onGenerateImage || (() => {});
+  const handleGenerateSection = onGenerateSection || (() => {});
   const generating = isGeneratingImage || false;
+  const generatingSection = isGeneratingSection || false;
 
   return (
     <div className="bg-background rounded-lg overflow-hidden">
@@ -2879,16 +2954,16 @@ function CanvasBlockContent({
           <ImageBlockCanvas block={block} onUpdate={handleUpdate} onGenerateImage={handleGenerateImage} isGeneratingImage={generating} isSelected={isSelected} />
         )}
         {block.type === "faq" && (
-          <FAQBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+          <FAQBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} onGenerateSection={handleGenerateSection} isGeneratingSection={generatingSection} />
         )}
         {block.type === "cta" && (
           <CTABlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "highlights" && (
-          <HighlightsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+          <HighlightsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} onGenerateSection={handleGenerateSection} isGeneratingSection={generatingSection} />
         )}
         {block.type === "tips" && (
-          <TipsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+          <TipsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} onGenerateSection={handleGenerateSection} isGeneratingSection={generatingSection} />
         )}
         {block.type === "info_grid" && (
           <InfoGridBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
@@ -3248,30 +3323,54 @@ function FAQBlockCanvas({
   block,
   onUpdate,
   isSelected,
+  onGenerateSection,
+  isGeneratingSection,
 }: {
   block: ContentBlock;
   onUpdate: (data: Record<string, unknown>) => void;
   isSelected: boolean;
+  onGenerateSection?: (sectionType: string) => void;
+  isGeneratingSection?: boolean;
 }) {
+  const isEmpty = !block.data?.question && !block.data?.answer;
+
   return (
     <div className="p-6 space-y-3">
-      <input
-        type="text"
-        value={String(block.data?.question || "")}
-        onChange={(e) => onUpdate({ question: e.target.value })}
-        onClick={(e) => e.stopPropagation()}
-        placeholder="Enter your question..."
-        className="w-full bg-transparent border-none outline-none text-lg font-semibold placeholder:text-muted-foreground/50 focus:ring-0"
-        data-testid={`faq-question-${block.id}`}
-      />
-      <textarea
-        value={String(block.data?.answer || "")}
-        onChange={(e) => onUpdate({ answer: e.target.value })}
-        onClick={(e) => e.stopPropagation()}
-        placeholder="Enter your answer..."
-        className="w-full min-h-[80px] bg-transparent border-none outline-none resize-none text-muted-foreground placeholder:text-muted-foreground/50 focus:ring-0"
-        data-testid={`faq-answer-${block.id}`}
-      />
+      {isEmpty && onGenerateSection ? (
+        <div className="flex flex-col items-center justify-center py-8 gap-3 bg-muted/30 rounded-lg border-2 border-dashed">
+          <HelpCircle className="h-10 w-10 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No FAQ content yet</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onGenerateSection("faq"); }}
+            disabled={isGeneratingSection}
+          >
+            {isGeneratingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            Generate FAQ
+          </Button>
+        </div>
+      ) : (
+        <>
+          <input
+            type="text"
+            value={String(block.data?.question || "")}
+            onChange={(e) => onUpdate({ question: e.target.value })}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Enter your question..."
+            className="w-full bg-transparent border-none outline-none text-lg font-semibold placeholder:text-muted-foreground/50 focus:ring-0"
+            data-testid={`faq-question-${block.id}`}
+          />
+          <textarea
+            value={String(block.data?.answer || "")}
+            onChange={(e) => onUpdate({ answer: e.target.value })}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Enter your answer..."
+            className="w-full min-h-[80px] bg-transparent border-none outline-none resize-none text-muted-foreground placeholder:text-muted-foreground/50 focus:ring-0"
+            data-testid={`faq-answer-${block.id}`}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -3315,12 +3414,17 @@ function HighlightsBlockCanvas({
   block,
   onUpdate,
   isSelected,
+  onGenerateSection,
+  isGeneratingSection,
 }: {
   block: ContentBlock;
   onUpdate: (data: Record<string, unknown>) => void;
   isSelected: boolean;
+  onGenerateSection?: (sectionType: string) => void;
+  isGeneratingSection?: boolean;
 }) {
   const content = String(block.data?.content || "");
+  const isEmpty = !content.trim();
 
   return (
     <div className="p-6">
@@ -3328,14 +3432,30 @@ function HighlightsBlockCanvas({
         <Star className="h-5 w-5 text-primary" />
         <span className="font-semibold">Highlights</span>
       </div>
-      <textarea
-        value={content}
-        onChange={(e) => onUpdate({ content: e.target.value })}
-        onClick={(e) => e.stopPropagation()}
-        placeholder="Enter highlights (one per line)..."
-        className="w-full min-h-[100px] bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground/50 focus:ring-0"
-        data-testid={`highlights-content-${block.id}`}
-      />
+      {isEmpty && onGenerateSection ? (
+        <div className="flex flex-col items-center justify-center py-6 gap-3 bg-muted/30 rounded-lg border-2 border-dashed">
+          <Star className="h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No highlights yet</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onGenerateSection("highlights"); }}
+            disabled={isGeneratingSection}
+          >
+            {isGeneratingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            Generate Highlights
+          </Button>
+        </div>
+      ) : (
+        <textarea
+          value={content}
+          onChange={(e) => onUpdate({ content: e.target.value })}
+          onClick={(e) => e.stopPropagation()}
+          placeholder="Enter highlights (one per line)..."
+          className="w-full min-h-[100px] bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground/50 focus:ring-0"
+          data-testid={`highlights-content-${block.id}`}
+        />
+      )}
     </div>
   );
 }
@@ -3345,12 +3465,17 @@ function TipsBlockCanvas({
   block,
   onUpdate,
   isSelected,
+  onGenerateSection,
+  isGeneratingSection,
 }: {
   block: ContentBlock;
   onUpdate: (data: Record<string, unknown>) => void;
   isSelected: boolean;
+  onGenerateSection?: (sectionType: string) => void;
+  isGeneratingSection?: boolean;
 }) {
   const content = String(block.data?.content || "");
+  const isEmpty = !content.trim();
 
   return (
     <div className="p-6">
@@ -3358,14 +3483,30 @@ function TipsBlockCanvas({
         <Lightbulb className="h-5 w-5 text-yellow-500" />
         <span className="font-semibold">Tips</span>
       </div>
-      <textarea
-        value={content}
-        onChange={(e) => onUpdate({ content: e.target.value })}
-        onClick={(e) => e.stopPropagation()}
-        placeholder="Enter tips (one per line)..."
-        className="w-full min-h-[100px] bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground/50 focus:ring-0"
-        data-testid={`tips-content-${block.id}`}
-      />
+      {isEmpty && onGenerateSection ? (
+        <div className="flex flex-col items-center justify-center py-6 gap-3 bg-muted/30 rounded-lg border-2 border-dashed">
+          <Lightbulb className="h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No tips yet</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onGenerateSection("tips"); }}
+            disabled={isGeneratingSection}
+          >
+            {isGeneratingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            Generate Tips
+          </Button>
+        </div>
+      ) : (
+        <textarea
+          value={content}
+          onChange={(e) => onUpdate({ content: e.target.value })}
+          onClick={(e) => e.stopPropagation()}
+          placeholder="Enter tips (one per line)..."
+          className="w-full min-h-[100px] bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground/50 focus:ring-0"
+          data-testid={`tips-content-${block.id}`}
+        />
+      )}
     </div>
   );
 }
