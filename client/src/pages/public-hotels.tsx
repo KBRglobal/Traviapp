@@ -1,14 +1,19 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Star, Building2, Waves, Briefcase, Users, Heart,
   Sparkles, Award, Crown, Plane, Palmtree, Building,
-  Umbrella, Utensils, Dumbbell, Car, Wifi, Coffee
+  Umbrella, Utensils, Dumbbell, Car, Wifi, Coffee,
+  Sun, Moon, TreePalm, Baby, MapPin, TrendingUp
 } from "lucide-react";
 import { PageContainer, Section, ContentCard, CategoryGrid } from "@/components/public-layout";
 import { PublicHero } from "@/components/public-hero";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { cn } from "@/lib/utils";
 
 const hotelCategories = [
   {
@@ -63,7 +68,8 @@ const featuredHotels = [
     image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=900&h=600&fit=crop",
     features: ["Underwater Suites", "Aquaventure Waterpark", "The Lost Chambers"],
     rating: 5,
-    area: "Palm Jumeirah"
+    area: "Palm Jumeirah",
+    vibe: "family"
   },
   {
     name: "Burj Al Arab",
@@ -72,7 +78,8 @@ const featuredHotels = [
     image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=900&h=600&fit=crop",
     features: ["Butler Service", "Helipad", "Private Beach"],
     rating: 7,
-    area: "Jumeirah"
+    area: "Jumeirah",
+    vibe: "romance"
   },
   {
     name: "Address Downtown",
@@ -81,7 +88,8 @@ const featuredHotels = [
     image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=900&h=600&fit=crop",
     features: ["Burj Khalifa Views", "Dubai Mall Access", "Rooftop Pool"],
     rating: 5,
-    area: "Downtown Dubai"
+    area: "Downtown Dubai",
+    vibe: "city"
   },
   {
     name: "One&Only Royal Mirage",
@@ -90,7 +98,8 @@ const featuredHotels = [
     image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=900&h=600&fit=crop",
     features: ["Private Beach", "Oriental Hammam", "Lush Gardens"],
     rating: 5,
-    area: "The Palm"
+    area: "The Palm",
+    vibe: "beach"
   },
   {
     name: "Armani Hotel Dubai",
@@ -99,7 +108,8 @@ const featuredHotels = [
     image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&h=600&fit=crop",
     features: ["Armani Design", "Burj Khalifa Location", "Fine Dining"],
     rating: 5,
-    area: "Downtown Dubai"
+    area: "Downtown Dubai",
+    vibe: "city"
   },
   {
     name: "Four Seasons Jumeirah",
@@ -108,7 +118,8 @@ const featuredHotels = [
     image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=900&h=600&fit=crop",
     features: ["Private Beach", "Infinity Pool", "Award-Winning Spa"],
     rating: 5,
-    area: "Jumeirah Beach"
+    area: "Jumeirah Beach",
+    vibe: "romance"
   }
 ];
 
@@ -174,125 +185,486 @@ const amenities = [
   { icon: Wifi, name: "High-Speed WiFi", description: "Seamless connectivity" }
 ];
 
+const vibeOptions = [
+  { 
+    id: "beach", 
+    label: "Beach Life", 
+    icon: Sun,
+    gradient: "from-cyan-400 to-blue-500",
+    glowColor: "shadow-cyan-400/50",
+    description: "Sun, sand & luxury"
+  },
+  { 
+    id: "city", 
+    label: "City Views", 
+    icon: Building2,
+    gradient: "from-travi-purple to-indigo-600",
+    glowColor: "shadow-travi-purple/50",
+    description: "Skyline panoramas"
+  },
+  { 
+    id: "romance", 
+    label: "Romance", 
+    icon: Heart,
+    gradient: "from-travi-pink to-rose-500",
+    glowColor: "shadow-travi-pink/50",
+    description: "Intimate escapes"
+  },
+  { 
+    id: "family", 
+    label: "Family Fun", 
+    icon: Users,
+    gradient: "from-travi-orange to-amber-500",
+    glowColor: "shadow-travi-orange/50",
+    description: "Adventure awaits"
+  }
+];
+
+const trendingDeals = [
+  "Atlantis Royal - 30% Off Weekend Stays",
+  "Burj Al Arab - Complimentary Spa Package",
+  "Address Downtown - Free Dubai Mall Credit",
+  "One&Only - Private Beach Cabana Included",
+  "Four Seasons - Kids Stay Free This Winter",
+  "Armani Hotel - Exclusive Dining Experience"
+];
+
+function FloatingSparkle({ delay = 0, size = "w-2 h-2", position }: { delay?: number; size?: string; position: string }) {
+  return (
+    <motion.div
+      className={cn("absolute", position)}
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{ 
+        opacity: [0, 1, 0],
+        scale: [0.5, 1.2, 0.5],
+        rotate: [0, 180, 360]
+      }}
+      transition={{
+        duration: 3,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    >
+      <Star className={cn(size, "text-travi-orange fill-travi-orange")} />
+    </motion.div>
+  );
+}
+
+function FloatingStar({ delay = 0, position }: { delay?: number; position: string }) {
+  return (
+    <motion.div
+      className={cn("absolute", position)}
+      animate={{ 
+        y: [0, -15, 0],
+        opacity: [0.3, 0.8, 0.3]
+      }}
+      transition={{
+        duration: 4,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    >
+      <Sparkles className="w-4 h-4 text-travi-pink" />
+    </motion.div>
+  );
+}
+
+function TrendingMarquee() {
+  const { isRTL } = useLocale();
+  
+  return (
+    <div 
+      className="relative overflow-hidden bg-gradient-to-r from-travi-purple via-travi-pink to-travi-purple py-3"
+      data-testid="trending-marquee"
+    >
+      <motion.div
+        className="flex gap-12 whitespace-nowrap"
+        animate={{
+          x: isRTL ? ["0%", "50%"] : ["0%", "-50%"]
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+      >
+        {[...trendingDeals, ...trendingDeals].map((deal, idx) => (
+          <div key={idx} className="flex items-center gap-3 text-white">
+            <TrendingUp className="w-4 h-4" />
+            <span className="font-medium text-sm">{deal}</span>
+            <Star className="w-3 h-3 fill-travi-orange text-travi-orange" />
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  );
+}
+
+function VibeSelector({ selectedVibe, onSelectVibe }: { selectedVibe: string | null; onSelectVibe: (vibe: string) => void }) {
+  const { isRTL } = useLocale();
+  
+  return (
+    <section 
+      className="relative py-16 overflow-hidden bg-gradient-to-br from-background via-muted/30 to-background"
+      data-testid="vibe-selector-section"
+    >
+      <FloatingSparkle delay={0} position="top-8 left-[10%]" />
+      <FloatingSparkle delay={1} position="top-16 right-[15%]" size="w-3 h-3" />
+      <FloatingStar delay={0.5} position="bottom-12 left-[20%]" />
+      <FloatingStar delay={1.5} position="top-24 right-[25%]" />
+      <FloatingSparkle delay={2} position="bottom-20 right-[10%]" />
+      
+      <div className="max-w-7xl mx-auto px-5 md:px-8 lg:px-[140px]">
+        <motion.div 
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <Badge className="mb-4 bg-gradient-to-r from-travi-purple to-travi-pink text-white border-0">
+            <Sparkles className="w-3 h-3 mr-1" />
+            Find Your Perfect Stay
+          </Badge>
+          <h2 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+            Choose Your <span className="bg-gradient-to-r from-travi-purple to-travi-pink bg-clip-text text-transparent">Vibe</span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            What kind of Dubai hotel experience are you dreaming of?
+          </p>
+        </motion.div>
+        
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          {vibeOptions.map((vibe, idx) => {
+            const Icon = vibe.icon;
+            const isSelected = selectedVibe === vibe.id;
+            
+            return (
+              <motion.button
+                key={vibe.id}
+                data-testid={`vibe-button-${vibe.id}`}
+                onClick={() => onSelectVibe(vibe.id)}
+                className={cn(
+                  "relative group p-6 md:p-8 rounded-[20px] text-center transition-all duration-300",
+                  "border-2",
+                  isSelected 
+                    ? `bg-gradient-to-br ${vibe.gradient} border-transparent shadow-xl ${vibe.glowColor}`
+                    : "bg-card border-border/50 hover:border-travi-purple/50"
+                )}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: idx * 0.1 }}
+                whileHover={{ scale: 1.03, y: -4 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {isSelected && (
+                  <motion.div
+                    className="absolute inset-0 rounded-[20px] bg-white/10"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0.1, 0.3, 0.1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                )}
+                
+                <motion.div 
+                  className={cn(
+                    "w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300",
+                    isSelected 
+                      ? "bg-white/20" 
+                      : `bg-gradient-to-br ${vibe.gradient}`
+                  )}
+                  whileHover={{ rotate: [0, -5, 5, 0] }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Icon className={cn(
+                    "w-8 h-8 md:w-10 md:h-10",
+                    isSelected ? "text-white" : "text-white"
+                  )} />
+                </motion.div>
+                
+                <h3 className={cn(
+                  "font-heading font-bold text-lg md:text-xl mb-1",
+                  isSelected ? "text-white" : "text-foreground"
+                )}>
+                  {vibe.label}
+                </h3>
+                <p className={cn(
+                  "text-sm",
+                  isSelected ? "text-white/80" : "text-muted-foreground"
+                )}>
+                  {vibe.description}
+                </p>
+                
+                {isSelected && (
+                  <motion.div 
+                    className="absolute -top-2 -right-2"
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  >
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
+                      <Star className="w-4 h-4 fill-travi-orange text-travi-orange" />
+                    </div>
+                  </motion.div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FloatingHotelPreviews() {
+  const previewHotels = featuredHotels.slice(0, 3);
+  
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {previewHotels.map((hotel, idx) => {
+        const positions = [
+          { left: "5%", top: "20%", rotate: -8 },
+          { right: "5%", top: "30%", rotate: 6 },
+          { left: "10%", bottom: "15%", rotate: -4 }
+        ];
+        const pos = positions[idx];
+        
+        return (
+          <motion.div
+            key={hotel.name}
+            className="absolute hidden lg:block"
+            style={{ 
+              left: pos.left, 
+              right: pos.right, 
+              top: pos.top, 
+              bottom: pos.bottom 
+            }}
+            initial={{ opacity: 0, y: 50, rotate: pos.rotate }}
+            animate={{ 
+              opacity: 0.9,
+              y: [0, -10, 0],
+              rotate: pos.rotate
+            }}
+            transition={{ 
+              opacity: { duration: 1, delay: idx * 0.3 },
+              y: { duration: 4, repeat: Infinity, delay: idx * 0.5 }
+            }}
+          >
+            <div className="w-32 h-24 rounded-xl overflow-hidden shadow-xl border-2 border-white/20 backdrop-blur-sm">
+              <img 
+                src={hotel.image} 
+                alt={hotel.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
 function CategoryCard({ category }: { category: typeof hotelCategories[0] }) {
   const IconComponent = category.icon;
   const { isRTL } = useLocale();
   
   return (
-    <Card 
-      className="group overflow-visible bg-card rounded-[16px] shadow-[var(--shadow-level-1)] hover-elevate transition-all duration-300"
-      data-testid={`card-category-${category.name.toLowerCase().replace(/\s+/g, '-')}`}
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      whileHover={{ y: -8 }}
+      transition={{ duration: 0.4 }}
     >
-      <div className="relative aspect-[4/3] overflow-hidden rounded-t-[16px]">
-        <img 
-          src={category.image} 
-          alt={category.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-        
-        <div className={`absolute top-4 ${isRTL ? 'right-4' : 'left-4'} w-12 h-12 rounded-xl bg-travi-purple flex items-center justify-center shadow-md`}>
-          <IconComponent className="w-6 h-6 text-white" />
+      <Card 
+        className="group overflow-visible bg-card rounded-[16px] shadow-[var(--shadow-level-1)] hover:shadow-xl transition-all duration-300"
+        data-testid={`card-category-${category.name.toLowerCase().replace(/\s+/g, '-')}`}
+      >
+        <div className="relative aspect-[4/3] overflow-hidden rounded-t-[16px]">
+          <motion.img 
+            src={category.image} 
+            alt={category.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            whileHover={{ scale: 1.08 }}
+            transition={{ duration: 0.5 }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+          
+          <motion.div 
+            className={cn(
+              "absolute top-4 w-12 h-12 rounded-xl bg-gradient-to-br from-travi-purple to-travi-pink flex items-center justify-center shadow-lg",
+              isRTL ? "right-4" : "left-4"
+            )}
+            whileHover={{ rotate: 12, scale: 1.1 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <IconComponent className="w-6 h-6 text-white" />
+          </motion.div>
+          
+          <div className="absolute bottom-0 left-0 right-0 p-5">
+            <h3 className="font-heading font-bold text-white text-xl mb-2">{category.name}</h3>
+            <p className="text-white/80 text-sm line-clamp-2">{category.description}</p>
+          </div>
         </div>
         
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <h3 className="font-heading font-bold text-white text-xl mb-2">{category.name}</h3>
-          <p className="text-white/80 text-sm line-clamp-2">{category.description}</p>
+        <div className="p-5">
+          <div className="flex flex-wrap gap-2">
+            {category.hotels.map((hotel, idx) => (
+              <Badge 
+                key={idx} 
+                variant="secondary" 
+                className="text-xs"
+              >
+                {hotel}
+              </Badge>
+            ))}
+          </div>
         </div>
-      </div>
-      
-      <div className="p-5">
-        <div className="flex flex-wrap gap-2">
-          {category.hotels.map((hotel, idx) => (
-            <Badge 
-              key={idx} 
-              variant="secondary" 
-              className="text-xs"
-            >
-              {hotel}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    </Card>
+      </Card>
+    </motion.div>
   );
 }
 
-function FeaturedHotelCard({ hotel, index }: { hotel: typeof featuredHotels[0]; index: number }) {
+function ShimmerBadge({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("relative overflow-hidden", className)}>
+      <Badge className="relative bg-gradient-to-r from-travi-purple to-travi-pink text-white border-0 px-4 py-1.5">
+        {children}
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+          animate={{ x: ["-100%", "200%"] }}
+          transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+        />
+      </Badge>
+    </div>
+  );
+}
+
+function FeaturedHotelCard({ hotel, index, isVisible }: { hotel: typeof featuredHotels[0]; index: number; isVisible: boolean }) {
   const { isRTL } = useLocale();
   const isReversed = index % 2 === 1;
   
   return (
-    <div 
-      className={`flex flex-col ${isReversed ? 'lg:flex-row-reverse' : 'lg:flex-row'} gap-8 lg:gap-12 items-center`}
+    <motion.div 
+      className={cn(
+        "flex flex-col gap-8 lg:gap-12 items-center",
+        isReversed ? "lg:flex-row-reverse" : "lg:flex-row"
+      )}
       data-testid={`card-featured-hotel-${hotel.name.toLowerCase().replace(/\s+/g, '-')}`}
+      initial={{ opacity: 0, x: isReversed ? 50 : -50 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.7, delay: 0.2 }}
     >
       <div className="w-full lg:w-1/2">
-        <div className="relative overflow-hidden rounded-[16px] shadow-[var(--shadow-level-2)]">
-          <img 
-            src={hotel.image} 
-            alt={hotel.name}
-            className="w-full aspect-[4/3] object-cover"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+        <motion.div 
+          className="relative overflow-hidden rounded-[20px] shadow-xl group"
+          whileHover={{ scale: 1.02 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="relative overflow-hidden">
+            <motion.img 
+              src={hotel.image} 
+              alt={hotel.name}
+              className="w-full aspect-[4/3] object-cover"
+              loading="lazy"
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.8 }}
+            />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           
-          <div className={`absolute top-4 ${isRTL ? 'left-4' : 'right-4'}`}>
+          <div className={cn("absolute top-4", isRTL ? "left-4" : "right-4")}>
+            <ShimmerBadge>
+              <Sparkles className="w-3 h-3 mr-1 inline" />
+              Signature Experience
+            </ShimmerBadge>
+          </div>
+          
+          <div className={cn("absolute top-4", isRTL ? "right-4" : "left-4")}>
             <Badge className="bg-white/90 text-foreground backdrop-blur-sm border-0 gap-1">
               <Star className="w-3 h-3 fill-travi-orange text-travi-orange" />
               {hotel.rating === 7 ? "7-Star" : `${hotel.rating}-Star`}
             </Badge>
           </div>
           
-          <div className={`absolute bottom-4 ${isRTL ? 'right-4' : 'left-4'}`}>
+          <div className={cn("absolute bottom-4", isRTL ? "right-4" : "left-4")}>
             <Badge className="bg-travi-purple text-white border-0">
+              <MapPin className="w-3 h-3 mr-1" />
               {hotel.area}
             </Badge>
           </div>
-        </div>
+        </motion.div>
       </div>
       
       <div className="w-full lg:w-1/2 space-y-4">
-        <div>
-          <p className="text-travi-purple font-medium text-sm uppercase tracking-wide mb-2">{hotel.tagline}</p>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <p className="text-transparent bg-clip-text bg-gradient-to-r from-travi-purple to-travi-pink font-semibold text-sm uppercase tracking-wide mb-2">
+            {hotel.tagline}
+          </p>
           <h3 className="font-heading text-3xl lg:text-4xl font-bold text-foreground mb-4">{hotel.name}</h3>
           <p className="text-muted-foreground text-lg leading-relaxed">{hotel.description}</p>
-        </div>
+        </motion.div>
         
-        <div className="flex flex-wrap gap-3 pt-4">
+        <motion.div 
+          className="flex flex-wrap gap-3 pt-4"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
           {hotel.features.map((feature, idx) => (
-            <div 
+            <motion.div 
               key={idx}
-              className="flex items-center gap-2 px-4 py-2 bg-muted rounded-full"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-muted to-muted/50 rounded-full border border-border/50"
+              whileHover={{ scale: 1.05, y: -2 }}
+              transition={{ type: "spring", stiffness: 400 }}
             >
-              <Sparkles className="w-4 h-4 text-travi-purple" />
+              <Sparkles className="w-4 h-4 text-travi-pink" />
               <span className="text-sm font-medium text-foreground">{feature}</span>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 function AreaCard({ area }: { area: typeof dubaiAreas[0] }) {
-  const IconComponent = area.icon;
-  
   return (
-    <ContentCard
-      image={area.image}
-      title={area.name}
-      description={area.description}
-      badge={area.type}
-      badgeVariant="secondary"
-      aspectRatio="portrait"
-      showGradientOverlay={true}
-    />
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      whileHover={{ y: -6 }}
+      transition={{ duration: 0.4 }}
+    >
+      <ContentCard
+        image={area.image}
+        title={area.name}
+        description={area.description}
+        badge={area.type}
+        badgeVariant="secondary"
+        aspectRatio="portrait"
+        showGradientOverlay={true}
+      />
+    </motion.div>
   );
 }
 
 export default function PublicHotels() {
+  const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
+  const { isRTL } = useLocale();
+  
   useDocumentMeta({
     title: "Luxury Hotels in Dubai | From Palm Jumeirah to Downtown | Travi",
     description: "Discover Dubai's finest hotels. From Palm Jumeirah beachfront resorts to Downtown high-rises overlooking Burj Khalifa. 5-star luxury, world-class service.",
@@ -301,18 +673,29 @@ export default function PublicHotels() {
     ogType: "website",
   });
 
+  const filteredHotels = selectedVibe 
+    ? featuredHotels.filter(h => h.vibe === selectedVibe)
+    : featuredHotels;
+
   return (
     <PageContainer navVariant="transparent">
-      <PublicHero
-        title="Dubai Hotels"
-        subtitle="From iconic landmarks to beachfront resorts, find your perfect stay"
-        backgroundImage="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop"
-        breadcrumbs={[
-          { label: "Home", href: "/" },
-          { label: "Hotels" }
-        ]}
-        size="large"
-      />
+      <div className="relative">
+        <PublicHero
+          title="Dubai Hotels"
+          subtitle="From iconic landmarks to beachfront resorts, find your perfect stay"
+          backgroundImage="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop"
+          breadcrumbs={[
+            { label: "Home", href: "/" },
+            { label: "Hotels" }
+          ]}
+          size="large"
+        />
+        <FloatingHotelPreviews />
+      </div>
+
+      <TrendingMarquee />
+
+      <VibeSelector selectedVibe={selectedVibe} onSelectVibe={setSelectedVibe} />
 
       <Section
         id="categories"
@@ -329,13 +712,51 @@ export default function PublicHotels() {
 
       <Section
         id="featured"
-        title="Dubai's Finest"
-        subtitle="Iconic properties that define luxury hospitality"
+        className="relative overflow-hidden"
       >
+        <FloatingSparkle delay={0} position="top-20 left-[5%]" size="w-3 h-3" />
+        <FloatingStar delay={1} position="top-40 right-[8%]" />
+        <FloatingSparkle delay={2} position="bottom-32 left-[12%]" />
+        <FloatingStar delay={0.5} position="bottom-48 right-[15%]" />
+        
+        <motion.div 
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <Badge className="mb-4 bg-gradient-to-r from-travi-orange to-travi-pink text-white border-0">
+            <Crown className="w-3 h-3 mr-1" />
+            Editor's Choice
+          </Badge>
+          <h2 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+            Dubai's <span className="bg-gradient-to-r from-travi-purple to-travi-pink bg-clip-text text-transparent">Finest</span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Iconic properties that define luxury hospitality
+            {selectedVibe && (
+              <span className="block mt-2 text-travi-purple font-medium">
+                Showing {vibeOptions.find(v => v.id === selectedVibe)?.label} hotels
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="ml-2 text-muted-foreground"
+                  onClick={() => setSelectedVibe(null)}
+                  data-testid="button-clear-vibe-filter"
+                >
+                  Clear filter
+                </Button>
+              </span>
+            )}
+          </p>
+        </motion.div>
+        
         <div className="space-y-16 lg:space-y-24">
-          {featuredHotels.map((hotel, idx) => (
-            <FeaturedHotelCard key={idx} hotel={hotel} index={idx} />
-          ))}
+          <AnimatePresence mode="wait">
+            {filteredHotels.map((hotel, idx) => (
+              <FeaturedHotelCard key={hotel.name} hotel={hotel} index={idx} isVisible={true} />
+            ))}
+          </AnimatePresence>
         </div>
       </Section>
 
@@ -352,67 +773,119 @@ export default function PublicHotels() {
         </CategoryGrid>
       </Section>
 
-      <Section id="amenities" className="bg-travi-purple">
-        <div className="text-center mb-12">
-          <h2 className="font-heading text-3xl md:text-4xl font-bold text-white mb-4">
-            World-Class Amenities
-          </h2>
-          <p className="text-lg text-white/90 max-w-2xl mx-auto">
-            Dubai's luxury hotels offer amenities that redefine hospitality
-          </p>
+      <Section id="amenities" className="bg-gradient-to-br from-travi-purple via-travi-purple to-travi-pink relative overflow-hidden">
+        <motion.div
+          className="absolute top-10 left-10 w-32 h-32 bg-white/5 rounded-full blur-xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 4, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute bottom-10 right-10 w-48 h-48 bg-travi-pink/20 rounded-full blur-2xl"
+          animate={{ scale: [1.2, 1, 1.2], opacity: [0.4, 0.6, 0.4] }}
+          transition={{ duration: 5, repeat: Infinity }}
+        />
+        
+        <div className="text-center mb-12 relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <Badge className="mb-4 bg-white/20 text-white border-0 backdrop-blur-sm">
+              <Sparkles className="w-3 h-3 mr-1" />
+              World-Class Standards
+            </Badge>
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-white mb-4">
+              World-Class Amenities
+            </h2>
+            <p className="text-lg text-white/90 max-w-2xl mx-auto">
+              Dubai's luxury hotels offer amenities that redefine hospitality
+            </p>
+          </motion.div>
         </div>
         
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 relative">
           {amenities.map((amenity, idx) => {
             const IconComponent = amenity.icon;
             return (
-              <div 
+              <motion.div 
                 key={idx}
-                className="bg-card/30 backdrop-blur-sm rounded-[16px] p-6 text-center border border-white/20"
+                className="bg-white/10 backdrop-blur-sm rounded-[16px] p-6 text-center border border-white/20 group"
                 data-testid={`amenity-${amenity.name.toLowerCase().replace(/\s+/g, '-')}`}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: idx * 0.1 }}
+                whileHover={{ y: -6, scale: 1.02 }}
               >
-                <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center mx-auto mb-4">
+                <motion.div 
+                  className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center mx-auto mb-4 group-hover:bg-white/30 transition-colors"
+                  whileHover={{ rotate: 12 }}
+                >
                   <IconComponent className="w-7 h-7 text-white" />
-                </div>
+                </motion.div>
                 <h3 className="font-heading font-bold text-white mb-1">{amenity.name}</h3>
                 <p className="text-white/70 text-sm">{amenity.description}</p>
-              </div>
+              </motion.div>
             );
           })}
         </div>
       </Section>
 
-      <Section id="cta">
+      <Section id="cta" className="relative overflow-hidden">
+        <FloatingSparkle delay={0} position="top-8 left-[15%]" size="w-4 h-4" />
+        <FloatingStar delay={1.5} position="bottom-16 right-[20%]" />
+        
         <div className="max-w-4xl mx-auto text-center">
-          <div className="relative">
+          <motion.div 
+            className="relative"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-64 h-64 bg-[#6443F4]/10 rounded-full blur-3xl" />
+              <motion.div 
+                className="w-64 h-64 bg-gradient-to-br from-travi-purple/20 to-travi-pink/20 rounded-full blur-3xl"
+                animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.8, 0.5] }}
+                transition={{ duration: 4, repeat: Infinity }}
+              />
             </div>
             <div className="relative">
-              <Crown className="w-16 h-16 mx-auto text-[#FF9327] mb-6" />
+              <motion.div
+                whileHover={{ rotate: [0, -10, 10, 0] }}
+                transition={{ duration: 0.5 }}
+              >
+                <Crown className="w-16 h-16 mx-auto text-travi-orange mb-6" />
+              </motion.div>
               <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-6">
-                Experience Dubai Luxury
+                Experience <span className="bg-gradient-to-r from-travi-purple to-travi-pink bg-clip-text text-transparent">Dubai Luxury</span>
               </h2>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
                 From the world's only 7-star hotel to intimate boutique retreats, 
                 Dubai offers hospitality experiences found nowhere else on Earth.
               </p>
-              <div className="flex flex-wrap justify-center gap-4">
+              <motion.div 
+                className="flex flex-wrap justify-center gap-4"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 }}
+              >
                 <Badge className="px-6 py-3 text-base" variant="secondary">
-                  <Star className="w-4 h-4 mr-2 text-[#FF9327]" />
+                  <Star className="w-4 h-4 mr-2 text-travi-orange" />
                   500+ Luxury Hotels
                 </Badge>
                 <Badge className="px-6 py-3 text-base" variant="secondary">
-                  <Heart className="w-4 h-4 mr-2 text-[#F94498]" />
+                  <Heart className="w-4 h-4 mr-2 text-travi-pink" />
                   World-Renowned Service
                 </Badge>
                 <Badge className="px-6 py-3 text-base" variant="secondary">
-                  <Coffee className="w-4 h-4 mr-2 text-[#FF9327]" />
+                  <Coffee className="w-4 h-4 mr-2 text-travi-orange" />
                   Michelin-Star Dining
                 </Badge>
-              </div>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </Section>
     </PageContainer>
