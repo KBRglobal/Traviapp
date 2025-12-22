@@ -77,7 +77,7 @@ import {
 } from "./ai-generator";
 import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-queue";
 import { registerEnterpriseRoutes } from "./enterprise-routes";
-import { registerImageLogicRoutes } from "./image-logic-routes";
+import { registerImageRoutes } from "./routes/image-routes";
 import { registerAutomationRoutes } from "./automation-routes";
 import { registerContentIntelligenceRoutes } from "./content-intelligence-routes";
 import { registerAutoPilotRoutes } from "./auto-pilot-routes";
@@ -8038,9 +8038,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   registerEnterpriseRoutes(app);
 
   // ============================================================================
-  // IMAGE LOGIC ROUTES (Smart image selection system)
+  // IMAGE ROUTES (Smart image selection + SEO + processing)
   // ============================================================================
-  registerImageLogicRoutes(app);
+  registerImageRoutes(app);
 
   // ============================================================================
   // AUTOMATION ROUTES (Auto SEO, linking, freshness, etc.)

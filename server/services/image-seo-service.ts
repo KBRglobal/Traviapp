@@ -2,9 +2,11 @@
  * Image SEO Enforcement Service
  * Validates and auto-generates SEO metadata for all images
  * Uses GPT-4o-mini for cost-effective tag generation
+ *
+ * ALL FIELDS ARE REQUIRED - no optional fields!
  */
 
-import OpenAI from "openai";
+import OpenAI from 'openai';
 
 // ==================== Types ====================
 
@@ -30,9 +32,9 @@ export interface ImageSeoTags {
 
 export interface ImageSeoInput {
   url: string;
-  context?: string; // Article/content context for better AI generation
-  contentType?: string; // hotel, attraction, restaurant, etc.
-  location?: string; // Dubai Marina, Downtown, etc.
+  context?: string;
+  contentType?: string;
+  location?: string;
   existingAlt?: string;
   existingTitle?: string;
 }
@@ -52,17 +54,6 @@ export interface ImageSeoResult {
 
 // ==================== Constants ====================
 
-// ALL fields are REQUIRED - image CANNOT be saved without these
-const REQUIRED_FIELDS = [
-  'alt',
-  'title',
-  'caption',
-  'keywords',
-  'contentLocation',
-  'altHe',
-] as const;
-
-// Dubai areas for location context
 const DUBAI_AREAS = [
   'Downtown Dubai', 'Dubai Marina', 'Palm Jumeirah', 'Jumeirah Beach',
   'Business Bay', 'DIFC', 'Al Barsha', 'Deira', 'Bur Dubai', 'JBR',
@@ -118,16 +109,12 @@ export const SEO_RULES = {
 
 // ==================== Validation Functions ====================
 
-/**
- * Validate image SEO completeness
- * ALL FIELDS ARE REQUIRED - no optional fields
- */
 export function validateImageSeo(tags: Partial<ImageSeoTags>): ImageSeoValidation {
   const missingFields: string[] = [];
   const warnings: string[] = [];
   let score = 100;
 
-  // ========== ALT TEXT (REQUIRED) ==========
+  // ALT TEXT (REQUIRED)
   if (!tags.alt || tags.alt.trim().length === 0) {
     missingFields.push('alt');
     score -= 20;
@@ -140,7 +127,6 @@ export function validateImageSeo(tags: Partial<ImageSeoTags>): ImageSeoValidatio
       warnings.push(`Alt text too long (${tags.alt.length}/${SEO_RULES.alt.maxLength} chars)`);
       score -= 5;
     }
-    // Check for generic alt text
     const genericPatterns = /^(image|photo|picture|pic|img|untitled)(\s+of)?$/i;
     if (genericPatterns.test(tags.alt.trim())) {
       missingFields.push('alt (generic text not allowed)');
@@ -148,7 +134,7 @@ export function validateImageSeo(tags: Partial<ImageSeoTags>): ImageSeoValidatio
     }
   }
 
-  // ========== HEBREW ALT TEXT (REQUIRED) ==========
+  // HEBREW ALT TEXT (REQUIRED)
   if (!tags.altHe || tags.altHe.trim().length === 0) {
     missingFields.push('altHe');
     score -= 15;
@@ -157,7 +143,7 @@ export function validateImageSeo(tags: Partial<ImageSeoTags>): ImageSeoValidatio
     score -= 10;
   }
 
-  // ========== TITLE (REQUIRED) ==========
+  // TITLE (REQUIRED)
   if (!tags.title || tags.title.trim().length === 0) {
     missingFields.push('title');
     score -= 15;
@@ -166,7 +152,7 @@ export function validateImageSeo(tags: Partial<ImageSeoTags>): ImageSeoValidatio
     score -= 10;
   }
 
-  // ========== CAPTION (REQUIRED) ==========
+  // CAPTION (REQUIRED)
   if (!tags.caption || tags.caption.trim().length === 0) {
     missingFields.push('caption');
     score -= 10;
@@ -175,7 +161,7 @@ export function validateImageSeo(tags: Partial<ImageSeoTags>): ImageSeoValidatio
     score -= 5;
   }
 
-  // ========== KEYWORDS (REQUIRED) ==========
+  // KEYWORDS (REQUIRED)
   if (!tags.keywords || tags.keywords.length === 0) {
     missingFields.push('keywords');
     score -= 10;
@@ -184,13 +170,13 @@ export function validateImageSeo(tags: Partial<ImageSeoTags>): ImageSeoValidatio
     score -= 5;
   }
 
-  // ========== CONTENT LOCATION (REQUIRED) ==========
+  // CONTENT LOCATION (REQUIRED)
   if (!tags.contentLocation || !tags.contentLocation.name) {
     missingFields.push('contentLocation');
     score -= 10;
   }
 
-  // ========== FILENAME QUALITY (REQUIRED) ==========
+  // FILENAME QUALITY
   if (tags.filename) {
     const filenamePattern = /^[a-z0-9-]+\.(webp|jpg|jpeg|png)$/;
     if (!filenamePattern.test(tags.filename)) {
@@ -223,14 +209,10 @@ function getOpenAIClient(): OpenAI | null {
   });
 }
 
-/**
- * Generate SEO tags using AI (GPT-4o-mini for cost efficiency)
- */
 export async function generateImageSeoTags(input: ImageSeoInput): Promise<ImageSeoTags> {
   const openai = getOpenAIClient();
 
   if (!openai) {
-    // Fallback: generate basic tags from URL/context
     return generateFallbackTags(input);
   }
 
@@ -238,10 +220,10 @@ export async function generateImageSeoTags(input: ImageSeoInput): Promise<ImageS
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Cheapest model - ~$0.15/$0.60 per 1M tokens
+      model: 'gpt-4o-mini',
       messages: [
         {
-          role: "system",
+          role: 'system',
           content: `You are an Image SEO specialist for a Dubai travel website (TripMD).
 Generate comprehensive SEO metadata for images following these STRICT rules:
 
@@ -273,13 +255,10 @@ KEYWORDS:
 
 Respond ONLY with valid JSON, no markdown or explanation.`
         },
-        {
-          role: "user",
-          content: prompt
-        }
+        { role: 'user', content: prompt }
       ],
       max_tokens: 1000,
-      temperature: 0.3, // Low temperature for consistent output
+      temperature: 0.3,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -287,7 +266,6 @@ Respond ONLY with valid JSON, no markdown or explanation.`
       return generateFallbackTags(input);
     }
 
-    // Parse JSON response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return generateFallbackTags(input);
@@ -431,7 +409,6 @@ function generateFallbackKeywords(input: ImageSeoInput): string[] {
 }
 
 function detectLocation(input: ImageSeoInput): ImageSeoTags['contentLocation'] | undefined {
-  // Try to detect Dubai area from input
   const searchText = `${input.url} ${input.context || ''} ${input.location || ''}`.toLowerCase();
 
   for (const area of DUBAI_AREAS) {
@@ -459,18 +436,12 @@ function detectLocation(input: ImageSeoInput): ImageSeoTags['contentLocation'] |
 
 // ==================== Main Enforcement Function ====================
 
-/**
- * Enforce SEO tags on an image - validates and auto-generates if needed
- * This is the MAIN function to call before saving any image
- */
 export async function enforceImageSeo(
   input: ImageSeoInput,
   existingTags?: Partial<ImageSeoTags>
 ): Promise<ImageSeoResult> {
-  // Step 1: Validate existing tags
   const validation = validateImageSeo(existingTags || {});
 
-  // Step 2: If valid and complete, return as-is
   if (validation.isValid && validation.score >= 80) {
     return {
       validation,
@@ -479,14 +450,12 @@ export async function enforceImageSeo(
     };
   }
 
-  // Step 3: Generate missing tags using AI
   const generatedTags = await generateImageSeoTags({
     ...input,
     existingAlt: existingTags?.alt,
     existingTitle: existingTags?.title,
   });
 
-  // Step 4: Merge existing with generated (existing takes priority)
   const mergedTags: ImageSeoTags = {
     alt: existingTags?.alt || generatedTags.alt,
     altHe: existingTags?.altHe || generatedTags.altHe,
@@ -500,7 +469,6 @@ export async function enforceImageSeo(
     contentLocation: existingTags?.contentLocation || generatedTags.contentLocation,
   };
 
-  // Step 5: Re-validate merged tags
   const finalValidation = validateImageSeo(mergedTags);
 
   return {
@@ -510,13 +478,9 @@ export async function enforceImageSeo(
   };
 }
 
-/**
- * Batch process multiple images
- */
 export async function enforceImageSeoBatch(
   images: Array<{ input: ImageSeoInput; existingTags?: Partial<ImageSeoTags> }>
 ): Promise<ImageSeoResult[]> {
-  // Process in parallel with concurrency limit
   const results: ImageSeoResult[] = [];
   const batchSize = 5;
 
@@ -533,18 +497,13 @@ export async function enforceImageSeoBatch(
 
 // ==================== Express Middleware ====================
 
-/**
- * Express middleware to enforce image SEO before saving
- */
 export function imageSeoMiddleware() {
   return async (req: any, res: any, next: any) => {
-    // Check if request contains image data
     if (!req.body?.image && !req.body?.images && !req.body?.heroImage) {
       return next();
     }
 
     try {
-      // Single image
       if (req.body.image) {
         const result = await enforceImageSeo(
           { url: req.body.image.url || req.body.image },
@@ -562,7 +521,6 @@ export function imageSeoMiddleware() {
         req.body.image = { ...req.body.image, ...result.tags };
       }
 
-      // Hero image
       if (req.body.heroImage) {
         const result = await enforceImageSeo(
           {
@@ -577,7 +535,6 @@ export function imageSeoMiddleware() {
         req.body.heroImageTitle = result.tags.title;
       }
 
-      // Multiple images (gallery)
       if (req.body.images && Array.isArray(req.body.images)) {
         const results = await enforceImageSeoBatch(
           req.body.images.map((img: any) => ({
@@ -599,7 +556,7 @@ export function imageSeoMiddleware() {
       next();
     } catch (error) {
       console.error('Image SEO middleware error:', error);
-      next(); // Don't block on errors, just continue
+      next();
     }
   };
 }
