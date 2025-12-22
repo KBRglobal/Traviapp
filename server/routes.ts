@@ -181,13 +181,24 @@ async function convertToWebP(buffer: Buffer, originalFilename: string, mimeType:
 }
 
 let objectStorageClient: Client | null = null;
+let objectStorageInitFailed = false;
 
 function getObjectStorageClient(): Client | null {
   if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
     return null;
   }
+  // Don't retry if initialization already failed
+  if (objectStorageInitFailed) {
+    return null;
+  }
   if (!objectStorageClient) {
-    objectStorageClient = new Client();
+    try {
+      objectStorageClient = new Client();
+    } catch (error) {
+      console.warn("[Object Storage] Initialization failed, falling back to local storage:", error);
+      objectStorageInitFailed = true;
+      return null;
+    }
   }
   return objectStorageClient;
 }
