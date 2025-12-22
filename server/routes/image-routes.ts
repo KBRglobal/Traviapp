@@ -3,7 +3,7 @@
  * Consolidated API endpoints for all image operations
  */
 
-import { Express, Request, Response } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import * as multer from "multer";
 import {
   getImageService,
@@ -19,6 +19,13 @@ import {
   FreepikSearchOptions,
 } from "../services/external-image-service";
 import { SUPPORTED_MIME_TYPES } from "../services/image-processing";
+import {
+  rateLimiters,
+  requirePermission,
+  checkReadOnlyMode,
+  checkAiUsageLimit,
+  safeMode,
+} from "../security";
 
 // Multer configuration for memory storage
 const upload = multer({
@@ -52,6 +59,8 @@ export function registerImageRoutes(app: Express) {
    */
   app.post(
     "/api/images/upload",
+    requirePermission("canAccessMediaLibrary"),
+    checkReadOnlyMode,
     upload.single("file"),
     async (req: Request, res: Response) => {
       try {
@@ -94,6 +103,8 @@ export function registerImageRoutes(app: Express) {
    */
   app.post(
     "/api/images/upload-batch",
+    requirePermission("canAccessMediaLibrary"),
+    checkReadOnlyMode,
     upload.array("files", 10),
     async (req: Request, res: Response) => {
       try {
@@ -137,7 +148,7 @@ export function registerImageRoutes(app: Express) {
    * POST /api/images/upload-url
    * Upload image from external URL
    */
-  app.post("/api/images/upload-url", async (req: Request, res: Response) => {
+  app.post("/api/images/upload-url", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, async (req: Request, res: Response) => {
     try {
       const { url, filename, altText, contentId } = req.body;
 
@@ -174,7 +185,12 @@ export function registerImageRoutes(app: Express) {
    * POST /api/images/generate-ai
    * Generate and store an AI image
    */
-  app.post("/api/images/generate-ai", async (req: Request, res: Response) => {
+  app.post("/api/images/generate-ai", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req: Request, res: Response) => {
+    // Check if AI is disabled
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+
     try {
       const {
         prompt,
@@ -225,7 +241,11 @@ export function registerImageRoutes(app: Express) {
    * POST /api/images/generate-ai-batch
    * Generate multiple AI images from prompts
    */
-  app.post("/api/images/generate-ai-batch", async (req: Request, res: Response) => {
+  app.post("/api/images/generate-ai-batch", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req: Request, res: Response) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+
     try {
       const { prompts, options, contentId } = req.body;
 
@@ -281,7 +301,7 @@ export function registerImageRoutes(app: Express) {
    * POST /api/images/search-freepik
    * Search Freepik for images
    */
-  app.post("/api/images/search-freepik", async (req: Request, res: Response) => {
+  app.post("/api/images/search-freepik", requirePermission("canAccessMediaLibrary"), async (req: Request, res: Response) => {
     try {
       const { query, limit, page, orientation, premium } = req.body;
 
@@ -318,7 +338,7 @@ export function registerImageRoutes(app: Express) {
    * POST /api/images/download-freepik
    * Download and store image from Freepik
    */
-  app.post("/api/images/download-freepik", async (req: Request, res: Response) => {
+  app.post("/api/images/download-freepik", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, async (req: Request, res: Response) => {
     try {
       const { url, filename, altText, contentId } = req.body;
 
@@ -358,7 +378,7 @@ export function registerImageRoutes(app: Express) {
    * DELETE /api/images
    * Delete an image by URL
    */
-  app.delete("/api/images", async (req: Request, res: Response) => {
+  app.delete("/api/images", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, async (req: Request, res: Response) => {
     try {
       const { url } = req.body;
 
@@ -388,7 +408,7 @@ export function registerImageRoutes(app: Express) {
    * GET /api/images/status
    * Get storage status and configuration
    */
-  app.get("/api/images/status", async (req: Request, res: Response) => {
+  app.get("/api/images/status", requirePermission("canManageSettings"), async (req: Request, res: Response) => {
     try {
       const status = imageService.getStorageStatus();
       const supportedTypes = imageService.getSupportedMimeTypes();

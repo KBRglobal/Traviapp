@@ -62,6 +62,18 @@ export class ObjectStorageAdapter implements StorageAdapter {
 }
 
 /**
+ * Sanitize path to prevent directory traversal attacks
+ */
+function sanitizePath(key: string): string {
+  // Remove any path traversal attempts
+  return key
+    .replace(/\.\./g, "")
+    .replace(/^\/+/, "")
+    .replace(/[<>:"|?*]/g, "")
+    .replace(/\\/g, "/");
+}
+
+/**
  * Local Filesystem Storage Adapter
  */
 export class LocalStorageAdapter implements StorageAdapter {
@@ -79,7 +91,16 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async upload(key: string, buffer: Buffer): Promise<string> {
-    const filePath = this.getFilePath(key);
+    const sanitizedKey = sanitizePath(key);
+    const filePath = this.getFilePath(sanitizedKey);
+
+    // Security: Verify path is within base directory
+    const resolvedPath = path.resolve(filePath);
+    const resolvedBase = path.resolve(this.baseDir);
+    if (!resolvedPath.startsWith(resolvedBase)) {
+      throw new Error("Invalid file path: path traversal detected");
+    }
+
     const dir = path.dirname(filePath);
 
     // Ensure directory exists
@@ -88,11 +109,21 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
 
     await fs.promises.writeFile(filePath, buffer);
-    return this.getUrl(key);
+    return this.getUrl(sanitizedKey);
   }
 
   async delete(key: string): Promise<void> {
-    const filePath = this.getFilePath(key);
+    const sanitizedKey = sanitizePath(key);
+    const filePath = this.getFilePath(sanitizedKey);
+
+    // Security: Verify path is within base directory
+    const resolvedPath = path.resolve(filePath);
+    const resolvedBase = path.resolve(this.baseDir);
+    if (!resolvedPath.startsWith(resolvedBase)) {
+      console.warn(`[LocalStorage] Path traversal attempt blocked: ${key}`);
+      return;
+    }
+
     try {
       if (fs.existsSync(filePath)) {
         await fs.promises.unlink(filePath);
@@ -103,7 +134,16 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async exists(key: string): Promise<boolean> {
-    const filePath = this.getFilePath(key);
+    const sanitizedKey = sanitizePath(key);
+    const filePath = this.getFilePath(sanitizedKey);
+
+    // Security: Verify path is within base directory
+    const resolvedPath = path.resolve(filePath);
+    const resolvedBase = path.resolve(this.baseDir);
+    if (!resolvedPath.startsWith(resolvedBase)) {
+      return false;
+    }
+
     return fs.existsSync(filePath);
   }
 
