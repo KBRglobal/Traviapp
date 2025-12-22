@@ -1461,7 +1461,7 @@ export default function ContentEditor() {
         </div>
 
         {/* Right Panel - Settings */}
-        <div className="w-80 border-l bg-background shrink-0 flex flex-col">
+        <div className="w-80 border-l bg-background shrink-0 flex flex-col overflow-hidden">
           <div className="p-3 border-b">
             <h3 className="font-medium text-sm flex items-center gap-2">
               {selectedBlock ? (
@@ -2489,6 +2489,89 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     );
   }
 
+  if (block.type === "gallery") {
+    const images = Array.isArray(block.data?.images) ? block.data.images : [];
+    return (
+      <div className="p-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {images.map((img: { url?: string; alt?: string }, index: number) => (
+            <img key={index} src={String(img?.url || "")} alt={String(img?.alt || "")} className="w-full aspect-video object-cover rounded-lg" />
+          ))}
+        </div>
+        {images.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+            <p>No images in gallery</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (block.type === "highlights") {
+    const items = Array.isArray(block.data?.items) ? block.data.items : [];
+    return (
+      <div className="p-8 bg-primary/5">
+        <h3 className="text-xl font-semibold mb-4">{String(block.data?.title || "Highlights")}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {items.map((item: string | { text?: string }, index: number) => (
+            <div key={index} className="flex items-start gap-2">
+              <Star className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <span>{typeof item === 'string' ? item : String(item?.text || '')}</span>
+            </div>
+          ))}
+        </div>
+        {items.length === 0 && (
+          <p className="text-muted-foreground">No highlights added</p>
+        )}
+      </div>
+    );
+  }
+
+  if (block.type === "tips") {
+    const items = Array.isArray(block.data?.items) ? block.data.items : [];
+    return (
+      <div className="p-8 bg-amber-50 dark:bg-amber-950/20">
+        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Lightbulb className="h-5 w-5 text-amber-500" />
+          {String(block.data?.title || "Pro Tips")}
+        </h3>
+        <ul className="space-y-3">
+          {items.map((item: string | { text?: string; tip?: string }, index: number) => (
+            <li key={index} className="flex items-start gap-2">
+              <span className="text-amber-500 font-bold">{index + 1}.</span>
+              <span>{typeof item === 'string' ? item : String(item?.text || item?.tip || '')}</span>
+            </li>
+          ))}
+        </ul>
+        {items.length === 0 && (
+          <p className="text-muted-foreground">No tips added</p>
+        )}
+      </div>
+    );
+  }
+
+  if (block.type === "info_grid") {
+    const items = Array.isArray(block.data?.items) ? block.data.items : [];
+    return (
+      <div className="p-8">
+        <h3 className="text-xl font-semibold mb-4">{String(block.data?.title || "Information")}</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {items.map((item: { label?: string; value?: string }, index: number) => (
+            <div key={index} className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">{String(item?.label || "Label")}</p>
+              <p className="font-medium">{String(item?.value || "Value")}</p>
+            </div>
+          ))}
+        </div>
+        {items.length === 0 && (
+          <div className="text-center py-4 text-muted-foreground border-2 border-dashed rounded-lg">
+            <p>No info items added</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (block.type === "faq") {
     return (
       <div className="p-8 space-y-2">
@@ -2506,7 +2589,13 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     );
   }
 
-  return null;
+  // Fallback for any unknown block types - show the raw content
+  return (
+    <div className="p-8 border-l-4 border-muted">
+      <p className="text-sm text-muted-foreground mb-2">Block: {block.type}</p>
+      <pre className="text-sm whitespace-pre-wrap">{JSON.stringify(block.data, null, 2)}</pre>
+    </div>
+  );
 }
 
 // Block Settings Panel
