@@ -4669,25 +4669,30 @@ Output format:
       const storageClient = getObjectStorageClient();
       const storedImages: GeneratedImage[] = [];
 
+      console.log(`[AI Images] Processing ${images.length} generated images...`);
       for (const image of images) {
         try {
+          console.log(`[AI Images] Downloading image from: ${image.url.substring(0, 100)}...`);
           // Download image from URL
           const imageResponse = await fetch(image.url);
           if (!imageResponse.ok) {
-            console.error(`Failed to fetch image: ${image.url}`);
+            console.error(`[AI Images] Failed to fetch image: ${imageResponse.status} ${imageResponse.statusText}`);
             continue;
           }
 
           const imageBuffer = await imageResponse.arrayBuffer();
           const buffer = Buffer.from(imageBuffer);
+          console.log(`[AI Images] Downloaded ${buffer.length} bytes`);
 
           if (storageClient) {
             // Store in object storage
             const objectPath = `public/ai-generated/${image.filename}`;
             await storageClient.uploadFromBytes(objectPath, buffer);
+            const storedUrl = `/api/ai-images/${image.filename}`;
+            console.log(`[AI Images] Stored to object storage: ${storedUrl}`);
             storedImages.push({
               ...image,
-              url: `/api/ai-images/${image.filename}`, // Use AI images endpoint
+              url: storedUrl,
             });
           } else {
             // Store locally
@@ -4697,13 +4702,15 @@ Output format:
             }
             const localPath = path.join(uploadsDir, image.filename);
             fs.writeFileSync(localPath, buffer);
+            const storedUrl = `/uploads/ai-generated/${image.filename}`;
+            console.log(`[AI Images] Stored locally: ${storedUrl}`);
             storedImages.push({
               ...image,
-              url: `/uploads/ai-generated/${image.filename}`,
+              url: storedUrl,
             });
           }
         } catch (imgError) {
-          console.error(`Error storing image ${image.filename}:`, imgError);
+          console.error(`[AI Images] Error storing image ${image.filename}:`, imgError);
         }
       }
 
