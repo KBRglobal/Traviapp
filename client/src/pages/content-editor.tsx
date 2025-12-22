@@ -32,6 +32,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -75,6 +78,7 @@ import {
   Award,
   MapPin,
   Clock,
+  CalendarDays,
   DollarSign,
   Plus,
   GripHorizontal,
@@ -484,6 +488,7 @@ export default function ContentEditor() {
   const [heroImageAlt, setHeroImageAlt] = useState("");
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [status, setStatus] = useState<string>("draft");
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | null>(null);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
@@ -1536,6 +1541,11 @@ export default function ContentEditor() {
       status,
     };
 
+    // Include scheduled date if status is scheduled
+    if (status === "scheduled" && scheduledDate) {
+      saveData.scheduledAt = scheduledDate.toISOString();
+    }
+
     // Include content-type-specific SEO data
     if (contentType === "attraction") {
       saveData.attractionData = attractionSeoData;
@@ -2191,6 +2201,8 @@ export default function ContentEditor() {
                       onSlugChange={setSlug}
                       status={status}
                       onStatusChange={setStatus}
+                      scheduledDate={scheduledDate}
+                      onScheduledDateChange={setScheduledDate}
                       metaTitle={metaTitle}
                       onMetaTitleChange={setMetaTitle}
                       metaDescription={metaDescription}
@@ -2246,6 +2258,8 @@ export default function ContentEditor() {
                     onSlugChange={setSlug}
                     status={status}
                     onStatusChange={setStatus}
+                    scheduledDate={scheduledDate}
+                    onScheduledDateChange={setScheduledDate}
                     metaTitle={metaTitle}
                     onMetaTitleChange={setMetaTitle}
                     metaDescription={metaDescription}
@@ -4169,6 +4183,8 @@ function PageSettingsPanel({
   onSlugChange,
   status,
   onStatusChange,
+  scheduledDate,
+  onScheduledDateChange,
   metaTitle,
   onMetaTitleChange,
   metaDescription,
@@ -4183,6 +4199,8 @@ function PageSettingsPanel({
   onSlugChange: (v: string) => void;
   status: string;
   onStatusChange: (v: string) => void;
+  scheduledDate?: Date;
+  onScheduledDateChange?: (v: Date | undefined) => void;
   metaTitle: string;
   onMetaTitleChange: (v: string) => void;
   metaDescription: string;
@@ -4249,6 +4267,46 @@ function PageSettingsPanel({
             </SelectContent>
           </Select>
         </div>
+        {status === "scheduled" && onScheduledDateChange && (
+          <div className="space-y-2">
+            <Label>Scheduled Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                  data-testid="settings-scheduled-date"
+                >
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {scheduledDate ? format(scheduledDate, "PPP 'at' p") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={scheduledDate}
+                  onSelect={onScheduledDateChange}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                />
+                <div className="p-3 border-t">
+                  <Label className="text-xs text-muted-foreground">Time</Label>
+                  <Input
+                    type="time"
+                    value={scheduledDate ? format(scheduledDate, "HH:mm") : "12:00"}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(":").map(Number);
+                      const newDate = scheduledDate ? new Date(scheduledDate) : new Date();
+                      newDate.setHours(hours, minutes, 0, 0);
+                      onScheduledDateChange(newDate);
+                    }}
+                    className="mt-1"
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
 
       <Separator />
