@@ -57,14 +57,18 @@ export interface FreepikSearchOptions {
 let openaiClient: OpenAI | null = null;
 
 function getOpenAIClient(): OpenAI | null {
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn("[ExternalImageService] OPENAI_API_KEY not configured");
+  // Check both possible environment variable names
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    console.warn("[ExternalImageService] OpenAI API key not configured (checked AI_INTEGRATIONS_OPENAI_API_KEY and OPENAI_API_KEY)");
     return null;
   }
 
   if (!openaiClient) {
     openaiClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
     });
   }
 
