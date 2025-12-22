@@ -269,3 +269,114 @@ export function getStorageManager(): StorageManager {
 export function resetStorageManager(): void {
   storageManagerInstance = null;
 }
+
+// ============================================================================
+// CACHE HEADERS CONFIGURATION
+// ============================================================================
+
+/**
+ * Cache configuration for different file types
+ */
+export const IMAGE_CACHE_CONFIG = {
+  // Immutable assets (versioned/hashed filenames) - cache for 1 year
+  immutable: {
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "Vary": "Accept-Encoding",
+  },
+  // Static images - cache for 30 days
+  static: {
+    "Cache-Control": "public, max-age=2592000",
+    "Vary": "Accept-Encoding, Accept",
+  },
+  // Dynamic/user content - cache for 24 hours
+  dynamic: {
+    "Cache-Control": "public, max-age=86400",
+    "Vary": "Accept-Encoding",
+  },
+  // AI-generated images - cache for 7 days (might be regenerated)
+  aiGenerated: {
+    "Cache-Control": "public, max-age=604800",
+    "Vary": "Accept-Encoding",
+  },
+  // Thumbnails - cache for 30 days
+  thumbnails: {
+    "Cache-Control": "public, max-age=2592000",
+    "Vary": "Accept-Encoding",
+  },
+  // Private/authenticated content - short cache
+  private: {
+    "Cache-Control": "private, max-age=3600",
+    "Vary": "Authorization, Accept-Encoding",
+  },
+};
+
+/**
+ * Get appropriate cache headers based on file path/type
+ */
+export function getCacheHeaders(filePath: string): Record<string, string> {
+  // Check for WebP format - add Accept to Vary
+  const isWebP = filePath.endsWith(".webp");
+
+  // AI generated images
+  if (filePath.includes("ai-generated") || filePath.includes("generated")) {
+    return IMAGE_CACHE_CONFIG.aiGenerated;
+  }
+
+  // Thumbnails
+  if (filePath.includes("thumb") || filePath.includes("-sm") || filePath.includes("-md")) {
+    return IMAGE_CACHE_CONFIG.thumbnails;
+  }
+
+  // Check for hashed/versioned filenames (contain timestamp or hash)
+  const hasVersioning = /[-_][\da-f]{8,}[-_]|[-_]\d{13}[-_]/i.test(filePath);
+  if (hasVersioning) {
+    return IMAGE_CACHE_CONFIG.immutable;
+  }
+
+  // Default to static cache for images
+  if (/\.(jpg|jpeg|png|gif|webp|avif|svg)$/i.test(filePath)) {
+    return IMAGE_CACHE_CONFIG.static;
+  }
+
+  // Default
+  return IMAGE_CACHE_CONFIG.dynamic;
+}
+
+/**
+ * Express middleware to add cache headers for image responses
+ */
+export function imageCacheMiddleware() {
+  return (req: any, res: any, next: any) => {
+    const originalSend = res.send;
+
+    res.send = function(body: any) {
+      // Only apply to image responses
+      const contentType = res.get("Content-Type") || "";
+      if (contentType.startsWith("image/")) {
+        const headers = getCacheHeaders(req.path);
+        Object.entries(headers).forEach(([key, value]) => {
+          res.set(key, value);
+        });
+
+        // Add ETag based on content length if not present
+        if (!res.get("ETag") && body?.length) {
+          res.set("ETag", `"${body.length}-${Date.now()}"`);
+        }
+      }
+
+      return originalSend.call(this, body);
+    };
+
+    next();
+  };
+}
+
+/**
+ * Apply cache headers to a response
+ */
+export function applyCacheHeaders(res: any, filePath: string): void {
+  const headers = getCacheHeaders(filePath);
+  Object.entries(headers).forEach(([key, value]) => {
+    res.set(key, value);
+  });
+}

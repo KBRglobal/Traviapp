@@ -38,6 +38,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useImageUpload } from "@/hooks/use-image-upload";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Save,
@@ -3055,42 +3056,27 @@ function HeroBlockCanvas({
   isSelected: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const hasImage = !!block.data?.image;
 
-  const { toast } = useToast();
+  // Use unified image upload hook
+  const { uploadFile: upload, isUploading } = useImageUpload();
 
-  const uploadFile = async (file: File) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/media/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include", // Include auth cookies
-      });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: "Upload failed" }));
-        throw new Error(error.error || "Upload failed");
-      }
-      const result = await response.json();
+  const handleUpload = async (file: File) => {
+    const result = await upload(file, {
+      showSuccessToast: true,
+      successMessage: "Hero image uploaded successfully"
+    });
+    if (result) {
       onUpdate({ image: result.url, alt: file.name });
-      toast({ title: "Image Uploaded", description: "Image has been added successfully." });
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast({ title: "Upload Failed", description: error instanceof Error ? error.message : "Failed to upload image", variant: "destructive" });
-    } finally {
-      setIsUploading(false);
     }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    await uploadFile(file);
+    await handleUpload(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -3112,7 +3098,7 @@ function HeroBlockCanvas({
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
-      await uploadFile(file);
+      await handleUpload(file);
     }
   };
 
@@ -3236,41 +3222,27 @@ function ImageBlockCanvas({
   isSelected: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const hasImage = !!block.data?.image;
-  const { toast } = useToast();
 
-  const uploadFile = async (file: File) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/media/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include", // Include auth cookies
-      });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: "Upload failed" }));
-        throw new Error(error.error || "Upload failed");
-      }
-      const result = await response.json();
+  // Use unified image upload hook
+  const { uploadFile: upload, isUploading } = useImageUpload();
+
+  const handleUpload = async (file: File) => {
+    const result = await upload(file, {
+      showSuccessToast: true,
+      successMessage: "Image uploaded successfully"
+    });
+    if (result) {
       onUpdate({ image: result.url, alt: file.name });
-      toast({ title: "Image Uploaded", description: "Image has been added successfully." });
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast({ title: "Upload Failed", description: error instanceof Error ? error.message : "Failed to upload image", variant: "destructive" });
-    } finally {
-      setIsUploading(false);
     }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    await uploadFile(file);
+    await handleUpload(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -3292,7 +3264,7 @@ function ImageBlockCanvas({
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
-      await uploadFile(file);
+      await handleUpload(file);
     }
   };
 
@@ -3595,41 +3567,28 @@ function GalleryBlockCanvas({
   isSelected: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const images = (block.data?.images as Array<{ url: string; alt: string }>) || [];
-  const { toast } = useToast();
 
-  const uploadFile = async (file: File) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/media/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include", // Include auth cookies
-      });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: "Upload failed" }));
-        throw new Error(error.error || "Upload failed");
-      }
-      const result = await response.json();
+  // Use unified image upload hook
+  const { uploadFile: upload, uploadFiles, isUploading } = useImageUpload();
+
+  const handleUpload = async (file: File) => {
+    const result = await upload(file, {
+      showSuccessToast: true,
+      successMessage: "Image added to gallery"
+    });
+    if (result) {
       const newImages = [...images, { url: result.url, alt: file.name.replace(/\.[^/.]+$/, "") }];
       onUpdate({ images: newImages });
-      toast({ title: "Image Uploaded", description: "Image has been added to gallery." });
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast({ title: "Upload Failed", description: error instanceof Error ? error.message : "Failed to upload image", variant: "destructive" });
-    } finally {
-      setIsUploading(false);
     }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
+      // Upload files one by one to maintain gallery order
       for (const file of Array.from(files)) {
-        await uploadFile(file);
+        await handleUpload(file);
       }
     }
     e.target.value = "";
