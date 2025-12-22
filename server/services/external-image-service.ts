@@ -57,19 +57,23 @@ export interface FreepikSearchOptions {
 let openaiClient: OpenAI | null = null;
 
 function getOpenAIClient(): OpenAI | null {
-  // Check both possible environment variable names
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+  // For image generation, prefer direct OPENAI_API_KEY (not proxied)
+  // Replit AI integrations proxy doesn't support DALL-E models
+  const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
   if (!apiKey) {
-    console.warn("[ExternalImageService] OpenAI API key not configured (checked AI_INTEGRATIONS_OPENAI_API_KEY and OPENAI_API_KEY)");
+    console.warn("[ExternalImageService] OpenAI API key not configured (checked OPENAI_API_KEY and AI_INTEGRATIONS_OPENAI_API_KEY)");
     return null;
   }
 
   if (!openaiClient) {
+    // IMPORTANT: Do NOT use BASE_URL for image generation
+    // Replit AI integrations proxy doesn't support DALL-E models
     openaiClient = new OpenAI({
       apiKey,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
+      // Intentionally not using baseURL - DALL-E requires direct OpenAI API
     });
+    console.log("[ExternalImageService] OpenAI client initialized for DALL-E (direct API)");
   }
 
   return openaiClient;
