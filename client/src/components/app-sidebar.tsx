@@ -45,6 +45,7 @@ import {
   Building,
   LayoutTemplate,
   SearchCheck,
+  ScrollText,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -257,6 +258,12 @@ const systemItems: Array<{
     title: "Content Rules",
     url: "/admin/content-rules",
     icon: Shield,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "System Logs",
+    url: "/admin/logs",
+    icon: ScrollText,
     requiredPermission: "canManageSettings",
   },
   {

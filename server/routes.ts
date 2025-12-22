@@ -78,6 +78,7 @@ import {
 import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-queue";
 import { registerEnterpriseRoutes } from "./enterprise-routes";
 import { registerImageRoutes } from "./routes/image-routes";
+import { registerLogRoutes } from "./routes/log-routes";
 import { registerAutomationRoutes } from "./automation-routes";
 import { registerContentIntelligenceRoutes } from "./content-intelligence-routes";
 import { registerAutoPilotRoutes } from "./auto-pilot-routes";
@@ -8068,6 +8069,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // IMAGE ROUTES (Smart image selection + SEO + processing)
   // ============================================================================
   registerImageRoutes(app);
+
+  // ============================================================================
+  // LOG ROUTES (Admin Panel log viewer)
+  // ============================================================================
+  registerLogRoutes(app);
 
   // ============================================================================
   // AUTOMATION ROUTES (Auto SEO, linking, freshness, etc.)

@@ -120,6 +120,7 @@ const UsersPage = lazy(() => import("@/pages/users"));
 const HomepagePromotions = lazy(() => import("@/pages/homepage-promotions"));
 const Analytics = lazy(() => import("@/pages/analytics"));
 const AuditLogs = lazy(() => import("@/pages/audit-logs"));
+const AdminLogs = lazy(() => import("@/pages/admin-logs"));
 const NewsletterSubscribers = lazy(() => import("@/pages/newsletter-subscribers"));
 const Campaigns = lazy(() => import("@/pages/campaigns"));
 const TranslationsPage = lazy(() => import("@/pages/translations"));
@@ -235,6 +236,7 @@ function AdminRouter() {
         <Route path="/admin/homepage-promotions" component={HomepagePromotions} />
         <Route path="/admin/analytics" component={Analytics} />
         <Route path="/admin/audit-logs" component={AuditLogs} />
+        <Route path="/admin/logs" component={AdminLogs} />
         <Route path="/admin/newsletter" component={NewsletterSubscribers} />
         <Route path="/admin/campaigns" component={Campaigns} />
         <Route path="/admin/translations" component={TranslationsPage} />
