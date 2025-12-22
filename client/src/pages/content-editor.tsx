@@ -3108,7 +3108,13 @@ function HeroBlockCanvas({
 
   return (
     <div
-      className={`relative aspect-[21/9] bg-gradient-to-br from-muted to-muted/50 overflow-hidden transition-all ${isDragging ? "ring-4 ring-primary ring-inset" : ""}`}
+      className={`relative aspect-[21/9] overflow-hidden transition-all rounded-lg ${
+        hasImage
+          ? ""
+          : isDragging
+            ? "bg-primary/5 border-2 border-dashed border-primary"
+            : "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:bg-primary/5"
+      }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -3124,39 +3130,46 @@ function HeroBlockCanvas({
       {hasImage ? (
         <div className="relative w-full h-full group">
           <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full h-full object-cover" />
-          {/* Controls to change image - visible on hover (desktop) or when selected (touch) */}
-          <div className={`absolute top-4 right-4 z-30 transition-opacity flex gap-2 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-change-upload-${block.id}`}>
+          {/* Gradient overlay for better button visibility */}
+          <div className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
+          {/* Controls to change image */}
+          <div className={`absolute top-4 right-4 z-30 transition-all flex gap-2 ${isSelected ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-change-upload-${block.id}`}>
               {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             </Button>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`hero-change-library-${block.id}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`hero-change-library-${block.id}`}>
               <FolderOpen className="h-4 w-4" />
             </Button>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); onUpdate({ image: "", alt: "" }); }} data-testid={`hero-remove-${block.id}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950" onClick={(e) => { e.stopPropagation(); onUpdate({ image: "", alt: "" }); }} data-testid={`hero-remove-${block.id}`}>
               <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
       ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10">
-          <ImagePlus className="h-12 w-12 text-muted-foreground/50" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 p-6">
+          <div className={`p-4 rounded-full transition-all ${isDragging ? "bg-primary/20 scale-110" : "bg-slate-100 dark:bg-slate-800"}`}>
+            <ImagePlus className={`h-10 w-10 transition-colors ${isDragging ? "text-primary" : "text-slate-400 dark:text-slate-500"}`} />
+          </div>
           {isDragging ? (
-            <p className="text-lg font-medium text-primary">Drop image here</p>
+            <p className="text-lg font-semibold text-primary animate-pulse">Drop image here</p>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">Drag & drop an image or</p>
+              <div className="text-center">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Hero Image</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Drag & drop or choose an option</p>
+              </div>
               <div className="flex flex-wrap gap-2 justify-center">
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-upload-${block.id}`}>
+                <Button size="sm" className="shadow-sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-upload-${block.id}`}>
                   {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                   Upload
                 </Button>
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`hero-library-${block.id}`}>
+                <Button variant="outline" size="sm" className="shadow-sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`hero-library-${block.id}`}>
                   <FolderOpen className="h-4 w-4 mr-2" />
                   Library
                 </Button>
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`hero-generate-${block.id}`}>
-                  {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                  Generate
+                <Button variant="outline" size="sm" className="shadow-sm bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-violet-200 dark:border-violet-800 hover:from-violet-500/20 hover:to-purple-500/20" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`hero-generate-${block.id}`}>
+                  {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2 text-violet-500" />}
+                  <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent font-medium">AI Generate</span>
                 </Button>
               </div>
             </>
@@ -3288,41 +3301,52 @@ function ImageBlockCanvas({
         onChange={handleFileSelect}
       />
       {hasImage ? (
-        <div className="relative aspect-video rounded-lg overflow-hidden group">
+        <div className="relative aspect-video rounded-lg overflow-hidden group shadow-sm">
           <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full h-full object-cover" />
-          {/* Controls to change image - visible on hover (desktop) or when selected (touch) */}
-          <div className={`absolute top-4 right-4 z-10 transition-opacity flex gap-2 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-change-upload-${block.id}`}>
+          {/* Gradient overlay for better button visibility */}
+          <div className={`absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
+          {/* Controls to change image */}
+          <div className={`absolute top-3 right-3 z-10 transition-all flex gap-2 ${isSelected ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-change-upload-${block.id}`}>
               {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             </Button>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`image-change-library-${block.id}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`image-change-library-${block.id}`}>
               <FolderOpen className="h-4 w-4" />
             </Button>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); onUpdate({ image: "", alt: "" }); }} data-testid={`image-remove-${block.id}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950" onClick={(e) => { e.stopPropagation(); onUpdate({ image: "", alt: "" }); }} data-testid={`image-remove-${block.id}`}>
               <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
       ) : (
-        <div className={`aspect-video rounded-lg bg-muted flex flex-col items-center justify-center gap-4 transition-all ${isDragging ? "ring-4 ring-primary ring-inset" : ""}`}>
-          <ImagePlus className="h-10 w-10 text-muted-foreground/50" />
+        <div className={`aspect-video rounded-lg flex flex-col items-center justify-center gap-4 transition-all ${
+          isDragging
+            ? "bg-primary/5 border-2 border-dashed border-primary"
+            : "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:bg-primary/5"
+        }`}>
+          <div className={`p-3 rounded-full transition-all ${isDragging ? "bg-primary/20 scale-110" : "bg-slate-100 dark:bg-slate-800"}`}>
+            <ImagePlus className={`h-8 w-8 transition-colors ${isDragging ? "text-primary" : "text-slate-400 dark:text-slate-500"}`} />
+          </div>
           {isDragging ? (
-            <p className="text-lg font-medium text-primary">Drop image here</p>
+            <p className="text-lg font-semibold text-primary animate-pulse">Drop image here</p>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">Drag & drop an image or</p>
+              <div className="text-center">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Add Image</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Drag & drop or choose an option</p>
+              </div>
               <div className="flex flex-wrap gap-2 justify-center">
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-upload-${block.id}`}>
+                <Button size="sm" className="shadow-sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-upload-${block.id}`}>
                   {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                   Upload
                 </Button>
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`image-library-${block.id}`}>
+                <Button variant="outline" size="sm" className="shadow-sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`image-library-${block.id}`}>
                   <FolderOpen className="h-4 w-4 mr-2" />
                   Library
                 </Button>
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`image-generate-${block.id}`}>
-                  {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                  Generate
+                <Button variant="outline" size="sm" className="shadow-sm bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-violet-200 dark:border-violet-800 hover:from-violet-500/20 hover:to-purple-500/20" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`image-generate-${block.id}`}>
+                  {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2 text-violet-500" />}
+                  <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent font-medium">AI Generate</span>
                 </Button>
               </div>
             </>
