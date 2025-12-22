@@ -2485,6 +2485,14 @@ export async function registerRoutes(
 
       const { attraction, hotel, article, event, itinerary, dining, district, changedBy, changeNote, ...contentData } = req.body;
 
+      // Convert date strings to Date objects for database
+      if (contentData.publishedAt && typeof contentData.publishedAt === 'string') {
+        contentData.publishedAt = new Date(contentData.publishedAt);
+      }
+      if (contentData.scheduledPublishAt && typeof contentData.scheduledPublishAt === 'string') {
+        contentData.scheduledPublishAt = new Date(contentData.scheduledPublishAt);
+      }
+
       const updatedContent = await storage.updateContent(req.params.id, contentData);
 
       // Update content-type-specific data
