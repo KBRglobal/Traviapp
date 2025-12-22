@@ -3858,23 +3858,35 @@ export async function registerRoutes(
         req.file.mimetype
       );
 
-      const storageClient = getObjectStorageClient();
-
       const filename = `${Date.now()}-${converted.filename}`;
       let url = `/uploads/${filename}`;
+      let useLocalStorage = true;
 
+      // Try Object Storage first, fallback to local if it fails
+      const storageClient = getObjectStorageClient();
       if (storageClient) {
-        objectPath = `public/${filename}`;
-        await storageClient.uploadFromBytes(objectPath, converted.buffer);
-        // Note: Using simple URL path instead of signed URL (getSignedDownloadUrl doesn't exist)
-        url = `/object-storage/${objectPath}`;
-      } else {
+        try {
+          objectPath = `public/${filename}`;
+          await storageClient.uploadFromBytes(objectPath, converted.buffer);
+          url = `/object-storage/${objectPath}`;
+          useLocalStorage = false;
+          console.log(`[Media Upload] Stored to Object Storage: ${url}`);
+        } catch (objStorageError) {
+          console.warn("[Media Upload] Object Storage failed, falling back to local:", objStorageError);
+          useLocalStorage = true;
+        }
+      }
+
+      // Save to local filesystem (either as primary or fallback)
+      if (useLocalStorage) {
         const uploadsDir = path.join(process.cwd(), "uploads");
         if (!fs.existsSync(uploadsDir)) {
           fs.mkdirSync(uploadsDir, { recursive: true });
         }
         localPath = path.join(uploadsDir, filename);
         fs.writeFileSync(localPath, converted.buffer);
+        url = `/uploads/${filename}`;
+        console.log(`[Media Upload] Stored locally: ${url}`);
       }
 
       const mediaFile = await storage.createMediaFile({
@@ -4695,26 +4707,37 @@ Output format:
           const buffer = Buffer.from(imageBuffer);
           console.log(`[AI Images] Downloaded ${buffer.length} bytes`);
 
+          let storedUrl: string | null = null;
+          let useLocalStorage = true;
+
+          // Try Object Storage first
           if (storageClient) {
-            // Store in object storage
-            const objectPath = `public/ai-generated/${image.filename}`;
-            await storageClient.uploadFromBytes(objectPath, buffer);
-            const storedUrl = `/api/ai-images/${image.filename}`;
-            console.log(`[AI Images] Stored to object storage: ${storedUrl}`);
-            storedImages.push({
-              ...image,
-              url: storedUrl,
-            });
-          } else {
-            // Store locally
+            try {
+              const objectPath = `public/ai-generated/${image.filename}`;
+              await storageClient.uploadFromBytes(objectPath, buffer);
+              storedUrl = `/api/ai-images/${image.filename}`;
+              useLocalStorage = false;
+              console.log(`[AI Images] Stored to object storage: ${storedUrl}`);
+            } catch (objError) {
+              console.warn(`[AI Images] Object Storage failed, falling back to local:`, objError);
+              useLocalStorage = true;
+            }
+          }
+
+          // Fallback to local storage
+          if (useLocalStorage) {
             const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
             if (!fs.existsSync(uploadsDir)) {
               fs.mkdirSync(uploadsDir, { recursive: true });
             }
             const localPath = path.join(uploadsDir, image.filename);
             fs.writeFileSync(localPath, buffer);
-            const storedUrl = `/uploads/ai-generated/${image.filename}`;
+            storedUrl = `/uploads/ai-generated/${image.filename}`;
             console.log(`[AI Images] Stored locally: ${storedUrl}`);
+          }
+
+          // Add to stored images (works for both Object Storage and local)
+          if (storedUrl) {
             storedImages.push({
               ...image,
               url: storedUrl,
@@ -4772,12 +4795,24 @@ Output format:
 
       const storageClient = getObjectStorageClient();
       let storedUrl: string;
+      let useLocalStorage = true;
 
+      // Try Object Storage first
       if (storageClient) {
-        const objectPath = `public/ai-generated/${finalFilename}`;
-        await storageClient.uploadFromBytes(objectPath, buffer);
-        storedUrl = `/api/ai-images/${finalFilename}`;
-      } else {
+        try {
+          const objectPath = `public/ai-generated/${finalFilename}`;
+          await storageClient.uploadFromBytes(objectPath, buffer);
+          storedUrl = `/api/ai-images/${finalFilename}`;
+          useLocalStorage = false;
+          console.log(`[AI Single Image] Stored to object storage: ${storedUrl}`);
+        } catch (objError) {
+          console.warn(`[AI Single Image] Object Storage failed, falling back to local:`, objError);
+          useLocalStorage = true;
+        }
+      }
+
+      // Fallback to local storage
+      if (useLocalStorage) {
         const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
         if (!fs.existsSync(uploadsDir)) {
           fs.mkdirSync(uploadsDir, { recursive: true });
@@ -4785,6 +4820,7 @@ Output format:
         const localPath = path.join(uploadsDir, finalFilename);
         fs.writeFileSync(localPath, buffer);
         storedUrl = `/uploads/ai-generated/${finalFilename}`;
+        console.log(`[AI Single Image] Stored locally: ${storedUrl}`);
       }
 
       res.json({ url: storedUrl, filename: finalFilename });
