@@ -2530,10 +2530,11 @@ export async function registerRoutes(
         changeNote: req.body.changeNote || null,
       });
 
-      const { attraction, hotel, article, event, itinerary, changedBy, changeNote, ...contentData } = req.body;
-      
+      const { attraction, hotel, article, event, itinerary, dining, district, changedBy, changeNote, ...contentData } = req.body;
+
       const updatedContent = await storage.updateContent(req.params.id, contentData);
 
+      // Update content-type-specific data
       if (existingContent.type === "attraction" && attraction) {
         await storage.updateAttraction(req.params.id, attraction);
       } else if (existingContent.type === "hotel" && hotel) {
@@ -2545,6 +2546,8 @@ export async function registerRoutes(
       } else if (existingContent.type === "itinerary" && itinerary) {
         await storage.updateItinerary(req.params.id, itinerary);
       }
+      // Note: dining and district content types don't have separate extension tables
+      // Their SEO data is stored directly in the content blocks
 
       const fullContent = await storage.getContent(req.params.id);
       

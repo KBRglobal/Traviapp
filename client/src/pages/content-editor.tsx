@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
+import DOMPurify from "dompurify";
 import {
   DndContext,
   closestCenter,
@@ -171,6 +172,19 @@ const blockCategories = [
   { id: "interactive", label: "Interactive", icon: MousePointer },
 ];
 
+// Environment-based configuration
+const GOOGLE_MAPS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8";
+
+// Safe deep clone function to handle potential JSON errors
+function safeDeepClone<T>(obj: T): T | null {
+  try {
+    return JSON.parse(JSON.stringify(obj));
+  } catch (e) {
+    console.error("Failed to deep clone object:", e);
+    return null;
+  }
+}
+
 const defaultTemplateBlocks: ContentBlock[] = [
   { id: "hero-default", type: "hero", data: { image: "", alt: "", title: "" }, order: 0 },
   { id: "intro-default", type: "text", data: { content: "" }, order: 1 },
@@ -189,6 +203,10 @@ function generateSlug(title: string): string {
 }
 
 function generateId(): string {
+  // Use crypto.randomUUID() for secure ID generation, fallback to less secure method
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID().substring(0, 8);
+  }
   return Math.random().toString(36).substring(2, 9);
 }
 
@@ -519,9 +537,12 @@ export default function ContentEditor() {
 
   // Save state to history (called when blocks change significantly)
   const pushToHistory = useCallback((newBlocks: ContentBlock[]) => {
+    const cloned = safeDeepClone(newBlocks);
+    if (!cloned) return; // Skip if cloning failed
+
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push(JSON.parse(JSON.stringify(newBlocks)));
+      newHistory.push(cloned);
       if (newHistory.length > maxHistorySize) {
         newHistory.shift();
         return newHistory;
@@ -533,15 +554,21 @@ export default function ContentEditor() {
 
   const undo = useCallback(() => {
     if (historyIndex > 0) {
-      setHistoryIndex(prev => prev - 1);
-      setBlocks(JSON.parse(JSON.stringify(history[historyIndex - 1])));
+      const cloned = safeDeepClone(history[historyIndex - 1]);
+      if (cloned) {
+        setHistoryIndex(prev => prev - 1);
+        setBlocks(cloned);
+      }
     }
   }, [history, historyIndex]);
 
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      setHistoryIndex(prev => prev + 1);
-      setBlocks(JSON.parse(JSON.stringify(history[historyIndex + 1])));
+      const cloned = safeDeepClone(history[historyIndex + 1]);
+      if (cloned) {
+        setHistoryIndex(prev => prev + 1);
+        setBlocks(cloned);
+      }
     }
   }, [history, historyIndex]);
 
@@ -1048,9 +1075,15 @@ export default function ContentEditor() {
           status,
         };
 
-        // Include attraction-specific SEO data if this is an attraction
+        // Include content-type-specific SEO data (use property names expected by backend)
         if (contentType === "attraction") {
-          autosaveData.attractionData = attractionSeoData;
+          autosaveData.attraction = attractionSeoData;
+        } else if (contentType === "hotel") {
+          autosaveData.hotel = hotelSeoData;
+        } else if (contentType === "dining") {
+          autosaveData.dining = diningSeoData;
+        } else if (contentType === "district") {
+          autosaveData.district = districtSeoData;
         }
 
         autosaveMutation.mutate(autosaveData);
@@ -1063,7 +1096,7 @@ export default function ContentEditor() {
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [title, slug, metaTitle, metaDescription, primaryKeyword, heroImage, heroImageAlt, blocks, status, contentId, contentType, attractionSeoData]);
+  }, [title, slug, metaTitle, metaDescription, primaryKeyword, heroImage, heroImageAlt, blocks, status, contentId, contentType, attractionSeoData, hotelSeoData, diningSeoData, districtSeoData]);
 
   // Generate blocks from attraction/hotel/article extension data
   // Blocks use simple string content (one item per line) for tips, highlights, info_grid
@@ -1732,15 +1765,15 @@ export default function ContentEditor() {
       saveData.scheduledAt = scheduledDate.toISOString();
     }
 
-    // Include content-type-specific SEO data
+    // Include content-type-specific SEO data (use property names expected by backend)
     if (contentType === "attraction") {
-      saveData.attractionData = attractionSeoData;
+      saveData.attraction = attractionSeoData;
     } else if (contentType === "hotel") {
-      saveData.hotelData = hotelSeoData;
+      saveData.hotel = hotelSeoData;
     } else if (contentType === "dining") {
-      saveData.diningData = diningSeoData;
+      saveData.dining = diningSeoData;
     } else if (contentType === "district") {
-      saveData.districtData = districtSeoData;
+      saveData.district = districtSeoData;
     }
 
     saveMutation.mutate(saveData);
@@ -1761,15 +1794,15 @@ export default function ContentEditor() {
       publishedAt: new Date().toISOString(),
     };
 
-    // Include content-type-specific SEO data
+    // Include content-type-specific SEO data (use property names expected by backend)
     if (contentType === "attraction") {
-      publishData.attractionData = attractionSeoData;
+      publishData.attraction = attractionSeoData;
     } else if (contentType === "hotel") {
-      publishData.hotelData = hotelSeoData;
+      publishData.hotel = hotelSeoData;
     } else if (contentType === "dining") {
-      publishData.diningData = diningSeoData;
+      publishData.dining = diningSeoData;
     } else if (contentType === "district") {
-      publishData.districtData = districtSeoData;
+      publishData.district = districtSeoData;
     }
 
     publishMutation.mutate(publishData);
@@ -3032,6 +3065,8 @@ function HeroBlockCanvas({
   const [showLibrary, setShowLibrary] = useState(false);
   const hasImage = !!block.data?.image;
 
+  const { toast } = useToast();
+
   const uploadFile = async (file: File) => {
     setIsUploading(true);
     try {
@@ -3040,12 +3075,18 @@ function HeroBlockCanvas({
       const response = await fetch("/api/media/upload", {
         method: "POST",
         body: formData,
+        credentials: "include", // Include auth cookies
       });
-      if (!response.ok) throw new Error("Upload failed");
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Upload failed" }));
+        throw new Error(error.error || "Upload failed");
+      }
       const result = await response.json();
       onUpdate({ image: result.url, alt: file.name });
+      toast({ title: "Image Uploaded", description: "Image has been added successfully." });
     } catch (error) {
       console.error("Upload error:", error);
+      toast({ title: "Upload Failed", description: error instanceof Error ? error.message : "Failed to upload image", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }
@@ -3085,7 +3126,7 @@ function HeroBlockCanvas({
   };
 
   return (
-    <div 
+    <div
       className={`relative aspect-[21/9] bg-gradient-to-br from-muted to-muted/50 overflow-hidden transition-all ${isDragging ? "ring-4 ring-primary ring-inset" : ""}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -3204,6 +3245,7 @@ function ImageBlockCanvas({
   const [isDragging, setIsDragging] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const hasImage = !!block.data?.image;
+  const { toast } = useToast();
 
   const uploadFile = async (file: File) => {
     setIsUploading(true);
@@ -3213,12 +3255,18 @@ function ImageBlockCanvas({
       const response = await fetch("/api/media/upload", {
         method: "POST",
         body: formData,
+        credentials: "include", // Include auth cookies
       });
-      if (!response.ok) throw new Error("Upload failed");
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Upload failed" }));
+        throw new Error(error.error || "Upload failed");
+      }
       const result = await response.json();
       onUpdate({ image: result.url, alt: file.name });
+      toast({ title: "Image Uploaded", description: "Image has been added successfully." });
     } catch (error) {
       console.error("Upload error:", error);
+      toast({ title: "Upload Failed", description: error instanceof Error ? error.message : "Failed to upload image", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }
@@ -3554,6 +3602,7 @@ function GalleryBlockCanvas({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const images = (block.data?.images as Array<{ url: string; alt: string }>) || [];
+  const { toast } = useToast();
 
   const uploadFile = async (file: File) => {
     setIsUploading(true);
@@ -3563,13 +3612,19 @@ function GalleryBlockCanvas({
       const response = await fetch("/api/media/upload", {
         method: "POST",
         body: formData,
+        credentials: "include", // Include auth cookies
       });
-      if (!response.ok) throw new Error("Upload failed");
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Upload failed" }));
+        throw new Error(error.error || "Upload failed");
+      }
       const result = await response.json();
       const newImages = [...images, { url: result.url, alt: file.name.replace(/\.[^/.]+$/, "") }];
       onUpdate({ images: newImages });
+      toast({ title: "Image Uploaded", description: "Image has been added to gallery." });
     } catch (error) {
       console.error("Upload error:", error);
+      toast({ title: "Upload Failed", description: error instanceof Error ? error.message : "Failed to upload image", variant: "destructive" });
     } finally {
       setIsUploading(false);
     }
@@ -3898,8 +3953,8 @@ function MapBlockCanvas({
   const lng = Number(block.data?.lng || 55.2708);
 
   const mapUrl = address
-    ? `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(address)}`
-    : `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${lat},${lng}&zoom=14`;
+    ? `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(address)}`
+    : `https://www.google.com/maps/embed/v1/view?key=${GOOGLE_MAPS_API_KEY}&center=${lat},${lng}&zoom=14`;
 
   return (
     <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
@@ -4204,7 +4259,7 @@ function HtmlBlockCanvas({
         {showPreview ? (
           <div
             className="border rounded-lg p-4 min-h-[100px] bg-background"
-            dangerouslySetInnerHTML={{ __html: code }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(code, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling'] }) }}
           />
         ) : (
           <Textarea
@@ -4237,7 +4292,15 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
   if (block.type === "text") {
     return (
       <div className="p-8">
-        <p className="text-lg leading-relaxed">{String(block.data?.content || "")}</p>
+        <p className="text-lg leading-relaxed whitespace-pre-wrap">{String(block.data?.content || "")}</p>
+      </div>
+    );
+  }
+
+  if (block.type === "heading") {
+    return (
+      <div className="p-8">
+        <h2 className="text-2xl font-bold">{String(block.data?.content || "")}</h2>
       </div>
     );
   }
@@ -4246,15 +4309,115 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     return (
       <div className="p-8">
         <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full rounded-lg" />
+        {block.data?.caption && <p className="text-sm text-muted-foreground text-center mt-2">{String(block.data.caption)}</p>}
+      </div>
+    );
+  }
+
+  if (block.type === "gallery") {
+    const images = (block.data?.images as Array<{ url: string; alt: string }>) || [];
+    if (images.length === 0) return null;
+    return (
+      <div className="p-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {images.map((img: { url: string; alt: string }, i: number) => (
+            <img key={i} src={img.url} alt={img.alt} className="w-full aspect-square object-cover rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "video") {
+    const videoUrl = String(block.data?.url || "");
+    if (!videoUrl) return null;
+    return (
+      <div className="p-8">
+        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+          <iframe src={videoUrl} className="w-full h-full border-0" allowFullScreen />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "quote") {
+    return (
+      <div className="p-8">
+        <blockquote className="border-l-4 border-primary pl-6 italic text-lg">
+          <p>{String(block.data?.content || "")}</p>
+          {block.data?.author && <cite className="block mt-2 text-sm text-muted-foreground">— {String(block.data.author)}</cite>}
+        </blockquote>
+      </div>
+    );
+  }
+
+  if (block.type === "divider") {
+    return (
+      <div className="p-8">
+        <hr className="border-t border-border" />
       </div>
     );
   }
 
   if (block.type === "faq") {
     return (
-      <div className="p-8 space-y-2">
+      <div className="p-8 space-y-2 border-b last:border-b-0">
         <h3 className="text-xl font-semibold">{String(block.data?.question || "Question")}</h3>
         <p className="text-muted-foreground">{String(block.data?.answer || "Answer")}</p>
+      </div>
+    );
+  }
+
+  if (block.type === "tips") {
+    const content = String(block.data?.content || "");
+    if (!content) return null;
+    return (
+      <div className="p-8">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+          <div className="flex gap-3">
+            <Lightbulb className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-amber-900">{content}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "highlights") {
+    const items = (block.data?.items as string[]) || [];
+    if (items.length === 0) return null;
+    return (
+      <div className="p-8">
+        <div className="bg-primary/5 rounded-lg p-6">
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Star className="h-5 w-5 text-primary" />
+            Highlights
+          </h3>
+          <ul className="space-y-2">
+            {items.map((item: string, i: number) => (
+              <li key={i} className="flex items-start gap-2">
+                <Check className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "map") {
+    const address = String(block.data?.address || "");
+    if (!address) return null;
+    const mapUrl = `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(address)}`;
+    return (
+      <div className="p-8">
+        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+          <iframe src={mapUrl} className="w-full h-full border-0" loading="lazy" />
+        </div>
+        <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
+          <MapPin className="h-3 w-3" /> {address}
+        </p>
       </div>
     );
   }
@@ -4267,6 +4430,20 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     );
   }
 
+  if (block.type === "html") {
+    const code = String(block.data?.code || "");
+    if (!code) return null;
+    return (
+      <div className="p-8">
+        <div
+          className="rounded-lg overflow-hidden"
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(code, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling'] }) }}
+        />
+      </div>
+    );
+  }
+
+  // Fallback for unknown block types - show a placeholder in preview
   return null;
 }
 
