@@ -3777,26 +3777,35 @@ export async function generateArticleContent(
 
 ${categoryInstruction}
 
-REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1500-2500 words across all text blocks
+REQUIREMENTS (VERY IMPORTANT - IRON RULE FOR WORD COUNT):
+- Total word count: 2000-3500 words across all text blocks
 - Choose the most appropriate writing personality (A-E) for this topic
 - Choose the most appropriate article structure (1-6) for this topic
 - Write engaging, SEO-optimized content valuable for Dubai travelers
 
+WORD COUNT DISTRIBUTION (MUST FOLLOW):
+- Opening/Introduction: 150-200 words (~8% of content)
+- Quick Facts highlights: 80-120 words (~5% of content)
+- Main Sections (4-6 sections): 800-1800 words TOTAL (~60% of content)
+- FAQ (6-10 questions): 300-1000 words TOTAL (~20% of content)
+- Pro Tips (5-8 tips): 100-280 words TOTAL (~7% of content)
+- Summary/Conclusion: 100-150 words (~5% of content)
+
 MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
 1. hero block - with compelling title, subtitle, overlayText
-2. text block - "Introduction" (250-350 words, engaging hook)
-3. highlights block - Quick Facts (location, price, hours, booking, etc.)
-4. text block - Main content section 1 (300-400 words)
-5. image block - with searchQuery for Freepik, alt text, and caption (REQUIRED for visual engagement)
-6. text block - Main content section 2 (300-400 words)
+2. text block - "Introduction" (150-200 words, engaging hook that draws reader in)
+3. highlights block - Quick Facts (80-120 words: location, price, hours, booking, best time to visit)
+4. text block - Main content section 1 with H2 heading (250-350 words)
+5. image block - with searchQuery for Freepik, alt text, and caption (REQUIRED)
+6. text block - Main content section 2 with H2 heading (250-350 words)
 7. image block - second image with different searchQuery relevant to content (REQUIRED)
-8. text block - Main content section 3 (250-350 words)
+8. text block - Main content section 3 with H2 heading (200-300 words)
 9. image block - third image with relevant searchQuery (REQUIRED)
-10. tips block - with 7 detailed, actionable expert tips (this is REQUIRED, do NOT skip)
-11. text block - "Practical Information" (200-250 words)
-12. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
-13. cta block - with relevant call to action
+10. text block - Main content section 4 with H2 heading (200-300 words) - OPTIONAL but recommended
+11. tips block - with 5-8 detailed, actionable expert tips (this is REQUIRED, do NOT skip) - 100-280 words total
+12. faq block - with 6-10 FAQ items, each answer 50-100 words (this is REQUIRED, do NOT skip) - 300-1000 words total
+13. text block - "Summary" or "Conclusion" (100-150 words wrapping up key points)
+14. cta block - with relevant call to action
 
 IMAGE BLOCKS ARE MANDATORY - Each image block must include:
 - searchQuery: Specific search term for finding relevant stock images (e.g., "Dubai Marina waterfront sunset", "Burj Khalifa observation deck")
@@ -3804,10 +3813,10 @@ IMAGE BLOCKS ARE MANDATORY - Each image block must include:
 - caption: Engaging caption that adds value for the reader
 
 ALSO REQUIRED in article object:
-- 5 quick facts
-- 7 pro tips
+- 5-8 quick facts
+- 5-8 pro tips
 - Relevant warnings
-- 8 FAQ items with detailed 100-200 word answers
+- 6-10 FAQ items with detailed 50-100 word answers each
 - 4 related topics for internal linking
 - 4 image descriptions with SEO alt text and captions
 - Comprehensive Article JSON-LD schema
@@ -3902,24 +3911,52 @@ function ensureRequiredArticleBlocks(blocks: ContentBlock[], topic: string): Con
         data: {
           title: 'Frequently Asked Questions',
           faqs: [
-            { question: `What is the best time to visit ${topic}?`, answer: `The best time to visit ${topic} is during the cooler months from October to April. Morning visits (9-11 AM) typically offer the best experience with fewer crowds. Avoid visiting during peak afternoon hours when temperatures are highest and crowds are at their maximum.` },
-            { question: `How much does ${topic} cost?`, answer: `Prices vary depending on the type of experience you choose. Standard admission typically ranges from AED 100-300 per person. Premium experiences and packages can cost more. Children and seniors often receive discounts. Check the official website for current pricing.` },
-            { question: `How do I get to ${topic}?`, answer: `You can reach ${topic} by metro, taxi, or car. The nearest metro station is usually within walking distance. Taxis and ride-sharing services like Uber and Careem are widely available. Parking is available for those driving.` },
-            { question: `Is ${topic} suitable for families with children?`, answer: `Yes, ${topic} is family-friendly with activities and facilities for all ages. Stroller access is available, and there are rest areas and family restrooms throughout. Some attractions may have age or height restrictions.` },
-            { question: `Do I need to book in advance for ${topic}?`, answer: `Advance booking is highly recommended, especially during weekends and peak tourist season. Online booking often provides discounts and guaranteed entry. Walk-ins are accepted but may face longer wait times.` },
-            { question: `What should I bring to ${topic}?`, answer: `Bring comfortable walking shoes, sunscreen, a hat, and water. A camera or smartphone for photos is essential. Check the dress code requirements as some areas may require modest clothing. Bags may be subject to security screening.` },
-            { question: `How long should I spend at ${topic}?`, answer: `Plan for 2-4 hours to fully experience ${topic}. A quick visit can be done in 1-2 hours, but to enjoy all features and take photos without rushing, allocate at least half a day.` },
-            { question: `Are there restaurants or cafes at ${topic}?`, answer: `Yes, there are multiple dining options available ranging from quick snacks to full-service restaurants. Prices are typically higher than outside, so budget accordingly. Some venues also allow outside food in designated areas.` }
+            { question: `What is the best time to visit ${topic}?`, answer: `The best time to visit is during the cooler months from October to April. Morning visits (9-11 AM) typically offer the best experience with fewer crowds.` },
+            { question: `How much does ${topic} cost?`, answer: `Prices vary depending on the experience. Standard admission typically ranges from AED 100-300 per person. Children and seniors often receive discounts.` },
+            { question: `How do I get to ${topic}?`, answer: `You can reach here by metro, taxi, or car. The nearest metro station is usually within walking distance. Taxis and Careem are widely available.` },
+            { question: `Is ${topic} suitable for families?`, answer: `Yes, it's family-friendly with activities for all ages. Stroller access is available. Some attractions may have age or height restrictions.` },
+            { question: `Do I need to book in advance?`, answer: `Advance booking is highly recommended, especially during weekends. Online booking often provides discounts and guaranteed entry.` },
+            { question: `What should I bring?`, answer: `Bring comfortable shoes, sunscreen, a hat, and water. Check dress code requirements as some areas may require modest clothing.` },
+            { question: `How long should I spend here?`, answer: `Plan for 2-4 hours for a full experience. A quick visit can be done in 1-2 hours, but allocate more time to avoid rushing.` },
+            { question: `Are there dining options available?`, answer: `Yes, multiple dining options are available from quick snacks to restaurants. Prices are typically higher than outside.` }
           ]
         },
         order: 11
+      })
+    },
+    {
+      type: 'text',
+      template: () => ({
+        id: generateBlockId(),
+        type: 'text' as const,
+        data: {
+          title: 'Summary',
+          content: `${topic} offers an unforgettable Dubai experience that combines world-class attractions with the unique charm of this dynamic city. Whether you're visiting for the first time or returning for another adventure, this destination delivers memorable moments for travelers of all types. Plan your visit during the cooler months, book in advance for the best experience, and don't forget to explore the surrounding areas to make the most of your Dubai adventure.`
+        },
+        order: 12
       })
     }
   ];
 
   let orderOffset = existingBlocks.length;
+
+  // Check for standard required blocks by type
   for (const required of requiredBlocks) {
-    if (!blockTypes.includes(required.type)) {
+    // For text type, we need special handling since there are multiple text blocks
+    if (required.type === 'text') {
+      // Check if summary block exists by looking for title containing "Summary" or "Conclusion"
+      const hasSummary = existingBlocks.some(b =>
+        b.type === 'text' &&
+        (String(b.data?.title || '').toLowerCase().includes('summary') ||
+         String(b.data?.title || '').toLowerCase().includes('conclusion'))
+      );
+      if (!hasSummary) {
+        console.log(`[AI Generator] Missing Summary/Conclusion text block, adding placeholder`);
+        const newBlock = required.template();
+        newBlock.order = orderOffset++;
+        existingBlocks.push(newBlock);
+      }
+    } else if (!blockTypes.includes(required.type)) {
       console.log(`[AI Generator] Missing required block type: ${required.type}, adding placeholder`);
       const newBlock = required.template();
       newBlock.order = orderOffset++;
