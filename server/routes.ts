@@ -84,6 +84,7 @@ import { registerAutoPilotRoutes } from "./auto-pilot-routes";
 import { registerEnhancementRoutes } from "./enhancement-routes";
 import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
 import { registerDocUploadRoutes } from "./doc-upload-routes";
+import { registerImageRoutes } from "./routes/image-routes";
 import { cache, cacheKeys } from "./cache";
 import {
   getContentWriterSystemPrompt,
@@ -4794,7 +4795,7 @@ Output format:
       const finalFilename = filename || `ai-image-${Date.now()}.jpg`;
 
       const storageClient = getObjectStorageClient();
-      let storedUrl: string;
+      let storedUrl: string = "";
       let useLocalStorage = true;
 
       // Try Object Storage first
@@ -8309,6 +8310,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // DOC/DOCX UPLOAD (Import content directly from Word documents)
   // ============================================================================
   registerDocUploadRoutes(app);
+
+  // ============================================================================
+  // UNIFIED IMAGE SERVICE (New architecture for all image operations)
+  // ============================================================================
+  registerImageRoutes(app);
 
   // ============================================================================
   // SECURE ERROR HANDLER (no stack traces to client)
