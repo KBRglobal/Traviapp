@@ -1,278 +1,437 @@
 /**
  * External Image Service
- * Handles integration with Freepik API and other external image sources
+ * Handles integration with external image providers (DALL-E, Freepik)
  */
 
-import { downloadAndSaveImage, ImageDownloadResult } from './image-processing';
+import OpenAI from "openai";
+import { getImageService, ImageUploadResponse } from "./image-service";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface ImageSearchBrief {
-  slotId: string;
-  role: 'hero' | 'interior' | 'experience' | 'practical' | 'usp' | 'food' | 'ambiance';
-  primaryQuery: string;
-  alternativeQueries: string[];
-  mustInclude: string[];
-  mustExclude: string[];
-  style: {
-    timeOfDay?: string;
-    mood?: string;
-    angle?: string;
-  };
-  areaRules?: {
-    additionalKeywords: string[];
-    styleOverrides: Record<string, string>;
-  };
+export type AIProvider = "dalle3" | "dalle2" | "flux" | "auto";
+
+export interface AIGenerationOptions {
+  size?: "1024x1024" | "1792x1024" | "1024x1792";
+  quality?: "standard" | "hd";
+  style?: "vivid" | "natural";
+  provider?: AIProvider;
 }
+
+export interface AIGenerationResult {
+  success: true;
+  url: string;
+  provider: string;
+  revisedPrompt?: string;
+}
+
+export interface AIGenerationError {
+  success: false;
+  error: string;
+  code?: string;
+}
+
+export type AIGenerationResponse = AIGenerationResult | AIGenerationError;
 
 export interface FreepikSearchResult {
   id: string;
   title: string;
   url: string;
   thumbnailUrl: string;
-  downloadUrl?: string;
-  relevanceScore: number;
-  matchedCriteria: string[];
-  rejectedReasons: string[];
+  author: string;
+  premium: boolean;
 }
 
-export interface FreepikSearchResponse {
-  results: FreepikSearchResult[];
-  usedQuery: string;
-  foundMatch: boolean;
-  queryAttempts: string[];
-}
-
-// ============================================================================
-// FREEPIK API INTEGRATION
-// ============================================================================
-
-/**
- * Search Freepik for images matching the brief
- */
-export async function searchFreepik(
-  brief: ImageSearchBrief,
-  apiKey?: string
-): Promise<FreepikSearchResponse> {
-  const key = apiKey || process.env.FREEPIK_API_KEY;
-
-  if (!key) {
-    console.log('[ExternalImage] Freepik API key not configured');
-    return {
-      results: [],
-      usedQuery: brief.primaryQuery,
-      foundMatch: false,
-      queryAttempts: [],
-    };
-  }
-
-  const queryAttempts: string[] = [];
-  const allResults: FreepikSearchResult[] = [];
-
-  // Try primary query first, then alternatives
-  const queriesToTry = [brief.primaryQuery, ...brief.alternativeQueries.slice(0, 2)];
-
-  for (const query of queriesToTry) {
-    queryAttempts.push(query);
-
-    try {
-      const params = new URLSearchParams({
-        term: query,
-        page: '1',
-        limit: '10',
-        order: 'relevance',
-        filters: JSON.stringify({
-          content_type: ['photo'],
-          orientation: brief.style.angle === 'wide' ? ['landscape'] :
-                      brief.style.angle === 'close-up' ? ['square'] : ['all'],
-        }),
-      });
-
-      const response = await fetch(`https://api.freepik.com/v1/resources?${params}`, {
-        headers: {
-          'Accept': 'application/json',
-          'x-freepik-api-key': key,
-        },
-      });
-
-      if (!response.ok) {
-        console.warn(`[ExternalImage] Freepik API error: ${response.status}`);
-        continue;
-      }
-
-      const data = await response.json();
-      const resources = data.data || [];
-
-      // Score and filter results
-      for (const resource of resources) {
-        const matchedCriteria: string[] = [];
-        const rejectedReasons: string[] = [];
-        let relevanceScore = 50;
-
-        const resourceText = `${resource.title} ${(resource.tags || []).join(' ')}`.toLowerCase();
-
-        // Check must-include terms
-        for (const mustInclude of brief.mustInclude) {
-          if (resourceText.includes(mustInclude.toLowerCase())) {
-            matchedCriteria.push(mustInclude);
-            relevanceScore += 10;
-          }
-        }
-
-        // Check must-exclude terms
-        for (const mustExclude of brief.mustExclude) {
-          if (resourceText.includes(mustExclude.toLowerCase())) {
-            rejectedReasons.push(`Contains excluded term: ${mustExclude}`);
-            relevanceScore -= 30;
-          }
-        }
-
-        // Boost for Dubai-specific content
-        if (resourceText.includes('dubai') || resourceText.includes('uae') || resourceText.includes('emirates')) {
-          matchedCriteria.push('Dubai/UAE location');
-          relevanceScore += 15;
-        }
-
-        if (relevanceScore >= 40 && rejectedReasons.length === 0) {
-          allResults.push({
-            id: resource.id?.toString() || '',
-            title: resource.title || '',
-            url: resource.url || resource.image?.source?.url || '',
-            thumbnailUrl: resource.thumbnail?.url || resource.image?.thumbnail?.url || '',
-            downloadUrl: resource.url || '',
-            relevanceScore,
-            matchedCriteria,
-            rejectedReasons,
-          });
-        }
-      }
-
-      if (allResults.length >= 3) {
-        break;
-      }
-    } catch (error) {
-      console.error(`[ExternalImage] Freepik search error:`, error);
-    }
-  }
-
-  allResults.sort((a, b) => b.relevanceScore - a.relevanceScore);
-
-  return {
-    results: allResults.slice(0, 5),
-    usedQuery: queryAttempts[0],
-    foundMatch: allResults.length > 0,
-    queryAttempts,
-  };
-}
-
-/**
- * Search Freepik with a simple query string
- */
-export async function searchFreepikSimple(
-  query: string,
-  options?: {
-    limit?: number;
-    orientation?: 'landscape' | 'portrait' | 'square' | 'all';
-  }
-): Promise<FreepikSearchResult[]> {
-  const brief: ImageSearchBrief = {
-    slotId: 'search',
-    role: 'hero',
-    primaryQuery: query,
-    alternativeQueries: [],
-    mustInclude: [],
-    mustExclude: [],
-    style: {
-      angle: options?.orientation === 'landscape' ? 'wide' : undefined,
-    },
-  };
-
-  const result = await searchFreepik(brief);
-  return result.results.slice(0, options?.limit || 10);
-}
-
-/**
- * Search Freepik and optionally auto-download to Media Library
- */
-export async function searchAndDownloadFreepik(
-  query: string,
-  options?: {
-    autoDownload?: boolean;
-    downloadCount?: number;
-    altTextPrefix?: string;
-    contentId?: string;
-  }
-): Promise<{
-  searchResults: FreepikSearchResult[];
-  downloadedMedia: ImageDownloadResult[];
-}> {
-  const results = await searchFreepikSimple(query);
-  const downloadedMedia: ImageDownloadResult[] = [];
-
-  if (options?.autoDownload && results.length > 0) {
-    const downloadCount = options.downloadCount || 1;
-    const toDownload = results.slice(0, downloadCount);
-
-    for (const result of toDownload) {
-      const downloaded = await downloadAndSaveImage(result.url, {
-        source: 'freepik',
-        slug: result.title,
-      });
-      downloadedMedia.push(downloaded);
-    }
-  }
-
-  return {
-    searchResults: results,
-    downloadedMedia,
-  };
+export interface FreepikSearchOptions {
+  limit?: number;
+  page?: number;
+  orientation?: "horizontal" | "vertical" | "square";
+  premium?: boolean;
 }
 
 // ============================================================================
-// AI IMAGE GENERATION
+// OPENAI CLIENT
 // ============================================================================
 
-export interface AiImagePrompt {
-  prompt: string;
-  negativePrompt: string;
-  style: string;
-  aspectRatio: '16:9' | '4:3' | '1:1' | '3:4';
-}
+let openaiClient: OpenAI | null = null;
 
-/**
- * Generate AI image using DALL-E
- */
-export async function generateAiImage(
-  prompt: AiImagePrompt
-): Promise<{ url: string } | null> {
-  try {
-    const { generateImage } = await import('../ai-generator');
-
-    const size: '1024x1024' | '1792x1024' | '1024x1792' =
-      prompt.aspectRatio === '16:9' ? '1792x1024' :
-      prompt.aspectRatio === '3:4' ? '1024x1792' :
-      '1024x1024';
-
-    const imageUrl = await generateImage(prompt.prompt, {
-      size,
-      quality: 'hd',
-      style: prompt.style === 'cinematic' ? 'vivid' : 'natural',
-    });
-
-    if (!imageUrl) return null;
-
-    return { url: imageUrl };
-  } catch (error) {
-    console.error('[ExternalImage] AI generation failed:', error);
+function getOpenAIClient(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn("[ExternalImageService] OPENAI_API_KEY not configured");
     return null;
   }
+
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  return openaiClient;
 }
 
-export default {
-  searchFreepik,
-  searchFreepikSimple,
-  searchAndDownloadFreepik,
-  generateAiImage,
-};
+// ============================================================================
+// DALL-E GENERATION
+// ============================================================================
+
+/**
+ * Generate image with DALL-E 3 (with fallback to DALL-E 2)
+ */
+async function generateWithDalle(
+  prompt: string,
+  options: AIGenerationOptions = {}
+): Promise<AIGenerationResponse> {
+  const openai = getOpenAIClient();
+  if (!openai) {
+    return { success: false, error: "OpenAI not configured", code: "NOT_CONFIGURED" };
+  }
+
+  // Try DALL-E 3 first
+  try {
+    console.log("[ExternalImageService] Trying DALL-E 3...");
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: prompt,
+      n: 1,
+      size: options.size || "1792x1024",
+      quality: options.quality || "hd",
+      style: options.style || "natural",
+    });
+
+    const imageUrl = response.data?.[0]?.url;
+    if (!imageUrl) {
+      throw new Error("No image URL in response");
+    }
+
+    console.log("[ExternalImageService] DALL-E 3 succeeded");
+    return {
+      success: true,
+      url: imageUrl,
+      provider: "dalle3",
+      revisedPrompt: response.data?.[0]?.revised_prompt,
+    };
+  } catch (error: any) {
+    console.warn("[ExternalImageService] DALL-E 3 failed:", error?.message);
+
+    // Fallback to DALL-E 2
+    return generateWithDalle2(prompt);
+  }
+}
+
+/**
+ * Generate image with DALL-E 2
+ */
+async function generateWithDalle2(prompt: string): Promise<AIGenerationResponse> {
+  const openai = getOpenAIClient();
+  if (!openai) {
+    return { success: false, error: "OpenAI not configured", code: "NOT_CONFIGURED" };
+  }
+
+  try {
+    console.log("[ExternalImageService] Trying DALL-E 2...");
+
+    // DALL-E 2 constraints
+    const truncatedPrompt = prompt.length > 1000 ? prompt.substring(0, 997) + "..." : prompt;
+
+    const response = await openai.images.generate({
+      model: "dall-e-2",
+      prompt: truncatedPrompt,
+      n: 1,
+      size: "1024x1024", // DALL-E 2 max size
+    });
+
+    const imageUrl = response.data?.[0]?.url;
+    if (!imageUrl) {
+      throw new Error("No image URL in response");
+    }
+
+    console.log("[ExternalImageService] DALL-E 2 succeeded");
+    return {
+      success: true,
+      url: imageUrl,
+      provider: "dalle2",
+    };
+  } catch (error: any) {
+    console.error("[ExternalImageService] DALL-E 2 failed:", error?.message);
+    return {
+      success: false,
+      error: error?.message || "DALL-E generation failed",
+      code: "GENERATION_FAILED",
+    };
+  }
+}
+
+// ============================================================================
+// FLUX GENERATION (via Replicate)
+// ============================================================================
+
+/**
+ * Generate image with Flux
+ */
+async function generateWithFlux(
+  prompt: string,
+  aspectRatio: string = "16:9"
+): Promise<AIGenerationResponse> {
+  if (!process.env.REPLICATE_API_TOKEN) {
+    return { success: false, error: "Replicate not configured", code: "NOT_CONFIGURED" };
+  }
+
+  try {
+    console.log("[ExternalImageService] Trying Flux...");
+
+    const response = await fetch("https://api.replicate.com/v1/predictions", {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${process.env.REPLICATE_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        version: "black-forest-labs/flux-schnell",
+        input: {
+          prompt,
+          aspect_ratio: aspectRatio,
+          num_outputs: 1,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Replicate API error: ${response.status}`);
+    }
+
+    const prediction = await response.json();
+
+    // Poll for completion
+    let result = prediction;
+    while (result.status !== "succeeded" && result.status !== "failed") {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
+        headers: {
+          Authorization: `Token ${process.env.REPLICATE_API_TOKEN}`,
+        },
+      });
+      result = await pollResponse.json();
+    }
+
+    if (result.status === "failed") {
+      throw new Error(result.error || "Flux generation failed");
+    }
+
+    const imageUrl = result.output?.[0];
+    if (!imageUrl) {
+      throw new Error("No image URL in response");
+    }
+
+    console.log("[ExternalImageService] Flux succeeded");
+    return {
+      success: true,
+      url: imageUrl,
+      provider: "flux",
+    };
+  } catch (error: any) {
+    console.warn("[ExternalImageService] Flux failed:", error?.message);
+    return {
+      success: false,
+      error: error?.message || "Flux generation failed",
+      code: "GENERATION_FAILED",
+    };
+  }
+}
+
+// ============================================================================
+// FREEPIK SEARCH
+// ============================================================================
+
+/**
+ * Search Freepik for images
+ */
+export async function searchFreepik(
+  query: string,
+  options: FreepikSearchOptions = {}
+): Promise<{ success: true; results: FreepikSearchResult[] } | { success: false; error: string }> {
+  const apiKey = process.env.FREEPIK_API_KEY;
+  if (!apiKey) {
+    return { success: false, error: "Freepik API key not configured" };
+  }
+
+  try {
+    const params = new URLSearchParams({
+      term: query,
+      limit: String(options.limit || 20),
+      page: String(options.page || 1),
+      ...(options.orientation && { orientation: options.orientation }),
+      filters: JSON.stringify({
+        content_type: ["photo"],
+        ...(options.premium !== undefined && { premium: options.premium }),
+      }),
+    });
+
+    const response = await fetch(`https://api.freepik.com/v1/resources?${params}`, {
+      headers: {
+        Accept: "application/json",
+        "x-freepik-api-key": apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Freepik API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const results: FreepikSearchResult[] = (data.data || []).map((item: any) => ({
+      id: String(item.id),
+      title: item.title || "",
+      url: item.image?.source?.url || item.url,
+      thumbnailUrl: item.thumbnails?.[0]?.url || item.image?.source?.url,
+      author: item.author?.name || "Unknown",
+      premium: item.premium || false,
+    }));
+
+    return { success: true, results };
+  } catch (error: any) {
+    console.error("[ExternalImageService] Freepik search failed:", error?.message);
+    return { success: false, error: error?.message || "Freepik search failed" };
+  }
+}
+
+/**
+ * Download image from Freepik and store locally
+ */
+export async function downloadFromFreepik(
+  freepikUrl: string,
+  filename: string,
+  options?: { altText?: string; contentId?: number }
+): Promise<ImageUploadResponse> {
+  const imageService = getImageService();
+  return imageService.uploadFromUrl(freepikUrl, filename, {
+    source: "freepik",
+    altText: options?.altText,
+    contentId: options?.contentId,
+  });
+}
+
+// ============================================================================
+// EXTERNAL IMAGE SERVICE CLASS
+// ============================================================================
+
+export class ExternalImageService {
+  /**
+   * Generate AI image (auto-selects best provider)
+   */
+  async generateAIImage(
+    prompt: string,
+    options: AIGenerationOptions = {}
+  ): Promise<AIGenerationResponse> {
+    const provider = options.provider || "auto";
+
+    // Try Flux first for hero images (cheaper and good quality)
+    if (provider === "flux" || provider === "auto") {
+      const aspectRatio =
+        options.size === "1792x1024"
+          ? "16:9"
+          : options.size === "1024x1792"
+          ? "9:16"
+          : "1:1";
+
+      const fluxResult = await generateWithFlux(prompt, aspectRatio);
+      if (fluxResult.success) return fluxResult;
+
+      // If auto, fallback to DALL-E
+      if (provider === "auto") {
+        console.log("[ExternalImageService] Flux failed, falling back to DALL-E");
+        return generateWithDalle(prompt, options);
+      }
+
+      return fluxResult;
+    }
+
+    // DALL-E 3 (with automatic DALL-E 2 fallback)
+    if (provider === "dalle3") {
+      return generateWithDalle(prompt, options);
+    }
+
+    // DALL-E 2 only
+    if (provider === "dalle2") {
+      return generateWithDalle2(prompt);
+    }
+
+    return { success: false, error: "Unknown provider", code: "INVALID_PROVIDER" };
+  }
+
+  /**
+   * Generate AI image and store it
+   */
+  async generateAndStoreAIImage(
+    prompt: string,
+    filename: string,
+    options?: AIGenerationOptions & { altText?: string; contentId?: number }
+  ): Promise<ImageUploadResponse> {
+    // Generate the image
+    const generation = await this.generateAIImage(prompt, options);
+    if (!generation.success) {
+      const err = generation as AIGenerationError;
+      return { success: false, error: err.error, code: err.code };
+    }
+
+    // Store the generated image
+    const imageService = getImageService();
+    return imageService.uploadFromUrl(generation.url, filename, {
+      source: "ai",
+      altText: options?.altText,
+      contentId: options?.contentId,
+      metadata: {
+        prompt,
+        provider: generation.provider,
+        revisedPrompt: generation.revisedPrompt,
+      },
+    });
+  }
+
+  /**
+   * Search Freepik
+   */
+  async searchFreepik(
+    query: string,
+    options?: FreepikSearchOptions
+  ): Promise<{ success: true; results: FreepikSearchResult[] } | { success: false; error: string }> {
+    return searchFreepik(query, options);
+  }
+
+  /**
+   * Download from Freepik and store
+   */
+  async downloadFromFreepik(
+    freepikUrl: string,
+    filename: string,
+    options?: { altText?: string; contentId?: number }
+  ): Promise<ImageUploadResponse> {
+    return downloadFromFreepik(freepikUrl, filename, options);
+  }
+
+  /**
+   * Download from any external URL and store
+   */
+  async downloadFromUrl(
+    url: string,
+    filename: string,
+    options?: { altText?: string; contentId?: number }
+  ): Promise<ImageUploadResponse> {
+    const imageService = getImageService();
+    return imageService.uploadFromUrl(url, filename, {
+      source: "external",
+      altText: options?.altText,
+      contentId: options?.contentId,
+    });
+  }
+}
+
+// Singleton
+let externalImageServiceInstance: ExternalImageService | null = null;
+
+export function getExternalImageService(): ExternalImageService {
+  if (!externalImageServiceInstance) {
+    externalImageServiceInstance = new ExternalImageService();
+  }
+  return externalImageServiceInstance;
+}

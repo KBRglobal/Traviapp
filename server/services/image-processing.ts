@@ -1,193 +1,266 @@
 /**
  * Image Processing Service
- * Handles image downloading, conversion (WebP), optimization, and metadata extraction
+ * Handles image validation, conversion, resizing, and optimization
  */
 
-import { storageAdapter, StoredFile } from './storage-adapter';
+// @ts-ignore - sharp has complex types
+import sharp from "sharp";
 
-export interface ProcessedImage {
-  buffer: Buffer;
-  mimeType: string;
+export interface ImageMetadata {
   width: number;
   height: number;
   format: string;
+  size: number;
+  hasAlpha: boolean;
 }
 
-export interface ImageDownloadResult {
-  success: boolean;
-  file?: StoredFile & { width?: number; height?: number };
-  error?: string;
+export interface ProcessedImage {
+  buffer: Buffer;
+  metadata: ImageMetadata;
+  filename: string;
+}
+
+export interface ProcessingOptions {
+  format?: "webp" | "jpeg" | "png" | "original";
+  quality?: number;
+  maxWidth?: number;
+  maxHeight?: number;
+  thumbnail?: boolean;
+  thumbnailSize?: number;
+}
+
+export const SUPPORTED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+] as const;
+
+export type SupportedMimeType = (typeof SUPPORTED_MIME_TYPES)[number];
+
+export const DEFAULT_QUALITY = 85;
+export const DEFAULT_THUMBNAIL_SIZE = 200;
+export const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
+/**
+ * Validate image MIME type
+ */
+export function isValidMimeType(mimeType: string): mimeType is SupportedMimeType {
+  return SUPPORTED_MIME_TYPES.includes(mimeType as SupportedMimeType);
 }
 
 /**
- * Download an image from URL and optionally convert to WebP
+ * Validate image buffer size
  */
-export async function downloadImage(url: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error(`[ImageProcessing] Failed to download: ${response.status}`);
-      return null;
-    }
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const mimeType = response.headers.get('content-type') || 'image/jpeg';
-
-    return { buffer, mimeType };
-  } catch (error) {
-    console.error('[ImageProcessing] Download error:', error);
-    return null;
-  }
+export function isValidSize(buffer: Buffer, maxSize: number = MAX_IMAGE_SIZE): boolean {
+  return buffer.length <= maxSize;
 }
 
 /**
- * Process image: convert to WebP, get metadata
+ * Get image metadata from buffer
  */
-export async function processImage(buffer: Buffer): Promise<ProcessedImage | null> {
-  try {
-    const sharp = (await import('sharp')).default;
-    const image = sharp(buffer);
-    const metadata = await image.metadata();
+export async function getImageMetadata(buffer: Buffer): Promise<ImageMetadata> {
+  const metadata = await sharp(buffer).metadata();
 
-    const webpBuffer = await image.webp({ quality: 85 }).toBuffer();
-
-    return {
-      buffer: webpBuffer,
-      mimeType: 'image/webp',
-      width: metadata.width || 0,
-      height: metadata.height || 0,
-      format: 'webp',
-    };
-  } catch (error) {
-    console.error('[ImageProcessing] Sharp processing failed:', error);
-    return null;
-  }
+  return {
+    width: metadata.width || 0,
+    height: metadata.height || 0,
+    format: metadata.format || "unknown",
+    size: buffer.length,
+    hasAlpha: metadata.hasAlpha || false,
+  };
 }
 
 /**
- * Generate filename from options
+ * Convert image to WebP format with optimization
  */
-export function generateFilename(options: {
-  prefix?: string;
-  slug?: string;
-  source?: string;
-}): string {
-  const timestamp = Date.now();
-  const parts: string[] = [];
-
-  if (options.source) {
-    parts.push(options.source);
-  }
-
-  if (options.slug) {
-    parts.push(options.slug.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50));
-  }
-
-  parts.push(timestamp.toString(36));
-
-  return `${parts.join('-')}.webp`;
+export async function convertToWebP(
+  buffer: Buffer,
+  quality: number = DEFAULT_QUALITY
+): Promise<Buffer> {
+  return sharp(buffer)
+    .webp({ quality })
+    .toBuffer();
 }
 
 /**
- * Download image from URL, process it, and save to storage
+ * Resize image while maintaining aspect ratio
  */
-export async function downloadAndSaveImage(
-  imageUrl: string,
-  options: {
-    filename?: string;
-    source?: 'freepik' | 'ai' | 'external' | 'upload';
-    slug?: string;
-  } = {}
-): Promise<ImageDownloadResult> {
-  try {
-    // 1. Download the image
-    const downloaded = await downloadImage(imageUrl);
-    if (!downloaded) {
-      return { success: false, error: 'Failed to download image' };
-    }
+export async function resizeImage(
+  buffer: Buffer,
+  maxWidth: number,
+  maxHeight?: number
+): Promise<Buffer> {
+  const options: sharp.ResizeOptions = {
+    width: maxWidth,
+    height: maxHeight,
+    fit: "inside",
+    withoutEnlargement: true,
+  };
 
-    // 2. Process the image (convert to WebP)
-    const processed = await processImage(downloaded.buffer);
-    const finalBuffer = processed?.buffer || downloaded.buffer;
-    const finalMimeType = processed?.mimeType || downloaded.mimeType;
+  return sharp(buffer)
+    .resize(options)
+    .toBuffer();
+}
 
-    // 3. Generate filename
-    const filename = options.filename || generateFilename({
-      source: options.source || 'external',
-      slug: options.slug,
+/**
+ * Generate thumbnail from image
+ */
+export async function generateThumbnail(
+  buffer: Buffer,
+  size: number = DEFAULT_THUMBNAIL_SIZE
+): Promise<Buffer> {
+  return sharp(buffer)
+    .resize(size, size, {
+      fit: "cover",
+      position: "center",
+    })
+    .webp({ quality: 80 })
+    .toBuffer();
+}
+
+/**
+ * Process image with full pipeline
+ */
+export async function processImage(
+  buffer: Buffer,
+  originalFilename: string,
+  options: ProcessingOptions = {}
+): Promise<ProcessedImage> {
+  const {
+    format = "webp",
+    quality = DEFAULT_QUALITY,
+    maxWidth,
+    maxHeight,
+  } = options;
+
+  let processedBuffer = buffer;
+  let sharpInstance = sharp(buffer);
+
+  // Resize if needed
+  if (maxWidth || maxHeight) {
+    sharpInstance = sharpInstance.resize({
+      width: maxWidth,
+      height: maxHeight,
+      fit: "inside",
+      withoutEnlargement: true,
     });
+  }
 
-    // 4. Save to storage
-    const stored = await storageAdapter.save(finalBuffer, filename, finalMimeType);
+  // Convert format
+  if (format === "webp") {
+    processedBuffer = await sharpInstance.webp({ quality }).toBuffer();
+  } else if (format === "jpeg") {
+    processedBuffer = await sharpInstance.jpeg({ quality }).toBuffer();
+  } else if (format === "png") {
+    processedBuffer = await sharpInstance.png().toBuffer();
+  } else {
+    processedBuffer = await sharpInstance.toBuffer();
+  }
 
-    return {
-      success: true,
-      file: {
-        ...stored,
-        width: processed?.width,
-        height: processed?.height,
-      },
-    };
-  } catch (error) {
-    console.error('[ImageProcessing] Download and save error:', error);
+  // Get metadata of processed image
+  const metadata = await getImageMetadata(processedBuffer);
+
+  // Generate filename
+  const extension = format === "original" ? getExtensionFromFilename(originalFilename) : format;
+  const baseName = getBaseFilename(originalFilename);
+  const filename = `${baseName}.${extension}`;
+
+  return {
+    buffer: processedBuffer,
+    metadata,
+    filename,
+  };
+}
+
+/**
+ * Process image and generate thumbnail
+ */
+export async function processImageWithThumbnail(
+  buffer: Buffer,
+  originalFilename: string,
+  options: ProcessingOptions = {}
+): Promise<{ main: ProcessedImage; thumbnail: ProcessedImage }> {
+  const main = await processImage(buffer, originalFilename, options);
+
+  const thumbnailSize = options.thumbnailSize || DEFAULT_THUMBNAIL_SIZE;
+  const thumbnailBuffer = await generateThumbnail(buffer, thumbnailSize);
+  const thumbnailMetadata = await getImageMetadata(thumbnailBuffer);
+
+  const baseName = getBaseFilename(originalFilename);
+  const thumbnail: ProcessedImage = {
+    buffer: thumbnailBuffer,
+    metadata: thumbnailMetadata,
+    filename: `thumb-${baseName}.webp`,
+  };
+
+  return { main, thumbnail };
+}
+
+/**
+ * Validate and process uploaded image
+ */
+export async function validateAndProcess(
+  buffer: Buffer,
+  mimeType: string,
+  originalFilename: string,
+  options: ProcessingOptions = {}
+): Promise<{ success: true; image: ProcessedImage } | { success: false; error: string }> {
+  // Validate MIME type
+  if (!isValidMimeType(mimeType)) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: `Unsupported image type: ${mimeType}. Supported types: ${SUPPORTED_MIME_TYPES.join(", ")}`,
     };
   }
-}
 
-/**
- * Resize image to multiple sizes for srcset
- */
-export async function generateResponsiveSizes(
-  buffer: Buffer,
-  sizes: number[] = [320, 640, 768, 1024, 1280, 1920]
-): Promise<Map<number, Buffer>> {
-  const results = new Map<number, Buffer>();
-
-  try {
-    const sharp = (await import('sharp')).default;
-    const metadata = await sharp(buffer).metadata();
-    const originalWidth = metadata.width || 1920;
-
-    for (const width of sizes) {
-      if (width <= originalWidth) {
-        const resized = await sharp(buffer)
-          .resize(width, null, { withoutEnlargement: true })
-          .webp({ quality: 80 })
-          .toBuffer();
-        results.set(width, resized);
-      }
-    }
-  } catch (error) {
-    console.error('[ImageProcessing] Responsive sizes generation failed:', error);
-  }
-
-  return results;
-}
-
-/**
- * Get image dimensions without full processing
- */
-export async function getImageDimensions(buffer: Buffer): Promise<{ width: number; height: number } | null> {
-  try {
-    const sharp = (await import('sharp')).default;
-    const metadata = await sharp(buffer).metadata();
+  // Validate size
+  if (!isValidSize(buffer)) {
     return {
-      width: metadata.width || 0,
-      height: metadata.height || 0,
+      success: false,
+      error: `Image too large. Maximum size: ${MAX_IMAGE_SIZE / 1024 / 1024}MB`,
     };
-  } catch {
-    return null;
+  }
+
+  try {
+    const image = await processImage(buffer, originalFilename, options);
+    return { success: true, image };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown processing error";
+    return { success: false, error: `Image processing failed: ${message}` };
   }
 }
 
-export default {
-  downloadImage,
-  processImage,
-  downloadAndSaveImage,
-  generateResponsiveSizes,
-  getImageDimensions,
-  generateFilename,
-};
+/**
+ * Helper: Get base filename without extension
+ */
+function getBaseFilename(filename: string): string {
+  const lastDot = filename.lastIndexOf(".");
+  if (lastDot === -1) return filename;
+  return filename.substring(0, lastDot);
+}
+
+/**
+ * Helper: Get extension from filename
+ */
+function getExtensionFromFilename(filename: string): string {
+  const lastDot = filename.lastIndexOf(".");
+  if (lastDot === -1) return "bin";
+  return filename.substring(lastDot + 1).toLowerCase();
+}
+
+/**
+ * Generate unique filename with timestamp
+ */
+export function generateUniqueFilename(originalFilename: string, prefix?: string): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  const baseName = getBaseFilename(originalFilename)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "-")
+    .replace(/-+/g, "-")
+    .substring(0, 50);
+
+  const parts = [prefix, timestamp, random, baseName].filter(Boolean);
+  return parts.join("-");
+}
