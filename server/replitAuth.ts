@@ -34,7 +34,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: sessionTtl,
     },
@@ -68,6 +68,14 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Skip Replit OIDC setup if not running on Replit (for local development)
+  if (!process.env.REPL_ID) {
+    console.log("[Auth] Running in local mode - Replit OIDC disabled");
+    passport.serializeUser((user: Express.User, cb) => cb(null, user));
+    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+    return;
+  }
 
   const config = await getOidcConfig();
 
