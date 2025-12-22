@@ -20,18 +20,45 @@ export interface StorageAdapter {
  */
 export class ObjectStorageAdapter implements StorageAdapter {
   private client: Client;
+  private initialized: boolean = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
     this.client = new Client();
   }
 
+  /**
+   * Lazy initialization - tests that Object Storage actually works
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (this.initialized) return;
+
+    if (!this.initPromise) {
+      this.initPromise = (async () => {
+        // Test that Object Storage actually works by doing a small operation
+        const testKey = `.storage-test-${Date.now()}`;
+        try {
+          await this.client.uploadFromBytes(testKey, Buffer.from("test"));
+          await this.client.delete(testKey);
+          this.initialized = true;
+        } catch (error) {
+          throw new Error(`Object Storage connection test failed: ${error}`);
+        }
+      })();
+    }
+
+    return this.initPromise;
+  }
+
   async upload(key: string, buffer: Buffer): Promise<string> {
+    await this.ensureInitialized();
     await this.client.uploadFromBytes(key, buffer);
     return this.getUrl(key);
   }
 
   async delete(key: string): Promise<void> {
     try {
+      await this.ensureInitialized();
       await this.client.delete(key);
     } catch (error) {
       console.warn(`[ObjectStorage] Failed to delete ${key}:`, error);
@@ -40,10 +67,29 @@ export class ObjectStorageAdapter implements StorageAdapter {
 
   async exists(key: string): Promise<boolean> {
     try {
+      await this.ensureInitialized();
       const result = await this.client.downloadAsBytes(key);
-      return result !== null;
+      return result.ok;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Download file from Object Storage
+   */
+  async download(key: string): Promise<Buffer | null> {
+    try {
+      await this.ensureInitialized();
+      const result = await this.client.downloadAsBytes(key);
+      if (!result.ok) {
+        return null;
+      }
+      // Result is [Buffer] tuple when successful
+      const [buffer] = result.value;
+      return buffer;
+    } catch {
+      return null;
     }
   }
 
@@ -171,22 +217,50 @@ export class StorageManager {
   private primaryAdapter: StorageAdapter | null = null;
   private fallbackAdapter: StorageAdapter;
   private initError: Error | null = null;
+  private objectStorageEnabled: boolean;
+  private primaryInitialized: boolean = false;
 
   constructor() {
     // Always have local storage as fallback
     this.fallbackAdapter = new LocalStorageAdapter();
 
-    // Try to initialize Object Storage if configured
-    if (process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-      try {
-        this.primaryAdapter = new ObjectStorageAdapter();
-        console.log("[StorageManager] Object Storage initialized as primary");
-      } catch (error) {
-        this.initError = error as Error;
-        console.warn("[StorageManager] Object Storage init failed, using local storage:", error);
-      }
+    // Check if Object Storage should be enabled (lazy initialization)
+    this.objectStorageEnabled = !!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+
+    if (this.objectStorageEnabled) {
+      console.log("[StorageManager] Object Storage configured, will initialize on first use");
     } else {
       console.log("[StorageManager] No Object Storage configured, using local storage");
+    }
+  }
+
+  /**
+   * Lazy initialize primary adapter on first use
+   */
+  private async ensurePrimaryAdapter(): Promise<StorageAdapter | null> {
+    if (this.primaryInitialized) {
+      return this.primaryAdapter;
+    }
+
+    if (!this.objectStorageEnabled) {
+      this.primaryInitialized = true;
+      return null;
+    }
+
+    try {
+      this.primaryAdapter = new ObjectStorageAdapter();
+      // Test that it actually works
+      const testKey = `.storage-init-test-${Date.now()}`;
+      await this.primaryAdapter.upload(testKey, Buffer.from("init-test"));
+      await this.primaryAdapter.delete(testKey);
+      this.primaryInitialized = true;
+      console.log("[StorageManager] Object Storage initialized successfully as primary");
+      return this.primaryAdapter;
+    } catch (error) {
+      this.initError = error as Error;
+      this.primaryInitialized = true;
+      console.warn("[StorageManager] Object Storage init failed, using local storage:", error);
+      return null;
     }
   }
 
@@ -195,11 +269,12 @@ export class StorageManager {
    */
   async upload(key: string, buffer: Buffer): Promise<{ url: string; storage: string }> {
     // Try primary adapter first
-    if (this.primaryAdapter) {
+    const primary = await this.ensurePrimaryAdapter();
+    if (primary) {
       try {
-        const url = await this.primaryAdapter.upload(key, buffer);
-        console.log(`[StorageManager] Uploaded to ${this.primaryAdapter.getName()}: ${key}`);
-        return { url, storage: this.primaryAdapter.getName() };
+        const url = await primary.upload(key, buffer);
+        console.log(`[StorageManager] Uploaded to ${primary.getName()}: ${key}`);
+        return { url, storage: primary.getName() };
       } catch (error) {
         console.warn(`[StorageManager] Primary storage failed, falling back:`, error);
       }
@@ -217,8 +292,9 @@ export class StorageManager {
   async delete(key: string): Promise<void> {
     const promises: Promise<void>[] = [];
 
-    if (this.primaryAdapter) {
-      promises.push(this.primaryAdapter.delete(key));
+    const primary = await this.ensurePrimaryAdapter();
+    if (primary) {
+      promises.push(primary.delete(key));
     }
     promises.push(this.fallbackAdapter.delete(key));
 
@@ -229,11 +305,29 @@ export class StorageManager {
    * Check if file exists in any storage
    */
   async exists(key: string): Promise<boolean> {
-    if (this.primaryAdapter) {
-      const existsInPrimary = await this.primaryAdapter.exists(key);
+    const primary = await this.ensurePrimaryAdapter();
+    if (primary) {
+      const existsInPrimary = await primary.exists(key);
       if (existsInPrimary) return true;
     }
     return this.fallbackAdapter.exists(key);
+  }
+
+  /**
+   * Download file from storage
+   */
+  async download(key: string): Promise<Buffer | null> {
+    const primary = await this.ensurePrimaryAdapter();
+    if (primary && "download" in primary) {
+      const data = await (primary as ObjectStorageAdapter).download(key);
+      if (data) return data;
+    }
+    // Try local fallback
+    const localPath = path.join(process.cwd(), "uploads", key.replace(/^public\//, ""));
+    if (fs.existsSync(localPath)) {
+      return fs.promises.readFile(localPath);
+    }
+    return null;
   }
 
   /**

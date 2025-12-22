@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
 import multer from "multer";
-import { Client } from "@replit/object-storage";
+// Object Storage is now handled through the unified storage adapter
 import OpenAI from "openai";
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
@@ -182,28 +182,8 @@ async function convertToWebP(buffer: Buffer, originalFilename: string, mimeType:
   }
 }
 
-let objectStorageClient: Client | null = null;
-let objectStorageInitFailed = false;
-
-function getObjectStorageClient(): Client | null {
-  if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-    return null;
-  }
-  // Don't retry if initialization already failed
-  if (objectStorageInitFailed) {
-    return null;
-  }
-  if (!objectStorageClient) {
-    try {
-      objectStorageClient = new Client();
-    } catch (error) {
-      console.warn("[Object Storage] Initialization failed, falling back to local storage:", error);
-      objectStorageInitFailed = true;
-      return null;
-    }
-  }
-  return objectStorageClient;
-}
+// Object storage is now handled through the unified StorageManager
+// See: ./services/storage-adapter.ts
 
 function getOpenAIClient(): OpenAI | null {
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
@@ -247,32 +227,23 @@ async function parseRssFeed(url: string): Promise<{ title: string; link: string;
   }
 }
 
-// Persist DALL-E image to object storage (DALL-E URLs expire in ~1 hour)
+// Persist DALL-E image to storage (DALL-E URLs expire in ~1 hour)
 async function persistImageToStorage(imageUrl: string, filename: string): Promise<string | null> {
-  const client = getObjectStorageClient();
-  if (!client) {
-    console.warn("Object storage not configured, cannot persist image");
-    return null;
-  }
-  
   try {
     const response = await fetch(imageUrl);
     if (!response.ok) {
       console.error(`Failed to fetch image: ${response.status}`);
       return null;
     }
-    
+
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    
+
     const storagePath = `public/generated/${filename}`;
-    await client.uploadFromBytes(storagePath, buffer);
-    
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : '';
-    
-    return `${baseUrl}/api/media/public/${encodeURIComponent(storagePath)}`;
+    const storageManager = getStorageManager();
+    const result = await storageManager.upload(storagePath, buffer);
+
+    return result.url;
   } catch (error) {
     console.error("Error persisting image to storage:", error);
     return null;
@@ -1006,30 +977,12 @@ async function findOrCreateArticleImage(
     
     const imageBuffer = await imageResponse.arrayBuffer();
     const filename = `freepik-${Date.now()}.jpg`;
-    let persistedUrl = imageUrl;
-    
-    const storageClient = getObjectStorageClient();
-    let uploadedSuccessfully = false;
-    
-    if (storageClient) {
-      try {
-        const objectPath = `public/images/${filename}`;
-        await storageClient.uploadFromBytes(objectPath, Buffer.from(imageBuffer));
-        persistedUrl = `/object-storage/${objectPath}`;
-        uploadedSuccessfully = true;
-      } catch (storageError) {
-        console.log(`[Image Finder] Object storage upload failed, falling back to local: ${storageError}`);
-      }
-    }
-    
-    if (!uploadedSuccessfully) {
-      const uploadsDir = path.join(process.cwd(), "uploads");
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      fs.writeFileSync(path.join(uploadsDir, filename), Buffer.from(imageBuffer));
-      persistedUrl = `/uploads/${filename}`;
-    }
+
+    // Use unified storage manager (handles fallback automatically)
+    const storageManager = getStorageManager();
+    const storagePath = `public/images/${filename}`;
+    const result = await storageManager.upload(storagePath, Buffer.from(imageBuffer));
+    const persistedUrl = result.url;
     
     const altText = bestResult.title || `${topic} - Dubai Travel`;
     
@@ -1717,49 +1670,36 @@ export async function registerRoutes(
   }
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
 
-  // Serve AI-generated images from object storage
+  // Serve AI-generated images from storage
   app.get("/api/ai-images/:filename", async (req: Request, res: Response) => {
     const filename = req.params.filename;
-    const client = getObjectStorageClient();
 
-    if (client) {
-      try {
-        const objectPath = `public/ai-generated/${filename}`;
-        const result = await client.downloadAsBytes(objectPath);
+    try {
+      const objectPath = `public/ai-generated/${filename}`;
+      const storageManager = getStorageManager();
+      const buffer = await storageManager.download(objectPath);
 
-        if (!result.ok) {
-          console.error(`Object storage error for ${filename}:`, result.error);
-          res.status(404).send('Image not found');
-          return;
-        }
-
-        const [buffer] = result.value;
-
-        // Determine content type
-        const ext = filename.split('.').pop()?.toLowerCase();
-        const contentTypes: Record<string, string> = {
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'png': 'image/png',
-          'webp': 'image/webp',
-          'gif': 'image/gif',
-        };
-
-        res.set('Content-Type', contentTypes[ext || 'jpg'] || 'image/jpeg');
-        res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-        res.send(buffer);
-      } catch (error) {
-        console.error(`Error serving AI image ${filename}:`, error);
+      if (!buffer) {
         res.status(404).send('Image not found');
+        return;
       }
-    } else {
-      // Fallback to local file
-      const localPath = path.join(process.cwd(), "uploads", "ai-generated", filename);
-      if (fs.existsSync(localPath)) {
-        res.sendFile(localPath);
-      } else {
-        res.status(404).send('Image not found');
-      }
+
+      // Determine content type
+      const ext = filename.split('.').pop()?.toLowerCase();
+      const contentTypes: Record<string, string> = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+        'gif': 'image/gif',
+      };
+
+      res.set('Content-Type', contentTypes[ext || 'jpg'] || 'image/jpeg');
+      res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+      res.send(buffer);
+    } catch (error) {
+      console.error(`Error serving AI image ${filename}:`, error);
+      res.status(404).send('Image not found');
     }
   });
 
@@ -3908,23 +3848,9 @@ export async function registerRoutes(
       const file = await storage.getMediaFile(req.params.id);
       const fileInfo = file ? { filename: file.originalFilename, mimeType: file.mimeType, size: file.size } : undefined;
       if (file) {
-        const storageClient = getObjectStorageClient();
-        if (storageClient) {
-          try {
-            await storageClient.delete(`public/${file.filename}`);
-          } catch (e) {
-            console.log("Could not delete from object storage:", e);
-          }
-        } else {
-          const localPath = path.join(process.cwd(), "uploads", file.filename);
-          if (fs.existsSync(localPath)) {
-            try {
-              fs.unlinkSync(localPath);
-            } catch (e) {
-              console.log("Could not delete local file:", e);
-            }
-          }
-        }
+        // Use unified storage manager (handles both Object Storage and local)
+        const storageManager = getStorageManager();
+        await storageManager.delete(`public/${file.filename}`);
       }
       await storage.deleteMediaFile(req.params.id);
       if (fileInfo) {
