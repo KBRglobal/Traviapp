@@ -6,6 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
@@ -380,6 +384,7 @@ export default function ContentEditor() {
   const [heroImageAlt, setHeroImageAlt] = useState("");
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [status, setStatus] = useState<string>("draft");
+  const [scheduledAt, setScheduledAt] = useState<Date | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | null>(null);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
@@ -495,6 +500,9 @@ export default function ContentEditor() {
       setHeroImage(content.heroImage || "");
       setHeroImageAlt(content.heroImageAlt || "");
       setStatus(content.status || "draft");
+      if (content.scheduledAt) {
+        setScheduledAt(new Date(content.scheduledAt));
+      }
 
       // Load attraction-specific SEO data if it exists
       if (content.attraction) {
@@ -643,6 +651,7 @@ export default function ContentEditor() {
           blocks,
           wordCount: currentWordCount,
           status,
+          scheduledAt: scheduledAt?.toISOString() || null,
         };
 
         // Include attraction-specific SEO data if this is an attraction
@@ -1133,6 +1142,7 @@ export default function ContentEditor() {
       blocks,
       wordCount,
       status,
+      scheduledAt: scheduledAt?.toISOString() || null,
     };
 
     // Include content-type-specific SEO data
@@ -1451,7 +1461,7 @@ export default function ContentEditor() {
         </div>
 
         {/* Right Panel - Settings */}
-        <div className="w-80 border-l bg-background shrink-0 flex flex-col">
+        <div className="w-80 border-l bg-background shrink-0 flex flex-col overflow-hidden">
           <div className="p-3 border-b">
             <h3 className="font-medium text-sm flex items-center gap-2">
               {selectedBlock ? (
@@ -1490,6 +1500,8 @@ export default function ContentEditor() {
                       onSlugChange={setSlug}
                       status={status}
                       onStatusChange={setStatus}
+                      scheduledAt={scheduledAt}
+                      onScheduledAtChange={setScheduledAt}
                       metaTitle={metaTitle}
                       onMetaTitleChange={setMetaTitle}
                       metaDescription={metaDescription}
@@ -1545,6 +1557,8 @@ export default function ContentEditor() {
                     onSlugChange={setSlug}
                     status={status}
                     onStatusChange={setStatus}
+                    scheduledAt={scheduledAt}
+                    onScheduledAtChange={setScheduledAt}
                     metaTitle={metaTitle}
                     onMetaTitleChange={setMetaTitle}
                     metaDescription={metaDescription}
@@ -2475,6 +2489,89 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     );
   }
 
+  if (block.type === "gallery") {
+    const images = Array.isArray(block.data?.images) ? block.data.images : [];
+    return (
+      <div className="p-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {images.map((img: { url?: string; alt?: string }, index: number) => (
+            <img key={index} src={String(img?.url || "")} alt={String(img?.alt || "")} className="w-full aspect-video object-cover rounded-lg" />
+          ))}
+        </div>
+        {images.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+            <p>No images in gallery</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (block.type === "highlights") {
+    const items = Array.isArray(block.data?.items) ? block.data.items : [];
+    return (
+      <div className="p-8 bg-primary/5">
+        <h3 className="text-xl font-semibold mb-4">{String(block.data?.title || "Highlights")}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {items.map((item: string | { text?: string }, index: number) => (
+            <div key={index} className="flex items-start gap-2">
+              <Star className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <span>{typeof item === 'string' ? item : String(item?.text || '')}</span>
+            </div>
+          ))}
+        </div>
+        {items.length === 0 && (
+          <p className="text-muted-foreground">No highlights added</p>
+        )}
+      </div>
+    );
+  }
+
+  if (block.type === "tips") {
+    const items = Array.isArray(block.data?.items) ? block.data.items : [];
+    return (
+      <div className="p-8 bg-amber-50 dark:bg-amber-950/20">
+        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Lightbulb className="h-5 w-5 text-amber-500" />
+          {String(block.data?.title || "Pro Tips")}
+        </h3>
+        <ul className="space-y-3">
+          {items.map((item: string | { text?: string; tip?: string }, index: number) => (
+            <li key={index} className="flex items-start gap-2">
+              <span className="text-amber-500 font-bold">{index + 1}.</span>
+              <span>{typeof item === 'string' ? item : String(item?.text || item?.tip || '')}</span>
+            </li>
+          ))}
+        </ul>
+        {items.length === 0 && (
+          <p className="text-muted-foreground">No tips added</p>
+        )}
+      </div>
+    );
+  }
+
+  if (block.type === "info_grid") {
+    const items = Array.isArray(block.data?.items) ? block.data.items : [];
+    return (
+      <div className="p-8">
+        <h3 className="text-xl font-semibold mb-4">{String(block.data?.title || "Information")}</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {items.map((item: { label?: string; value?: string }, index: number) => (
+            <div key={index} className="p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">{String(item?.label || "Label")}</p>
+              <p className="font-medium">{String(item?.value || "Value")}</p>
+            </div>
+          ))}
+        </div>
+        {items.length === 0 && (
+          <div className="text-center py-4 text-muted-foreground border-2 border-dashed rounded-lg">
+            <p>No info items added</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (block.type === "faq") {
     return (
       <div className="p-8 space-y-2">
@@ -2492,7 +2589,13 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     );
   }
 
-  return null;
+  // Fallback for any unknown block types - show the raw content
+  return (
+    <div className="p-8 border-l-4 border-muted">
+      <p className="text-sm text-muted-foreground mb-2">Block: {block.type}</p>
+      <pre className="text-sm whitespace-pre-wrap">{JSON.stringify(block.data, null, 2)}</pre>
+    </div>
+  );
 }
 
 // Block Settings Panel
@@ -2580,6 +2683,8 @@ function PageSettingsPanel({
   onSlugChange,
   status,
   onStatusChange,
+  scheduledAt,
+  onScheduledAtChange,
   metaTitle,
   onMetaTitleChange,
   metaDescription,
@@ -2594,6 +2699,8 @@ function PageSettingsPanel({
   onSlugChange: (v: string) => void;
   status: string;
   onStatusChange: (v: string) => void;
+  scheduledAt: Date | undefined;
+  onScheduledAtChange: (v: Date | undefined) => void;
   metaTitle: string;
   onMetaTitleChange: (v: string) => void;
   metaDescription: string;
@@ -2649,6 +2756,45 @@ function PageSettingsPanel({
             </SelectContent>
           </Select>
         </div>
+        {status === "scheduled" && (
+          <div className="space-y-2">
+            <Label>Schedule Date & Time</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {scheduledAt ? format(scheduledAt, "PPP p") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={scheduledAt}
+                  onSelect={onScheduledAtChange}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                />
+                <div className="p-3 border-t">
+                  <Label className="text-sm">Time</Label>
+                  <Input
+                    type="time"
+                    value={scheduledAt ? format(scheduledAt, "HH:mm") : ""}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(":").map(Number);
+                      const newDate = scheduledAt ? new Date(scheduledAt) : new Date();
+                      newDate.setHours(hours, minutes);
+                      onScheduledAtChange(newDate);
+                    }}
+                    className="mt-1"
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
 
       <Separator />

@@ -2220,7 +2220,15 @@ export async function registerRoutes(
       });
 
       const { attraction, hotel, article, event, itinerary, changedBy, changeNote, ...contentData } = req.body;
-      
+
+      // Convert date strings to Date objects for timestamp fields
+      if (contentData.publishedAt && typeof contentData.publishedAt === 'string') {
+        contentData.publishedAt = new Date(contentData.publishedAt);
+      }
+      if (contentData.scheduledAt && typeof contentData.scheduledAt === 'string') {
+        contentData.scheduledAt = new Date(contentData.scheduledAt);
+      }
+
       const updatedContent = await storage.updateContent(req.params.id, contentData);
 
       if (existingContent.type === "attraction" && attraction) {
