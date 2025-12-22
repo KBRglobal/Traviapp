@@ -4,7 +4,8 @@
  */
 
 import { Express, Request, Response, NextFunction } from "express";
-import * as multer from "multer";
+// @ts-ignore - multer has complex types
+import multer from "multer";
 import {
   getImageService,
   uploadImage,
@@ -12,6 +13,7 @@ import {
   deleteImage,
   StoredImage,
   UploadError,
+  ImageUploadOptions,
 } from "../services/image-service";
 import {
   getExternalImageService,
@@ -19,6 +21,17 @@ import {
   FreepikSearchOptions,
 } from "../services/external-image-service";
 import { SUPPORTED_MIME_TYPES } from "../services/image-processing";
+import {
+  getImageSEOService,
+  generateImageSEOMetadata,
+  generateAIImagePrompt,
+  generateImageFilename,
+  ImageSEOContext,
+  ContentType,
+  ImageCategory,
+  ImagePurpose,
+  DUBAI_AREAS,
+} from "../services/image-seo-service";
 import {
   rateLimiters,
   requirePermission,
@@ -68,7 +81,17 @@ export function registerImageRoutes(app: Express) {
           return res.status(400).json({ error: "No file provided" });
         }
 
-        const { altText, contentId } = req.body;
+        const { altText, contentId, seoContext } = req.body;
+
+        // Parse SEO context if provided as JSON string
+        let parsedSeoContext: ImageSEOContext | undefined;
+        if (seoContext) {
+          try {
+            parsedSeoContext = typeof seoContext === "string" ? JSON.parse(seoContext) : seoContext;
+          } catch (e) {
+            console.warn("[ImageRoutes] Invalid seoContext JSON:", e);
+          }
+        }
 
         const result = await uploadImage(
           req.file.buffer,
@@ -78,6 +101,7 @@ export function registerImageRoutes(app: Express) {
             source: "upload",
             altText,
             contentId: contentId ? parseInt(contentId) : undefined,
+            seoContext: parsedSeoContext,
           }
         );
 
@@ -401,6 +425,251 @@ export function registerImageRoutes(app: Express) {
   });
 
   // ============================================================================
+  // SEO ROUTES
+  // ============================================================================
+
+  /**
+   * POST /api/images/seo/generate-metadata
+   * Generate complete SEO metadata for an image
+   */
+  app.post("/api/images/seo/generate-metadata", requirePermission("canCreate"), async (req: Request, res: Response) => {
+    try {
+      const { context, imageUrl, width, height } = req.body;
+
+      if (!context) {
+        return res.status(400).json({ error: "SEO context is required" });
+      }
+
+      // Validate required context fields
+      if (!context.contentType || !context.entityName || !context.category) {
+        return res.status(400).json({
+          error: "SEO context must include contentType, entityName, and category",
+        });
+      }
+
+      const seoService = getImageSEOService();
+      const metadata = seoService.generateSEOMetadata(
+        context as ImageSEOContext,
+        imageUrl || "",
+        width && height ? { width: parseInt(width), height: parseInt(height) } : undefined
+      );
+
+      res.json({
+        success: true,
+        metadata,
+      });
+    } catch (error) {
+      console.error("[ImageRoutes] SEO metadata generation error:", error);
+      const message = error instanceof Error ? error.message : "SEO generation failed";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /api/images/seo/generate-prompt
+   * Generate SEO-optimized AI image prompt
+   */
+  app.post("/api/images/seo/generate-prompt", requirePermission("canCreate"), async (req: Request, res: Response) => {
+    try {
+      const { context } = req.body;
+
+      if (!context) {
+        return res.status(400).json({ error: "SEO context is required" });
+      }
+
+      if (!context.contentType || !context.entityName || !context.category) {
+        return res.status(400).json({
+          error: "SEO context must include contentType, entityName, and category",
+        });
+      }
+
+      const prompt = generateAIImagePrompt(context as ImageSEOContext);
+
+      res.json({
+        success: true,
+        prompt,
+      });
+    } catch (error) {
+      console.error("[ImageRoutes] AI prompt generation error:", error);
+      const message = error instanceof Error ? error.message : "Prompt generation failed";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /api/images/seo/generate-filename
+   * Generate SEO-optimized filename
+   */
+  app.post("/api/images/seo/generate-filename", requirePermission("canCreate"), async (req: Request, res: Response) => {
+    try {
+      const { context } = req.body;
+
+      if (!context) {
+        return res.status(400).json({ error: "SEO context is required" });
+      }
+
+      if (!context.contentType || !context.entityName || !context.category) {
+        return res.status(400).json({
+          error: "SEO context must include contentType, entityName, and category",
+        });
+      }
+
+      const filename = generateImageFilename(context as ImageSEOContext);
+
+      res.json({
+        success: true,
+        filename,
+      });
+    } catch (error) {
+      console.error("[ImageRoutes] Filename generation error:", error);
+      const message = error instanceof Error ? error.message : "Filename generation failed";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /api/images/seo/generate-and-upload
+   * Generate SEO-optimized AI image with full metadata
+   */
+  app.post("/api/images/seo/generate-and-upload", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req: Request, res: Response) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+
+    try {
+      const { context, options = {} } = req.body;
+
+      if (!context) {
+        return res.status(400).json({ error: "SEO context is required" });
+      }
+
+      if (!context.contentType || !context.entityName || !context.category) {
+        return res.status(400).json({
+          error: "SEO context must include contentType, entityName, entitySlug, category, location, and purpose",
+        });
+      }
+
+      // Generate SEO-optimized prompt
+      const seoService = getImageSEOService();
+      const seoPrompt = seoService.generateAIPrompt(context as ImageSEOContext);
+      const seoFilename = seoService.generateFilename(context as ImageSEOContext);
+
+      console.log(`[ImageRoutes] Generating SEO-optimized image for ${context.entityName}`);
+      console.log(`[ImageRoutes] SEO Prompt: ${seoPrompt.substring(0, 100)}...`);
+
+      // Generate the image using external service
+      const result = await externalImageService.generateAndStoreAIImage(
+        seoPrompt,
+        seoFilename,
+        {
+          ...options,
+          size: options.size || "1792x1024",
+          quality: options.quality || "hd",
+          style: options.style || "natural",
+        }
+      );
+
+      if (!result.success) {
+        return res.status(500).json({ error: (result as UploadError).error });
+      }
+
+      // Generate complete SEO metadata
+      const seoMetadata = seoService.generateSEOMetadata(
+        context as ImageSEOContext,
+        result.image.url,
+        { width: result.image.width, height: result.image.height }
+      );
+
+      res.json({
+        success: true,
+        image: {
+          ...result.image,
+          seo: seoMetadata,
+        },
+        seoPromptUsed: seoPrompt,
+      });
+    } catch (error) {
+      console.error("[ImageRoutes] SEO image generation error:", error);
+      const message = error instanceof Error ? error.message : "SEO image generation failed";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * GET /api/images/seo/areas
+   * Get list of Dubai areas with SEO data
+   */
+  app.get("/api/images/seo/areas", async (req: Request, res: Response) => {
+    try {
+      res.json({
+        success: true,
+        areas: DUBAI_AREAS,
+      });
+    } catch (error) {
+      console.error("[ImageRoutes] Areas fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch areas" });
+    }
+  });
+
+  /**
+   * GET /api/images/seo/categories
+   * Get available image categories by content type
+   */
+  app.get("/api/images/seo/categories/:contentType?", async (req: Request, res: Response) => {
+    try {
+      const contentTypes: ContentType[] = ["hotel", "attraction", "restaurant", "beach", "district", "event", "real-estate", "article", "itinerary", "transport"];
+      const categories: ImageCategory[] = ["exterior", "interior", "lobby", "room", "suite", "pool", "spa", "dining", "view", "beach", "activity", "architecture", "entrance", "exhibit", "dish", "chef", "bar", "balcony", "bedroom", "bathroom", "kitchen", "living-room", "amenities", "panorama", "sunset", "night", "aerial", "crowd", "performance", "fireworks", "hero", "featured", "gallery", "content"];
+      const purposes: ImagePurpose[] = ["hero", "featured", "content", "gallery", "thumbnail", "og-image"];
+
+      res.json({
+        success: true,
+        contentTypes,
+        categories,
+        purposes,
+      });
+    } catch (error) {
+      console.error("[ImageRoutes] Categories fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch categories" });
+    }
+  });
+
+  /**
+   * POST /api/images/seo/generate-html
+   * Generate complete HTML with picture element, caption, and Schema.org markup
+   */
+  app.post("/api/images/seo/generate-html", requirePermission("canCreate"), async (req: Request, res: Response) => {
+    try {
+      const { context, imageUrl, width, height, format = "figure" } = req.body;
+
+      if (!context || !imageUrl) {
+        return res.status(400).json({ error: "SEO context and imageUrl are required" });
+      }
+
+      const seoService = getImageSEOService();
+      const dimensions = width && height ? { width: parseInt(width), height: parseInt(height) } : undefined;
+
+      let html: string;
+      if (format === "picture") {
+        html = seoService.generatePictureHTML(context as ImageSEOContext, imageUrl, dimensions);
+      } else {
+        html = seoService.generateFigureHTML(context as ImageSEOContext, imageUrl, dimensions);
+      }
+
+      const metadata = seoService.generateSEOMetadata(context as ImageSEOContext, imageUrl, dimensions);
+
+      res.json({
+        success: true,
+        html,
+        metadata,
+      });
+    } catch (error) {
+      console.error("[ImageRoutes] HTML generation error:", error);
+      const message = error instanceof Error ? error.message : "HTML generation failed";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ============================================================================
   // STATUS ROUTES
   // ============================================================================
 
@@ -426,4 +695,5 @@ export function registerImageRoutes(app: Express) {
   });
 
   console.log("[ImageRoutes] Registered unified image API routes at /api/images/*");
+  console.log("[ImageRoutes] SEO endpoints available at /api/images/seo/*");
 }

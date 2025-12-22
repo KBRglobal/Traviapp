@@ -15,6 +15,12 @@ import {
   SUPPORTED_MIME_TYPES,
   convertToWebP,
 } from "./image-processing";
+import {
+  getImageSEOService,
+  ImageSEOContext,
+  SEOImageMetadata,
+  generateImageFilename,
+} from "./image-seo-service";
 
 export type ImageSource = "upload" | "ai" | "freepik" | "external";
 
@@ -26,6 +32,8 @@ export interface ImageUploadOptions {
   generateThumbnail?: boolean;
   prefix?: string;
   metadata?: Record<string, any>;
+  // SEO options
+  seoContext?: ImageSEOContext;
 }
 
 export interface StoredImage {
@@ -44,6 +52,8 @@ export interface StoredImage {
   contentId?: number;
   metadata?: Record<string, any>;
   createdAt: Date;
+  // SEO metadata
+  seo?: SEOImageMetadata;
 }
 
 export interface UploadResult {
@@ -92,6 +102,7 @@ export class ImageService {
       generateThumbnail = false,
       prefix,
       metadata,
+      seoContext,
     } = options;
 
     // Validate and process the image
@@ -105,8 +116,15 @@ export class ImageService {
     }
 
     const processed = validation.image;
-    const uniqueFilename = generateUniqueFilename(originalFilename, prefix);
-    const finalFilename = `${uniqueFilename}.webp`;
+
+    // Generate filename: use SEO-optimized name if context provided
+    let finalFilename: string;
+    if (seoContext) {
+      finalFilename = generateImageFilename(seoContext);
+    } else {
+      const uniqueFilename = generateUniqueFilename(originalFilename, prefix);
+      finalFilename = `${uniqueFilename}.webp`;
+    }
 
     // Determine storage path based on source
     const storagePath = this.getStoragePath(source, finalFilename);
@@ -124,6 +142,16 @@ export class ImageService {
         thumbnailUrl = thumbResult.url;
       }
 
+      // Generate SEO metadata if context provided
+      let seoMetadata: SEOImageMetadata | undefined;
+      if (seoContext) {
+        const seoService = getImageSEOService();
+        seoMetadata = seoService.generateSEOMetadata(seoContext, url, {
+          width: processed.metadata.width,
+          height: processed.metadata.height,
+        });
+      }
+
       const storedImage: StoredImage = {
         filename: finalFilename,
         originalFilename,
@@ -135,13 +163,14 @@ export class ImageService {
         mimeType: "image/webp",
         source,
         storage,
-        altText,
+        altText: seoMetadata?.alt.en || altText,
         contentId,
         metadata,
         createdAt: new Date(),
+        seo: seoMetadata,
       };
 
-      console.log(`[ImageService] Uploaded ${source} image: ${url} (${storage})`);
+      console.log(`[ImageService] Uploaded ${source} image: ${url} (${storage})${seoContext ? " [SEO optimized]" : ""}`);
       return { success: true, image: storedImage };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown upload error";
