@@ -1381,8 +1381,11 @@ export default function ContentEditor() {
       }
       setImageGeneratingBlock(null);
     },
-    onError: () => {
-      toast({ title: "Generation Failed", description: "Failed to generate images.", variant: "destructive" });
+    onError: (error: Error) => {
+      const message = error.message?.includes("API_NOT_CONFIGURED") || error.message?.includes("not configured")
+        ? "Image generation API not configured. Please add OPENAI_API_KEY or REPLICATE_API_KEY."
+        : "Failed to generate images. Check server logs for details.";
+      toast({ title: "Generation Failed", description: message, variant: "destructive" });
       setImageGeneratingBlock(null);
     },
   });

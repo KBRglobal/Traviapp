@@ -4527,6 +4527,18 @@ Return valid JSON-LD that can be embedded in a webpage.`,
         return res.status(400).json({ error: "Invalid content type" });
       }
 
+      // Check if any image generation API is configured
+      const hasOpenAI = !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY);
+      const hasReplicate = !!process.env.REPLICATE_API_KEY;
+
+      if (!hasOpenAI && !hasReplicate) {
+        console.error("[AI Images] No image generation API configured. Set OPENAI_API_KEY or REPLICATE_API_KEY.");
+        return res.status(503).json({
+          error: "Image generation not configured. Please set OPENAI_API_KEY or REPLICATE_API_KEY in environment variables.",
+          code: "API_NOT_CONFIGURED"
+        });
+      }
+
       const options: ImageGenerationOptions = {
         contentType,
         title: title.trim(),
@@ -4537,11 +4549,15 @@ Return valid JSON-LD that can be embedded in a webpage.`,
         contentImageCount: Math.min(contentImageCount || 0, 5), // Limit to 5 content images
       };
 
-      console.log(`Starting image generation for ${contentType}: ${title}`);
+      console.log(`[AI Images] Starting generation for ${contentType}: "${title}" (OpenAI: ${hasOpenAI}, Replicate: ${hasReplicate})`);
       const images = await generateContentImages(options);
 
       if (images.length === 0) {
-        return res.status(500).json({ error: "Failed to generate images" });
+        console.error(`[AI Images] No images generated for "${title}". Check API keys and logs above.`);
+        return res.status(500).json({
+          error: "Failed to generate images. Check server logs for details.",
+          details: hasReplicate ? "Replicate/Flux failed" : "DALL-E failed"
+        });
       }
 
       // Store images in object storage if available
