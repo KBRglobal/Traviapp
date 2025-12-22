@@ -84,6 +84,9 @@ import { registerAutoPilotRoutes } from "./auto-pilot-routes";
 import { registerEnhancementRoutes } from "./enhancement-routes";
 import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
 import { registerDocUploadRoutes } from "./doc-upload-routes";
+import { registerImageRoutes } from "./routes/image-routes";
+import { getStorageManager } from "./services/storage-adapter";
+import { uploadImage, uploadImageFromUrl } from "./services/image-service";
 import { cache, cacheKeys } from "./cache";
 import {
   getContentWriterSystemPrompt,
@@ -181,13 +184,24 @@ async function convertToWebP(buffer: Buffer, originalFilename: string, mimeType:
 }
 
 let objectStorageClient: Client | null = null;
+let objectStorageInitFailed = false;
 
 function getObjectStorageClient(): Client | null {
   if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
     return null;
   }
+  // Don't retry if initialization already failed
+  if (objectStorageInitFailed) {
+    return null;
+  }
   if (!objectStorageClient) {
-    objectStorageClient = new Client();
+    try {
+      objectStorageClient = new Client();
+    } catch (error) {
+      console.warn("[Object Storage] Initialization failed, falling back to local storage:", error);
+      objectStorageInitFailed = true;
+      return null;
+    }
   }
   return objectStorageClient;
 }
@@ -2530,10 +2544,11 @@ export async function registerRoutes(
         changeNote: req.body.changeNote || null,
       });
 
-      const { attraction, hotel, article, event, itinerary, changedBy, changeNote, ...contentData } = req.body;
-      
+      const { attraction, hotel, article, event, itinerary, dining, district, changedBy, changeNote, ...contentData } = req.body;
+
       const updatedContent = await storage.updateContent(req.params.id, contentData);
 
+      // Update content-type-specific data
       if (existingContent.type === "attraction" && attraction) {
         await storage.updateAttraction(req.params.id, attraction);
       } else if (existingContent.type === "hotel" && hotel) {
@@ -2545,6 +2560,8 @@ export async function registerRoutes(
       } else if (existingContent.type === "itinerary" && itinerary) {
         await storage.updateItinerary(req.params.id, itinerary);
       }
+      // Note: dining and district content types don't have separate extension tables
+      // Their SEO data is stored directly in the content blocks
 
       const fullContent = await storage.getContent(req.params.id);
       
@@ -3826,58 +3843,50 @@ export async function registerRoutes(
   });
 
   app.post("/api/media/upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.single("file"), validateMediaUpload, async (req, res) => {
-    let localPath: string | null = null;
-    let objectPath: string | null = null;
+    console.log("[Media Upload] Request received");
 
     try {
       if (!req.file) {
+        console.log("[Media Upload] ERROR: No file in request");
         return res.status(400).json({ error: "No file uploaded" });
       }
+      console.log(`[Media Upload] Processing file: ${req.file.originalname}, size: ${req.file.size}`);
 
-      // Convert images to WebP for optimization
-      const converted = await convertToWebP(
+      // Use the new unified ImageService for upload
+      const result = await uploadImage(
         req.file.buffer,
         req.file.originalname,
-        req.file.mimetype
+        req.file.mimetype,
+        {
+          source: "upload",
+          altText: req.body.altText,
+        }
       );
 
-      const storageClient = getObjectStorageClient();
-
-      const filename = `${Date.now()}-${converted.filename}`;
-      let url = `/uploads/${filename}`;
-
-      if (storageClient) {
-        objectPath = `public/${filename}`;
-        await storageClient.uploadFromBytes(objectPath, converted.buffer);
-        // Note: Using simple URL path instead of signed URL (getSignedDownloadUrl doesn't exist)
-        url = `/object-storage/${objectPath}`;
-      } else {
-        const uploadsDir = path.join(process.cwd(), "uploads");
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
-        }
-        localPath = path.join(uploadsDir, filename);
-        fs.writeFileSync(localPath, converted.buffer);
+      if (!result.success) {
+        console.error("[Media Upload] ERROR:", result.error);
+        return res.status(400).json({ error: result.error });
       }
 
+      const image = result.image;
+
+      // Save to database for media library
       const mediaFile = await storage.createMediaFile({
-        filename,
-        originalFilename: req.file.originalname,
-        mimeType: converted.mimeType,
-        size: converted.buffer.length,
-        url,
+        filename: image.filename,
+        originalFilename: image.originalFilename,
+        mimeType: image.mimeType,
+        size: image.size,
+        url: image.url,
         altText: req.body.altText || null,
-        width: converted.width || (req.body.width ? parseInt(req.body.width) : null),
-        height: converted.height || (req.body.height ? parseInt(req.body.height) : null),
+        width: image.width || (req.body.width ? parseInt(req.body.width) : null),
+        height: image.height || (req.body.height ? parseInt(req.body.height) : null),
       });
 
       await logAuditEvent(req, "media_upload", "media", mediaFile.id, `Uploaded media: ${mediaFile.originalFilename}`, undefined, { filename: mediaFile.originalFilename, mimeType: mediaFile.mimeType, size: mediaFile.size, originalSize: req.file.size });
+      console.log(`[Media Upload] SUCCESS: ${mediaFile.filename} -> ${mediaFile.url}`);
       res.status(201).json(mediaFile);
     } catch (error) {
-      if (localPath && fs.existsSync(localPath)) {
-        try { fs.unlinkSync(localPath); } catch (e) { console.log("Cleanup failed:", e); }
-      }
-      console.error("Error uploading media file:", error);
+      console.error("[Media Upload] ERROR:", error);
       res.status(500).json({ error: "Failed to upload media file" });
     }
   });
@@ -4342,12 +4351,14 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const { name } = req.body;
+      const { name, primaryKeyword } = req.body;
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return res.status(400).json({ error: "Attraction name is required" });
       }
 
-      const result = await generateAttractionContent(name.trim());
+      const result = await generateAttractionContent(name.trim(), {
+        primaryKeyword: primaryKeyword?.trim() || name.trim()
+      });
       if (!result) {
         return res.status(500).json({ error: "Failed to generate attraction content" });
       }
@@ -4356,6 +4367,102 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     } catch (error) {
       console.error("Error generating attraction content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate attraction content";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Generate partial content for a specific section based on existing content
+  app.post("/api/ai/generate-section", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+    try {
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      }
+
+      const { sectionType, title, existingContent, contentType } = req.body;
+
+      if (!sectionType || !title) {
+        return res.status(400).json({ error: "Section type and title are required" });
+      }
+
+      const validSections = ["faq", "tips", "highlights"];
+      if (!validSections.includes(sectionType)) {
+        return res.status(400).json({ error: "Invalid section type. Must be: faq, tips, or highlights" });
+      }
+
+      let prompt = "";
+      const systemPrompt = `You are a Dubai travel content expert. Generate high-quality, SEO-optimized content for the "${title}" page.
+Based on the existing content context, generate ONLY the requested section. Output valid JSON.`;
+
+      const contextInfo = existingContent ? `\n\nExisting content context:\n${existingContent.substring(0, 3000)}` : "";
+
+      if (sectionType === "faq") {
+        prompt = `Generate 8 frequently asked questions with detailed answers for "${title}" (${contentType || "attraction"}).
+${contextInfo}
+
+Generate practical, helpful FAQs that visitors would actually ask.
+Each answer should be 100-150 words with specific, actionable information.
+
+Output format:
+{
+  "faqs": [
+    {"question": "What are the opening hours of ${title}?", "answer": "Detailed 100-150 word answer..."},
+    {"question": "How much do tickets cost?", "answer": "Detailed answer with prices..."},
+    ...8 total FAQs
+  ]
+}`;
+      } else if (sectionType === "tips") {
+        prompt = `Generate 7-8 insider tips for visiting "${title}" (${contentType || "attraction"}).
+${contextInfo}
+
+Tips should be practical, specific, and actionable - not generic advice.
+Each tip should be 30-50 words.
+
+Output format:
+{
+  "tips": [
+    "Book tickets online at least 2 days in advance to skip the queue and save 15% on entry fees.",
+    "Visit during weekday mornings (9-11 AM) for smaller crowds and better photo opportunities.",
+    ...7-8 total tips
+  ]
+}`;
+      } else if (sectionType === "highlights") {
+        prompt = `Generate 6 key highlights/experiences for "${title}" (${contentType || "attraction"}).
+${contextInfo}
+
+Each highlight should describe a specific experience or feature that visitors can enjoy.
+Include the highlight title and a 50-80 word description.
+
+Output format:
+{
+  "highlights": [
+    {"title": "Observation Deck Experience", "description": "50-80 word detailed description of this highlight..."},
+    {"title": "Interactive Exhibits", "description": "Description..."},
+    ...6 total highlights
+  ]
+}`;
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        max_tokens: 4000,
+        temperature: 0.7,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || "{}");
+      console.log(`[AI Section] Generated ${sectionType} for "${title}"`);
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating section content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate section content";
       res.status(500).json({ error: message });
     }
   });
@@ -4527,6 +4634,18 @@ Return valid JSON-LD that can be embedded in a webpage.`,
         return res.status(400).json({ error: "Invalid content type" });
       }
 
+      // Check if any image generation API is configured
+      const hasOpenAI = !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY);
+      const hasReplicate = !!process.env.REPLICATE_API_KEY;
+
+      if (!hasOpenAI && !hasReplicate) {
+        console.error("[AI Images] No image generation API configured. Set OPENAI_API_KEY or REPLICATE_API_KEY.");
+        return res.status(503).json({
+          error: "Image generation not configured. Please set OPENAI_API_KEY or REPLICATE_API_KEY in environment variables.",
+          code: "API_NOT_CONFIGURED"
+        });
+      }
+
       const options: ImageGenerationOptions = {
         contentType,
         title: title.trim(),
@@ -4537,52 +4656,43 @@ Return valid JSON-LD that can be embedded in a webpage.`,
         contentImageCount: Math.min(contentImageCount || 0, 5), // Limit to 5 content images
       };
 
-      console.log(`Starting image generation for ${contentType}: ${title}`);
+      console.log(`[AI Images] Starting generation for ${contentType}: "${title}" (OpenAI: ${hasOpenAI}, Replicate: ${hasReplicate})`);
       const images = await generateContentImages(options);
 
       if (images.length === 0) {
-        return res.status(500).json({ error: "Failed to generate images" });
+        console.error(`[AI Images] No images generated for "${title}". Check API keys and logs above.`);
+        return res.status(500).json({
+          error: "Failed to generate images. Check server logs for details.",
+          details: hasReplicate ? "Replicate/Flux failed" : "DALL-E failed"
+        });
       }
 
-      // Store images in object storage if available
-      const storageClient = getObjectStorageClient();
+      // Store images using unified ImageService
       const storedImages: GeneratedImage[] = [];
 
+      console.log(`[AI Images] Processing ${images.length} generated images...`);
       for (const image of images) {
         try {
-          // Download image from URL
-          const imageResponse = await fetch(image.url);
-          if (!imageResponse.ok) {
-            console.error(`Failed to fetch image: ${image.url}`);
-            continue;
-          }
+          console.log(`[AI Images] Downloading and storing: ${image.filename}`);
 
-          const imageBuffer = await imageResponse.arrayBuffer();
-          const buffer = Buffer.from(imageBuffer);
+          // Use unified ImageService for download and storage
+          const result = await uploadImageFromUrl(image.url, image.filename, {
+            source: "ai",
+            altText: image.alt,
+            metadata: { type: image.type, originalUrl: image.url },
+          });
 
-          if (storageClient) {
-            // Store in object storage
-            const objectPath = `public/ai-generated/${image.filename}`;
-            await storageClient.uploadFromBytes(objectPath, buffer);
+          if (result.success) {
             storedImages.push({
               ...image,
-              url: `/api/ai-images/${image.filename}`, // Use AI images endpoint
+              url: result.image.url,
             });
+            console.log(`[AI Images] Stored: ${result.image.url}`);
           } else {
-            // Store locally
-            const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
-            if (!fs.existsSync(uploadsDir)) {
-              fs.mkdirSync(uploadsDir, { recursive: true });
-            }
-            const localPath = path.join(uploadsDir, image.filename);
-            fs.writeFileSync(localPath, buffer);
-            storedImages.push({
-              ...image,
-              url: `/uploads/ai-generated/${image.filename}`,
-            });
+            console.error(`[AI Images] Failed to store ${image.filename}:`, result.error);
           }
         } catch (imgError) {
-          console.error(`Error storing image ${image.filename}:`, imgError);
+          console.error(`[AI Images] Error storing image ${image.filename}:`, imgError);
         }
       }
 
@@ -4621,34 +4731,18 @@ Return valid JSON-LD that can be embedded in a webpage.`,
         return res.status(500).json({ error: "Failed to generate image" });
       }
 
-      // Download and store image
-      const imageResponse = await fetch(imageUrl);
-      if (!imageResponse.ok) {
-        return res.status(500).json({ error: "Failed to download generated image" });
-      }
-
-      const imageBuffer = await imageResponse.arrayBuffer();
-      const buffer = Buffer.from(imageBuffer);
+      // Download and store image using unified ImageService
       const finalFilename = filename || `ai-image-${Date.now()}.jpg`;
+      const result = await uploadImageFromUrl(imageUrl, finalFilename, {
+        source: "ai",
+        metadata: { prompt, size: imageSize, quality, style },
+      });
 
-      const storageClient = getObjectStorageClient();
-      let storedUrl: string;
-
-      if (storageClient) {
-        const objectPath = `public/ai-generated/${finalFilename}`;
-        await storageClient.uploadFromBytes(objectPath, buffer);
-        storedUrl = `/api/ai-images/${finalFilename}`;
-      } else {
-        const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
-        }
-        const localPath = path.join(uploadsDir, finalFilename);
-        fs.writeFileSync(localPath, buffer);
-        storedUrl = `/uploads/ai-generated/${finalFilename}`;
+      if (!result.success) {
+        return res.status(500).json({ error: result.error || "Failed to store generated image" });
       }
 
-      res.json({ url: storedUrl, filename: finalFilename });
+      res.json({ url: result.image.url, filename: result.image.filename });
     } catch (error) {
       console.error("Error generating single image:", error);
       const message = error instanceof Error ? error.message : "Failed to generate image";
@@ -8134,6 +8228,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // DOC/DOCX UPLOAD (Import content directly from Word documents)
   // ============================================================================
   registerDocUploadRoutes(app);
+
+  // ============================================================================
+  // UNIFIED IMAGE SERVICE (New architecture for all image operations)
+  // ============================================================================
+  registerImageRoutes(app);
 
   // ============================================================================
   // SECURE ERROR HANDLER (no stack traces to client)

@@ -316,7 +316,7 @@ async function generateWithFlux(
   }
 }
 
-// Generate image using DALL-E 3
+// Generate image using DALL-E 3 with fallback to DALL-E 2
 async function generateWithDalle(
   prompt: string,
   options: {
@@ -328,7 +328,9 @@ async function generateWithDalle(
   const openai = getOpenAIClient();
   if (!openai) return null;
 
+  // Try DALL-E 3 first
   try {
+    console.log("[DALL-E] Trying DALL-E 3...");
     const response = await openai.images.generate({
       model: "dall-e-3",
       prompt: prompt,
@@ -338,10 +340,31 @@ async function generateWithDalle(
       style: options.style || 'natural',
     });
 
+    console.log("[DALL-E] DALL-E 3 succeeded");
     return response.data?.[0]?.url || null;
-  } catch (error) {
-    console.error("Error generating image with DALL-E:", error);
-    return null;
+  } catch (error: any) {
+    console.error("[DALL-E] DALL-E 3 failed:", error?.message || error);
+
+    // If DALL-E 3 fails (unknown model, etc.), try DALL-E 2
+    console.log("[DALL-E] Falling back to DALL-E 2...");
+    try {
+      // DALL-E 2 only supports 256x256, 512x512, 1024x1024
+      // Truncate prompt to 1000 chars (DALL-E 2 limit)
+      const truncatedPrompt = prompt.length > 1000 ? prompt.substring(0, 997) + "..." : prompt;
+
+      const response = await openai.images.generate({
+        model: "dall-e-2",
+        prompt: truncatedPrompt,
+        n: 1,
+        size: '1024x1024', // DALL-E 2 max size
+      });
+
+      console.log("[DALL-E] DALL-E 2 succeeded");
+      return response.data?.[0]?.url || null;
+    } catch (error2: any) {
+      console.error("[DALL-E] DALL-E 2 also failed:", error2?.message || error2);
+      return null;
+    }
   }
 }
 
@@ -369,11 +392,9 @@ export async function generateImage(
     const fluxResult = await generateWithFlux(prompt, aspectRatio);
     if (fluxResult) return fluxResult;
 
-    // Fallback to DALL-E if Flux fails
-    if (provider === 'auto') {
-      console.log("Flux failed, falling back to DALL-E");
-      return generateWithDalle(prompt, options);
-    }
+    // Always fallback to DALL-E if Flux fails (regardless of provider setting)
+    console.log("Flux failed or not configured, falling back to DALL-E");
+    return generateWithDalle(prompt, options);
   }
 
   return generateWithDalle(prompt, options);
@@ -389,13 +410,14 @@ export async function generateContentImages(
 
   // Generate hero image
   if (options.generateHero !== false) {
-    console.log(`Generating hero image for: ${options.title}`);
+    console.log(`[AI Images] Generating hero image for: ${options.title}`);
     const heroPrompt = await generateImagePrompt({
       ...options,
       generateHero: true,
     });
 
     if (heroPrompt) {
+      console.log(`[AI Images] Got prompt, generating image...`);
       const heroUrl = await generateImage(heroPrompt, {
         size: '1792x1024',
         quality: 'hd',
@@ -404,6 +426,7 @@ export async function generateContentImages(
       });
 
       if (heroUrl) {
+        console.log(`[AI Images] Hero image generated successfully`);
         images.push({
           url: heroUrl,
           filename: `${slug}-hero-${timestamp}.jpg`,
@@ -411,7 +434,11 @@ export async function generateContentImages(
           caption: `Explore ${options.title} in Dubai`,
           type: 'hero',
         });
+      } else {
+        console.error(`[AI Images] Failed to generate hero image - both Flux and DALL-E failed`);
       }
+    } else {
+      console.error(`[AI Images] Failed to generate image prompt - check OpenAI API key`);
     }
   }
 
@@ -3936,60 +3963,94 @@ Output valid JSON only, no markdown code blocks.`
   }
 }
 
-export async function generateAttractionContent(attractionName: string): Promise<GeneratedAttractionContent | null> {
+export async function generateAttractionContent(attractionName: string, options?: { primaryKeyword?: string }): Promise<GeneratedAttractionContent | null> {
   const openai = getOpenAIClient();
   if (!openai) {
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
-  const modelConfig = getModelConfig('premium'); // Attractions = premium content
+  const primaryKeyword = options?.primaryKeyword || attractionName;
+
+  // Use GPT-4o directly for attractions to ensure quality and word count
   try {
     const response = await openai.chat.completions.create({
-      model: modelConfig.model,
+      model: "gpt-4o",  // Force GPT-4o for attractions to ensure word count
+      max_tokens: 16000,
+      temperature: 0.8,
       messages: [
-        { role: "system", content: ATTRACTION_SYSTEM_PROMPT },
-        { 
-          role: "user", 
-          content: `Generate comprehensive content for a Dubai attraction called "${attractionName}".
+        { role: "system", content: ATTRACTION_SYSTEM_PROMPT + `
 
-REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1500-2500 words across all text blocks
-- Write engaging, SEO-optimized content that helps tourists plan their visit
-- All information must be accurate and realistic for Dubai
+CRITICAL REQUIREMENTS - READ CAREFULLY:
 
-MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
-1. hero block - with title, subtitle, overlayText
-2. text block - "About [Attraction Name]" (350-450 words minimum, detailed introduction)
-3. highlights block - with 6 items, each with 50-80 word descriptions (REQUIRED)
-4. text block - "The Complete Experience" (250-350 words, visitor journey)
-5. text block - "Planning Your Visit" (200-250 words, practical info)
-6. text block - "Nearby Attractions" (150-200 words)
-7. tips block - with 7 detailed, actionable visitor tips (this is REQUIRED, do NOT skip)
-8. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
-9. cta block - with booking call to action
+1. WORD COUNT - MANDATORY 2500+ WORDS:
+   - This is a HARD requirement. Generate AT LEAST 2500 words of actual content.
+   - Each text block must be SUBSTANTIAL - 300-500 words each
+   - You will write 8-10 detailed text blocks
+   - Count your words. If under 2500, ADD MORE CONTENT.
 
-ALSO REQUIRED in attraction object:
-- 6 highlights with 50-80 word descriptions each
-- 4 ticket options with descriptions and pricing
-- 12 essential info items
-- 8 quick info bar items
-- 7 visitor tips
-- 8 FAQ items with detailed 100-200 word answers
-- 4 nearby attractions
-- 5 image descriptions with SEO alt text and captions
-- Comprehensive TouristAttraction JSON-LD schema with geo coordinates
-- Trust signals and related keywords
+2. KEYWORD OPTIMIZATION - MANDATORY:
+   - Primary keyword: "${primaryKeyword}"
+   - Use "${primaryKeyword}" naturally 15-25 times throughout the content
+   - Include in: title, first paragraph, headings, throughout body, conclusion
+   - Target keyword density: 1.5-2.5%
+   - Also use variations and related terms
 
-DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
-Output valid JSON only, no markdown code blocks.`
+3. CONTENT DEPTH:
+   - Write like a professional travel journalist
+   - Include specific details, numbers, facts
+   - Describe sights, sounds, experiences vividly
+   - Provide actionable tips and insider knowledge
+
+FAILURE TO MEET 2500 WORD COUNT = REJECTION` },
+        {
+          role: "user",
+          content: `Generate comprehensive content for a Dubai attraction: "${attractionName}"
+
+PRIMARY KEYWORD FOR SEO: "${primaryKeyword}"
+- Use this keyword 15-25 times naturally throughout the content
+- Include in title, headings, first/last paragraphs
+- Target 1.5-2.5% keyword density
+
+⚠️ IRON RULE: MINIMUM 2500 WORDS - NO EXCEPTIONS ⚠️
+
+Required content structure (ALL blocks mandatory):
+
+1. hero - title containing "${primaryKeyword}", subtitle, overlayText
+2. text - "About ${attractionName}" - MINIMUM 500 words, comprehensive introduction
+3. highlights - 6 items with 80-100 word descriptions each (480-600 words)
+4. text - "The Complete ${attractionName} Experience" - MINIMUM 450 words
+5. text - "Planning Your ${attractionName} Visit" - MINIMUM 350 words
+6. text - "What Makes ${attractionName} Unique" - MINIMUM 300 words
+7. text - "Nearby Attractions" - MINIMUM 200 words
+8. tips - 8 detailed tips, each 40-50 words (320-400 words total)
+9. faq - 10 FAQ items, each answer 120-180 words (1200-1800 words total)
+10. text - "Final Thoughts on ${attractionName}" - MINIMUM 200 words
+11. cta - booking call to action
+
+WORD COUNT BREAKDOWN:
+- Text blocks: ~2000 words
+- Highlights: ~550 words
+- Tips: ~360 words
+- FAQ: ~1500 words
+- TOTAL: ~4400 words (this is your target)
+
+Also include in attraction object:
+- primaryKeyword: "${primaryKeyword}"
+- All required fields with detailed content
+- Comprehensive JSON-LD schema
+
+Output valid JSON only.`
         }
       ],
-      temperature: 0.7,
       response_format: { type: "json_object" }
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
-    
+
+    // Log word count for debugging
+    const totalWords = JSON.stringify(result).split(/\s+/).length;
+    console.log(`[AI Attraction] Generated content for "${attractionName}" - approx ${totalWords} words in response`);
+
     if (result.content?.blocks) {
       result.content.blocks = result.content.blocks.map((block: ContentBlock, index: number) => ({
         ...block,
@@ -4031,38 +4092,50 @@ export async function generateArticleContent(
 
 ${categoryInstruction}
 
-⚠️ CRITICAL WORD COUNT REQUIREMENT ⚠️
-MINIMUM TOTAL: 1,200 words | TARGET: 1,500-2,000 words
-Articles under 1,200 words will be REJECTED. Write DETAILED, COMPREHENSIVE content.
+⚠️ CRITICAL WORD COUNT REQUIREMENTS (IRON RULE - MUST FOLLOW) ⚠️
+TOTAL WORD COUNT: 2000-3500 words MINIMUM - Articles under 2000 words will be REJECTED.
+
+Word count distribution (MANDATORY):
+- Opening/Introduction: 150-200 words (~8% of total)
+- Quick Facts section: 80-120 words (~5% of total)
+- Main Content Sections (4-6 sections): 800-1800 words combined (~60% of total)
+- FAQ Section (6-10 questions): 300-1000 words combined (~20% of total)
+- Pro Tips (5-8 tips): 100-280 words combined (~7% of total)
+- Summary/Conclusion: 100-150 words (~5% of total)
 
 Each text block MUST meet these MINIMUM word counts:
-- Introduction: AT LEAST 300 words (hook readers, establish context, preview content)
+- Introduction: AT LEAST 200 words (hook readers, establish context, preview content)
 - Main Section 1: AT LEAST 350 words (deep dive, specific examples, data points)
 - Main Section 2: AT LEAST 350 words (comprehensive coverage, practical details)
-- Main Section 3: AT LEAST 300 words (additional insights, local perspective)
+- Main Section 3: AT LEAST 350 words (additional insights, local perspective)
+- Main Section 4: AT LEAST 300 words (more depth and context)
 - Practical Information: AT LEAST 250 words (actionable guidance)
+- Summary: AT LEAST 150 words (wrap-up with strong CTA)
 
 MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array):
 1. hero block - with compelling title, subtitle, overlayText
-2. text block - "Introduction" (300+ words, engaging hook with context)
+2. text block - "Introduction" (200+ words, engaging hook with context)
 3. text block - Main content section 1 (350+ words, detailed exploration)
 4. text block - Main content section 2 (350+ words, practical insights)
-5. text block - Main content section 3 (300+ words, local tips and perspective)
-6. highlights block - with 6 key takeaways (REQUIRED)
-7. text block - "Practical Information" (250+ words, concrete guidance)
-8. tips block - with 7 detailed, actionable expert tips (each tip 30-50 words)
-9. faq block - with 8 FAQ items, each answer 150-200 words (this is REQUIRED)
-10. cta block - with relevant call to action
+5. text block - Main content section 3 (350+ words, local tips and perspective)
+6. text block - Main content section 4 (300+ words, additional depth)
+7. highlights block - with 6 key takeaways (REQUIRED)
+8. text block - "Practical Information" (250+ words, concrete guidance)
+9. tips block - with 7-8 detailed, actionable expert tips (each tip 35-50 words for 100-280 total)
+10. faq block - with 8-10 FAQ items, each answer 100-150 words (this is REQUIRED, 300-1000 words total)
+11. text block - "Summary" (150+ words, conclusion with CTA)
+12. cta block - with relevant call to action
 
 ALSO REQUIRED in article object:
-- 5 quick facts
-- 7 pro tips (each 40-60 words with specific actionable advice)
+- 5 quick facts (80-120 words total)
+- 7-8 pro tips (each 35-50 words with specific actionable advice)
 - Relevant warnings
-- 8 FAQ items with detailed 150-200 word answers
+- 8-10 FAQ items with detailed 100-150 word answers
 - 4 related topics for internal linking
 - 4 image descriptions with SEO alt text and captions
 - Comprehensive Article JSON-LD schema
 
+⚠️ IMPORTANT: Count your words! The total MUST be between 2000-3500 words. DO NOT produce less.
 REMEMBER: Write LONG, DETAILED paragraphs. Each section should thoroughly cover its topic.
 DO NOT produce short, superficial content. Quality AND quantity are required.
 Output valid JSON only, no markdown code blocks.`
