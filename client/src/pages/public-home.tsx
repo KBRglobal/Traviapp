@@ -1,17 +1,17 @@
-import { Search, Star, ArrowRight, Plane, MapPin, Clock, Users, ChevronRight, Mail, Globe, Building2, TrendingUp, Sparkles, Heart, Camera, Utensils, Palmtree, Sun, Compass, Scale } from "lucide-react";
-import { useState, useEffect, useRef, type KeyboardEvent } from "react";
+import { Search, Star, MapPin, ChevronRight, Mail, BookOpen, Users, Globe, Building, UtensilsCrossed, Calendar, Clock, DollarSign, ArrowRight, Check, Newspaper, TrendingUp, Menu } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
 import type { Content, ContentWithRelations } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
-import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
-import traviLogoImg from "@assets/Logotype_for_Dark_Background_1766192985178.png";
+import mascotImage from "@assets/Mascot_for_Dark_Background_1766314766064.png";
+import skyBackground from "@assets/blue-sky-clouds-background_1766314952453.jpg";
 
 interface HomepagePromotion {
   id: string;
@@ -24,216 +24,171 @@ interface HomepagePromotion {
   content?: ContentWithRelations;
 }
 
-// World landmarks for the flowing logo texture
-const worldLandmarks = [
-  "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&h=800&fit=crop", // Eiffel Tower, Paris
-  "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=600&h=800&fit=crop", // Colosseum, Rome
-  "https://images.unsplash.com/photo-1548013146-72479768bada?w=600&h=800&fit=crop", // Taj Mahal, India
-  "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=600&h=800&fit=crop", // Statue of Liberty, NYC
-  "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600&h=800&fit=crop", // London Bridge & Big Ben
-  "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=600&h=800&fit=crop", // Sydney Opera House
-  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=800&fit=crop", // Burj Khalifa, Dubai
-  "https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=600&h=800&fit=crop", // Tokyo Tower, Japan
+const heroImage = "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop&q=80";
+
+const categories = [
+  { key: "attractions", icon: Building, count: 166, color: "#6C5CE7" },
+  { key: "hotels", icon: Building, count: 26, color: "#EC4899" },
+  { key: "dining", icon: UtensilsCrossed, count: 31, color: "#F59E0B" },
+  { key: "districts", icon: MapPin, count: 21, color: "#10B981" },
+  { key: "guides", icon: BookOpen, count: 87, color: "#3B82F6" },
+  { key: "events", icon: Calendar, count: 7, color: "#8B5CF6" },
 ];
 
-// Mascot message keys for translation
-const mascotMessageKeys = [
-  "mascotCantCatch",
+const topAttractions = [
+  { name: "Burj Khalifa", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", rating: 4.9, area: "Downtown", price: "From $35", slug: "burj-khalifa" },
+  { name: "Dubai Mall", image: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=400&h=300&fit=crop", rating: 4.8, area: "Downtown", price: "Free", slug: "dubai-mall" },
+  { name: "Desert Safari", image: "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=400&h=300&fit=crop", rating: 4.7, area: "Desert", price: "From $65", slug: "desert-safari" },
+  { name: "Palm Jumeirah", image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=400&h=300&fit=crop", rating: 4.8, area: "Palm", price: "Free", slug: "palm-jumeirah" },
+];
+
+const districts = [
+  { name: "Downtown Dubai", attractions: 45, restaurants: 23, image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop", slug: "downtown" },
+  { name: "Dubai Marina", attractions: 28, restaurants: 41, image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400&h=300&fit=crop", slug: "marina" },
+  { name: "Old Dubai", attractions: 32, restaurants: 15, image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400&h=300&fit=crop", slug: "old-dubai" },
+];
+
+const hotels = [
+  { name: "Atlantis The Royal", image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=300&fit=crop", stars: 5, area: "Palm", price: "From $800", slug: "atlantis-royal" },
+  { name: "Burj Al Arab", image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=300&fit=crop", stars: 5, area: "Jumeirah", price: "From $2000", slug: "burj-al-arab" },
+  { name: "JW Marriott", image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop", stars: 5, area: "Marina", price: "From $350", slug: "jw-marriott" },
+  { name: "Rove Downtown", image: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=300&fit=crop", stars: 4, area: "Downtown", price: "From $120", slug: "rove-downtown" },
+];
+
+const restaurants = [
+  { name: "Nobu", cuisine: "Japanese", priceLevel: "$$$$", area: "Downtown", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop", slug: "nobu" },
+  { name: "SALT Burger", cuisine: "Burgers", priceLevel: "$", area: "Various", image: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=300&fit=crop", slug: "salt-burger" },
+  { name: "Pierchic", cuisine: "Seafood", priceLevel: "$$$$", area: "Jumeirah", image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop", slug: "pierchic" },
+  { name: "Ravi Restaurant", cuisine: "Pakistani", priceLevel: "$", area: "Satwa", image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop", slug: "ravi" },
+];
+
+const upcomingEvents = [
+  { date: "Dec 22", title: "Dubai Shopping Festival Opening", slug: "dsf-2024" },
+  { date: "Dec 23", title: "Burj Khalifa NYE Rehearsal (Free!)", slug: "nye-rehearsal" },
+  { date: "Dec 25", title: "Christmas Markets at Madinat", slug: "christmas-markets" },
+  { date: "Dec 31", title: "New Year's Eve Fireworks", slug: "nye-fireworks" },
+];
+
+const popularGuides = [
+  { title: "Best Time to Visit Dubai", slug: "best-time-visit" },
+  { title: "Dubai on a Budget", slug: "budget-guide" },
+  { title: "What to Pack", slug: "packing-list" },
+  { title: "Laws Tourists Should Know", slug: "laws-for-tourists" },
+  { title: "First Time in Dubai? Read This", slug: "first-time-guide" },
+];
+
+const mascotPhrases = [
+  "mascotSurprised",
+  "mascotWhyCatch",
+  "mascotNotReady",
   "mascotTooSlow",
-  "mascotNiceTry",
-  "mascotAlmost",
-  "mascotTooFast",
-  "mascotKeepTrying",
-  "mascotMissed",
-  "mascotCatchMe",
-  "mascotNotToday",
-  "mascotSoClose",
+  "mascotNiceDay",
+  "mascotCantCatch",
 ];
 
-// Category keys for translation lookup
-const categoryConfigs = [
-  { key: "categoryAttractions", icon: Camera, href: "/attractions", color: "from-purple-500 to-pink-500", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=500&fit=crop" },
-  { key: "categoryHotels", icon: Building2, href: "/hotels", color: "from-blue-500 to-cyan-500", image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400&h=500&fit=crop" },
-  { key: "categoryDining", icon: Utensils, href: "/dining", color: "from-orange-500 to-amber-500", image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=500&fit=crop" },
-  { key: "categoryDistricts", icon: MapPin, href: "/districts", color: "from-emerald-500 to-teal-500", image: "https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=400&h=500&fit=crop" },
-  { key: "categoryEvents", icon: Sparkles, href: "/events", color: "from-rose-500 to-pink-500", image: "https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=400&h=500&fit=crop" },
-  { key: "categoryArticles", icon: Compass, href: "/articles", color: "from-indigo-500 to-purple-500", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=500&fit=crop" },
-];
-
-// Featured districts config - uses translation keys for names/taglines
-const featuredDistrictConfigs = [
-  { nameKey: "districtDowntown", taglineKey: "districtDowntownTagline", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop", slug: "downtown-dubai", stats: { attractions: 12, hotels: 25 } },
-  { nameKey: "districtMarina", taglineKey: "districtMarinaTagline", image: "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=600&h=400&fit=crop", slug: "dubai-marina", stats: { attractions: 8, hotels: 18 } },
-  { nameKey: "districtPalm", taglineKey: "districtPalmTagline", image: "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=600&h=400&fit=crop", slug: "palm-jumeirah", stats: { attractions: 6, hotels: 12 } },
-  { nameKey: "districtOld", taglineKey: "districtOldTagline", image: "https://images.unsplash.com/photo-1534551767192-78b8dd45b51b?w=600&h=400&fit=crop", slug: "old-dubai", stats: { attractions: 10, hotels: 15 } },
-];
-
-const CloudSVG = ({ className = "", size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) => {
-  const sizes = { sm: "w-16 h-10", md: "w-24 h-14", lg: "w-32 h-20" };
-  return (
-    <svg className={`${sizes[size]} ${className}`} viewBox="0 0 100 60" fill="white">
-      <ellipse cx="30" cy="40" rx="25" ry="18" />
-      <ellipse cx="55" cy="35" rx="22" ry="16" />
-      <ellipse cx="75" cy="42" rx="20" ry="14" />
-      <ellipse cx="45" cy="28" rx="18" ry="14" />
-    </svg>
-  );
+const getRandomPosition = (heroRect: DOMRect) => {
+  // Keep mascot floating in the upper-left quadrant as a decorative element
+  // Horizontal: 3-25% of hero width (capped at 200px)
+  const minX = Math.max(10, heroRect.width * 0.03);
+  const maxX = Math.min(heroRect.width * 0.25, 200);
+  
+  // Vertical: 15-45% of hero height (capped at 350px)
+  const minY = Math.max(100, heroRect.height * 0.15);
+  const maxY = Math.min(heroRect.height * 0.45, 350);
+  
+  const x = minX + Math.random() * (Math.max(0, maxX - minX));
+  const y = minY + Math.random() * (maxY - minY);
+  
+  return { x: Math.max(10, x), y: Math.max(100, y) };
 };
-
-const HotAirBalloonSVG = ({ className = "", color = "#EC4899" }: { className?: string; color?: string }) => (
-  <svg className={`w-16 h-24 balloon-icon ${className}`} viewBox="0 0 60 100" fill="none">
-    <ellipse cx="30" cy="30" rx="25" ry="30" fill={color} />
-    <ellipse cx="30" cy="30" rx="25" ry="30" fill="url(#balloonShine)" />
-    <path d="M15 55 L20 70 L40 70 L45 55" fill="#8B4513" />
-    <rect x="18" y="70" width="24" height="15" rx="2" fill="#D2691E" stroke="#8B4513" strokeWidth="1" />
-    <line x1="20" y1="55" x2="20" y2="70" stroke="#654321" strokeWidth="1" />
-    <line x1="40" y1="55" x2="40" y2="70" stroke="#654321" strokeWidth="1" />
-    <defs>
-      <linearGradient id="balloonShine" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="white" stopOpacity="0.3" />
-        <stop offset="50%" stopColor="white" stopOpacity="0" />
-      </linearGradient>
-    </defs>
-  </svg>
-);
-
-const BirdSVG = ({ className = "" }: { className?: string }) => (
-  <svg className={`w-6 h-4 ${className}`} viewBox="0 0 24 16" fill="#334155">
-    <path d="M0 8 Q6 2 12 8 Q18 2 24 8 Q18 6 12 10 Q6 6 0 8" />
-  </svg>
-);
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
-};
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-};
-
-// Featured landing pages - keys for translation
-const quickCategoryConfigs = [
-  { titleKey: "freeThings", icon: Sparkles, href: "/dubai/free-things-to-do", color: "from-emerald-500 to-cyan-500", badgeKey: "topGuide" },
-  { titleKey: "offPlanInvestment", icon: Building2, href: "/dubai-off-plan-properties", color: "from-purple-500 to-pink-500", badgeKey: "investors" },
-  { titleKey: "lawsFines", icon: Scale, href: "/dubai/laws-for-tourists", color: "from-red-500 to-amber-500", badgeKey: "mustRead" },
-];
 
 export default function PublicHome() {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const heroRef = useRef<HTMLDivElement>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { t, localePath, isRTL } = useLocale();
   
-  // Interactive mascot state - can escape anywhere on screen
-  const [mascotMessage, setMascotMessage] = useState("");
+  const heroRef = useRef<HTMLElement>(null);
+  const traviTextRef = useRef<HTMLSpanElement>(null);
+  const mascotRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mascotPosition, setMascotPosition] = useState({ x: 0, y: 0 });
-  const [mascotEscaped, setMascotEscaped] = useState(false);
-  const [showMascotMessage, setShowMascotMessage] = useState(false);
-  const mascotTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const escapeCount = useRef(0);
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
+  const [showPhrase, setShowPhrase] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   
-  // Escape positions - corners and edges of the viewport
-  const escapePositions = [
-    { x: -300, y: -200 }, // top left area
-    { x: 300, y: -200 },  // top right area
-    { x: -350, y: 150 },  // left side
-    { x: 350, y: 150 },   // right side
-    { x: -250, y: 300 },  // bottom left
-    { x: 250, y: 300 },   // bottom right
-    { x: 0, y: -250 },    // top center
-    { x: 0, y: 350 },     // bottom center
-  ];
+  // Get actual mascot width for responsive positioning
+  const getMascotWidth = useCallback(() => {
+    if (mascotRef.current) {
+      return mascotRef.current.getBoundingClientRect().width;
+    }
+    // Fallback: w-24 on mobile (96px), w-32 on desktop (128px)
+    return typeof window !== "undefined" && window.innerWidth < 768 ? 96 : 128;
+  }, []);
   
-  const handleMascotHover = () => {
-    escapeCount.current += 1;
-    
-    // Pick a random escape position, avoiding the current one
-    const availablePositions = escapePositions.filter(
-      pos => Math.abs(pos.x - mascotPosition.x) > 100 || Math.abs(pos.y - mascotPosition.y) > 100
-    );
-    const randomPos = availablePositions[Math.floor(Math.random() * availablePositions.length)] || escapePositions[0];
-    
-    // Add some randomness to the position
-    const newX = randomPos.x + (Math.random() - 0.5) * 80;
-    const newY = randomPos.y + (Math.random() - 0.5) * 60;
-    setMascotPosition({ x: newX, y: newY });
-    setMascotEscaped(true);
-    
-    // Random message key
-    const randomMessageKey = mascotMessageKeys[Math.floor(Math.random() * mascotMessageKeys.length)];
-    setMascotMessage(randomMessageKey);
-    setShowMascotMessage(true);
-    
-    // Hide message after delay, but keep mascot in escaped position longer
-    if (mascotTimeoutRef.current) clearTimeout(mascotTimeoutRef.current);
-    mascotTimeoutRef.current = setTimeout(() => {
-      setShowMascotMessage(false);
-      // Return home after longer delay if not touched again
-      setTimeout(() => {
-        setMascotPosition({ x: 0, y: 0 });
-        setMascotEscaped(false);
-      }, 3000);
-    }, 2000);
-  };
+  useEffect(() => {
+    if (heroRef.current && !isInitialized) {
+      // Position mascot as a floating decorative element in the upper-left quadrant
+      const heroRect = heroRef.current.getBoundingClientRect();
+      const mascotWidth = getMascotWidth();
+      
+      // Anchor to upper-left area (5-15% from left, 15-25% from top)
+      const startX = Math.max(20, heroRect.width * 0.08);
+      const startY = Math.max(120, heroRect.height * 0.2);
+      
+      setMascotPosition({ 
+        x: Math.min(startX, heroRect.width * 0.15), 
+        y: startY 
+      });
+      setIsInitialized(true);
+    }
+  }, [isInitialized, getMascotWidth]);
   
-  // Cleanup mascot timeout on unmount
+  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
-      if (mascotTimeoutRef.current) clearTimeout(mascotTimeoutRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
-
-  // Mouse parallax effect
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (heroRef.current) {
-        const rect = heroRef.current.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width - 0.5;
-        const y = (e.clientY - rect.top) / rect.height - 0.5;
-        setMousePosition({ x, y });
-      }
-    };
-
-    const heroElement = heroRef.current;
-    if (heroElement) {
-      heroElement.addEventListener('mousemove', handleMouseMove);
-      return () => heroElement.removeEventListener('mousemove', handleMouseMove);
+  
+  const handleMascotHover = useCallback(() => {
+    if (!heroRef.current) return;
+    
+    // Clear any existing timeout
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    // Only move mascot if reduced motion is not preferred
+    if (!prefersReducedMotion) {
+      const heroRect = heroRef.current.getBoundingClientRect();
+      const newPos = getRandomPosition(heroRect);
+      setMascotPosition(newPos);
     }
-  }, []);
+    
+    // Always show speech bubble (even with reduced motion)
+    setCurrentPhraseIndex((prev) => (prev + 1) % mascotPhrases.length);
+    setShowPhrase(true);
+    
+    // Set new timeout
+    timeoutRef.current = setTimeout(() => setShowPhrase(false), 4000);
+  }, [prefersReducedMotion]);
 
   useDocumentMeta({
-    title: `Travi - ${t("home.heroTitle")} | ${t("nav.hotels")}, ${t("nav.attractions")}`,
-    description: t("home.heroSubtitle"),
-    ogTitle: `Travi - ${t("home.heroTitle")}`,
-    ogDescription: t("home.heroSubtitle"),
+    title: "Travi - Dubai Travel Guide | Things to Do, Hotels & Attractions",
+    description: "The most comprehensive guide to Dubai's attractions, hotels & hidden gems. Written by local experts in 17 languages.",
+    ogTitle: "Travi - Discover the World Like a Local",
+    ogDescription: "The most comprehensive guide to Dubai's attractions, hotels & hidden gems.",
     ogType: "website",
+  });
+
+  const { data: publishedContent = [] } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/contents?status=published"],
   });
 
   const { data: featuredPromotions = [] } = useQuery<HomepagePromotion[]>({
     queryKey: ["/api/homepage-promotions/featured"],
   });
-
-  const { data: attractionsPromotions = [] } = useQuery<HomepagePromotion[]>({
-    queryKey: ["/api/homepage-promotions/attractions"],
-  });
-
-  const { data: publishedContent } = useQuery<ContentWithRelations[]>({
-    queryKey: ["/api/contents?status=published"],
-  });
-
-  const getActiveContent = (promotions: HomepagePromotion[]): ContentWithRelations[] => {
-    return promotions
-      .filter(p => p.isActive && p.content)
-      .map(p => p.content!)
-      .slice(0, 6);
-  };
-
-  const trendingContent = getActiveContent(featuredPromotions);
-  const exploreContent = getActiveContent(attractionsPromotions);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -241,647 +196,633 @@ export default function PublicHome() {
     }
   };
 
-  const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  const getContentPath = (content: Content) => localePath(`/${content.type}s/${content.slug}`);
+  const contentByType = (type: string) => publishedContent.filter(c => c.type === type);
+  const attractionsContent = contentByType("attraction").slice(0, 4);
+  const articlesContent = contentByType("article").slice(0, 4);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-white via-slate-50 to-white">
+    <div className="min-h-screen bg-background">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md">
         {t("home.skipToMain")}
       </a>
 
-      <PublicNav variant="transparent" />
+      <PublicNav 
+        variant="transparent"
+        transparentTone="light"
+        hideOnMobile={true}
+        externalMobileMenuOpen={mobileMenuOpen}
+        onMobileMenuToggle={setMobileMenuOpen}
+      />
 
       <main id="main-content">
-        {/* HERO SECTION - Sky Theme with Giant TRAVI Letters */}
-        <section ref={heroRef} className="relative min-h-screen sky-gradient overflow-hidden" data-testid="section-hero">
-          {/* Floating Clouds with Parallax */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div style={{ transform: `translate(${mousePosition.x * 20}px, ${mousePosition.y * 15}px)` }} className="transition-transform duration-300 ease-out">
-              <CloudSVG className="absolute top-20 left-[5%] opacity-90" size="lg" />
-            </div>
-            <div style={{ transform: `translate(${mousePosition.x * -25}px, ${mousePosition.y * 20}px)` }} className="transition-transform duration-300 ease-out">
-              <CloudSVG className="absolute top-32 right-[10%] opacity-80" size="md" />
-            </div>
-            <div style={{ transform: `translate(${mousePosition.x * 15}px, ${mousePosition.y * -10}px)` }} className="transition-transform duration-300 ease-out">
-              <CloudSVG className="absolute top-48 left-[25%] opacity-70" size="sm" />
-            </div>
-            <div style={{ transform: `translate(${mousePosition.x * -30}px, ${mousePosition.y * 25}px)` }} className="transition-transform duration-300 ease-out">
-              <CloudSVG className="absolute bottom-40 right-[20%] opacity-85" size="lg" />
-            </div>
-            <div style={{ transform: `translate(${mousePosition.x * 18}px, ${mousePosition.y * -20}px)` }} className="transition-transform duration-300 ease-out">
-              <CloudSVG className="absolute bottom-60 left-[15%] opacity-75" size="md" />
-            </div>
+        {/* 1. HERO SECTION - Playful Sky Theme with Interactive Mascot */}
+        <section 
+          ref={heroRef}
+          className="relative min-h-[85vh] flex items-center overflow-hidden" 
+          data-testid="section-hero"
+        >
+          {/* Sky Background */}
+          <div className="absolute inset-0">
+            <img 
+              src={skyBackground} 
+              alt=""
+              className="w-full h-full object-cover"
+              aria-hidden="true"
+            />
           </div>
 
-          {/* Floating Decorative Elements with Parallax */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div style={{ transform: `translate(${mousePosition.x * -40}px, ${mousePosition.y * 30}px)` }} className="transition-transform duration-500 ease-out">
-              <HotAirBalloonSVG className="absolute top-24 right-[8%] animate-balloon" color="#EC4899" />
-            </div>
-            <div style={{ transform: `translate(${mousePosition.x * 35}px, ${mousePosition.y * -25}px)` }} className="transition-transform duration-500 ease-out">
-              <HotAirBalloonSVG className="absolute top-40 left-[12%] animate-balloon animation-delay-2000" color="#6C5CE7" />
-            </div>
-            <Plane className="absolute top-16 left-[30%] w-8 h-8 text-white/60 animate-plane plane-icon" />
-            <div style={{ transform: `translate(${mousePosition.x * 12}px, ${mousePosition.y * 8}px)` }} className="transition-transform duration-200 ease-out">
-              <BirdSVG className="absolute top-28 left-[45%] animate-bird" />
-              <BirdSVG className="absolute top-36 left-[48%] animate-bird animation-delay-500" />
-              <BirdSVG className="absolute top-32 left-[52%] animate-bird animation-delay-300" />
-            </div>
-          </div>
-
-          {/* Main Hero Content */}
-          <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20">
-            {/* Giant TRAVI Logo with Flowing Dubai Images Texture */}
-            <div className="text-center mb-8 flex justify-center" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
-              <div 
-                className="relative w-[90vw] max-w-[800px] h-[20vh] sm:h-[25vh] lg:h-[30vh]"
-                style={{
-                  filter: 'drop-shadow(0 8px 30px rgba(108, 92, 231, 0.3)) drop-shadow(0 4px 15px rgba(236, 72, 153, 0.2))',
-                  WebkitMaskImage: `url(${traviLogoImg})`,
-                  maskImage: `url(${traviLogoImg})`,
-                  WebkitMaskSize: 'contain',
-                  maskSize: 'contain',
-                  WebkitMaskPosition: 'center',
-                  maskPosition: 'center',
-                  WebkitMaskRepeat: 'no-repeat',
-                  maskRepeat: 'no-repeat',
-                }}
-                role="img"
-                aria-label={t("home.traviAriaLabel")}
-              >
-                {/* Animated flowing image strip - seamless loop */}
+          {/* Interactive Mascot - Hidden on mobile, shown in fixed position on desktop */}
+          {isInitialized && (
+            <div
+              ref={mascotRef}
+              className="hidden md:block absolute z-20 cursor-pointer select-none"
+              style={{
+                left: `${mascotPosition.x}px`,
+                top: `${mascotPosition.y}px`,
+                transition: prefersReducedMotion ? "none" : "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+              }}
+              onMouseEnter={handleMascotHover}
+              data-testid="mascot-interactive"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && handleMascotHover()}
+              aria-label={t("home.mascotLabel") || "Interactive mascot - hover to play!"}
+            >
+              <img 
+                src={mascotImage} 
+                alt="Travi the Duck"
+                className="w-28 h-28 lg:w-32 lg:h-32 drop-shadow-lg hover:scale-110 transition-transform"
+                draggable={false}
+              />
+              
+              {/* Speech Bubble */}
+              {showPhrase && currentPhraseIndex >= 0 && (
                 <div 
-                  className="absolute inset-0 flex animate-logo-flow"
-                  style={{ width: '200%' }}
+                  className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white rounded-xl px-4 py-2 shadow-lg whitespace-nowrap"
+                  dir={isRTL ? "rtl" : "ltr"}
+                  data-testid="mascot-speech-bubble"
                 >
-                  {[...worldLandmarks, ...worldLandmarks].map((img, i) => (
-                    <div 
-                      key={i}
-                      className="h-full flex-shrink-0"
-                      style={{
-                        width: `${100 / (worldLandmarks.length * 2)}%`,
-                        backgroundImage: `url(${img})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                      }}
-                    />
-                  ))}
+                  <span className="text-sm font-medium text-foreground">
+                    {t(`home.${mascotPhrases[currentPhraseIndex]}`)}
+                  </span>
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white" />
                 </div>
-              </div>
+              )}
             </div>
-
-            {/* Interactive Mascot - Escapes across the page! */}
-            <div className="flex justify-center mb-6 relative" style={{ minHeight: '160px' }}>
-              <motion.div 
-                className="relative cursor-pointer select-none z-30"
-                onMouseEnter={handleMascotHover}
-                data-testid="mascot-interactive"
-                animate={{ 
-                  x: mascotPosition.x,
-                  y: mascotPosition.y,
-                  rotate: mascotEscaped ? (mascotPosition.x > 0 ? 15 : -15) : 0,
-                  scale: mascotEscaped ? 0.9 : 1
-                }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 200, 
-                  damping: 25,
-                  mass: 1.2
-                }}
-              >
-                {/* Speech bubble follows mascot */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                  animate={{ 
-                    opacity: showMascotMessage ? 1 : 0, 
-                    scale: showMascotMessage ? 1 : 0.8,
-                    y: showMascotMessage ? 0 : 10
-                  }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-purple-100 whitespace-nowrap z-20"
+          )}
+          
+          {/* Main Content - Centered layout */}
+          <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 w-full text-center">
+            <div className="flex flex-col items-center" dir={isRTL ? "rtl" : "ltr"}>
+              {/* Big TRAVI Letters with mascot */}
+              <div className="mb-6 relative inline-flex items-center justify-center">
+                <span 
+                  ref={traviTextRef}
+                  className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 drop-shadow-sm"
                 >
-                  <span className="text-sm font-medium text-[#6C5CE7]">{t(`home.${mascotMessage}`)}</span>
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white/95" />
-                </motion.div>
-                
-                {/* Mascot image */}
-                <img 
-                  src={mascotImg} 
-                  alt={t("home.mascotAlt")} 
-                  className="w-32 h-32 sm:w-40 sm:h-40 drop-shadow-lg pointer-events-none"
-                />
-              </motion.div>
-            </div>
-
-            {/* Tagline */}
-            <div className="text-center mb-10" dir={isRTL ? "rtl" : "ltr"}>
-              <p className="text-xl sm:text-2xl md:text-3xl text-[#1E1B4B] font-medium px-4">
-                {t("home.heroTitle")} <span className="font-script text-2xl sm:text-3xl md:text-4xl text-[#EC4899]">{t("home.heroSubtitle")}</span>
-              </p>
-            </div>
-
-            {/* Search Bar */}
-            <form 
-              onSubmit={(e) => { e.preventDefault(); handleSearch(); }} 
-              role="search" 
-              className="max-w-2xl mx-auto px-2 sm:px-4"
-            >
-              <div className="bg-white/95 backdrop-blur-xl rounded-2xl lg:rounded-full shadow-2xl shadow-purple-500/10 p-3 lg:p-2 flex flex-col lg:flex-row items-stretch lg:items-center gap-2 border border-white/50" dir={isRTL ? "rtl" : "ltr"}>
-                <div className="flex-1 flex items-center gap-3 px-4 lg:px-5">
-                  <Search className="w-5 h-5 text-[#6C5CE7] shrink-0" aria-hidden="true" />
-                  <label htmlFor="hero-search" className="sr-only">{t("home.searchLabel")}</label>
-                  <input
-                    id="hero-search"
-                    type="search"
-                    placeholder={t("nav.searchPlaceholder")}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                    className="flex-1 min-w-0 text-[#1E1B4B] placeholder:text-[#94A3B8] bg-transparent outline-none py-3 lg:py-4 text-base lg:text-lg"
-                    data-testid="input-search"
-                  />
-                </div>
-                <Button 
-                  type="submit"
-                  className="bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] hover:opacity-90 text-white rounded-xl lg:rounded-full px-6 py-3 text-sm lg:text-base shadow-lg shadow-purple-500/25 transition-all duration-300 whitespace-nowrap" 
-                  data-testid="button-search"
-                >
-                  {t("home.exploreAttractions")}
-                </Button>
-              </div>
-            </form>
-
-            {/* Featured Landing Pages */}
-            <div className="flex flex-wrap justify-center gap-3 mt-8" dir={isRTL ? "rtl" : "ltr"}>
-              {quickCategoryConfigs.map((cat) => (
-                <Link key={cat.titleKey} href={localePath(cat.href)}>
-                  <motion.div
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="flex items-center gap-2 bg-white/90 backdrop-blur-xl px-4 py-3 rounded-2xl shadow-lg shadow-purple-500/10 border border-white/50 cursor-pointer group max-w-[200px] sm:max-w-none"
-                    data-testid={`quick-${cat.titleKey}`}
-                  >
-                    <div className={`w-9 h-9 shrink-0 rounded-full bg-gradient-to-br ${cat.color} flex items-center justify-center shadow-md`}>
-                      <cat.icon className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex flex-col items-start min-w-0">
-                      <span className="font-semibold text-[#1E1B4B] group-hover:text-[#6C5CE7] transition-colors leading-tight text-sm truncate max-w-full">{t(`home.${cat.titleKey}`)}</span>
-                      <span className="text-xs text-slate-400 truncate max-w-full">{t(`home.${cat.badgeKey}`)}</span>
-                    </div>
-                    <ChevronRight className={`w-4 h-4 shrink-0 text-slate-400 group-hover:text-[#6C5CE7] transition-all ${isRTL ? 'rotate-180 group-hover:-translate-x-0.5 me-1' : 'group-hover:translate-x-0.5 ms-1'}`} />
-                  </motion.div>
-                </Link>
-              ))}
-            </div>
-
-            {/* Quick Stats */}
-            {publishedContent && publishedContent.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-8 mt-6">
-                <div className="flex items-center gap-2 text-[#1E1B4B] bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
-                  <MapPin className="w-5 h-5 text-[#EC4899]" />
-                  <span className="font-medium">{publishedContent.length} {t("common.places")}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Smooth Gradient Transition */}
-          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-white via-white/80 to-transparent" />
-        </section>
-
-        {/* EXPLORE CATEGORIES - Glass Cards Grid */}
-        <section className="py-24 relative" data-testid="section-categories">
-          <div className="max-w-7xl mx-auto px-6">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-100px" }}
-              variants={fadeInUp}
-              className="text-center mb-16"
-            >
-              <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-[#6C5CE7] border-0 mb-4 px-4 py-1.5">
-                <Compass className="w-4 h-4 mr-2" />
-                {t("home.exploreDubai")}
-              </Badge>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#1E1B4B] mb-4 tracking-tight">
-                {t("home.adventureStartsHere")}
-              </h2>
-              <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                {t("home.discoverBestOfDubai")}
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-50px" }}
-              variants={staggerContainer}
-              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6"
-            >
-              {categoryConfigs.map((category, index) => (
-                <motion.div key={category.key} variants={fadeInUp}>
-                  <Link href={localePath(category.href)} data-testid={`category-${category.key}`}>
-                    <div className="group relative overflow-hidden rounded-3xl aspect-[3/4] cursor-pointer">
-                      {/* Background Image */}
-                      <img
-                        src={category.image}
-                        alt={t(`home.${category.key}`)}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
-                      
-                      {/* Gradient Overlay */}
-                      <div className={`absolute inset-0 bg-gradient-to-t ${category.color} opacity-60 mix-blend-multiply transition-opacity duration-300 group-hover:opacity-70`} />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                      
-                      {/* Icon */}
-                      <div className="absolute top-4 right-4">
-                        <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
-                          <category.icon className="w-5 h-5 text-white" />
-                        </div>
-                      </div>
-                      
-                      {/* Content */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 className="text-white font-bold text-base sm:text-lg lg:text-xl mb-1 break-words hyphens-auto leading-tight">{t(`home.${category.key}`)}</h3>
-                      </div>
-                      
-                      {/* Hover Arrow */}
-                      <div className="absolute bottom-5 right-5 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                        <ArrowRight className="w-5 h-5 text-white" />
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* FEATURED DISTRICTS - Immersive Cards */}
-        <section className="py-24 relative overflow-hidden" data-testid="section-districts">
-          {/* Subtle Background Pattern */}
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-purple-50/30 to-slate-50" />
-          
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-100px" }}
-              variants={fadeInUp}
-              className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12"
-            >
-              <div>
-                <Badge className="bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-600 border-0 mb-4 px-4 py-1.5">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  {t("home.districts21")}
-                </Badge>
-                <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] mb-2 tracking-tight">
-                  {t("home.iconicNeighborhoods")}
-                </h2>
-                <p className="text-lg text-slate-500 max-w-xl">
-                  {t("home.districtStory")}
-                </p>
-              </div>
-              <Link href={localePath("/districts")}>
-                <Button variant="outline" className="border-2 border-[#6C5CE7] text-[#6C5CE7] rounded-full px-6 gap-2 hover:bg-[#6C5CE7] hover:text-white transition-all duration-300" data-testid="button-view-all-districts">
-                  {t("home.exploreAllDistricts")} <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-            </motion.div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-50px" }}
-              variants={staggerContainer}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-            >
-              {featuredDistrictConfigs.map((district, index) => (
-                <motion.div key={district.slug} variants={fadeInUp}>
-                  <Link href={localePath(`/districts/${district.slug}`)} data-testid={`district-${district.slug}`}>
-                    <div className="group relative overflow-hidden rounded-3xl cursor-pointer bg-white shadow-lg shadow-slate-200/50 hover:shadow-xl hover:shadow-purple-200/30 transition-all duration-500">
-                      {/* Image */}
-                      <div className="relative aspect-[4/3] overflow-hidden">
-                        <img
-                          src={district.image}
-                          alt={t(`home.${district.nameKey}`)}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        
-                        {/* Stats Overlay */}
-                        <div className="absolute bottom-4 left-4 right-4 flex gap-3">
-                          <span className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full border border-white/30">
-                            <Camera className="w-3 h-3" /> {district.stats.attractions}
-                          </span>
-                          <span className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full border border-white/30">
-                            <Building2 className="w-3 h-3" /> {district.stats.hotels}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Content */}
-                      <div className="p-5">
-                        <h3 className="text-xl font-bold text-[#1E1B4B] mb-1 group-hover:text-[#6C5CE7] transition-colors">
-                          {t(`home.${district.nameKey}`)}
-                        </h3>
-                        <p className="text-slate-500 text-sm">{t(`home.${district.taglineKey}`)}</p>
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* EXPLORE CONTENT - Editorial Style */}
-        {exploreContent.length > 0 && (
-          <section className="py-24 bg-white relative overflow-hidden" data-testid="section-explore">
-            <div className="max-w-7xl mx-auto px-6">
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-100px" }}
-                variants={fadeInUp}
-                className="text-center mb-16"
-              >
-                <Badge className="bg-gradient-to-r from-pink-100 to-rose-100 text-pink-600 border-0 mb-4 px-4 py-1.5">
-                  <Heart className="w-4 h-4 mr-2" />
-                  {t("home.handPicked")}
-                </Badge>
-                <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] mb-4 tracking-tight">
-                  {t("home.exploreAttractions")}
-                </h2>
-                <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                  {t("home.handPickedDestinations")}
-                </p>
-              </motion.div>
-
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-50px" }}
-                variants={staggerContainer}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-              >
-                {exploreContent.slice(0, 4).map((content, index) => (
-                  <motion.div key={content.id} variants={fadeInUp}>
-                    <Link href={getContentPath(content)} data-testid={`explore-card-${content.id}`}>
-                      <div className="group relative overflow-hidden rounded-3xl cursor-pointer aspect-[3/4]">
-                        <img
-                          src={content.heroImage || worldLandmarks[index % worldLandmarks.length]}
-                          alt={content.heroImageAlt || content.title}
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                        
-                        <div className="absolute top-4 left-4">
-                          <Badge className="bg-white/90 backdrop-blur-sm text-[#6C5CE7] border-0 text-xs font-semibold capitalize">
-                            {content.type}
-                          </Badge>
-                        </div>
-
-                        <div className="absolute bottom-0 left-0 right-0 p-6">
-                          <h3 className="text-white font-bold text-xl line-clamp-2 mb-2">
-                            {content.title}
-                          </h3>
-                          <span className="inline-flex items-center gap-1 text-white/80 text-sm opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                            {t("home.explore")} <ArrowRight className="w-4 h-4" />
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </motion.div>
-
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeInUp}
-                className="text-center mt-12"
-              >
-                <Link href={localePath("/attractions")}>
-                  <Button className="bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] hover:opacity-90 text-white rounded-full px-8 py-6 text-lg shadow-lg shadow-purple-500/25" data-testid="button-view-all-explore">
-                    {t("home.viewAll")} {t("nav.attractions")}
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </Link>
-              </motion.div>
-            </div>
-          </section>
-        )}
-
-        {/* TRENDING - Glass Cards */}
-        {trendingContent.length > 0 && (
-          <section className="py-24 bg-gradient-to-b from-slate-50 to-white relative overflow-hidden" data-testid="section-trending">
-            <div className="max-w-7xl mx-auto px-6">
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-100px" }}
-                variants={fadeInUp}
-                className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12"
-              >
-                <div>
-                  <Badge className="bg-gradient-to-r from-rose-100 to-orange-100 text-rose-600 border-0 mb-4 px-4 py-1.5">
-                    <Star className="w-4 h-4 mr-2" />
-                    {t("home.hotRightNow")}
-                  </Badge>
-                  <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] tracking-tight">
-                    {t("home.trendingInDubai")}
-                  </h2>
-                </div>
-                <Link href={localePath("/articles")}>
-                  <Button variant="outline" className="border-2 border-rose-400 text-rose-500 rounded-full px-6 gap-2 hover:bg-rose-500 hover:text-white transition-all duration-300" data-testid="button-view-all-trending">
-                    {t("home.viewAll")} <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-              </motion.div>
-
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-50px" }}
-                variants={staggerContainer}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-              >
-                {trendingContent.slice(0, 4).map((content, index) => (
-                  <motion.div key={content.id} variants={fadeInUp}>
-                    <Link href={getContentPath(content)} data-testid={`trending-card-${content.id}`}>
-                      <div className="group relative overflow-hidden rounded-3xl cursor-pointer aspect-[4/5] shadow-lg shadow-rose-100/50 hover:shadow-xl hover:shadow-rose-200/50 transition-all duration-500">
-                        <img
-                          src={content.heroImage || worldLandmarks[index % worldLandmarks.length]}
-                          alt={content.heroImageAlt || content.title}
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                        
-                        <div className="absolute top-4 right-4">
-                          <Badge className="bg-gradient-to-r from-rose-500 to-orange-500 text-white border-0 text-xs font-semibold shadow-lg">
-                            <Star className="w-3 h-3 mr-1" /> {t("home.hot")}
-                          </Badge>
-                        </div>
-
-                        <div className="absolute bottom-0 left-0 right-0 p-6">
-                          <span className="text-rose-300 text-sm font-medium uppercase tracking-wide mb-2 block">
-                            {content.type}
-                          </span>
-                          <h3 className="text-white font-bold text-xl line-clamp-2">
-                            {content.title}
-                          </h3>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </div>
-          </section>
-        )}
-
-        {/* OFF-PLAN PROPERTIES - Premium Finance Section */}
-        <section className="py-24 relative overflow-hidden" data-testid="section-off-plan">
-          {/* Premium Gradient Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4C1D95]" />
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920')] bg-cover bg-center mix-blend-overlay opacity-10" />
-          
-          {/* Animated Orbs */}
-          <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/30 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse animation-delay-2000" />
-          
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-100px" }}
-              variants={fadeInUp}
-              className="text-center mb-16"
-            >
-              <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 mb-6 px-5 py-2 text-sm shadow-lg">
-                <Building2 className="w-4 h-4 mr-2" />
-                {t("home.investmentHub")}
-              </Badge>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight">
-                {t("home.dubaiOffPlan")}
-              </h2>
-              <p className="text-xl text-white/70 max-w-3xl mx-auto leading-relaxed">
-                {t("home.investDescription")}
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-50px" }}
-              variants={staggerContainer}
-              className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12"
-            >
-              {[
-                { titleKey: "propertyHub", descKey: "activeProjects", icon: Building2, color: "amber", href: "/dubai-off-plan-properties" },
-                { titleKey: "roiCalculator", descKey: "calculateReturns", icon: TrendingUp, color: "emerald", href: "/tools-roi-calculator" },
-                { titleKey: "comparisons", descKey: "analysisGuides", icon: Users, color: "purple", href: "/compare-off-plan-vs-ready" },
-                { titleKey: "glossary", descKey: "termsExplained", icon: MapPin, color: "pink", href: "/glossary" },
-              ].map((item, index) => (
-                <motion.div key={item.titleKey} variants={fadeInUp}>
-                  <Link href={localePath(item.href)} data-testid={`link-${item.titleKey}`}>
-                    <div className="group bg-white/10 backdrop-blur-xl rounded-2xl p-6 cursor-pointer border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color === 'amber' ? 'from-amber-400 to-orange-500' : item.color === 'emerald' ? 'from-emerald-400 to-teal-500' : item.color === 'purple' ? 'from-purple-400 to-indigo-500' : 'from-pink-400 to-rose-500'} flex items-center justify-center mb-4 shadow-lg`}>
-                        <item.icon className="w-6 h-6 text-white" />
-                      </div>
-                      <h3 className="font-semibold text-white text-lg mb-1">{t(`home.${item.titleKey}`)}</h3>
-                      <p className="text-sm text-white/60">{t(`home.${item.descKey}`)}</p>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </motion.div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeInUp}
-              className="text-center"
-            >
-              <Link href={localePath("/dubai-off-plan-properties")}>
-                <Button size="lg" className="bg-gradient-to-r from-amber-400 to-orange-500 hover:opacity-90 text-white rounded-full px-10 py-7 text-lg shadow-xl shadow-amber-500/30" data-testid="button-explore-offplan">
-                  {t("home.exploreInvestment")} <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* NEWSLETTER - Dreamy Cloud Section */}
-        <section className="py-24 relative overflow-hidden" data-testid="section-newsletter">
-          {/* Sky Gradient Background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-sky-100 via-purple-50 to-pink-50" />
-          
-          {/* Floating Clouds */}
-          <CloudSVG className="absolute top-10 left-[5%] opacity-40 animate-cloud-drift" size="lg" />
-          <CloudSVG className="absolute top-20 right-[10%] opacity-30 animate-cloud-drift animation-delay-1000" size="md" />
-          <CloudSVG className="absolute bottom-20 left-[15%] opacity-35 animate-cloud-drift animation-delay-2000" size="sm" />
-          
-          {/* Mascot */}
-          <img 
-            src={mascotImg} 
-            alt="" 
-            className="absolute bottom-0 right-[8%] w-32 h-32 md:w-40 md:h-40 animate-float-gentle hidden lg:block"
-          />
-
-          <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-100px" }}
-              variants={fadeInUp}
-            >
-              <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-5 py-2 mb-6 shadow-sm">
-                <Sparkles className="w-5 h-5 text-[#EC4899]" />
-                <span className="text-sm font-medium text-[#1E1B4B]">{t("home.joinTravelers")}</span>
+                  TRAVI
+                </span>
               </div>
               
-              <h2 className="text-4xl md:text-5xl font-bold text-[#1E1B4B] mb-4 tracking-tight">
-                {t("home.stayUpdated")}
-              </h2>
-              <p className="text-xl text-slate-500 mb-10">
-                {t("home.newsletterDesc")}
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 leading-tight">
+                {t("home.heroTitleNew") || "Discover the World Like a Local"}
+              </h1>
+              <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl">
+                {t("home.heroSubtitleNew") || "The most comprehensive guide to Dubai's attractions, hotels & hidden gems."}
               </p>
 
-              <form onSubmit={(e) => { e.preventDefault(); }} className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
-                <div className="flex-1 relative">
-                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    type="email"
-                    placeholder={t("home.emailAddress")}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-14 pr-5 py-5 rounded-full border-0 shadow-xl shadow-slate-200/50 text-[#1E1B4B] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#6C5CE7] bg-white/90 backdrop-blur-sm"
-                    data-testid="input-newsletter-email"
-                  />
+              {/* Search Bar */}
+              <form 
+                onSubmit={(e) => { e.preventDefault(); handleSearch(); }} 
+                role="search" 
+                className="mb-8 w-full max-w-xl"
+              >
+                <div className="bg-white rounded-full shadow-xl p-2 flex items-center border border-gray-200">
+                  <div className="flex-1 flex items-center gap-3 px-4">
+                    <Search className="w-5 h-5 text-muted-foreground shrink-0" aria-hidden="true" />
+                    <input
+                      type="search"
+                      placeholder={t("home.searchPlaceholder")}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="flex-1 min-w-0 text-foreground placeholder:text-muted-foreground bg-transparent outline-none py-3 text-base"
+                      data-testid="input-search"
+                    />
+                  </div>
+                  <Button 
+                    type="submit"
+                    className="rounded-full px-6 py-3 shrink-0" 
+                    data-testid="button-search"
+                  >
+                    {t("common.search") || "Search"}
+                  </Button>
                 </div>
-                <Button 
-                  type="submit"
-                  className="bg-gradient-to-r from-[#6C5CE7] to-[#EC4899] hover:opacity-90 text-white rounded-full px-8 py-5 text-lg shadow-lg shadow-purple-500/25"
-                  data-testid="button-newsletter-subscribe"
-                >
-                  {t("home.subscribeNow")}
-                </Button>
               </form>
 
-              <p className="text-sm text-slate-400 mt-6">
-                {t("home.newsletterTitle")}
-              </p>
-            </motion.div>
+              {/* Quick Links */}
+              <div className="flex flex-wrap items-center justify-center gap-3 mb-6 text-sm" dir={isRTL ? "rtl" : "ltr"}>
+                <Link href={localePath("/dubai/laws-for-tourists")} className="text-gray-600 hover:text-primary transition-colors">
+                  Laws for Tourists
+                </Link>
+                <span className="text-gray-400">•</span>
+                <Link href={localePath("/dubai/sheikh-mohammed-bin-rashid")} className="text-gray-600 hover:text-primary transition-colors">
+                  Sheikh Mohammed
+                </Link>
+                <span className="text-gray-400">•</span>
+                <Link href={localePath("/dubai/24-hours-open")} className="text-gray-600 hover:text-primary transition-colors">
+                  24 Hours Open
+                </Link>
+                <span className="text-gray-400">•</span>
+                <Link href={localePath("/dubai/free-things-to-do")} className="text-gray-600 hover:text-primary transition-colors">
+                  Free Things To Do
+                </Link>
+              </div>
+
+              {/* Social Proof */}
+              <div className="flex flex-wrap items-center justify-center gap-6 text-gray-700">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5" />
+                  <span className="font-semibold">{t("home.guidesCount") || "847 Guides"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  <span className="font-semibold">{t("home.viewsCount") || "2.3M Views"}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Category Quick Links */}
+            <div className="mt-12 grid grid-cols-3 md:grid-cols-6 gap-3 max-w-4xl mx-auto">
+              {categories.map((cat) => {
+                const Icon = cat.icon;
+                return (
+                  <Link 
+                    key={cat.key} 
+                    href={localePath(`/${cat.key}`)}
+                    data-testid={`category-${cat.key}`}
+                  >
+                    <div 
+                      className="bg-white/80 backdrop-blur-sm rounded-xl p-4 text-center hover-elevate cursor-pointer border border-gray-200 shadow-sm"
+                      style={{ borderLeftColor: cat.color, borderLeftWidth: "3px" }}
+                    >
+                      <Icon className="w-6 h-6 mx-auto mb-2" style={{ color: cat.color }} />
+                      <div className="text-gray-800 font-medium text-sm">{t(`nav.${cat.key}`)}</div>
+                      <div className="text-gray-500 text-xs">{cat.count}</div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* 2. WHY TRAVI - Trust Section */}
+        <section className="py-16 bg-muted/30" data-testid="section-trust">
+          <div className="max-w-7xl mx-auto px-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12" dir={isRTL ? "rtl" : "ltr"}>
+              {t("home.whyTravi") || "Why 2 Million Travelers Trust Travi"}
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+              <Card className="p-6 text-center">
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">{t("home.localExperts") || "Local Experts"}</h3>
+                <p className="text-muted-foreground">
+                  {t("home.localExpertsDesc") || "Written by Dubai residents who know every hidden corner"}
+                </p>
+              </Card>
+
+              <Card className="p-6 text-center">
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">{t("home.inDepthGuides") || "In-Depth Guides"}</h3>
+                <p className="text-muted-foreground">
+                  {t("home.inDepthGuidesDesc") || "1500+ words per guide on average"}
+                </p>
+              </Card>
+
+              <Card className="p-6 text-center">
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Globe className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">{t("home.multiLanguage") || "17 Languages"}</h3>
+                <p className="text-muted-foreground">
+                  {t("home.multiLanguageDesc") || "Read in your native language"}
+                </p>
+              </Card>
+            </div>
+
+            <p className="text-center text-lg italic text-muted-foreground">
+              "{t("home.testimonial") || "The most detailed Dubai guide I've found"}" - TripAdvisor
+            </p>
+          </div>
+        </section>
+
+        {/* 3. TOP ATTRACTIONS */}
+        <section className="py-16 bg-background" data-testid="section-attractions">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+              <h2 className="text-3xl md:text-4xl font-bold" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.topAttractionsTitle") || "Top Attractions in Dubai"}
+              </h2>
+              <Link href={localePath("/attractions")}>
+                <Button variant="outline" className="rounded-full">
+                  {t("home.viewAll")} <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {(attractionsContent.length > 0 ? attractionsContent : topAttractions).map((item, index) => {
+                const isContent = 'id' in item;
+                const name = isContent ? (item as ContentWithRelations).title : (item as typeof topAttractions[0]).name;
+                const image = isContent ? (item as ContentWithRelations).heroImage : (item as typeof topAttractions[0]).image;
+                const slug = isContent ? (item as ContentWithRelations).slug : (item as typeof topAttractions[0]).slug;
+                const attraction = item as typeof topAttractions[0];
+                
+                return (
+                  <Link 
+                    key={index} 
+                    href={localePath(`/attractions/${slug}`)}
+                    data-testid={`attraction-card-${index}`}
+                  >
+                    <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
+                      <div className="aspect-[4/3] overflow-hidden">
+                        <img 
+                          src={image || topAttractions[index % topAttractions.length].image}
+                          alt={name}
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        />
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-lg mb-2 line-clamp-1">{name}</h3>
+                        {!isContent && (
+                          <>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                              <span>{attraction.rating}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                              <MapPin className="w-4 h-4" />
+                              <span>{attraction.area}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                              <DollarSign className="w-4 h-4" />
+                              <span>{attraction.price}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* 4. EXPLORE BY DISTRICT */}
+        <section className="py-16 bg-muted/30" data-testid="section-districts">
+          <div className="max-w-7xl mx-auto px-6">
+            <h2 className="text-3xl md:text-4xl font-bold mb-8" dir={isRTL ? "rtl" : "ltr"}>
+              {t("home.exploreByArea") || "Explore Dubai by Area"}
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {districts.map((district, index) => (
+                <Link 
+                  key={index} 
+                  href={localePath(`/districts/${district.slug}`)}
+                  data-testid={`district-card-${index}`}
+                >
+                  <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
+                    <div className="aspect-video overflow-hidden relative">
+                      <img 
+                        src={district.image}
+                        alt={district.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <h3 className="absolute bottom-4 left-4 text-white font-bold text-xl">{district.name}</h3>
+                    </div>
+                    <div className="p-4">
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>{district.attractions} {t("nav.attractions").toLowerCase()}</span>
+                        <span>{district.restaurants} {t("home.restaurantsLabel") || "restaurants"}</span>
+                      </div>
+                      <span className="text-primary font-medium text-sm flex items-center gap-1 mt-2">
+                        {t("home.explore") || "Explore"} <ArrowRight className="w-4 h-4" />
+                      </span>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 5. BEST HOTELS */}
+        <section className="py-16 bg-background" data-testid="section-hotels">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+              <h2 className="text-3xl md:text-4xl font-bold" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.whereToStay") || "Where to Stay in Dubai"}
+              </h2>
+              <Link href={localePath("/hotels")}>
+                <Button variant="outline" className="rounded-full">
+                  {t("home.viewAll")} <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Filter Chips */}
+            <div className="flex flex-wrap gap-2 mb-8">
+              {["All", "Luxury 5*", "Mid-Range", "Budget", "Beach", "City"].map((filter) => (
+                <Badge 
+                  key={filter} 
+                  variant={filter === "All" ? "default" : "outline"}
+                  className="cursor-pointer px-4 py-2 text-sm"
+                >
+                  {filter}
+                </Badge>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {hotels.map((hotel, index) => (
+                <Link 
+                  key={index} 
+                  href={localePath(`/hotels/${hotel.slug}`)}
+                  data-testid={`hotel-card-${index}`}
+                >
+                  <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
+                    <div className="aspect-[4/3] overflow-hidden">
+                      <img 
+                        src={hotel.image}
+                        alt={hotel.name}
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-lg mb-2">{hotel.name}</h3>
+                      <div className="flex items-center gap-1 mb-1">
+                        {Array.from({ length: hotel.stars }).map((_, i) => (
+                          <Star key={i} className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                        <MapPin className="w-4 h-4" />
+                        <span>{hotel.area}</span>
+                      </div>
+                      <div className="text-sm font-medium text-primary">{hotel.price}</div>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 6. LATEST ARTICLES */}
+        <section className="py-16 bg-muted/30" data-testid="section-articles">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+              <h2 className="text-3xl md:text-4xl font-bold" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.travelTips") || "Dubai Travel Tips & News"}
+              </h2>
+              <Link href={localePath("/news")}>
+                <Button variant="outline" className="rounded-full">
+                  {t("home.viewAll")} <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Featured Article */}
+              <div className="lg:col-span-2">
+                <Link href={localePath("/dubai/free-things-to-do")} data-testid="featured-article">
+                  <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
+                    <div className="aspect-video overflow-hidden">
+                      <img 
+                        src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=450&fit=crop"
+                        alt="Free things to do in Dubai"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-2xl font-bold mb-3">
+                        {t("home.featuredArticleTitle") || "70 Free Things to Do in Dubai (2024 Guide)"}
+                      </h3>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" /> Dec 15, 2024
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" /> 12 min read
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              </div>
+
+              {/* Popular Guides Sidebar */}
+              <div className="space-y-6">
+                <Card className="p-6">
+                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-primary" />
+                    {t("home.popularGuides") || "Popular Guides"}
+                  </h3>
+                  <ul className="space-y-3">
+                    {popularGuides.map((guide, index) => (
+                      <li key={index}>
+                        <Link 
+                          href={localePath(`/dubai/${guide.slug}`)}
+                          className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                        >
+                          <ChevronRight className="w-4 h-4 text-primary" />
+                          {guide.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+
+                {/* Quick Stats Card */}
+                <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10">
+                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                    {t("home.dubaiStats") || "Dubai Quick Facts"}
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">Annual Visitors</span>
+                      <span className="font-semibold">17.15M+</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">World's Tallest Tower</span>
+                      <span className="font-semibold">828m</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">Year-Round Sunshine</span>
+                      <span className="font-semibold">340+ days</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">Nationalities Living</span>
+                      <span className="font-semibold">200+</span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 7. BEST RESTAURANTS */}
+        <section className="py-16 bg-background" data-testid="section-dining">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+              <h2 className="text-3xl md:text-4xl font-bold" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.bestRestaurants") || "Best Restaurants in Dubai"}
+              </h2>
+              <Link href={localePath("/dining")}>
+                <Button variant="outline" className="rounded-full">
+                  {t("home.viewAll")} <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Filter Chips */}
+            <div className="flex flex-wrap gap-2 mb-8">
+              {["All", "Fine Dining", "Casual", "Brunches", "Street Food"].map((filter) => (
+                <Badge 
+                  key={filter} 
+                  variant={filter === "All" ? "default" : "outline"}
+                  className="cursor-pointer px-4 py-2 text-sm"
+                >
+                  {filter}
+                </Badge>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {restaurants.map((restaurant, index) => (
+                <Link 
+                  key={index} 
+                  href={localePath(`/dining/${restaurant.slug}`)}
+                  data-testid={`restaurant-card-${index}`}
+                >
+                  <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
+                    <div className="aspect-[4/3] overflow-hidden">
+                      <img 
+                        src={restaurant.image}
+                        alt={restaurant.name}
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-lg mb-1">{restaurant.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-1">{restaurant.cuisine}</p>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{restaurant.priceLevel}</span>
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <MapPin className="w-3 h-3" /> {restaurant.area}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 8. UPCOMING EVENTS */}
+        <section className="py-16 bg-muted/30" data-testid="section-events">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+              <h2 className="text-3xl md:text-4xl font-bold" dir={isRTL ? "rtl" : "ltr"}>
+                {t("home.whatsHappening") || "What's Happening in Dubai"}
+              </h2>
+              <Link href={localePath("/events")}>
+                <Button variant="outline" className="rounded-full">
+                  {t("home.viewAll")} <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+
+            <Card className="overflow-hidden">
+              <div className="bg-primary/5 px-6 py-3 border-b">
+                <span className="font-semibold flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  {t("home.thisWeek") || "THIS WEEK"}
+                </span>
+              </div>
+              <div className="divide-y">
+                {upcomingEvents.map((event, index) => (
+                  <Link 
+                    key={index} 
+                    href={localePath(`/events/${event.slug}`)}
+                    data-testid={`event-item-${index}`}
+                  >
+                    <div className="px-6 py-4 flex items-center gap-4 hover:bg-muted/50 transition-colors cursor-pointer">
+                      <div className="bg-primary/10 rounded-lg px-3 py-2 text-center min-w-[60px]">
+                        <span className="text-sm font-semibold text-primary">{event.date}</span>
+                      </div>
+                      <span className="font-medium">{event.title}</span>
+                      <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        {/* 9. NEWSLETTER */}
+        <section className="py-16 bg-primary text-primary-foreground" data-testid="section-newsletter">
+          <div className="max-w-3xl mx-auto px-6 text-center">
+            <Mail className="w-12 h-12 mx-auto mb-4 opacity-90" />
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              {t("home.newsletterTitle") || "Get Weekly Dubai Tips & Deals"}
+            </h2>
+            <p className="text-lg mb-8 opacity-90">
+              {t("home.newsletterSubtitle") || "Join 50,000+ travelers who get our free guide"}
+            </p>
+
+            <form 
+              onSubmit={(e) => e.preventDefault()} 
+              className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto mb-6"
+            >
+              <input
+                type="email"
+                placeholder={t("common.emailPlaceholder")}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1 px-4 py-3 rounded-full text-foreground bg-white outline-none"
+                data-testid="input-newsletter-email"
+              />
+              <Button 
+                type="submit"
+                variant="secondary"
+                className="rounded-full px-8"
+                data-testid="button-newsletter-subscribe"
+              >
+                {t("common.subscribe")}
+              </Button>
+            </form>
+
+            <div className="flex flex-wrap justify-center gap-6 text-sm opacity-90">
+              <span className="flex items-center gap-2">
+                <Check className="w-4 h-4" /> {t("home.freeGuide") || "Free Dubai Starter Guide"}
+              </span>
+              <span className="flex items-center gap-2">
+                <Check className="w-4 h-4" /> {t("home.exclusiveDeals") || "Exclusive Deals"}
+              </span>
+            </div>
           </div>
         </section>
       </main>

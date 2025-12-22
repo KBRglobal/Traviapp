@@ -34,7 +34,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
       maxAge: sessionTtl,
     },
@@ -54,16 +54,12 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  // Check if user exists to preserve their role, otherwise default to admin for OIDC users
-  const existingUser = await storage.getUser(claims["sub"]);
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    // If new user, set as admin; if existing user, preserve their role
-    role: existingUser?.role || "admin",
   });
 }
 
@@ -72,14 +68,6 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
-
-  // Skip Replit OIDC setup if not running on Replit (for local development)
-  if (!process.env.REPL_ID) {
-    console.log("[Auth] Running in local mode - Replit OIDC disabled");
-    passport.serializeUser((user: Express.User, cb) => cb(null, user));
-    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
-    return;
-  }
 
   const config = await getOidcConfig();
 

@@ -401,8 +401,6 @@ export class DatabaseStorage implements IStorage {
           firstName: userData.firstName,
           lastName: userData.lastName,
           profileImageUrl: userData.profileImageUrl,
-          // Update role if provided (preserves existing role when explicitly passed)
-          ...(userData.role && { role: userData.role }),
           updatedAt: new Date(),
         },
       })
@@ -777,24 +775,30 @@ export class DatabaseStorage implements IStorage {
     published: number;
     drafts: number;
     inReview: number;
+    scheduled: number;
     attractions: number;
     hotels: number;
     articles: number;
+    dining: number;
     events: number;
     itineraries: number;
+    districts: number;
   }> {
     const allContent = await db.select().from(contents);
-    
+
     return {
       totalContent: allContent.length,
       published: allContent.filter(c => c.status === "published").length,
       drafts: allContent.filter(c => c.status === "draft").length,
       inReview: allContent.filter(c => c.status === "in_review").length,
+      scheduled: allContent.filter(c => c.status === "scheduled").length,
       attractions: allContent.filter(c => c.type === "attraction").length,
       hotels: allContent.filter(c => c.type === "hotel").length,
       articles: allContent.filter(c => c.type === "article").length,
+      dining: allContent.filter(c => c.type === "dining").length,
       events: allContent.filter(c => c.type === "event").length,
       itineraries: allContent.filter(c => c.type === "itinerary").length,
+      districts: allContent.filter(c => c.type === "district").length,
     };
   }
 

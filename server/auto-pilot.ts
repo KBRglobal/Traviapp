@@ -1,0 +1,1087 @@
+/**
+ * Auto-Pilot System
+ * Complete automation - user only supervises
+ *
+ * This system runs everything automatically:
+ * - Scheduled publishing
+ * - Auto-translation on publish
+ * - Auto affiliate link placement
+ * - Auto tagging and clustering
+ * - Auto homepage promotions
+ * - Auto RSS import and processing
+ * - Quality gates before publish
+ * - Daily/weekly reports
+ */
+
+import { db } from "./db";
+import {
+  contents, translations, affiliateLinks, tags, contentTags,
+  homepagePromotions, rssFeeds, siteSettings, contentClusters,
+  clusterMembers, users, notifications
+} from "@shared/schema";
+import { eq, desc, and, sql, lt, gt, or, ne, isNull, inArray } from "drizzle-orm";
+import { automation } from "./automation";
+import { contentIntelligence } from "./content-intelligence";
+import { imageLogic, DUBAI_AREAS } from "./image-logic";
+import { jobQueue } from "./job-queue";
+import { cache } from "./cache";
+
+// ============================================================================
+// AUTO-PILOT CONFIGURATION
+// ============================================================================
+
+export const autoPilotConfig = {
+  // Quality thresholds
+  minSeoScoreToPublish: 75,
+  minSeoScoreToAutoApprove: 85,
+
+  // Translation settings
+  autoTranslateOnPublish: true,
+  priorityLocales: ["en", "ar", "he", "ru", "zh"], // Translate these first
+
+  // Affiliate settings
+  autoPlaceAffiliates: true,
+  affiliateProviders: {
+    hotel: "booking.com",
+    attraction: "getyourguide",
+    dining: "tripadvisor",
+  },
+
+  // Homepage settings
+  maxFeaturedItems: 6,
+  maxTrendingItems: 8,
+  rotateFeaturedEvery: 7, // days
+
+  // RSS settings
+  autoImportRss: true,
+  rssImportQualityThreshold: 70,
+  maxAutoImportPerFeed: 5,
+
+  // Refresh settings
+  autoRefreshStaleContent: true,
+  staleThresholdDays: {
+    hotel: 90,
+    restaurant: 60,
+    attraction: 120,
+    event: 14,
+    article: 180,
+  },
+
+  // Report settings
+  sendDailyDigest: true,
+  sendWeeklyReport: true,
+  reportRecipients: ["admin"], // roles or specific user IDs
+};
+
+// ============================================================================
+// AUTO-PUBLISH SCHEDULER
+// ============================================================================
+
+export const autoPublisher = {
+  /**
+   * Check and publish scheduled content
+   */
+  async processScheduledContent(): Promise<{
+    published: number;
+    failed: Array<{ id: string; error: string }>;
+  }> {
+    const now = new Date();
+
+    // Find content scheduled to publish before now
+    const scheduledContent = await db.select()
+      .from(contents)
+      .where(and(
+        eq(contents.status, "scheduled" as any),
+        lt(contents.scheduledAt as any, now)
+      ));
+
+    const published: string[] = [];
+    const failed: Array<{ id: string; error: string }> = [];
+
+    for (const content of scheduledContent) {
+      try {
+        // Check quality before publishing
+        const qualityCheck = await this.checkPublishQuality(content.id);
+
+        if (qualityCheck.canPublish) {
+          // Publish
+          await db.update(contents)
+            .set({
+              status: "published",
+              publishedAt: now,
+              updatedAt: now,
+            })
+            .where(eq(contents.id, content.id));
+
+          // Trigger post-publish automations
+          await this.onContentPublished(content.id);
+          published.push(content.id);
+        } else {
+          failed.push({
+            id: content.id,
+            error: `Quality check failed: ${qualityCheck.issues.join(", ")}`,
+          });
+        }
+      } catch (error: any) {
+        failed.push({ id: content.id, error: error.message });
+      }
+    }
+
+    return { published: published.length, failed };
+  },
+
+  /**
+   * Quality check before auto-publish
+   */
+  async checkPublishQuality(contentId: string): Promise<{
+    canPublish: boolean;
+    score: number;
+    issues: string[];
+  }> {
+    const issues: string[] = [];
+
+    const [content] = await db.select().from(contents).where(eq(contents.id, contentId));
+    if (!content) {
+      return { canPublish: false, score: 0, issues: ["Content not found"] };
+    }
+
+    // Check hero image
+    if (!content.heroImage) {
+      issues.push("Missing hero image");
+    }
+
+    // Check meta
+    if (!content.metaTitle || content.metaTitle.length < 30) {
+      issues.push("Meta title too short or missing");
+    }
+    if (!content.metaDescription || content.metaDescription.length < 100) {
+      issues.push("Meta description too short or missing");
+    }
+
+    // Check content blocks
+    const blocks = (content.blocks as any[]) || [];
+    if (blocks.length < 3) {
+      issues.push("Not enough content blocks");
+    }
+
+    // Calculate word count
+    const text = blocks
+      .filter((b: any) => b.type === "text" || b.type === "paragraph")
+      .map((b: any) => b.content || b.text || "")
+      .join(" ");
+    const wordCount = text.split(/\s+/).length;
+
+    if (wordCount < 300) {
+      issues.push(`Word count too low: ${wordCount}`);
+    }
+
+    // Calculate score
+    let score = 100;
+    score -= issues.length * 15;
+    score = Math.max(0, score);
+
+    return {
+      canPublish: score >= autoPilotConfig.minSeoScoreToPublish,
+      score,
+      issues,
+    };
+  },
+
+  /**
+   * Actions to take after content is published
+   */
+  async onContentPublished(contentId: string): Promise<void> {
+    // 1. Auto-translate
+    if (autoPilotConfig.autoTranslateOnPublish) {
+      await autoTranslator.triggerTranslation(contentId);
+    }
+
+    // 2. Auto-place affiliate links
+    if (autoPilotConfig.autoPlaceAffiliates) {
+      await autoAffiliate.placeLinks(contentId);
+    }
+
+    // 3. Auto-tag
+    await autoTagger.tagContent(contentId);
+
+    // 4. Auto-cluster
+    await autoCluster.addToCluster(contentId);
+
+    // 5. Auto internal linking
+    await automation.linking.applyLinks(
+      contentId,
+      await automation.linking.findLinkOpportunities(contentId)
+    );
+
+    // 6. Update homepage if trending
+    await autoHomepage.checkForPromotion(contentId);
+
+    // 7. Clear relevant caches
+    await cache.invalidate(`content:${contentId}*`);
+
+    console.log(`[AutoPilot] Post-publish completed for content ${contentId}`);
+  },
+};
+
+// ============================================================================
+// AUTO-TRANSLATION
+// ============================================================================
+
+export const autoTranslator = {
+  /**
+   * Trigger translation for content
+   */
+  async triggerTranslation(contentId: string): Promise<{ queued: string[] }> {
+    const [content] = await db.select().from(contents).where(eq(contents.id, contentId));
+    if (!content || content.status !== "published") {
+      return { queued: [] };
+    }
+
+    const queued: string[] = [];
+
+    // Queue translations for priority locales first
+    for (const locale of autoPilotConfig.priorityLocales) {
+      if (locale === "en") continue; // Skip source language
+
+      // Check if translation already exists
+      const [existing] = await db.select()
+        .from(translations)
+        .where(and(
+          eq(translations.contentId, contentId),
+          eq(translations.locale, locale as any)
+        ));
+
+      if (!existing || existing.status !== "completed") {
+        // Queue translation job
+        await jobQueue.addJob("translate", {
+          contentId,
+          targetLocale: locale,
+          priority: autoPilotConfig.priorityLocales.indexOf(locale),
+        });
+        queued.push(locale);
+      }
+    }
+
+    return { queued };
+  },
+
+  /**
+   * Check translation completion status
+   */
+  async getTranslationStatus(contentId: string): Promise<{
+    total: number;
+    completed: number;
+    pending: number;
+    locales: Record<string, string>;
+  }> {
+    const allTranslations = await db.select()
+      .from(translations)
+      .where(eq(translations.contentId, contentId));
+
+    const locales: Record<string, string> = {};
+    let completed = 0;
+    let pending = 0;
+
+    for (const t of allTranslations) {
+      locales[t.locale] = t.status || "pending";
+      if (t.status === "completed") completed++;
+      else pending++;
+    }
+
+    return {
+      total: allTranslations.length,
+      completed,
+      pending,
+      locales,
+    };
+  },
+};
+
+// ============================================================================
+// AUTO-AFFILIATE LINK PLACEMENT
+// ============================================================================
+
+export const autoAffiliate = {
+  /**
+   * Auto-place affiliate links in content
+   */
+  async placeLinks(contentId: string): Promise<{ placed: number }> {
+    const [content] = await db.select().from(contents).where(eq(contents.id, contentId));
+    if (!content) return { placed: 0 };
+
+    const provider = autoPilotConfig.affiliateProviders[content.type as keyof typeof autoPilotConfig.affiliateProviders];
+    if (!provider) return { placed: 0 };
+
+    // Check if affiliate link already exists
+    const existing = await db.select()
+      .from(affiliateLinks)
+      .where(eq(affiliateLinks.contentId, contentId));
+
+    if (existing.length > 0) return { placed: 0 };
+
+    // Create affiliate link based on content type
+    let productId = "";
+    let anchorText = "";
+    let placement = "booking_widget";
+
+    switch (content.type) {
+      case "hotel":
+        productId = content.slug; // Would be actual booking.com hotel ID
+        anchorText = `Book ${content.title}`;
+        placement = "hero_section";
+        break;
+      case "attraction":
+        productId = content.slug;
+        anchorText = `Get Tickets for ${content.title}`;
+        placement = "booking_section";
+        break;
+      case "dining":
+        productId = content.slug;
+        anchorText = `Reserve at ${content.title}`;
+        placement = "reservation_section";
+        break;
+    }
+
+    if (!productId) return { placed: 0 };
+
+    // Insert affiliate link
+    await db.insert(affiliateLinks).values({
+      contentId,
+      provider,
+      productId,
+      anchor: anchorText,
+      url: `https://${provider}/${productId}`,
+      placement,
+    });
+
+    return { placed: 1 };
+  },
+
+  /**
+   * Bulk place affiliate links for all content missing them
+   */
+  async placeBulkLinks(): Promise<{ total: number; placed: number }> {
+    const contentWithoutLinks = await db.select({ id: contents.id, type: contents.type })
+      .from(contents)
+      .where(eq(contents.status, "published"));
+
+    let placed = 0;
+    for (const content of contentWithoutLinks) {
+      const result = await this.placeLinks(content.id);
+      placed += result.placed;
+    }
+
+    return { total: contentWithoutLinks.length, placed };
+  },
+};
+
+// ============================================================================
+// AUTO-TAGGING
+// ============================================================================
+
+export const autoTagger = {
+  /**
+   * Auto-tag content based on analysis
+   */
+  async tagContent(contentId: string): Promise<{ tagsAdded: string[] }> {
+    const [content] = await db.select().from(contents).where(eq(contents.id, contentId));
+    if (!content) return { tagsAdded: [] };
+
+    const contentText = `${content.title} ${JSON.stringify(content.blocks || [])}`.toLowerCase();
+    const tagsToAdd: string[] = [];
+
+    // Detect Dubai area
+    for (const [areaKey, areaData] of Object.entries(DUBAI_AREAS)) {
+      if (areaData.identifiers.some(id => contentText.includes(id.toLowerCase()))) {
+        tagsToAdd.push(areaData.name);
+        break;
+      }
+    }
+
+    // Detect audience
+    if (contentText.includes("family") || contentText.includes("kids")) {
+      tagsToAdd.push("Family-Friendly");
+    }
+    if (contentText.includes("luxury") || contentText.includes("premium")) {
+      tagsToAdd.push("Luxury");
+    }
+    if (contentText.includes("budget") || contentText.includes("cheap") || contentText.includes("affordable")) {
+      tagsToAdd.push("Budget");
+    }
+    if (contentText.includes("romantic") || contentText.includes("couples")) {
+      tagsToAdd.push("Romantic");
+    }
+
+    // Detect activities
+    if (contentText.includes("beach")) tagsToAdd.push("Beach");
+    if (contentText.includes("desert") || contentText.includes("safari")) tagsToAdd.push("Desert");
+    if (contentText.includes("shopping") || contentText.includes("mall")) tagsToAdd.push("Shopping");
+    if (contentText.includes("food") || contentText.includes("dining")) tagsToAdd.push("Food & Dining");
+    if (contentText.includes("adventure") || contentText.includes("thrill")) tagsToAdd.push("Adventure");
+    if (contentText.includes("culture") || contentText.includes("heritage")) tagsToAdd.push("Culture");
+
+    // Create or find tags and link to content
+    const addedTags: string[] = [];
+    for (const tagName of tagsToAdd) {
+      try {
+        // Find or create tag
+        let [tag] = await db.select().from(tags).where(eq(tags.name, tagName));
+
+        if (!tag) {
+          [tag] = await db.insert(tags).values({
+            name: tagName,
+            slug: tagName.toLowerCase().replace(/\s+/g, "-"),
+          }).returning();
+        }
+
+        // Check if already linked
+        const [existing] = await db.select()
+          .from(contentTags)
+          .where(and(
+            eq(contentTags.contentId, contentId),
+            eq(contentTags.tagId, tag.id)
+          ));
+
+        if (!existing) {
+          await db.insert(contentTags).values({
+            contentId,
+            tagId: tag.id,
+          });
+          addedTags.push(tagName);
+        }
+      } catch (error) {
+        // Skip if error
+      }
+    }
+
+    return { tagsAdded: addedTags };
+  },
+
+  /**
+   * Bulk auto-tag all content
+   */
+  async tagAllContent(): Promise<{ processed: number; tagsAdded: number }> {
+    const allContent = await db.select({ id: contents.id })
+      .from(contents)
+      .where(eq(contents.status, "published"));
+
+    let totalTags = 0;
+    for (const content of allContent) {
+      const result = await this.tagContent(content.id);
+      totalTags += result.tagsAdded.length;
+    }
+
+    return { processed: allContent.length, tagsAdded: totalTags };
+  },
+};
+
+// ============================================================================
+// AUTO-CLUSTERING
+// ============================================================================
+
+export const autoCluster = {
+  /**
+   * Add content to appropriate cluster
+   */
+  async addToCluster(contentId: string): Promise<{ clusterId: string | null }> {
+    const [content] = await db.select().from(contents).where(eq(contents.id, contentId));
+    if (!content) return { clusterId: null };
+
+    const contentText = `${content.title} ${JSON.stringify(content.blocks || [])}`.toLowerCase();
+
+    // Detect Dubai area
+    let detectedArea: string | null = null;
+    for (const [areaKey, areaData] of Object.entries(DUBAI_AREAS)) {
+      if (areaData.identifiers.some(id => contentText.includes(id.toLowerCase()))) {
+        detectedArea = areaKey;
+        break;
+      }
+    }
+
+    if (!detectedArea) return { clusterId: null };
+
+    // Find or create cluster for this area
+    let [cluster] = await db.select()
+      .from(contentClusters)
+      .where(eq(contentClusters.slug, `${detectedArea}-guide`));
+
+    if (!cluster) {
+      const areaData = DUBAI_AREAS[detectedArea as keyof typeof DUBAI_AREAS];
+      [cluster] = await db.insert(contentClusters).values({
+        name: `${areaData.name} Complete Guide`,
+        slug: `${detectedArea}-guide`,
+        description: `Everything about ${areaData.name} - hotels, restaurants, attractions`,
+      }).returning();
+    }
+
+    // Check if already a member
+    const [existing] = await db.select()
+      .from(clusterMembers)
+      .where(and(
+        eq(clusterMembers.clusterId, cluster.id),
+        eq(clusterMembers.contentId, contentId)
+      ));
+
+    if (!existing) {
+      await db.insert(clusterMembers).values({
+        clusterId: cluster.id,
+        contentId,
+      });
+    }
+
+    return { clusterId: cluster.id };
+  },
+};
+
+// ============================================================================
+// AUTO-HOMEPAGE PROMOTIONS
+// ============================================================================
+
+export const autoHomepage = {
+  /**
+   * Check if content should be promoted on homepage
+   */
+  async checkForPromotion(contentId: string): Promise<{ promoted: boolean; section: string | null }> {
+    const [content] = await db.select().from(contents).where(eq(contents.id, contentId));
+    if (!content) return { promoted: false, section: null };
+
+    // Determine section based on content type
+    let section: string | null = null;
+    switch (content.type) {
+      case "hotel":
+        section = "hotels";
+        break;
+      case "attraction":
+        section = "attractions";
+        break;
+      case "article":
+        section = "articles";
+        break;
+      default:
+        section = "trending";
+    }
+
+    // Check current count in section
+    const currentPromotions = await db.select()
+      .from(homepagePromotions)
+      .where(and(
+        eq(homepagePromotions.section, section as any),
+        eq(homepagePromotions.isActive, true)
+      ));
+
+    const maxItems = section === "featured" ?
+      autoPilotConfig.maxFeaturedItems :
+      autoPilotConfig.maxTrendingItems;
+
+    if (currentPromotions.length < maxItems) {
+      // Add to homepage
+      await db.insert(homepagePromotions).values({
+        contentId,
+        section: section as any,
+        customTitle: content.title,
+        isActive: true,
+        position: currentPromotions.length + 1,
+      });
+      return { promoted: true, section };
+    }
+
+    return { promoted: false, section };
+  },
+
+  /**
+   * Rotate homepage promotions based on performance/freshness
+   */
+  async rotatePromotions(): Promise<{ rotated: number }> {
+    const now = new Date();
+    const rotationThreshold = new Date(now.getTime() - autoPilotConfig.rotateFeaturedEvery * 24 * 60 * 60 * 1000);
+
+    // Get old promotions
+    const oldPromotions = await db.select()
+      .from(homepagePromotions)
+      .where(and(
+        eq(homepagePromotions.isActive, true),
+        lt(homepagePromotions.createdAt, rotationThreshold)
+      ));
+
+    let rotated = 0;
+
+    for (const promo of oldPromotions) {
+      // Find replacement content
+      const [replacement] = await db.select()
+        .from(contents)
+        .where(and(
+          eq(contents.status, "published"),
+          eq(contents.type, promo.section === "hotels" ? "hotel" :
+                           promo.section === "attractions" ? "attraction" : "article"),
+          gt(contents.publishedAt as any, rotationThreshold)
+        ))
+        .orderBy(desc(contents.publishedAt))
+        .limit(1);
+
+      if (replacement) {
+        // Deactivate old
+        await db.update(homepagePromotions)
+          .set({ isActive: false })
+          .where(eq(homepagePromotions.id, promo.id));
+
+        // Add new
+        await db.insert(homepagePromotions).values({
+          contentId: replacement.id,
+          section: promo.section,
+          customTitle: replacement.title,
+          isActive: true,
+          position: promo.position || 0,
+        });
+
+        rotated++;
+      }
+    }
+
+    return { rotated };
+  },
+};
+
+// ============================================================================
+// AUTO-RSS PROCESSING
+// ============================================================================
+
+export const autoRss = {
+  /**
+   * Auto-fetch and import from all active RSS feeds
+   */
+  async processAllFeeds(): Promise<{
+    feedsProcessed: number;
+    itemsImported: number;
+    errors: Array<{ feedId: string; error: string }>;
+  }> {
+    if (!autoPilotConfig.autoImportRss) {
+      return { feedsProcessed: 0, itemsImported: 0, errors: [] };
+    }
+
+    const activeFeeds = await db.select()
+      .from(rssFeeds)
+      .where(eq(rssFeeds.isActive, true));
+
+    let itemsImported = 0;
+    const errors: Array<{ feedId: string; error: string }> = [];
+
+    for (const feed of activeFeeds) {
+      try {
+        const result = await this.processFeed(feed.id);
+        itemsImported += result.imported;
+      } catch (error: any) {
+        errors.push({ feedId: feed.id, error: error.message });
+      }
+    }
+
+    return {
+      feedsProcessed: activeFeeds.length,
+      itemsImported,
+      errors,
+    };
+  },
+
+  /**
+   * Process single RSS feed
+   */
+  async processFeed(feedId: string): Promise<{ fetched: number; imported: number }> {
+    // This would fetch and parse the RSS feed
+    // For now, return placeholder
+    console.log(`[AutoPilot] Processing RSS feed ${feedId}`);
+    return { fetched: 0, imported: 0 };
+  },
+};
+
+// ============================================================================
+// AUTO-CONTENT REFRESH
+// ============================================================================
+
+export const autoRefresh = {
+  /**
+   * Find and refresh stale content
+   */
+  async refreshStaleContent(): Promise<{
+    identified: number;
+    refreshed: number;
+    flagged: number;
+  }> {
+    const now = new Date();
+    let identified = 0;
+    let refreshed = 0;
+    let flagged = 0;
+
+    for (const [type, days] of Object.entries(autoPilotConfig.staleThresholdDays)) {
+      const threshold = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+      const staleContent = await db.select()
+        .from(contents)
+        .where(and(
+          eq(contents.status, "published"),
+          eq(contents.type, type as any),
+          lt(contents.updatedAt, threshold)
+        ));
+
+      identified += staleContent.length;
+
+      for (const content of staleContent) {
+        // Flag for review (would trigger AI refresh in full implementation)
+        await db.update(contents)
+          .set({ status: "review" as any })
+          .where(eq(contents.id, content.id));
+        flagged++;
+      }
+    }
+
+    return { identified, refreshed, flagged };
+  },
+};
+
+// ============================================================================
+// DAILY/WEEKLY REPORTS
+// ============================================================================
+
+export interface AutoPilotReport {
+  period: "daily" | "weekly";
+  generatedAt: Date;
+  summary: {
+    contentPublished: number;
+    translationsCompleted: number;
+    affiliateLinksPlaced: number;
+    tagsAdded: number;
+    clustersUpdated: number;
+    homepageRotations: number;
+    rssImports: number;
+    staleContentFlagged: number;
+  };
+  issues: Array<{
+    type: string;
+    description: string;
+    contentId?: string;
+    severity: "high" | "medium" | "low";
+  }>;
+  recommendations: string[];
+}
+
+export const autoReports = {
+  /**
+   * Generate daily report
+   */
+  async generateDailyReport(): Promise<AutoPilotReport> {
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    // Get published content in last 24h
+    const publishedContent = await db.select()
+      .from(contents)
+      .where(and(
+        eq(contents.status, "published"),
+        gt(contents.publishedAt as any, yesterday)
+      ));
+
+    // Get freshness report
+    const freshness = await automation.freshness.getReport();
+
+    // Get broken links
+    const brokenLinks = await automation.brokenLinks.quickScan();
+
+    // Build issues list
+    const issues: AutoPilotReport["issues"] = [];
+
+    // Add stale content issues
+    for (const stale of freshness.staleContent.slice(0, 5)) {
+      issues.push({
+        type: "stale_content",
+        description: `"${stale.title}" is ${stale.daysSinceUpdate} days old`,
+        contentId: stale.id,
+        severity: stale.priority as "high" | "medium" | "low",
+      });
+    }
+
+    // Add broken link issues
+    for (const link of brokenLinks.slice(0, 5)) {
+      issues.push({
+        type: "broken_link",
+        description: `Broken ${link.type} link in "${link.contentTitle}"`,
+        contentId: link.contentId,
+        severity: "medium",
+      });
+    }
+
+    // Build recommendations
+    const recommendations: string[] = [];
+
+    if (freshness.stats.critical > 0) {
+      recommendations.push(`${freshness.stats.critical} critical content items need immediate update`);
+    }
+    if (brokenLinks.length > 10) {
+      recommendations.push(`Run full broken links scan - ${brokenLinks.length} issues found`);
+    }
+    if (publishedContent.length === 0) {
+      recommendations.push("No content published today - consider scheduling more content");
+    }
+
+    return {
+      period: "daily",
+      generatedAt: now,
+      summary: {
+        contentPublished: publishedContent.length,
+        translationsCompleted: 0, // Would track from job queue
+        affiliateLinksPlaced: 0,
+        tagsAdded: 0,
+        clustersUpdated: 0,
+        homepageRotations: 0,
+        rssImports: 0,
+        staleContentFlagged: freshness.stats.stale,
+      },
+      issues,
+      recommendations,
+    };
+  },
+
+  /**
+   * Generate weekly report
+   */
+  async generateWeeklyReport(): Promise<AutoPilotReport> {
+    const now = new Date();
+    const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Get all content from last week
+    const weeklyContent = await db.select()
+      .from(contents)
+      .where(and(
+        eq(contents.status, "published"),
+        gt(contents.publishedAt as any, lastWeek)
+      ));
+
+    // Get performance scores
+    const scores = await automation.performance.scoreAllContent();
+    const underperformers = scores.filter((s: { scores: { overall: number }}) => s.scores.overall < 60);
+
+    // Build issues
+    const issues: AutoPilotReport["issues"] = [];
+
+    for (const up of underperformers.slice(0, 10)) {
+      issues.push({
+        type: "low_performance",
+        description: `"${up.title}" has performance score of ${up.scores.overall}%`,
+        contentId: up.contentId,
+        severity: up.scores.overall < 40 ? "high" : "medium",
+      });
+    }
+
+    // Recommendations
+    const recommendations: string[] = [];
+
+    if (underperformers.length > 5) {
+      recommendations.push(`${underperformers.length} content items have low performance - consider refresh`);
+    }
+
+    const avgScore = scores.length > 0
+      ? scores.reduce((sum: number, s: { scores: { overall: number }}) => sum + s.scores.overall, 0) / scores.length
+      : 0;
+    if (avgScore < 70) {
+      recommendations.push(`Average content score is ${Math.round(avgScore)}% - focus on quality improvements`);
+    }
+
+    return {
+      period: "weekly",
+      generatedAt: now,
+      summary: {
+        contentPublished: weeklyContent.length,
+        translationsCompleted: 0,
+        affiliateLinksPlaced: 0,
+        tagsAdded: 0,
+        clustersUpdated: 0,
+        homepageRotations: 0,
+        rssImports: 0,
+        staleContentFlagged: 0,
+      },
+      issues,
+      recommendations,
+    };
+  },
+
+  /**
+   * Send report to admins
+   */
+  async sendReport(report: AutoPilotReport): Promise<void> {
+    // Get admin users
+    const admins = await db.select()
+      .from(users)
+      .where(eq(users.role, "admin"));
+
+    // Create notifications for each admin
+    for (const admin of admins) {
+      await db.insert(notifications).values({
+        userId: admin.id,
+        type: "info",
+        title: `${report.period === "daily" ? "Daily" : "Weekly"} Auto-Pilot Report`,
+        message: `Published: ${report.summary.contentPublished}, Issues: ${report.issues.length}`,
+        metadata: report as any,
+      });
+    }
+  },
+};
+
+// ============================================================================
+// MAIN AUTO-PILOT RUNNER
+// ============================================================================
+
+export const autoPilot = {
+  /**
+   * Run all hourly tasks
+   */
+  async runHourlyTasks(): Promise<{
+    scheduled: { published: number };
+  }> {
+    console.log("[AutoPilot] Running hourly tasks...");
+
+    // 1. Process scheduled content
+    const scheduled = await autoPublisher.processScheduledContent();
+
+    console.log("[AutoPilot] Hourly tasks completed");
+
+    return { scheduled };
+  },
+
+  /**
+   * Run all daily tasks
+   */
+  async runDailyTasks(): Promise<{
+    automation: any;
+    affiliates: { placed: number };
+    tags: { added: number };
+    homepage: { rotated: number };
+    rss: { imported: number };
+    refresh: { flagged: number };
+    report: AutoPilotReport;
+  }> {
+    console.log("[AutoPilot] Running daily tasks...");
+
+    // 1. Run base automation tasks
+    const automationResult = await automation.runner.runDailyTasks();
+
+    // 2. Bulk place affiliate links
+    const affiliates = await autoAffiliate.placeBulkLinks();
+
+    // 3. Bulk auto-tag
+    const tagsResult = await autoTagger.tagAllContent();
+
+    // 4. Rotate homepage
+    const homepage = await autoHomepage.rotatePromotions();
+
+    // 5. Process RSS feeds
+    const rss = await autoRss.processAllFeeds();
+
+    // 6. Refresh stale content
+    const refresh = await autoRefresh.refreshStaleContent();
+
+    // 7. Generate and send daily report
+    const report = await autoReports.generateDailyReport();
+    if (autoPilotConfig.sendDailyDigest) {
+      await autoReports.sendReport(report);
+    }
+
+    console.log("[AutoPilot] Daily tasks completed");
+
+    return {
+      automation: automationResult,
+      affiliates: { placed: affiliates.placed },
+      tags: { added: tagsResult.tagsAdded },
+      homepage: { rotated: homepage.rotated },
+      rss: { imported: rss.itemsImported },
+      refresh: { flagged: refresh.flagged },
+      report,
+    };
+  },
+
+  /**
+   * Run all weekly tasks
+   */
+  async runWeeklyTasks(): Promise<{
+    automation: any;
+    report: AutoPilotReport;
+  }> {
+    console.log("[AutoPilot] Running weekly tasks...");
+
+    // 1. Run base weekly automation
+    const automationResult = await automation.runner.runWeeklyTasks();
+
+    // 2. Generate and send weekly report
+    const report = await autoReports.generateWeeklyReport();
+    if (autoPilotConfig.sendWeeklyReport) {
+      await autoReports.sendReport(report);
+    }
+
+    console.log("[AutoPilot] Weekly tasks completed");
+
+    return {
+      automation: automationResult,
+      report,
+    };
+  },
+
+  /**
+   * Get current auto-pilot status
+   */
+  async getStatus(): Promise<{
+    enabled: boolean;
+    config: typeof autoPilotConfig;
+    lastRuns: {
+      hourly?: Date;
+      daily?: Date;
+      weekly?: Date;
+    };
+    health: {
+      pendingScheduled: number;
+      pendingTranslations: number;
+      staleContent: number;
+      brokenLinks: number;
+    };
+  }> {
+    // Get counts
+    const [
+      scheduledCount,
+      freshness,
+      brokenLinks,
+    ] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` })
+        .from(contents)
+        .where(eq(contents.status, "scheduled" as any)),
+      automation.freshness.getReport(),
+      automation.brokenLinks.quickScan(),
+    ]);
+
+    return {
+      enabled: true,
+      config: autoPilotConfig,
+      lastRuns: {
+        // Would track from settings/cache
+      },
+      health: {
+        pendingScheduled: Number(scheduledCount[0]?.count || 0),
+        pendingTranslations: 0, // Would get from job queue
+        staleContent: freshness.stats.stale,
+        brokenLinks: brokenLinks.length,
+      },
+    };
+  },
+};
+
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+export const autoPilotSystem = {
+  config: autoPilotConfig,
+  publisher: autoPublisher,
+  translator: autoTranslator,
+  affiliate: autoAffiliate,
+  tagger: autoTagger,
+  cluster: autoCluster,
+  homepage: autoHomepage,
+  rss: autoRss,
+  refresh: autoRefresh,
+  reports: autoReports,
+  runner: autoPilot,
+};

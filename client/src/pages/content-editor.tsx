@@ -1,15 +1,30 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
@@ -53,6 +68,32 @@ import {
   Check,
   FolderOpen,
   Search,
+  Video,
+  Quote,
+  Minus,
+  MessageSquare,
+  Award,
+  MapPin,
+  Clock,
+  DollarSign,
+  Plus,
+  GripHorizontal,
+  Map,
+  Heading1,
+  Share2,
+  ChevronRight,
+  Layers,
+  Code,
+  ExternalLink,
+  ArrowUpDown,
+  Palette,
+  Undo2,
+  Redo2,
+  EyeOff,
+  Tablet,
+  AlertTriangle,
+  CheckCircle,
+  Keyboard,
 } from "lucide-react";
 import type {
   ContentWithRelations,
@@ -71,6 +112,11 @@ import { HotelSeoEditor } from "@/components/hotel-seo-editor";
 import { DiningSeoEditor } from "@/components/dining-seo-editor";
 import { DistrictSeoEditor } from "@/components/district-seo-editor";
 import { TranslationManager } from "@/components/translation-manager";
+import { AITitleSuggestions } from "@/components/ai-title-suggestions";
+import { RelatedContentFinder } from "@/components/related-content-finder";
+import { BrokenLinkChecker } from "@/components/broken-link-checker";
+import { ReadingTimeCalculator } from "@/components/reading-time-calculator";
+import { useRegisterTab } from "@/components/multi-tab-editor";
 
 type ContentType = "attraction" | "hotel" | "article" | "dining" | "district";
 // TEMPORARILY DISABLED: "transport" | "event" | "itinerary" - Will be enabled later
@@ -80,18 +126,45 @@ interface BlockTypeConfig {
   label: string;
   icon: typeof Image;
   description: string;
+  category: "media" | "content" | "layout" | "interactive";
+  color: string;
 }
 
 const blockTypes: BlockTypeConfig[] = [
-  { type: "hero", label: "Hero", icon: Image, description: "Full-width hero image" },
-  { type: "text", label: "Text", icon: Type, description: "Text paragraph" },
-  { type: "image", label: "Image", icon: Image, description: "Single image" },
-  { type: "gallery", label: "Gallery", icon: LayoutGrid, description: "Image gallery" },
-  { type: "faq", label: "FAQ", icon: HelpCircle, description: "Question & answer" },
-  { type: "cta", label: "CTA", icon: MousePointer, description: "Call to action button" },
-  { type: "info_grid", label: "Info Grid", icon: LayoutGrid, description: "Information grid" },
-  { type: "highlights", label: "Highlights", icon: Star, description: "Key highlights" },
-  { type: "tips", label: "Tips", icon: Lightbulb, description: "Travel tips" },
+  // Media blocks
+  { type: "hero", label: "Hero", icon: Image, description: "Full-width hero section", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  { type: "image", label: "Image", icon: ImagePlus, description: "Single image with caption", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  { type: "gallery", label: "Gallery", icon: LayoutGrid, description: "Image gallery grid", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  { type: "video", label: "Video", icon: Video, description: "YouTube/Vimeo embed", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  { type: "map", label: "Map", icon: Map, description: "Google Maps location", category: "media", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+
+  // Content blocks
+  { type: "heading", label: "Heading", icon: Heading1, description: "Section heading H2/H3", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  { type: "text", label: "Text", icon: Type, description: "Rich text paragraph", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  { type: "highlights", label: "Highlights", icon: Star, description: "Key feature highlights", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  { type: "tips", label: "Tips", icon: Lightbulb, description: "Pro tips & advice", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  { type: "quote", label: "Quote", icon: Quote, description: "Blockquote / testimonial", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  { type: "social", label: "Social", icon: Share2, description: "Social media links", category: "content", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+
+  // Layout blocks
+  { type: "info_grid", label: "Info Grid", icon: LayoutGrid, description: "Quick facts grid", category: "layout", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
+  { type: "divider", label: "Divider", icon: Minus, description: "Section separator", category: "layout", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
+  { type: "spacer", label: "Spacer", icon: ArrowUpDown, description: "Vertical spacing", category: "layout", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
+  { type: "columns", label: "Columns", icon: Layers, description: "Two column layout", category: "layout", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
+
+  // Interactive blocks
+  { type: "faq", label: "FAQ", icon: HelpCircle, description: "Question & answer", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  { type: "accordion", label: "Accordion", icon: ChevronRight, description: "Collapsible sections", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  { type: "tabs", label: "Tabs", icon: Layers, description: "Tabbed content", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  { type: "cta", label: "CTA", icon: MousePointer, description: "Call to action button", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  { type: "html", label: "HTML", icon: Code, description: "Custom HTML/embed", category: "interactive", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+];
+
+const blockCategories = [
+  { id: "media", label: "Media", icon: Image },
+  { id: "content", label: "Content", icon: Type },
+  { id: "layout", label: "Layout", icon: LayoutGrid },
+  { id: "interactive", label: "Interactive", icon: MousePointer },
 ];
 
 const defaultTemplateBlocks: ContentBlock[] = [
@@ -113,6 +186,26 @@ function generateSlug(title: string): string {
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
+}
+
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) {
+    const mins = Math.floor(seconds / 60);
+    return `${mins} minute${mins > 1 ? 's' : ''} ago`;
+  }
+  if (seconds < 86400) {
+    const hours = Math.floor(seconds / 3600);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  }
+  if (seconds < 604800) {
+    const days = Math.floor(seconds / 86400);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // Topic categories for filtering media
@@ -375,6 +468,13 @@ export default function ContentEditor() {
   };
   const contentType: ContentType = getContentType();
 
+  // Multi-tab editing support
+  const { registerTab, markDirty, updateTitle } = useRegisterTab(
+    contentType,
+    contentId || "new",
+    ""
+  );
+
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [metaTitle, setMetaTitle] = useState("");
@@ -384,7 +484,6 @@ export default function ContentEditor() {
   const [heroImageAlt, setHeroImageAlt] = useState("");
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [status, setStatus] = useState<string>("draft");
-  const [scheduledAt, setScheduledAt] = useState<Date | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | null>(null);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
@@ -400,6 +499,273 @@ export default function ContentEditor() {
   const [selectedVersion, setSelectedVersion] = useState<ContentVersion | null>(null);
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [lastAutosaveTime, setLastAutosaveTime] = useState<string | null>(null);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+
+  // NEW: Enhanced Editor Features
+  const [blockSearchQuery, setBlockSearchQuery] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
+
+  // Undo/Redo History
+  const [history, setHistory] = useState<ContentBlock[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const maxHistorySize = 50;
+
+  // Save state to history (called when blocks change significantly)
+  const pushToHistory = useCallback((newBlocks: ContentBlock[]) => {
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(JSON.parse(JSON.stringify(newBlocks)));
+      if (newHistory.length > maxHistorySize) {
+        newHistory.shift();
+        return newHistory;
+      }
+      return newHistory;
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, maxHistorySize - 1));
+  }, [historyIndex]);
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      setHistoryIndex(prev => prev - 1);
+      setBlocks(JSON.parse(JSON.stringify(history[historyIndex - 1])));
+    }
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(prev => prev + 1);
+      setBlocks(JSON.parse(JSON.stringify(history[historyIndex + 1])));
+    }
+  }, [history, historyIndex]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Undo: Ctrl+Z
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+      // Redo: Ctrl+Y or Ctrl+Shift+Z
+      if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+        e.preventDefault();
+        redo();
+      }
+      // Save: Ctrl+S
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+      // Preview: Ctrl+P
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        setShowPreview(prev => !prev);
+      }
+      // Delete selected block: Delete or Backspace
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockId && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        removeBlock(selectedBlockId);
+      }
+      // Duplicate: Ctrl+D
+      if (e.ctrlKey && e.key === 'd' && selectedBlockId) {
+        e.preventDefault();
+        duplicateBlock(selectedBlockId);
+      }
+      // Escape: Close preview or deselect
+      if (e.key === 'Escape') {
+        if (showPreview) setShowPreview(false);
+        else if (contextMenu) setContextMenu(null);
+        else setSelectedBlockId(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, selectedBlockId, showPreview, contextMenu]);
+
+  // Live SEO Score calculation
+  const seoScore = useMemo(() => {
+    let score = 0;
+    const issues: string[] = [];
+    const passed: string[] = [];
+
+    // Title (15 points)
+    if (title) {
+      score += 5;
+      passed.push("Title exists");
+      if (title.length >= 30 && title.length <= 60) {
+        score += 5;
+        passed.push("Title length optimal (30-60)");
+      } else {
+        issues.push(`Title length: ${title.length} (optimal: 30-60)`);
+      }
+      if (primaryKeyword && title.toLowerCase().includes(primaryKeyword.toLowerCase())) {
+        score += 5;
+        passed.push("Keyword in title");
+      } else if (primaryKeyword) {
+        issues.push("Primary keyword not in title");
+      }
+    } else {
+      issues.push("Missing title");
+    }
+
+    // Meta Description (15 points)
+    if (metaDescription) {
+      score += 5;
+      passed.push("Meta description exists");
+      if (metaDescription.length >= 120 && metaDescription.length <= 160) {
+        score += 5;
+        passed.push("Meta description length optimal");
+      } else {
+        issues.push(`Meta description: ${metaDescription.length} chars (optimal: 120-160)`);
+      }
+      if (primaryKeyword && metaDescription.toLowerCase().includes(primaryKeyword.toLowerCase())) {
+        score += 5;
+        passed.push("Keyword in meta description");
+      } else if (primaryKeyword) {
+        issues.push("Primary keyword not in meta description");
+      }
+    } else {
+      issues.push("Missing meta description");
+    }
+
+    // Hero Image (15 points)
+    if (heroImage) {
+      score += 10;
+      passed.push("Hero image exists");
+      if (heroImage.includes('.webp')) {
+        score += 5;
+        passed.push("Image is WebP format");
+      } else {
+        issues.push("Hero image not WebP format");
+      }
+    } else {
+      issues.push("Missing hero image");
+    }
+
+    // Content (15 points)
+    const textBlocks = blocks.filter(b => b.type === 'text' || b.type === 'hero');
+    const totalWords = textBlocks.reduce((acc, b) => {
+      const text = String(b.data?.content || b.data?.text || '');
+      return acc + text.split(/\s+/).filter(w => w.length > 0).length;
+    }, 0);
+
+    if (totalWords >= 300) { score += 5; passed.push("Content ≥300 words"); }
+    else issues.push(`Content: ${totalWords} words (min: 300)`);
+
+    if (totalWords >= 600) { score += 5; passed.push("Content ≥600 words"); }
+    if (totalWords >= 1000) { score += 5; passed.push("Content ≥1000 words"); }
+
+    // Structure (15 points)
+    if (blocks.length > 0) { score += 5; passed.push("Has content blocks"); }
+    else issues.push("No content blocks");
+
+    const hasHeading = blocks.some(b => b.type === 'heading' || b.type === 'hero');
+    if (hasHeading) { score += 5; passed.push("Has headings"); }
+    else issues.push("No headings found");
+
+    const hasImages = blocks.some(b => b.type === 'image' || b.type === 'gallery');
+    if (hasImages) { score += 5; passed.push("Has images"); }
+    else issues.push("No images in content");
+
+    // Keyword (15 points)
+    if (primaryKeyword) {
+      score += 5;
+      passed.push("Primary keyword defined");
+
+      const contentText = blocks.map(b => JSON.stringify(b.data || {})).join(' ').toLowerCase();
+      if (contentText.includes(primaryKeyword.toLowerCase())) {
+        score += 5;
+        passed.push("Keyword in content");
+      } else {
+        issues.push("Keyword not found in content");
+      }
+    } else {
+      issues.push("No primary keyword set");
+    }
+
+    // Slug (10 points)
+    if (slug) {
+      score += 3;
+      passed.push("Slug exists");
+      if (slug.length <= 75) { score += 3; passed.push("Slug length OK"); }
+      if (primaryKeyword && slug.toLowerCase().includes(primaryKeyword.toLowerCase().replace(/\s+/g, '-'))) {
+        score += 4;
+        passed.push("Keyword in slug");
+      }
+    } else {
+      issues.push("Missing slug");
+    }
+
+    return { score, maxScore: 100, percentage: score, issues, passed, totalWords };
+  }, [title, metaDescription, heroImage, blocks, primaryKeyword, slug]);
+
+  // Filter blocks by search
+  const filteredBlockTypes = useMemo(() => {
+    if (!blockSearchQuery.trim()) return blockTypes;
+    const query = blockSearchQuery.toLowerCase();
+    return blockTypes.filter(bt =>
+      bt.label.toLowerCase().includes(query) ||
+      bt.description.toLowerCase().includes(query) ||
+      bt.type.toLowerCase().includes(query)
+    );
+  }, [blockSearchQuery]);
+
+  // Context menu handler
+  const handleContextMenu = useCallback((e: React.MouseEvent, blockId: string) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, blockId });
+    setSelectedBlockId(blockId);
+  }, []);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    if (contextMenu) {
+      window.addEventListener('click', handleClick);
+      return () => window.removeEventListener('click', handleClick);
+    }
+  }, [contextMenu]);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveBlockId(event.active.id as string);
+    setSelectedBlockId(event.active.id as string);
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setBlocks((items) => {
+        pushToHistory(items); // Save before drag reorder
+        const oldIndex = items.findIndex((b) => b.id === active.id);
+        const newIndex = items.findIndex((b) => b.id === over.id);
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        return newItems.map((b, i) => ({ ...b, order: i }));
+      });
+    }
+
+    setActiveBlockId(null);
+  }, [pushToHistory]);
+
+  const activeBlock = activeBlockId ? blocks.find(b => b.id === activeBlockId) : null;
 
   // Attraction-specific SEO data
   const [attractionSeoData, setAttractionSeoData] = useState({
@@ -500,9 +866,6 @@ export default function ContentEditor() {
       setHeroImage(content.heroImage || "");
       setHeroImageAlt(content.heroImageAlt || "");
       setStatus(content.status || "draft");
-      if (content.scheduledAt) {
-        setScheduledAt(new Date(content.scheduledAt));
-      }
 
       // Load attraction-specific SEO data if it exists
       if (content.attraction) {
@@ -593,20 +956,47 @@ export default function ContentEditor() {
 
       // Check if blocks are empty but extension data exists - auto-generate blocks
       const existingBlocks = content.blocks || [];
+      let initialBlocks: ContentBlock[];
       if (existingBlocks.length === 0) {
         const generatedBlocks = generateBlocksFromExtensionData(content);
-        if (generatedBlocks.length > 0) {
-          setBlocks(generatedBlocks);
-        } else {
-          setBlocks([]);
-        }
+        initialBlocks = generatedBlocks.length > 0 ? generatedBlocks : [];
       } else {
-        setBlocks(existingBlocks);
+        initialBlocks = existingBlocks;
       }
+      setBlocks(initialBlocks);
+      // Initialize history with loaded blocks
+      setHistory([JSON.parse(JSON.stringify(initialBlocks))]);
+      setHistoryIndex(0);
     } else if (isNew && blocks.length === 0) {
-      setBlocks(defaultTemplateBlocks.map(b => ({ ...b, id: generateId() })));
+      const newBlocks = defaultTemplateBlocks.map(b => ({ ...b, id: generateId() }));
+      setBlocks(newBlocks);
+      // Initialize history for new content
+      setHistory([JSON.parse(JSON.stringify(newBlocks))]);
+      setHistoryIndex(0);
     }
   }, [content, isNew]);
+
+  // Register tab for multi-tab editing
+  useEffect(() => {
+    if (content?.title || title) {
+      registerTab();
+      updateTitle(content?.title || title || "Untitled");
+    }
+  }, [content?.title, contentId]);
+
+  // Update tab title when title changes
+  useEffect(() => {
+    if (title) {
+      updateTitle(title);
+    }
+  }, [title, updateTitle]);
+
+  // Mark tab as dirty when content changes
+  useEffect(() => {
+    if (hasChangedRef.current) {
+      markDirty(true);
+    }
+  }, [title, slug, blocks, markDirty]);
 
   // Autosave effect - debounce changes and auto-save after 30 seconds of inactivity
   useEffect(() => {
@@ -651,7 +1041,6 @@ export default function ContentEditor() {
           blocks,
           wordCount: currentWordCount,
           status,
-          scheduledAt: scheduledAt?.toISOString() || null,
         };
 
         // Include attraction-specific SEO data if this is an attraction
@@ -1142,7 +1531,6 @@ export default function ContentEditor() {
       blocks,
       wordCount,
       status,
-      scheduledAt: scheduledAt?.toISOString() || null,
     };
 
     // Include content-type-specific SEO data
@@ -1192,6 +1580,8 @@ export default function ContentEditor() {
     switch (type) {
       case "hero":
         return { image: "", alt: "", title: "" };
+      case "heading":
+        return { text: "", level: "h2" };
       case "text":
         return { content: "" };
       case "image":
@@ -1201,19 +1591,40 @@ export default function ContentEditor() {
       case "faq":
         return { question: "", answer: "" };
       case "cta":
-        return { text: "Learn More", url: "" };
+        return { text: "Learn More", url: "", style: "primary" };
       case "info_grid":
         return { content: "" };
       case "highlights":
         return { content: "" };
       case "tips":
         return { content: "" };
+      case "video":
+        return { url: "", caption: "", provider: "youtube" };
+      case "quote":
+        return { text: "", author: "", role: "" };
+      case "divider":
+        return { style: "line" };
+      case "spacer":
+        return { height: 40 };
+      case "map":
+        return { address: "", lat: 25.2048, lng: 55.2708, zoom: 14 }; // Dubai default
+      case "social":
+        return { links: [] };
+      case "accordion":
+        return { items: [{ title: "", content: "" }] };
+      case "tabs":
+        return { tabs: [{ title: "Tab 1", content: "" }] };
+      case "columns":
+        return { left: "", right: "" };
+      case "html":
+        return { code: "" };
       default:
         return {};
     }
   };
 
   const addBlock = (type: ContentBlock["type"], insertAfterIndex?: number) => {
+    pushToHistory(blocks); // Save before adding
     const newBlock: ContentBlock = {
       id: generateId(),
       type,
@@ -1230,11 +1641,23 @@ export default function ContentEditor() {
     setSelectedBlockId(newBlock.id ?? null);
   };
 
+  // Track last history push time for debouncing text updates
+  const lastHistoryPushRef = useRef<number>(0);
+  const historyDebounceMs = 500;
+
   const updateBlock = (id: string, data: Record<string, unknown>) => {
-    setBlocks(blocks.map((b) => (b.id === id ? { ...b, data: { ...b.data, ...data } } : b)));
+    const newBlocks = blocks.map((b) => (b.id === id ? { ...b, data: { ...b.data, ...data } } : b));
+    // Debounce history push for text updates
+    const now = Date.now();
+    if (now - lastHistoryPushRef.current > historyDebounceMs) {
+      pushToHistory(blocks); // Save current state before change
+      lastHistoryPushRef.current = now;
+    }
+    setBlocks(newBlocks);
   };
 
   const removeBlock = (id: string) => {
+    pushToHistory(blocks); // Save before delete
     setBlocks(blocks.filter((b) => b.id !== id));
     if (selectedBlockId === id) setSelectedBlockId(null);
   };
@@ -1242,6 +1665,7 @@ export default function ContentEditor() {
   const duplicateBlock = (id: string) => {
     const blockIndex = blocks.findIndex((b) => b.id === id);
     if (blockIndex !== -1) {
+      pushToHistory(blocks); // Save before duplicate
       const block = blocks[blockIndex];
       const newBlock: ContentBlock = {
         ...block,
@@ -1259,6 +1683,7 @@ export default function ContentEditor() {
     const index = blocks.findIndex((b) => b.id === id);
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex >= 0 && targetIndex < blocks.length) {
+      pushToHistory(blocks); // Save before move
       const newBlocks = [...blocks];
       [newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]];
       setBlocks(newBlocks.map((b, i) => ({ ...b, order: i })));
@@ -1346,9 +1771,38 @@ export default function ContentEditor() {
           <Button variant="ghost" size="icon" onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)} data-testid="button-toggle-panel">
             <PanelLeft className="h-4 w-4" />
           </Button>
+
+          {/* Undo/Redo Controls */}
+          <div className="flex items-center border rounded-md">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-r-none" onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <div className="w-px h-4 bg-border" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-l-none" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)">
+              <Redo2 className="h-4 w-4" />
+            </Button>
+          </div>
+
           <div className="flex items-center gap-2">
             <StatusBadge status={status as "draft" | "in_review" | "approved" | "scheduled" | "published"} />
-            <span className="text-sm text-muted-foreground">{wordCount} words</span>
+            {/* Live Word Count with Reading Time */}
+            <span className="text-sm text-muted-foreground">{seoScore.totalWords} words</span>
+            <ReadingTimeCalculator wordCount={seoScore.totalWords} />
+          </div>
+
+          {/* Live SEO Score Indicator */}
+          <div
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+              seoScore.percentage >= 70
+                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                : seoScore.percentage >= 50
+                  ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                  : "bg-red-100 text-red-700 hover:bg-red-200"
+            }`}
+            title={`SEO Score: ${seoScore.percentage}%\n\nPassed:\n${seoScore.passed.map(p => '✓ ' + p).join('\n')}\n\nIssues:\n${seoScore.issues.map(i => '✗ ' + i).join('\n')}`}
+          >
+            {seoScore.percentage >= 70 ? <CheckCircle className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+            <span>SEO: {seoScore.percentage}%</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1356,36 +1810,111 @@ export default function ContentEditor() {
             <Sparkles className="h-4 w-4 mr-2" />
             AI Generate
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setPreviewMode("desktop")} data-testid="button-preview">
-            <Eye className="h-4 w-4 mr-2" />
-            Preview
-          </Button>
+          {/* Enhanced Preview with Device Toggle */}
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={showPreview ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-r-none gap-1.5"
+              onClick={() => setShowPreview(!showPreview)}
+              data-testid="button-preview"
+            >
+              {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPreview ? "Exit" : "Preview"}
+            </Button>
+            {showPreview && (
+              <>
+                <div className="w-px h-6 bg-border" />
+                <Button
+                  variant={previewDevice === "desktop" ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8 rounded-none"
+                  onClick={() => setPreviewDevice("desktop")}
+                  title="Desktop"
+                >
+                  <Monitor className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={previewDevice === "tablet" ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8 rounded-none"
+                  onClick={() => setPreviewDevice("tablet")}
+                  title="Tablet"
+                >
+                  <Tablet className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={previewDevice === "mobile" ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8 rounded-l-none"
+                  onClick={() => setPreviewDevice("mobile")}
+                  title="Mobile"
+                >
+                  <Smartphone className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
           {contentId && (
             <Button variant="outline" size="sm" onClick={() => setVersionHistoryOpen(true)} data-testid="button-history">
               <History className="h-4 w-4 mr-2" />
               History
             </Button>
           )}
-          {/* Translation Manager - Translate to 50 languages */}
-          {contentId && title && (
+          {/* Broken Link Checker */}
+          <BrokenLinkChecker contentBody={blocks.filter(b => b.type === "text").map(b => b.data?.content || "").join(" ")} />
+          {/* Related Content Finder */}
+          {contentId && (
+            <RelatedContentFinder
+              currentContentId={contentId}
+              currentTitle={title}
+              currentType={contentType}
+            />
+          )}
+          {/* Translation Manager - Only for PUBLISHED content */}
+          {contentId && title && status === "published" && (
             <TranslationManager contentId={contentId} contentTitle={title} />
           )}
           <Button variant="outline" size="sm" onClick={handleSave} disabled={saveMutation.isPending} data-testid="button-save-draft">
             {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Save
           </Button>
-          {autosaveStatus === "saving" && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1" data-testid="autosave-saving">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Saving...
-            </span>
-          )}
-          {autosaveStatus === "saved" && lastAutosaveTime && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1" data-testid="autosave-saved">
-              <Check className="h-3 w-3 text-green-500" />
-              Autosaved at {lastAutosaveTime}
-            </span>
-          )}
+
+          {/* Improved Auto-save Indicator */}
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all duration-300 ${
+            autosaveStatus === "saving"
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+              : autosaveStatus === "saved"
+                ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
+                : hasChangedRef.current && status === "draft"
+                  ? "bg-muted text-muted-foreground"
+                  : "hidden"
+          }`}>
+            {autosaveStatus === "saving" && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-20" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin relative" />
+                </div>
+                <span className="font-medium" data-testid="autosave-saving">Saving changes...</span>
+              </>
+            )}
+            {autosaveStatus === "saved" && lastAutosaveTime && (
+              <>
+                <div className="relative flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-green-500 animate-[pulse_1s_ease-in-out_1] opacity-30" />
+                  <Check className="h-3.5 w-3.5 relative" />
+                </div>
+                <span className="font-medium" data-testid="autosave-saved">Saved at {lastAutosaveTime}</span>
+              </>
+            )}
+            {autosaveStatus === "idle" && hasChangedRef.current && status === "draft" && (
+              <>
+                <Clock className="h-3.5 w-3.5" />
+                <span>Auto-save in 30s</span>
+              </>
+            )}
+          </div>
           {canPublish && (
             <Button size="sm" onClick={handlePublish} disabled={publishMutation.isPending} data-testid="button-publish">
               {publishMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
@@ -1399,24 +1928,77 @@ export default function ContentEditor() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel - Block Library */}
         {!leftPanelCollapsed && (
-          <div className="w-64 border-r bg-muted/30 shrink-0 flex flex-col">
-            <div className="p-3 border-b">
-              <h3 className="font-medium text-sm">Blocks</h3>
-              <p className="text-xs text-muted-foreground mt-1">Click to add to page</p>
+          <div className="w-72 border-r bg-gradient-to-b from-background to-muted/20 shrink-0 flex flex-col">
+            <div className="p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+              <h3 className="font-semibold text-base flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Block
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">Drag or click to add</p>
+              {/* Search blocks */}
+              <div className="relative mt-3">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search blocks..."
+                  value={blockSearchQuery}
+                  onChange={(e) => setBlockSearchQuery(e.target.value)}
+                  className="pl-8 h-9 text-sm"
+                />
+                {blockSearchQuery && (
+                  <button
+                    onClick={() => setBlockSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
             <ScrollArea className="flex-1">
-              <div className="p-3 grid grid-cols-2 gap-2">
-                {blockTypes.map((bt) => (
-                  <button
-                    key={bt.type}
-                    onClick={() => addBlock(bt.type)}
-                    className="flex flex-col items-center gap-2 p-3 rounded-md border bg-background hover-elevate cursor-pointer transition-all"
-                    data-testid={`block-add-${bt.type}`}
-                  >
-                    <bt.icon className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-xs font-medium">{bt.label}</span>
-                  </button>
-                ))}
+              <div className="p-3 space-y-4">
+                {filteredBlockTypes.length === 0 && blockSearchQuery && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No blocks match "{blockSearchQuery}"</p>
+                    <button
+                      onClick={() => setBlockSearchQuery("")}
+                      className="text-xs text-primary mt-1 hover:underline"
+                    >
+                      Clear search
+                    </button>
+                  </div>
+                )}
+                {blockCategories.map((category) => {
+                  const categoryBlocks = filteredBlockTypes.filter(b => b.category === category.id);
+                  if (categoryBlocks.length === 0) return null;
+                  return (
+                    <div key={category.id} className="space-y-2">
+                      <div className="flex items-center gap-2 px-1">
+                        <category.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{category.label}</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {categoryBlocks.map((bt) => (
+                          <button
+                            key={bt.type}
+                            onClick={() => addBlock(bt.type)}
+                            className={`w-full flex items-center gap-3 p-2.5 rounded-lg border transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 cursor-grab active:cursor-grabbing ${bt.color}`}
+                            data-testid={`block-add-${bt.type}`}
+                          >
+                            <div className="p-1.5 rounded-md bg-background/80">
+                              <bt.icon className="h-4 w-4" />
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                              <div className="text-sm font-medium">{bt.label}</div>
+                              <div className="text-[10px] opacity-70 truncate">{bt.description}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </ScrollArea>
           </div>
@@ -1425,43 +2007,123 @@ export default function ContentEditor() {
         {/* Center - Canvas */}
         <div className="flex-1 overflow-auto bg-muted/50" ref={canvasRef} onClick={handleCanvasClick}>
           <div className="max-w-3xl mx-auto py-8 px-4">
-            {/* Canvas blocks */}
-            <div className="space-y-4">
-              {blocks.map((block, index) => {
-                const blockId = block.id ?? `block-${index}`;
-                return (
-                <CanvasBlock
-                  key={blockId}
-                  block={block}
-                  isSelected={selectedBlockId === blockId}
-                  onSelect={() => setSelectedBlockId(blockId)}
-                  onUpdate={(data) => updateBlock(blockId, data)}
-                  onDelete={() => removeBlock(blockId)}
-                  onDuplicate={() => duplicateBlock(blockId)}
-                  onMoveUp={() => moveBlock(blockId, "up")}
-                  onMoveDown={() => moveBlock(blockId, "down")}
-                  canMoveUp={index > 0}
-                  canMoveDown={index < blocks.length - 1}
-                  title={title}
-                  onTitleChange={setTitle}
-                  onGenerateImage={() => handleGenerateImage(blockId, block.type === "hero" ? "hero" : "image")}
-                  isGeneratingImage={imageGeneratingBlock === blockId}
-                />
-              );})}
+            {/* Canvas blocks with Drag & Drop */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={blocks.map(b => b.id ?? '')}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-4">
+                  {blocks.map((block, index) => {
+                    const blockId = block.id ?? `block-${index}`;
+                    return (
+                      <SortableCanvasBlock
+                        key={blockId}
+                        id={blockId}
+                        block={block}
+                        isSelected={selectedBlockId === blockId}
+                        isDragging={activeBlockId === blockId}
+                        onSelect={() => setSelectedBlockId(blockId)}
+                        onUpdate={(data) => updateBlock(blockId, data)}
+                        onDelete={() => removeBlock(blockId)}
+                        onDuplicate={() => duplicateBlock(blockId)}
+                        onMoveUp={() => moveBlock(blockId, "up")}
+                        onMoveDown={() => moveBlock(blockId, "down")}
+                        canMoveUp={index > 0}
+                        canMoveDown={index < blocks.length - 1}
+                        title={title}
+                        onTitleChange={setTitle}
+                        onGenerateImage={() => handleGenerateImage(blockId, block.type === "hero" ? "hero" : "image")}
+                        isGeneratingImage={imageGeneratingBlock === blockId}
+                        onContextMenu={(e) => handleContextMenu(e, blockId)}
+                      />
+                    );
+                  })}
 
-              {blocks.length === 0 && (
-                <div className="text-center py-20 text-muted-foreground">
-                  <LayoutGrid className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Start building your page</p>
-                  <p className="text-sm mt-1">Select a block from the left panel to add content</p>
+                  {blocks.length === 0 && (
+                    <div className="text-center py-20 text-muted-foreground">
+                      <LayoutGrid className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium">Start building your page</p>
+                      <p className="text-sm mt-1">Select a block from the left panel to add content</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </SortableContext>
+
+              {/* Drag Overlay for smooth dragging */}
+              <DragOverlay>
+                {activeBlock ? (
+                  <div className="opacity-80 shadow-2xl">
+                    <CanvasBlockContent
+                      block={activeBlock}
+                      isSelected={true}
+                      title={title}
+                    />
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+
+            {/* Context Menu */}
+            {contextMenu && (
+              <div
+                className="fixed bg-popover border rounded-lg shadow-xl py-1 z-50 min-w-[180px] animate-in fade-in-0 zoom-in-95"
+                style={{ left: contextMenu.x, top: contextMenu.y }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center gap-2"
+                  onClick={() => {
+                    duplicateBlock(contextMenu.blockId);
+                    setContextMenu(null);
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                  Duplicate Block
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center gap-2"
+                  onClick={() => {
+                    moveBlock(contextMenu.blockId, "up");
+                    setContextMenu(null);
+                  }}
+                >
+                  <ChevronUp className="h-4 w-4" />
+                  Move Up
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center gap-2"
+                  onClick={() => {
+                    moveBlock(contextMenu.blockId, "down");
+                    setContextMenu(null);
+                  }}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                  Move Down
+                </button>
+                <div className="h-px bg-border my-1" />
+                <button
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-destructive hover:text-destructive-foreground flex items-center gap-2 text-destructive"
+                  onClick={() => {
+                    removeBlock(contextMenu.blockId);
+                    setContextMenu(null);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Block
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right Panel - Settings */}
-        <div className="w-80 border-l bg-background shrink-0 flex flex-col overflow-hidden">
+        <div className="w-80 border-l bg-background shrink-0 flex flex-col">
           <div className="p-3 border-b">
             <h3 className="font-medium text-sm flex items-center gap-2">
               {selectedBlock ? (
@@ -1500,8 +2162,6 @@ export default function ContentEditor() {
                       onSlugChange={setSlug}
                       status={status}
                       onStatusChange={setStatus}
-                      scheduledAt={scheduledAt}
-                      onScheduledAtChange={setScheduledAt}
                       metaTitle={metaTitle}
                       onMetaTitleChange={setMetaTitle}
                       metaDescription={metaDescription}
@@ -1557,8 +2217,6 @@ export default function ContentEditor() {
                     onSlugChange={setSlug}
                     status={status}
                     onStatusChange={setStatus}
-                    scheduledAt={scheduledAt}
-                    onScheduledAtChange={setScheduledAt}
                     metaTitle={metaTitle}
                     onMetaTitleChange={setMetaTitle}
                     metaDescription={metaDescription}
@@ -1647,108 +2305,230 @@ export default function ContentEditor() {
         </DialogContent>
       </Dialog>
 
-      {/* Version History Dialog */}
+      {/* Version History Dialog - Improved UI */}
       <Dialog open={versionHistoryOpen} onOpenChange={(open) => { setVersionHistoryOpen(open); if (!open) setSelectedVersion(null); }}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Version History</DialogTitle>
-            <DialogDescription>View and restore previous versions of this content</DialogDescription>
+        <DialogContent className="max-w-4xl max-h-[85vh]">
+          <DialogHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-primary/10">
+                <History className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg">Version History</DialogTitle>
+                <DialogDescription className="text-sm">Browse and restore previous versions of your content</DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="flex gap-4 min-h-[400px]">
-            {/* Version List */}
-            <div className="w-1/3 border-r pr-4">
+
+          <div className="flex gap-0 min-h-[450px] border rounded-lg overflow-hidden">
+            {/* Version Timeline */}
+            <div className="w-80 bg-muted/30 border-r">
+              <div className="p-3 border-b bg-background/50 backdrop-blur-sm sticky top-0">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {versions.length} {versions.length === 1 ? 'Version' : 'Versions'}
+                </p>
+              </div>
               <ScrollArea className="h-[400px]">
                 {isLoadingVersions ? (
-                  <div className="flex items-center justify-center py-8" data-testid="loading-versions">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <div className="flex flex-col items-center justify-center py-12 gap-3" data-testid="loading-versions">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+                    <p className="text-sm text-muted-foreground">Loading versions...</p>
                   </div>
                 ) : versions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4" data-testid="empty-versions">No versions saved yet. Versions are created when you save changes.</p>
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center" data-testid="empty-versions">
+                    <div className="p-3 rounded-full bg-muted mb-3">
+                      <History className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">No versions yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Versions are created each time you save changes</p>
+                  </div>
                 ) : (
-                  <div className="space-y-2">
-                    {versions.map((version) => (
-                      <button
-                        key={version.id}
-                        onClick={() => setSelectedVersion(version)}
-                        className={`w-full text-left p-3 rounded-md border transition-colors ${
-                          selectedVersion?.id === version.id ? "border-primary bg-primary/5" : "hover-elevate"
-                        }`}
-                        data-testid={`version-item-${version.versionNumber}`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-sm">Version {version.versionNumber}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {version.createdAt ? new Date(version.createdAt).toLocaleDateString() : ""}
-                          </Badge>
-                        </div>
-                        {version.changeNote && (
-                          <p className="text-xs text-muted-foreground mt-1 truncate">{version.changeNote}</p>
-                        )}
-                      </button>
-                    ))}
+                  <div className="relative py-2">
+                    {/* Timeline line */}
+                    <div className="absolute left-6 top-4 bottom-4 w-px bg-border" />
+
+                    {versions.map((version, index) => {
+                      const isLatest = index === 0;
+                      const isSelected = selectedVersion?.id === version.id;
+                      const createdDate = version.createdAt ? new Date(version.createdAt) : null;
+                      const timeAgo = createdDate ? getTimeAgo(createdDate) : '';
+
+                      return (
+                        <button
+                          key={version.id}
+                          onClick={() => setSelectedVersion(version)}
+                          className={`w-full text-left px-3 py-2 transition-all relative ${
+                            isSelected
+                              ? "bg-primary/10"
+                              : "hover:bg-muted/80"
+                          }`}
+                          data-testid={`version-item-${version.versionNumber}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {/* Timeline dot */}
+                            <div className={`relative z-10 mt-1.5 w-3 h-3 rounded-full border-2 ${
+                              isLatest
+                                ? "bg-green-500 border-green-500"
+                                : isSelected
+                                  ? "bg-primary border-primary"
+                                  : "bg-background border-muted-foreground/40"
+                            }`} />
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={`font-medium text-sm ${isSelected ? "text-primary" : ""}`}>
+                                  v{version.versionNumber}
+                                </span>
+                                {isLatest && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 border-green-200">
+                                    Latest
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{timeAgo}</p>
+                              {version.changeNote && (
+                                <p className="text-xs text-muted-foreground mt-1 truncate italic">
+                                  "{version.changeNote}"
+                                </p>
+                              )}
+                            </div>
+
+                            {isSelected && (
+                              <ChevronRight className="h-4 w-4 text-primary mt-1" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </ScrollArea>
             </div>
-            
+
             {/* Version Details */}
-            <div className="flex-1 pl-4">
+            <div className="flex-1 bg-background">
               {selectedVersion ? (
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Version {selectedVersion.versionNumber} Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Created:</span>
-                        <span>{selectedVersion.createdAt ? new Date(selectedVersion.createdAt).toLocaleString() : "Unknown"}</span>
+                <div className="h-full flex flex-col">
+                  {/* Header */}
+                  <div className="p-4 border-b bg-muted/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <FileText className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold">Version {selectedVersion.versionNumber}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedVersion.createdAt
+                              ? new Date(selectedVersion.createdAt).toLocaleString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : 'Unknown date'}
+                          </p>
+                        </div>
                       </div>
+                      <Button
+                        onClick={() => restoreMutation.mutate(selectedVersion.id)}
+                        disabled={restoreMutation.isPending}
+                        size="sm"
+                        data-testid="button-restore-version"
+                      >
+                        {restoreMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                        )}
+                        Restore
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <ScrollArea className="flex-1">
+                    <div className="p-4 space-y-4">
+                      {/* Stats Row */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 rounded-lg bg-muted/50 text-center">
+                          <p className="text-2xl font-bold text-primary">
+                            {Array.isArray(selectedVersion.blocks) ? selectedVersion.blocks.length : 0}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Blocks</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/50 text-center">
+                          <p className="text-2xl font-bold text-primary">
+                            v{selectedVersion.versionNumber}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Version</p>
+                        </div>
+                      </div>
+
+                      {/* Title */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider">Title</Label>
+                        <div className="p-3 rounded-lg border bg-muted/30">
+                          <p className="text-sm font-medium">{selectedVersion.title || '(No title)'}</p>
+                        </div>
+                      </div>
+
+                      {/* Meta Description */}
+                      {selectedVersion.metaDescription && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Meta Description</Label>
+                          <div className="p-3 rounded-lg border bg-muted/30">
+                            <p className="text-sm text-muted-foreground">{selectedVersion.metaDescription}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Blocks Preview */}
+                      {Array.isArray(selectedVersion.blocks) && selectedVersion.blocks.length > 0 && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Content Blocks</Label>
+                          <div className="space-y-1.5">
+                            {(selectedVersion.blocks as ContentBlock[]).slice(0, 5).map((block, idx) => {
+                              const config = blockTypes.find(bt => bt.type === block.type);
+                              return (
+                                <div key={idx} className="flex items-center gap-2 p-2 rounded-md border bg-muted/30">
+                                  <div className={`p-1 rounded ${config?.color || 'bg-muted'}`}>
+                                    {config?.icon && <config.icon className="h-3 w-3" />}
+                                  </div>
+                                  <span className="text-xs font-medium">{config?.label || block.type}</span>
+                                </div>
+                              );
+                            })}
+                            {selectedVersion.blocks.length > 5 && (
+                              <p className="text-xs text-muted-foreground text-center py-1">
+                                +{selectedVersion.blocks.length - 5} more blocks
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Change Note */}
                       {selectedVersion.changeNote && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Note:</span>
-                          <span>{selectedVersion.changeNote}</span>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider">Change Note</Label>
+                          <div className="p-3 rounded-lg border bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+                            <p className="text-sm italic">"{selectedVersion.changeNote}"</p>
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Title</h4>
-                    <p className="text-sm bg-muted p-2 rounded">{selectedVersion.title}</p>
-                  </div>
-                  
-                  {selectedVersion.metaDescription && (
-                    <div>
-                      <h4 className="font-medium text-sm mb-2">Meta Description</h4>
-                      <p className="text-sm bg-muted p-2 rounded">{selectedVersion.metaDescription}</p>
-                    </div>
-                  )}
-                  
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Content Blocks</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {Array.isArray(selectedVersion.blocks) ? selectedVersion.blocks.length : 0} blocks
-                    </p>
-                  </div>
-                  
-                  <Button 
-                    onClick={() => restoreMutation.mutate(selectedVersion.id)} 
-                    disabled={restoreMutation.isPending}
-                    className="w-full"
-                    data-testid="button-restore-version"
-                  >
-                    {restoreMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                    )}
-                    Restore This Version
-                  </Button>
+                  </ScrollArea>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <p className="text-sm">Select a version to view details</p>
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
+                  <div className="p-4 rounded-full bg-muted mb-4">
+                    <Clock className="h-8 w-8" />
+                  </div>
+                  <p className="font-medium">Select a version</p>
+                  <p className="text-sm text-center mt-1">Click on a version from the timeline to view its details and restore it</p>
                 </div>
               )}
             </div>
@@ -1759,10 +2539,12 @@ export default function ContentEditor() {
   );
 }
 
-// Canvas Block Component - Visual representation on the canvas
-function CanvasBlock({
+// Sortable Canvas Block Wrapper - Uses dnd-kit for drag & drop
+function SortableCanvasBlock({
+  id,
   block,
   isSelected,
+  isDragging,
   onSelect,
   onUpdate,
   onDelete,
@@ -1775,9 +2557,12 @@ function CanvasBlock({
   onTitleChange,
   onGenerateImage,
   isGeneratingImage,
+  onContextMenu,
 }: {
+  id: string;
   block: ContentBlock;
   isSelected: boolean;
+  isDragging: boolean;
   onSelect: () => void;
   onUpdate: (data: Record<string, unknown>) => void;
   onDelete: () => void;
@@ -1790,81 +2575,192 @@ function CanvasBlock({
   onTitleChange: (title: string) => void;
   onGenerateImage: () => void;
   isGeneratingImage: boolean;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   const blockConfig = blockTypes.find((bt) => bt.type === block.type);
 
   return (
     <div
-      className={`group relative rounded-lg transition-all cursor-pointer ${
-        isSelected ? "ring-2 ring-primary shadow-lg" : "hover:ring-1 hover:ring-border"
-      }`}
+      ref={setNodeRef}
+      style={style}
+      className={`group relative transition-all cursor-pointer ${
+        isSelected
+          ? "ring-2 ring-primary shadow-xl scale-[1.01]"
+          : "hover:ring-2 hover:ring-primary/30 hover:shadow-lg"
+      } ${isDragging ? "z-50" : ""}`}
       onClick={(e) => {
         e.stopPropagation();
         onSelect();
       }}
+      onContextMenu={onContextMenu}
       data-testid={`canvas-block-${block.id}`}
     >
-      {/* Block label */}
-      <div className={`absolute -top-3 left-3 z-10 transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-        <Badge variant="secondary" className="text-xs">
-          {blockConfig?.label || block.type}
-        </Badge>
+      {/* Block header - visible on hover/select */}
+      <div className={`absolute -top-10 left-0 right-0 flex items-center justify-between px-2 transition-all ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+        <div className="flex items-center gap-2">
+          {/* Drag handle in header */}
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+            title="Drag to reorder"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${blockConfig?.color || "bg-muted"}`}>
+            {blockConfig?.icon && <blockConfig.icon className="h-3 w-3" />}
+            {blockConfig?.label || block.type}
+          </div>
+        </div>
+        <div className="flex items-center gap-0.5 bg-background/95 backdrop-blur-sm rounded-lg border shadow-sm p-0.5">
+          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={!canMoveUp} data-testid={`move-up-${block.id}`} title="Move up">
+            <ChevronUp className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={!canMoveDown} data-testid={`move-down-${block.id}`} title="Move down">
+            <ChevronDown className="h-3.5 w-3.5" />
+          </Button>
+          <div className="w-px h-4 bg-border mx-0.5" />
+          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} data-testid={`duplicate-${block.id}`} title="Duplicate">
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(); }} data-testid={`delete-${block.id}`} title="Delete">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
-      {/* Block controls */}
-      <div className={`absolute -right-12 top-1/2 -translate-y-1/2 flex flex-col gap-1 transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={!canMoveUp} data-testid={`move-up-${block.id}`}>
-          <ChevronUp className="h-3 w-3" />
-        </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={!canMoveDown} data-testid={`move-down-${block.id}`}>
-          <ChevronDown className="h-3 w-3" />
-        </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} data-testid={`duplicate-${block.id}`}>
-          <Copy className="h-3 w-3" />
-        </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(); }} data-testid={`delete-${block.id}`}>
-          <Trash2 className="h-3 w-3" />
-        </Button>
+      {/* Side drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className={`absolute -left-8 top-1/2 -translate-y-1/2 transition-opacity cursor-grab active:cursor-grabbing ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-60"}`}
+        title="Drag to reorder"
+      >
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 
       {/* Block content */}
-      <div className="bg-background rounded-lg overflow-hidden">
+      <CanvasBlockContent
+        block={block}
+        isSelected={isSelected}
+        title={title}
+        onTitleChange={onTitleChange}
+        onUpdate={onUpdate}
+        onGenerateImage={onGenerateImage}
+        isGeneratingImage={isGeneratingImage}
+      />
+    </div>
+  );
+}
+
+// Canvas Block Content - The actual visual content of each block type
+function CanvasBlockContent({
+  block,
+  isSelected,
+  title,
+  onTitleChange,
+  onUpdate,
+  onGenerateImage,
+  isGeneratingImage,
+}: {
+  block: ContentBlock;
+  isSelected: boolean;
+  title: string;
+  onTitleChange?: (title: string) => void;
+  onUpdate?: (data: Record<string, unknown>) => void;
+  onGenerateImage?: () => void;
+  isGeneratingImage?: boolean;
+}) {
+  // Provide no-op fallbacks for optional handlers (used in DragOverlay)
+  const handleUpdate = onUpdate || (() => {});
+  const handleTitleChange = onTitleChange || (() => {});
+  const handleGenerateImage = onGenerateImage || (() => {});
+  const generating = isGeneratingImage || false;
+
+  return (
+    <div className="bg-background rounded-lg overflow-hidden">
         {block.type === "hero" && (
           <HeroBlockCanvas
             block={block}
             title={title}
-            onTitleChange={onTitleChange}
-            onUpdate={onUpdate}
-            onGenerateImage={onGenerateImage}
-            isGeneratingImage={isGeneratingImage}
+            onTitleChange={handleTitleChange}
+            onUpdate={handleUpdate}
+            onGenerateImage={handleGenerateImage}
+            isGeneratingImage={generating}
             isSelected={isSelected}
           />
         )}
         {block.type === "text" && (
-          <TextBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <TextBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "image" && (
-          <ImageBlockCanvas block={block} onUpdate={onUpdate} onGenerateImage={onGenerateImage} isGeneratingImage={isGeneratingImage} isSelected={isSelected} />
+          <ImageBlockCanvas block={block} onUpdate={handleUpdate} onGenerateImage={handleGenerateImage} isGeneratingImage={generating} isSelected={isSelected} />
         )}
         {block.type === "faq" && (
-          <FAQBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <FAQBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "cta" && (
-          <CTABlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <CTABlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "highlights" && (
-          <HighlightsBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <HighlightsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "tips" && (
-          <TipsBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <TipsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "info_grid" && (
-          <InfoGridBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <InfoGridBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "gallery" && (
-          <GalleryBlockCanvas block={block} onUpdate={onUpdate} isSelected={isSelected} />
+          <GalleryBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
-      </div>
+        {block.type === "video" && (
+          <VideoBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "quote" && (
+          <QuoteBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "divider" && (
+          <DividerBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "heading" && (
+          <HeadingBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "spacer" && (
+          <SpacerBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "map" && (
+          <MapBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "social" && (
+          <SocialBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "accordion" && (
+          <AccordionBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "tabs" && (
+          <TabsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "columns" && (
+          <ColumnsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
+        {block.type === "html" && (
+          <HtmlBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+        )}
     </div>
   );
 }
@@ -2458,6 +3354,562 @@ function GalleryBlockCanvas({
   );
 }
 
+// Video Block Canvas
+function VideoBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const url = String(block.data?.url || "");
+  const caption = String(block.data?.caption || "");
+
+  // Extract video ID from YouTube or Vimeo URL
+  const getEmbedUrl = (videoUrl: string) => {
+    // YouTube
+    const ytMatch = videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\s]+)/);
+    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+    // Vimeo
+    const vimeoMatch = videoUrl.match(/vimeo\.com\/(\d+)/);
+    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    return "";
+  };
+
+  const embedUrl = getEmbedUrl(url);
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      {embedUrl ? (
+        <div className="space-y-3">
+          <div className="aspect-video rounded-lg overflow-hidden bg-black">
+            <iframe
+              src={embedUrl}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+          {caption && <p className="text-sm text-muted-foreground text-center">{caption}</p>}
+        </div>
+      ) : (
+        <div className="aspect-video rounded-lg bg-gradient-to-br from-muted to-muted/50 flex flex-col items-center justify-center">
+          <Video className="h-12 w-12 text-muted-foreground/50 mb-3" />
+          <Input
+            value={url}
+            onChange={(e) => onUpdate({ url: e.target.value })}
+            placeholder="Paste YouTube or Vimeo URL..."
+            className="max-w-md text-center"
+            data-testid={`video-url-input-${block.id}`}
+          />
+          <p className="text-xs text-muted-foreground mt-2">Supports YouTube and Vimeo</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Quote Block Canvas
+function QuoteBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const text = String(block.data?.text || "");
+  const author = String(block.data?.author || "");
+  const role = String(block.data?.role || "");
+
+  return (
+    <div className={`p-6 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="relative pl-6 border-l-4 border-primary/60">
+        <Quote className="absolute -left-3 -top-2 h-6 w-6 text-primary/40 bg-background" />
+        <Textarea
+          value={text}
+          onChange={(e) => onUpdate({ text: e.target.value })}
+          placeholder="Enter quote text..."
+          className="min-h-[100px] text-lg italic border-none bg-transparent resize-none focus-visible:ring-0 p-0"
+          data-testid={`quote-text-input-${block.id}`}
+        />
+        <div className="flex gap-2 mt-3">
+          <Input
+            value={author}
+            onChange={(e) => onUpdate({ author: e.target.value })}
+            placeholder="Author name"
+            className="max-w-[200px] text-sm font-medium"
+            data-testid={`quote-author-input-${block.id}`}
+          />
+          <Input
+            value={role}
+            onChange={(e) => onUpdate({ role: e.target.value })}
+            placeholder="Title/Role"
+            className="max-w-[200px] text-sm text-muted-foreground"
+            data-testid={`quote-role-input-${block.id}`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Divider Block Canvas
+function DividerBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const style = String(block.data?.style || "line");
+
+  return (
+    <div className={`py-6 px-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          {style === "line" && <div className="h-px bg-border" />}
+          {style === "dots" && (
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-muted-foreground">•••</span>
+            </div>
+          )}
+          {style === "space" && <div className="h-8" />}
+        </div>
+        {isSelected && (
+          <Select value={style} onValueChange={(val) => onUpdate({ style: val })}>
+            <SelectTrigger className="w-28 h-8" data-testid={`divider-style-${block.id}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="line">Line</SelectItem>
+              <SelectItem value="dots">Dots</SelectItem>
+              <SelectItem value="space">Space</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Heading Block Canvas
+function HeadingBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const text = String(block.data?.text || "");
+  const level = String(block.data?.level || "h2");
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-3">
+        <Input
+          value={text}
+          onChange={(e) => onUpdate({ text: e.target.value })}
+          placeholder="Enter heading text..."
+          className={`flex-1 border-none bg-transparent focus-visible:ring-0 ${level === "h2" ? "text-2xl font-bold" : "text-xl font-semibold"}`}
+          data-testid={`heading-text-${block.id}`}
+        />
+        {isSelected && (
+          <Select value={level} onValueChange={(val) => onUpdate({ level: val })}>
+            <SelectTrigger className="w-20 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="h2">H2</SelectItem>
+              <SelectItem value="h3">H3</SelectItem>
+              <SelectItem value="h4">H4</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Spacer Block Canvas
+function SpacerBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const height = Number(block.data?.height || 40);
+
+  return (
+    <div className={`px-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        className="border-2 border-dashed border-muted-foreground/20 rounded flex items-center justify-center transition-all"
+        style={{ height: `${height}px` }}
+      >
+        {isSelected && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{height}px</span>
+            <input
+              type="range"
+              min="20"
+              max="200"
+              value={height}
+              onChange={(e) => onUpdate({ height: Number(e.target.value) })}
+              className="w-24"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Map Block Canvas
+function MapBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const address = String(block.data?.address || "");
+  const lat = Number(block.data?.lat || 25.2048);
+  const lng = Number(block.data?.lng || 55.2708);
+
+  const mapUrl = address
+    ? `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(address)}`
+    : `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${lat},${lng}&zoom=14`;
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      {address ? (
+        <div className="space-y-3">
+          <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+            <iframe
+              src={mapUrl}
+              className="w-full h-full border-0"
+              allowFullScreen
+              loading="lazy"
+            />
+          </div>
+          <p className="text-sm text-muted-foreground flex items-center gap-1">
+            <MapPin className="h-3 w-3" /> {address}
+          </p>
+        </div>
+      ) : (
+        <div className="aspect-video rounded-lg bg-gradient-to-br from-muted to-muted/50 flex flex-col items-center justify-center">
+          <Map className="h-12 w-12 text-muted-foreground/50 mb-3" />
+          <Input
+            value={address}
+            onChange={(e) => onUpdate({ address: e.target.value })}
+            placeholder="Enter location address..."
+            className="max-w-md text-center"
+            data-testid={`map-address-${block.id}`}
+          />
+          <p className="text-xs text-muted-foreground mt-2">e.g., Burj Khalifa, Dubai</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Social Block Canvas
+function SocialBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const links = (block.data?.links as Array<{ platform: string; url: string }>) || [];
+
+  const addLink = () => {
+    onUpdate({ links: [...links, { platform: "instagram", url: "" }] });
+  };
+
+  const updateLink = (index: number, field: string, value: string) => {
+    const newLinks = [...links];
+    newLinks[index] = { ...newLinks[index], [field]: value };
+    onUpdate({ links: newLinks });
+  };
+
+  const removeLink = (index: number) => {
+    onUpdate({ links: links.filter((_, i) => i !== index) });
+  };
+
+  const platforms = ["instagram", "facebook", "twitter", "youtube", "tiktok", "linkedin", "whatsapp"];
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-3">
+        {links.map((link, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <Select value={link.platform} onValueChange={(val) => updateLink(index, "platform", val)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {platforms.map((p) => (
+                  <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              value={link.url}
+              onChange={(e) => updateLink(index, "url", e.target.value)}
+              placeholder="Profile URL..."
+              className="flex-1"
+            />
+            <Button variant="ghost" size="icon" onClick={() => removeLink(index)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addLink} className="w-full">
+          <Plus className="h-4 w-4 mr-2" /> Add Social Link
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Accordion Block Canvas
+function AccordionBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const items = (block.data?.items as Array<{ title: string; content: string }>) || [];
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const addItem = () => {
+    onUpdate({ items: [...items, { title: "", content: "" }] });
+  };
+
+  const updateItem = (index: number, field: string, value: string) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    onUpdate({ items: newItems });
+  };
+
+  const removeItem = (index: number) => {
+    onUpdate({ items: items.filter((_, i) => i !== index) });
+  };
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-2">
+        {items.map((item, index) => (
+          <div key={index} className="border rounded-lg overflow-hidden">
+            <div
+              className="flex items-center gap-2 p-3 bg-muted/50 cursor-pointer"
+              onClick={() => setOpenIndex(openIndex === index ? null : index)}
+            >
+              <ChevronRight className={`h-4 w-4 transition-transform ${openIndex === index ? "rotate-90" : ""}`} />
+              <Input
+                value={item.title}
+                onChange={(e) => { e.stopPropagation(); updateItem(index, "title", e.target.value); }}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="Accordion title..."
+                className="flex-1 border-none bg-transparent p-0 h-auto focus-visible:ring-0"
+              />
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); removeItem(index); }}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            {openIndex === index && (
+              <div className="p-3 border-t">
+                <Textarea
+                  value={item.content}
+                  onChange={(e) => updateItem(index, "content", e.target.value)}
+                  placeholder="Accordion content..."
+                  className="min-h-[80px]"
+                />
+              </div>
+            )}
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addItem} className="w-full">
+          <Plus className="h-4 w-4 mr-2" /> Add Accordion Item
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Tabs Block Canvas
+function TabsBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const tabs = (block.data?.tabs as Array<{ title: string; content: string }>) || [];
+  const [activeTab, setActiveTab] = useState(0);
+
+  const addTab = () => {
+    onUpdate({ tabs: [...tabs, { title: `Tab ${tabs.length + 1}`, content: "" }] });
+  };
+
+  const updateTab = (index: number, field: string, value: string) => {
+    const newTabs = [...tabs];
+    newTabs[index] = { ...newTabs[index], [field]: value };
+    onUpdate({ tabs: newTabs });
+  };
+
+  const removeTab = (index: number) => {
+    if (tabs.length > 1) {
+      onUpdate({ tabs: tabs.filter((_, i) => i !== index) });
+      if (activeTab >= tabs.length - 1) setActiveTab(Math.max(0, tabs.length - 2));
+    }
+  };
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-3">
+        <div className="flex items-center gap-1 border-b">
+          {tabs.map((tab, index) => (
+            <div key={index} className="relative group">
+              <button
+                className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === index ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}
+                onClick={() => setActiveTab(index)}
+              >
+                <Input
+                  value={tab.title}
+                  onChange={(e) => updateTab(index, "title", e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-20 border-none bg-transparent p-0 h-auto text-center focus-visible:ring-0"
+                />
+              </button>
+              {tabs.length > 1 && (
+                <button
+                  className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                  onClick={(e) => { e.stopPropagation(); removeTab(index); }}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          ))}
+          <Button variant="ghost" size="sm" onClick={addTab} className="h-8">
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+        {tabs[activeTab] && (
+          <Textarea
+            value={tabs[activeTab].content}
+            onChange={(e) => updateTab(activeTab, "content", e.target.value)}
+            placeholder="Tab content..."
+            className="min-h-[120px]"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Columns Block Canvas
+function ColumnsBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const left = String(block.data?.left || "");
+  const right = String(block.data?.right || "");
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Left Column</Label>
+          <Textarea
+            value={left}
+            onChange={(e) => onUpdate({ left: e.target.value })}
+            placeholder="Left column content..."
+            className="min-h-[100px]"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Right Column</Label>
+          <Textarea
+            value={right}
+            onChange={(e) => onUpdate({ right: e.target.value })}
+            placeholder="Right column content..."
+            className="min-h-[100px]"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// HTML Block Canvas
+function HtmlBlockCanvas({
+  block,
+  onUpdate,
+  isSelected,
+}: {
+  block: ContentBlock;
+  onUpdate: (data: Record<string, unknown>) => void;
+  isSelected: boolean;
+}) {
+  const code = String(block.data?.code || "");
+  const [showPreview, setShowPreview] = useState(false);
+
+  return (
+    <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-muted-foreground flex items-center gap-1">
+            <Code className="h-3 w-3" /> Custom HTML / Embed
+          </Label>
+          <Button variant="ghost" size="sm" onClick={() => setShowPreview(!showPreview)}>
+            {showPreview ? "Edit" : "Preview"}
+          </Button>
+        </div>
+        {showPreview ? (
+          <div
+            className="border rounded-lg p-4 min-h-[100px] bg-background"
+            dangerouslySetInnerHTML={{ __html: code }}
+          />
+        ) : (
+          <Textarea
+            value={code}
+            onChange={(e) => onUpdate({ code: e.target.value })}
+            placeholder="<iframe>...</iframe> or custom HTML..."
+            className="min-h-[150px] font-mono text-sm"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Preview Block Component
 function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) {
   if (block.type === "hero") {
@@ -2489,89 +3941,6 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     );
   }
 
-  if (block.type === "gallery") {
-    const images = Array.isArray(block.data?.images) ? block.data.images : [];
-    return (
-      <div className="p-8">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {images.map((img: { url?: string; alt?: string }, index: number) => (
-            <img key={index} src={String(img?.url || "")} alt={String(img?.alt || "")} className="w-full aspect-video object-cover rounded-lg" />
-          ))}
-        </div>
-        {images.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-            <p>No images in gallery</p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (block.type === "highlights") {
-    const items = Array.isArray(block.data?.items) ? block.data.items : [];
-    return (
-      <div className="p-8 bg-primary/5">
-        <h3 className="text-xl font-semibold mb-4">{String(block.data?.title || "Highlights")}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {items.map((item: string | { text?: string }, index: number) => (
-            <div key={index} className="flex items-start gap-2">
-              <Star className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-              <span>{typeof item === 'string' ? item : String(item?.text || '')}</span>
-            </div>
-          ))}
-        </div>
-        {items.length === 0 && (
-          <p className="text-muted-foreground">No highlights added</p>
-        )}
-      </div>
-    );
-  }
-
-  if (block.type === "tips") {
-    const items = Array.isArray(block.data?.items) ? block.data.items : [];
-    return (
-      <div className="p-8 bg-amber-50 dark:bg-amber-950/20">
-        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-amber-500" />
-          {String(block.data?.title || "Pro Tips")}
-        </h3>
-        <ul className="space-y-3">
-          {items.map((item: string | { text?: string; tip?: string }, index: number) => (
-            <li key={index} className="flex items-start gap-2">
-              <span className="text-amber-500 font-bold">{index + 1}.</span>
-              <span>{typeof item === 'string' ? item : String(item?.text || item?.tip || '')}</span>
-            </li>
-          ))}
-        </ul>
-        {items.length === 0 && (
-          <p className="text-muted-foreground">No tips added</p>
-        )}
-      </div>
-    );
-  }
-
-  if (block.type === "info_grid") {
-    const items = Array.isArray(block.data?.items) ? block.data.items : [];
-    return (
-      <div className="p-8">
-        <h3 className="text-xl font-semibold mb-4">{String(block.data?.title || "Information")}</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {items.map((item: { label?: string; value?: string }, index: number) => (
-            <div key={index} className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">{String(item?.label || "Label")}</p>
-              <p className="font-medium">{String(item?.value || "Value")}</p>
-            </div>
-          ))}
-        </div>
-        {items.length === 0 && (
-          <div className="text-center py-4 text-muted-foreground border-2 border-dashed rounded-lg">
-            <p>No info items added</p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
   if (block.type === "faq") {
     return (
       <div className="p-8 space-y-2">
@@ -2589,13 +3958,7 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     );
   }
 
-  // Fallback for any unknown block types - show the raw content
-  return (
-    <div className="p-8 border-l-4 border-muted">
-      <p className="text-sm text-muted-foreground mb-2">Block: {block.type}</p>
-      <pre className="text-sm whitespace-pre-wrap">{JSON.stringify(block.data, null, 2)}</pre>
-    </div>
-  );
+  return null;
 }
 
 // Block Settings Panel
@@ -2664,12 +4027,106 @@ function BlockSettingsPanel({
             data-testid={`settings-cta-url-${block.id}`}
           />
         </div>
+        <div className="space-y-2">
+          <Label>Button Style</Label>
+          <Select value={String(block.data?.style || "primary")} onValueChange={(val) => onUpdate({ style: val })}>
+            <SelectTrigger data-testid={`settings-cta-style-${block.id}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="primary">Primary</SelectItem>
+              <SelectItem value="secondary">Secondary</SelectItem>
+              <SelectItem value="outline">Outline</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "video") {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Video URL</Label>
+          <Input
+            value={String(block.data?.url || "")}
+            onChange={(e) => onUpdate({ url: e.target.value })}
+            placeholder="YouTube or Vimeo URL"
+            data-testid={`settings-video-url-${block.id}`}
+          />
+          <p className="text-xs text-muted-foreground">Supports YouTube and Vimeo links</p>
+        </div>
+        <div className="space-y-2">
+          <Label>Caption (optional)</Label>
+          <Input
+            value={String(block.data?.caption || "")}
+            onChange={(e) => onUpdate({ caption: e.target.value })}
+            placeholder="Video description..."
+            data-testid={`settings-video-caption-${block.id}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "quote") {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Quote Text</Label>
+          <Textarea
+            value={String(block.data?.text || "")}
+            onChange={(e) => onUpdate({ text: e.target.value })}
+            placeholder="Enter the quote..."
+            data-testid={`settings-quote-text-${block.id}`}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Author Name</Label>
+          <Input
+            value={String(block.data?.author || "")}
+            onChange={(e) => onUpdate({ author: e.target.value })}
+            placeholder="Who said this?"
+            data-testid={`settings-quote-author-${block.id}`}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Author Title/Role</Label>
+          <Input
+            value={String(block.data?.role || "")}
+            onChange={(e) => onUpdate({ role: e.target.value })}
+            placeholder="CEO, Traveler, etc."
+            data-testid={`settings-quote-role-${block.id}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "divider") {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Divider Style</Label>
+          <Select value={String(block.data?.style || "line")} onValueChange={(val) => onUpdate({ style: val })}>
+            <SelectTrigger data-testid={`settings-divider-style-${block.id}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="line">Line</SelectItem>
+              <SelectItem value="dots">Dots</SelectItem>
+              <SelectItem value="space">Spacer</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="text-sm text-muted-foreground">
+    <div className="text-sm text-muted-foreground text-center py-4">
+      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
       <p>Edit this block directly on the canvas.</p>
     </div>
   );
@@ -2683,8 +4140,6 @@ function PageSettingsPanel({
   onSlugChange,
   status,
   onStatusChange,
-  scheduledAt,
-  onScheduledAtChange,
   metaTitle,
   onMetaTitleChange,
   metaDescription,
@@ -2699,8 +4154,6 @@ function PageSettingsPanel({
   onSlugChange: (v: string) => void;
   status: string;
   onStatusChange: (v: string) => void;
-  scheduledAt: Date | undefined;
-  onScheduledAtChange: (v: Date | undefined) => void;
   metaTitle: string;
   onMetaTitleChange: (v: string) => void;
   metaDescription: string;
@@ -2715,7 +4168,18 @@ function PageSettingsPanel({
       <div className="space-y-4">
         <h4 className="text-sm font-medium">Basic</h4>
         <div className="space-y-2">
-          <Label>Title</Label>
+          <div className="flex items-center justify-between">
+            <Label>Title</Label>
+            <AITitleSuggestions
+              currentTitle={title}
+              onSelect={(newTitle) => {
+                onTitleChange(newTitle);
+                if (!slug || slug === generateSlug(title)) {
+                  onSlugChange(generateSlug(newTitle));
+                }
+              }}
+            />
+          </div>
           <Input
             value={title}
             onChange={(e) => {
@@ -2756,45 +4220,6 @@ function PageSettingsPanel({
             </SelectContent>
           </Select>
         </div>
-        {status === "scheduled" && (
-          <div className="space-y-2">
-            <Label>Schedule Date & Time</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {scheduledAt ? format(scheduledAt, "PPP p") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={scheduledAt}
-                  onSelect={onScheduledAtChange}
-                  disabled={(date) => date < new Date()}
-                  initialFocus
-                />
-                <div className="p-3 border-t">
-                  <Label className="text-sm">Time</Label>
-                  <Input
-                    type="time"
-                    value={scheduledAt ? format(scheduledAt, "HH:mm") : ""}
-                    onChange={(e) => {
-                      const [hours, minutes] = e.target.value.split(":").map(Number);
-                      const newDate = scheduledAt ? new Date(scheduledAt) : new Date();
-                      newDate.setHours(hours, minutes);
-                      onScheduledAtChange(newDate);
-                    }}
-                    className="mt-1"
-                  />
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
       </div>
 
       <Separator />

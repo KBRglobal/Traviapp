@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { motion } from "framer-motion";
 import { 
   MapPin, Building2, Star, ArrowRight, Clock, Users, Camera, 
@@ -878,8 +879,9 @@ function CTASection() {
 }
 
 export default function DistrictPalmJumeirah() {
+  const { isRTL } = useLocale();
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
       <PublicNav variant="transparent" />
       <HeroSection />
       <QuickNavSection />

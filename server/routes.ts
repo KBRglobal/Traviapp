@@ -28,6 +28,7 @@ import {
   insertHomepagePromotionSchema,
   insertTagSchema,
   newsletterSubscribers,
+  contentRules,
   ROLE_PERMISSIONS,
   SUPPORTED_LOCALES,
   type UserRole,
@@ -49,9 +50,16 @@ import {
   validateAnalyticsRequest,
   secureErrorHandler,
   auditLogReadOnly,
+  securityHeaders,
+  ipBlockMiddleware,
+  recordFailedAttempt,
+  logAuditEvent as logSecurityEvent,
+  getAuditLogs,
+  getBlockedIps,
 } from "./security";
 import * as fs from "fs";
 import * as path from "path";
+import sharp from "sharp";
 import {
   generateHotelContent,
   generateAttractionContent,
@@ -67,16 +75,26 @@ import {
   type GeneratedImage,
   type ImageGenerationOptions
 } from "./ai-generator";
+import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-queue";
+import { registerEnterpriseRoutes } from "./enterprise-routes";
+import { registerImageLogicRoutes } from "./image-logic-routes";
+import { registerAutomationRoutes } from "./automation-routes";
+import { registerContentIntelligenceRoutes } from "./content-intelligence-routes";
+import { registerAutoPilotRoutes } from "./auto-pilot-routes";
+import { registerEnhancementRoutes } from "./enhancement-routes";
+import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
+import { registerDocUploadRoutes } from "./doc-upload-routes";
+import { cache, cacheKeys } from "./cache";
 import {
+  getContentWriterSystemPrompt,
+  buildArticleGenerationPrompt,
+  determineContentCategory,
+  validateArticleResponse,
+  buildRetryPrompt,
   CONTENT_WRITER_PERSONALITIES,
   ARTICLE_STRUCTURES,
   CATEGORY_PERSONALITY_MAPPING,
-  getContentWriterSystemPrompt,
-  determineContentCategory,
-  buildArticleGenerationPrompt,
-  validateArticleResponse,
-  buildRetryPrompt,
-  type ArticleResponse
+  type ArticleResponse,
 } from "./content-writer-guidelines";
 
 // Permission checking utilities (imported from security.ts for route-level checks)
@@ -102,6 +120,65 @@ function requireRole(role: UserRole | UserRole[]) {
 }
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+// WebP conversion settings
+const WEBP_QUALITY = 80;
+const SUPPORTED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+interface ConvertedImage {
+  buffer: Buffer;
+  filename: string;
+  mimeType: string;
+  width?: number;
+  height?: number;
+}
+
+async function convertToWebP(buffer: Buffer, originalFilename: string, mimeType: string): Promise<ConvertedImage> {
+  // Only convert supported image formats
+  if (!SUPPORTED_IMAGE_FORMATS.includes(mimeType)) {
+    return { buffer, filename: originalFilename, mimeType };
+  }
+
+  // Skip if already WebP
+  if (mimeType === 'image/webp') {
+    const metadata = await sharp(buffer).metadata();
+    return {
+      buffer,
+      filename: originalFilename,
+      mimeType,
+      width: metadata.width,
+      height: metadata.height,
+    };
+  }
+
+  try {
+    // Get image metadata for dimensions
+    const image = sharp(buffer);
+    const metadata = await image.metadata();
+
+    // Convert to WebP
+    const webpBuffer = await image
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+
+    // Generate new filename with .webp extension
+    const baseName = originalFilename.replace(/\.[^.]+$/, '');
+    const webpFilename = `${baseName}.webp`;
+
+    console.log(`[WebP] Converted ${originalFilename} (${(buffer.length / 1024).toFixed(1)}KB) -> ${webpFilename} (${(webpBuffer.length / 1024).toFixed(1)}KB)`);
+
+    return {
+      buffer: webpBuffer,
+      filename: webpFilename,
+      mimeType: 'image/webp',
+      width: metadata.width,
+      height: metadata.height,
+    };
+  } catch (error) {
+    console.error('[WebP] Conversion failed, using original:', error);
+    return { buffer, filename: originalFilename, mimeType };
+  }
+}
 
 let objectStorageClient: Client | null = null;
 
@@ -512,6 +589,68 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
     });
   }
 
+  // Add quote block if missing (insert after second text block if exists)
+  if (!blockTypes.has('quote')) {
+    const insertIndex = Math.min(4, normalizedBlocks.length);
+    normalizedBlocks.splice(insertIndex, 0, {
+      type: 'quote',
+      data: {
+        text: 'Dubai is a city that never stops surprising you. Every corner reveals a new wonder.',
+        author: 'Dubai Tourism',
+        source: ''
+      }
+    });
+  }
+
+  // Add banner block if missing
+  if (!blockTypes.has('banner')) {
+    const insertIndex = Math.min(7, normalizedBlocks.length);
+    normalizedBlocks.splice(insertIndex, 0, {
+      type: 'banner',
+      data: {
+        title: 'EXPERIENCE DUBAI',
+        subtitle: 'Discover the magic',
+        image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920',
+        ctaText: 'Explore More',
+        ctaLink: '/attractions'
+      }
+    });
+  }
+
+  // Add recommendations block if missing
+  if (!blockTypes.has('recommendations')) {
+    normalizedBlocks.push({
+      type: 'recommendations',
+      data: {
+        title: 'Travi Recommends',
+        subtitle: 'Handpicked experiences to enhance your Dubai visit',
+        items: [
+          { title: 'Burj Khalifa Sky Experience', description: 'See Dubai from the world\'s tallest building', image: 'https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=400', ctaText: 'Book Now', ctaLink: '/attractions/burj-khalifa', price: 'From AED 149' },
+          { title: 'Desert Safari Adventure', description: 'Experience the golden dunes at sunset', image: 'https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=400', ctaText: 'Book Now', ctaLink: '/attractions/desert-safari', price: 'From AED 199' },
+          { title: 'Dubai Marina Cruise', description: 'Luxury dinner cruise with skyline views', image: 'https://images.unsplash.com/photo-1512100356356-de1b84283e18?w=400', ctaText: 'Book Now', ctaLink: '/dining/marina-cruise', price: 'From AED 299' },
+          { title: 'Miracle Garden Entry', description: 'World\'s largest natural flower garden', image: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400', ctaText: 'Book Now', ctaLink: '/attractions/miracle-garden', price: 'From AED 55' }
+        ]
+      }
+    });
+  }
+
+  // Add related articles block if missing
+  if (!blockTypes.has('related_articles')) {
+    normalizedBlocks.push({
+      type: 'related_articles',
+      data: {
+        title: 'Related Articles',
+        subtitle: 'Explore more Dubai travel guides and tips',
+        articles: [
+          { title: 'Top 10 Things to Do in Dubai', description: 'Essential experiences for first-time visitors', image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400', date: '25', category: 'Dubai Guide', slug: 'top-things-to-do-dubai' },
+          { title: 'Dubai on a Budget', description: 'How to enjoy luxury for less', image: 'https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400', date: '25', category: 'Tips', slug: 'dubai-budget-guide' },
+          { title: 'Best Dubai Restaurants 2025', description: 'Where to eat from casual to fine dining', image: 'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=400', date: '25', category: 'Dining', slug: 'best-dubai-restaurants' },
+          { title: 'Dubai Hidden Gems', description: 'Secret spots the locals love', image: 'https://images.unsplash.com/photo-1546412414-e1885259563a?w=400', date: '25', category: 'Attractions', slug: 'dubai-hidden-gems' }
+        ]
+      }
+    });
+  }
+
   // Add id and order to all blocks before returning
   return normalizedBlocks.map((block, index) => ({
     ...block,
@@ -521,7 +660,7 @@ function validateAndNormalizeBlocks(blocks: unknown[], title: string): ContentBl
 }
 
 function normalizeBlock(type: string, data: Record<string, unknown>): Omit<ContentBlock, 'id' | 'order'> | null {
-  const validTypes: ContentBlock['type'][] = ['hero', 'text', 'image', 'gallery', 'faq', 'cta', 'info_grid', 'highlights', 'room_cards', 'tips'];
+  const validTypes: ContentBlock['type'][] = ['hero', 'text', 'image', 'gallery', 'faq', 'cta', 'info_grid', 'highlights', 'room_cards', 'tips', 'quote', 'banner', 'recommendations', 'related_articles'];
 
   switch (type) {
     case 'hero':
@@ -597,6 +736,51 @@ function normalizeBlock(type: string, data: Record<string, unknown>): Omit<Conte
       return { type: 'gallery' as const, data };
     case 'info_grid':
       return { type: 'info_grid' as const, data };
+
+    case 'quote':
+      return { type: 'quote' as const, data };
+
+    case 'banner':
+      // Ensure banner has image
+      const bannerData = { ...data };
+      if (!bannerData.image) {
+        bannerData.image = 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920';
+      }
+      return { type: 'banner' as const, data: bannerData };
+
+    case 'recommendations':
+      // Ensure recommendations have items with images
+      let recItems = (data as any).items;
+      if (Array.isArray(recItems)) {
+        const defaultImages = [
+          'https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=400',
+          'https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=400',
+          'https://images.unsplash.com/photo-1512100356356-de1b84283e18?w=400',
+          'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400'
+        ];
+        recItems = recItems.map((item: any, index: number) => ({
+          ...item,
+          image: item.image || defaultImages[index % defaultImages.length]
+        }));
+      }
+      return { type: 'recommendations' as const, data: { ...data, items: recItems } };
+
+    case 'related_articles':
+      // Ensure related articles have images
+      let articles = (data as any).articles;
+      if (Array.isArray(articles)) {
+        const defaultArticleImages = [
+          'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400',
+          'https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400',
+          'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=400',
+          'https://images.unsplash.com/photo-1546412414-e1885259563a?w=400'
+        ];
+        articles = articles.map((article: any, index: number) => ({
+          ...article,
+          image: article.image || defaultArticleImages[index % defaultArticleImages.length]
+        }));
+      }
+      return { type: 'related_articles' as const, data: { ...data, articles } };
 
     default:
       // Check if type is valid, otherwise return text
@@ -947,9 +1131,10 @@ async function translateArticleToAllLanguages(contentId: string, content: {
   const result = { success: 0, failed: 0, errors: [] as string[] };
   
   try {
-    const { translateContent, generateContentHash } = await import("./services/deepl-service");
-    
-    console.log(`[Auto-Translation] Starting translation for content ${contentId} to ${TARGET_LOCALES.length} languages...`);
+    // Use translation-service (Claude Haiku) instead of deepl-service
+    const { translateContent, generateContentHash } = await import("./services/translation-service");
+
+    console.log(`[Auto-Translation] Starting translation for content ${contentId} to ${TARGET_LOCALES.length} languages using Claude Haiku...`);
     
     const BATCH_SIZE = 3;
     for (let i = 0; i < TARGET_LOCALES.length; i += BATCH_SIZE) {
@@ -960,6 +1145,7 @@ async function translateArticleToAllLanguages(contentId: string, content: {
           try {
             console.log(`[Auto-Translation] Translating to ${locale}...`);
             
+            // Note: translation-service uses (content, sourceLocale, targetLocale) order
             const translatedContent = await translateContent(
               {
                 title: content.title,
@@ -967,12 +1153,12 @@ async function translateArticleToAllLanguages(contentId: string, content: {
                 metaDescription: content.metaDescription || undefined,
                 blocks: content.blocks || [],
               },
-              locale as any,
-              "en"
+              "en" as any,
+              locale as any
             );
-            
+
             const existingTranslation = await storage.getTranslation(contentId, locale as any);
-            
+
             const isRtl = RTL_LOCALES.includes(locale);
             const translationData = {
               contentId,
@@ -983,8 +1169,8 @@ async function translateArticleToAllLanguages(contentId: string, content: {
               metaDescription: translatedContent.metaDescription || null,
               blocks: translatedContent.blocks || [],
               sourceHash: translatedContent.sourceHash,
-              translatedBy: "deepl-auto",
-              translationProvider: "deepl",
+              translatedBy: "claude-auto",
+              translationProvider: "claude",
               isManualOverride: false,
             };
             
@@ -1146,13 +1332,12 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
         }));
 
         const combinedText = sources.map(s => `${s.title} ${s.description}`).join(' ');
-        const category = determineContentCategory(combinedText, '');
-        const mapping = CATEGORY_PERSONALITY_MAPPING[category] || CATEGORY_PERSONALITY_MAPPING.news;
-        const personality = CONTENT_WRITER_PERSONALITIES[mapping.personality];
-        const structure = ARTICLE_STRUCTURES[mapping.structure];
+        const category = determineContentCategory(combinedText);
+        const sourceContent = sources.map(s => `${s.title}: ${s.description}`).join('\n\n');
 
-        const systemPrompt = getContentWriterSystemPrompt(category, personality, structure);
-        const userPrompt = buildArticleGenerationPrompt(sources, category, personality, structure);
+        // Use centralized content rules system
+        const systemPrompt = await getContentWriterSystemPrompt(category);
+        const userPrompt = await buildArticleGenerationPrompt(cluster.topic || combinedText, sourceContent);
 
         // Generate article with validation and retries
         let validatedData: ArticleResponse | null = null;
@@ -1160,6 +1345,7 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
         const maxAttempts = 3;
         let lastResponse: unknown = null;
         let lastErrors: string[] = [];
+        let lastWordCount = 0;
 
         while (!validatedData && attempts < maxAttempts) {
           attempts++;
@@ -1172,9 +1358,10 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
 
           // Add retry prompt if this is a retry
           if (attempts > 1 && lastErrors.length > 0) {
-            messages.push({ 
-              role: "user", 
-              content: buildRetryPrompt(lastErrors, lastResponse) 
+            const retryPrompt = await buildRetryPrompt(lastErrors, lastWordCount, category);
+            messages.push({
+              role: "user",
+              content: retryPrompt
             });
           }
 
@@ -1187,13 +1374,14 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
           });
 
           lastResponse = JSON.parse(completion.choices[0].message.content || "{}");
-          const validation = validateArticleResponse(lastResponse);
+          const validation = await validateArticleResponse(lastResponse);
 
           if (validation.isValid && validation.data) {
             validatedData = validation.data;
             console.log(`[RSS Auto-Process] Validation passed on attempt ${attempts} - ${validation.wordCount} words`);
           } else {
             lastErrors = validation.errors;
+            lastWordCount = validation.wordCount;
             console.log(`[RSS Auto-Process] Validation failed (attempt ${attempts}): ${validation.errors.join(", ")}`);
           }
         }
@@ -1432,13 +1620,17 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
                       ? 'shopping'
                       : 'news';
 
+        // Get personality info for article metadata
+        const personalityKey = CATEGORY_PERSONALITY_MAPPING[category] || "A";
+        const personalityData = CONTENT_WRITER_PERSONALITIES[personalityKey];
+
         await storage.createArticle({
           contentId: content.id,
           category: articleCategory as any,
           urgencyLevel: mergedData.urgencyLevel || 'relevant',
           targetAudience: mergedData.targetAudience || [],
-          personality: mapping.personality,
-          tone: mapping.tone,
+          personality: personalityKey,
+          tone: personalityData?.tone || "professional",
           quickFacts: mergedData.quickFacts || [],
           proTips: mergedData.proTips || [],
           warnings: mergedData.warnings || [],
@@ -1511,10 +1703,66 @@ export async function registerRoutes(
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
-  
+
+  // Serve AI-generated images from object storage
+  app.get("/api/ai-images/:filename", async (req: Request, res: Response) => {
+    const filename = req.params.filename;
+    const client = getObjectStorageClient();
+
+    if (client) {
+      try {
+        const objectPath = `public/ai-generated/${filename}`;
+        const result = await client.downloadAsBytes(objectPath);
+
+        if (!result.ok) {
+          console.error(`Object storage error for ${filename}:`, result.error);
+          res.status(404).send('Image not found');
+          return;
+        }
+
+        const [buffer] = result.value;
+
+        // Determine content type
+        const ext = filename.split('.').pop()?.toLowerCase();
+        const contentTypes: Record<string, string> = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'webp': 'image/webp',
+          'gif': 'image/gif',
+        };
+
+        res.set('Content-Type', contentTypes[ext || 'jpg'] || 'image/jpeg');
+        res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        res.send(buffer);
+      } catch (error) {
+        console.error(`Error serving AI image ${filename}:`, error);
+        res.status(404).send('Image not found');
+      }
+    } else {
+      // Fallback to local file
+      const localPath = path.join(process.cwd(), "uploads", "ai-generated", filename);
+      if (fs.existsSync(localPath)) {
+        res.sendFile(localPath);
+      } else {
+        res.status(404).send('Image not found');
+      }
+    }
+  });
+
+  // Sitemap and robots.txt routes
+  const sitemapRoutes = (await import("./routes/sitemap")).default;
+  app.use(sitemapRoutes);
+
+  // Security headers for all responses (CSP, X-Frame-Options, etc.)
+  app.use(securityHeaders);
+
+  // IP blocking for suspicious activity
+  app.use("/api", ipBlockMiddleware);
+
   // Setup Replit Auth FIRST (so CSRF can use req.isAuthenticated)
   await setupAuth(app);
-  
+
   // Global CSRF protection for admin write endpoints (AFTER setupAuth)
   app.use("/api", csrfProtection);
   
@@ -1531,6 +1779,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Username and password are required" });
       }
       
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
       // Check for admin from environment first
       if (ADMIN_PASSWORD_HASH && username === ADMIN_USERNAME) {
         const isAdminPassword = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
@@ -1547,13 +1797,13 @@ export async function registerRoutes(
               isActive: true,
             });
           }
-          
+
           // Set up session
           const sessionUser = {
             claims: { sub: adminUser.id },
             id: adminUser.id,
           };
-          
+
           req.login(sessionUser, (err: any) => {
             if (err) {
               console.error("Login session error:", err);
@@ -1564,6 +1814,18 @@ export async function registerRoutes(
                 console.error("Session save error:", saveErr);
                 return res.status(500).json({ error: "Failed to save session" });
               }
+
+              // Log successful login
+              logSecurityEvent({
+                action: 'login',
+                resourceType: 'auth',
+                userId: adminUser!.id,
+                userEmail: adminUser!.username || undefined,
+                ip,
+                userAgent: req.get('User-Agent'),
+                details: { method: 'password', role: adminUser!.role },
+              });
+
               res.json({ success: true, user: adminUser });
             });
           });
@@ -1574,15 +1836,18 @@ export async function registerRoutes(
       // Check database for user
       const user = await storage.getUserByUsername(username);
       if (!user || !user.passwordHash) {
+        recordFailedAttempt(ip);
         return res.status(401).json({ error: "Invalid username or password" });
       }
-      
+
       if (!user.isActive) {
+        recordFailedAttempt(ip);
         return res.status(401).json({ error: "Account is deactivated" });
       }
-      
+
       const passwordMatch = await bcrypt.compare(password, user.passwordHash);
       if (!passwordMatch) {
+        recordFailedAttempt(ip);
         return res.status(401).json({ error: "Invalid username or password" });
       }
       
@@ -1602,6 +1867,18 @@ export async function registerRoutes(
             console.error("Session save error:", saveErr);
             return res.status(500).json({ error: "Failed to save session" });
           }
+
+          // Log successful login
+          logSecurityEvent({
+            action: 'login',
+            resourceType: 'auth',
+            userId: user.id,
+            userEmail: user.username || undefined,
+            ip,
+            userAgent: req.get('User-Agent'),
+            details: { method: 'password', role: user.role },
+          });
+
           res.json({ success: true, user });
         });
       });
@@ -2016,13 +2293,47 @@ export async function registerRoutes(
         status: status as string | undefined,
         search: search as string | undefined,
       };
-      
+
       // Always include relations (author, type-specific extensions) for consistency
       const contents = await storage.getContentsWithRelations(filters);
       res.json(contents);
     } catch (error) {
       console.error("Error fetching contents:", error);
       res.status(500).json({ error: "Failed to fetch contents" });
+    }
+  });
+
+  // Content needing attention for dashboard
+  app.get("/api/contents/attention", async (req, res) => {
+    try {
+      const contents = await storage.getContentsWithRelations({});
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+      // Low SEO score (below 70)
+      const lowSeo = contents.filter(c =>
+        c.status === "published" && (c.seoScore === null || c.seoScore === undefined || c.seoScore < 70)
+      ).slice(0, 10);
+
+      // No views in last 30 days (published content with 0 or very low views)
+      const noViews = contents.filter(c =>
+        c.status === "published" && (!c.viewCount || c.viewCount < 10)
+      ).slice(0, 10);
+
+      // Scheduled for today
+      const scheduledToday = contents.filter(c =>
+        c.status === "scheduled" &&
+        c.scheduledAt &&
+        new Date(c.scheduledAt) >= todayStart &&
+        new Date(c.scheduledAt) < todayEnd
+      );
+
+      res.json({ lowSeo, noViews, scheduledToday });
+    } catch (error) {
+      console.error("Error fetching attention items:", error);
+      res.status(500).json({ error: "Failed to fetch attention items" });
     }
   });
 
@@ -2220,15 +2531,7 @@ export async function registerRoutes(
       });
 
       const { attraction, hotel, article, event, itinerary, changedBy, changeNote, ...contentData } = req.body;
-
-      // Convert date strings to Date objects for timestamp fields
-      if (contentData.publishedAt && typeof contentData.publishedAt === 'string') {
-        contentData.publishedAt = new Date(contentData.publishedAt);
-      }
-      if (contentData.scheduledAt && typeof contentData.scheduledAt === 'string') {
-        contentData.scheduledAt = new Date(contentData.scheduledAt);
-      }
-
+      
       const updatedContent = await storage.updateContent(req.params.id, contentData);
 
       if (existingContent.type === "attraction" && attraction) {
@@ -2426,11 +2729,21 @@ export async function registerRoutes(
   });
 
   // Auto-translate content to all languages
+  // IMPORTANT: Only translates PUBLISHED content to save translation costs
   app.post("/api/contents/:id/translate-all", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const content = await storage.getContent(req.params.id);
       if (!content) {
         return res.status(404).json({ error: "Content not found" });
+      }
+
+      // CRITICAL: Only translate published content to avoid wasting money on drafts
+      if (content.status !== "published") {
+        return res.status(400).json({
+          error: "Cannot translate unpublished content",
+          message: "Only published content can be translated. Please publish the content first to save translation costs.",
+          currentStatus: content.status
+        });
       }
 
       const { tiers } = req.body; // Optional: only translate to specific tiers (1-7)
@@ -2570,12 +2883,12 @@ export async function registerRoutes(
     try {
       const existingContent = await storage.getContent(req.params.id);
       await storage.deleteContent(req.params.id);
-      
+
       // Audit log content deletion
       if (existingContent) {
         await logAuditEvent(req, "delete", "content", req.params.id, `Deleted: ${existingContent.title}`, { title: existingContent.title, type: existingContent.type });
       }
-      
+
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting content:", error);
@@ -2738,6 +3051,20 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching RSS feeds:", error);
       res.status(500).json({ error: "Failed to fetch RSS feeds" });
+    }
+  });
+
+  // RSS feeds stats for dashboard
+  app.get("/api/rss-feeds/stats", requireAuth, async (req, res) => {
+    try {
+      const feeds = await storage.getRssFeeds();
+      // Count articles from RSS that are still in draft status (pending review)
+      const allContent = await storage.getContentsWithRelations({ status: "draft" });
+      const rssArticles = allContent.filter(c => c.type === "article" && c.title?.includes("[RSS]"));
+      res.json({ pendingCount: rssArticles.length, totalFeeds: feeds.length });
+    } catch (error) {
+      console.error("Error fetching RSS stats:", error);
+      res.status(500).json({ error: "Failed to fetch RSS stats" });
     }
   });
 
@@ -3105,12 +3432,8 @@ export async function registerRoutes(
 
       // Determine content category based on source material
       const combinedText = sources.map(s => `${s.title} ${s.description}`).join(' ');
-      const category = determineContentCategory(combinedText, '');
-      
-      // Get the appropriate personality and structure for this category
-      const mapping = CATEGORY_PERSONALITY_MAPPING[category] || CATEGORY_PERSONALITY_MAPPING.news;
-      const personality = CONTENT_WRITER_PERSONALITIES[mapping.personality];
-      const structure = ARTICLE_STRUCTURES[mapping.structure];
+      const category = determineContentCategory(combinedText);
+      const sourceContent = sources.map(s => `${s.title}: ${s.description}`).join('\n\n');
 
       // Use OpenAI to merge the articles with enhanced prompting
       const openai = getOpenAIClient();
@@ -3118,9 +3441,9 @@ export async function registerRoutes(
         return res.status(503).json({ error: "OpenAI API not configured. Please set OPENAI_API_KEY." });
       }
 
-      // Build the enhanced system and user prompts
-      const systemPrompt = getContentWriterSystemPrompt(category, personality, structure);
-      const userPrompt = buildArticleGenerationPrompt(sources, category, personality, structure);
+      // Build the enhanced system and user prompts using centralized content rules
+      const systemPrompt = await getContentWriterSystemPrompt(category);
+      const userPrompt = await buildArticleGenerationPrompt(cluster.topic || combinedText, sourceContent);
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -3260,13 +3583,17 @@ export async function registerRoutes(
                     ? 'shopping'
                     : 'news';
 
+      // Get personality info for article metadata
+      const personalityKey = CATEGORY_PERSONALITY_MAPPING[category] || "A";
+      const personalityData = CONTENT_WRITER_PERSONALITIES[personalityKey];
+
       await storage.createArticle({
         contentId: content.id,
         category: articleCategory as any,
         urgencyLevel: mergedData.urgencyLevel || 'relevant',
         targetAudience: mergedData.targetAudience || [],
-        personality: mapping.personality,
-        tone: mapping.tone,
+        personality: personalityKey,
+        tone: personalityData?.tone || "professional",
         quickFacts: mergedData.quickFacts || [],
         proTips: mergedData.proTips || [],
         warnings: mergedData.warnings || [],
@@ -3312,13 +3639,13 @@ export async function registerRoutes(
       });
 
       res.status(201).json({
-        message: `Successfully merged ${items.length} articles using ${personality.name} personality`,
+        message: `Successfully merged ${items.length} articles using ${personalityData?.name || "Professional"} personality`,
         content,
         mergedFrom: items.length,
         sources: mergedData.sources || [],
         category,
-        personality: mapping.personality,
-        structure: mapping.structure,
+        personality: personalityKey,
+        structure: "standard",
         wordCount,
         translationsQueued: TARGET_LOCALES.length,
       });
@@ -3501,20 +3828,27 @@ export async function registerRoutes(
   app.post("/api/media/upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.single("file"), validateMediaUpload, async (req, res) => {
     let localPath: string | null = null;
     let objectPath: string | null = null;
-    
+
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
+      // Convert images to WebP for optimization
+      const converted = await convertToWebP(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+
       const storageClient = getObjectStorageClient();
-      
-      const filename = `${Date.now()}-${req.file.originalname}`;
+
+      const filename = `${Date.now()}-${converted.filename}`;
       let url = `/uploads/${filename}`;
-      
+
       if (storageClient) {
         objectPath = `public/${filename}`;
-        await storageClient.uploadFromBytes(objectPath, req.file.buffer);
+        await storageClient.uploadFromBytes(objectPath, converted.buffer);
         // Note: Using simple URL path instead of signed URL (getSignedDownloadUrl doesn't exist)
         url = `/object-storage/${objectPath}`;
       } else {
@@ -3523,21 +3857,21 @@ export async function registerRoutes(
           fs.mkdirSync(uploadsDir, { recursive: true });
         }
         localPath = path.join(uploadsDir, filename);
-        fs.writeFileSync(localPath, req.file.buffer);
+        fs.writeFileSync(localPath, converted.buffer);
       }
 
       const mediaFile = await storage.createMediaFile({
         filename,
         originalFilename: req.file.originalname,
-        mimeType: req.file.mimetype,
-        size: req.file.size,
+        mimeType: converted.mimeType,
+        size: converted.buffer.length,
         url,
         altText: req.body.altText || null,
-        width: req.body.width ? parseInt(req.body.width) : null,
-        height: req.body.height ? parseInt(req.body.height) : null,
+        width: converted.width || (req.body.width ? parseInt(req.body.width) : null),
+        height: converted.height || (req.body.height ? parseInt(req.body.height) : null),
       });
 
-      await logAuditEvent(req, "media_upload", "media", mediaFile.id, `Uploaded media: ${mediaFile.originalFilename}`, undefined, { filename: mediaFile.originalFilename, mimeType: mediaFile.mimeType, size: mediaFile.size });
+      await logAuditEvent(req, "media_upload", "media", mediaFile.id, `Uploaded media: ${mediaFile.originalFilename}`, undefined, { filename: mediaFile.originalFilename, mimeType: mediaFile.mimeType, size: mediaFile.size, originalSize: req.file.size });
       res.status(201).json(mediaFile);
     } catch (error) {
       if (localPath && fs.existsSync(localPath)) {
@@ -4232,7 +4566,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
             await storageClient.uploadFromBytes(objectPath, buffer);
             storedImages.push({
               ...image,
-              url: `/api/media/${image.filename}`, // Use proxy URL
+              url: `/api/ai-images/${image.filename}`, // Use AI images endpoint
             });
           } else {
             // Store locally
@@ -4303,7 +4637,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       if (storageClient) {
         const objectPath = `public/ai-generated/${finalFilename}`;
         await storageClient.uploadFromBytes(objectPath, buffer);
-        storedUrl = `/api/media/${finalFilename}`;
+        storedUrl = `/api/ai-images/${finalFilename}`;
       } else {
         const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
         if (!fs.existsSync(uploadsDir)) {
@@ -4451,6 +4785,19 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     }
   });
 
+  // Topic bank stats for dashboard
+  app.get("/api/topic-bank/stats", async (req, res) => {
+    try {
+      const items = await storage.getTopicBankItems({ isActive: true });
+      // Count unused topics (timesUsed === 0 or undefined)
+      const unusedCount = items.filter(item => !item.timesUsed || item.timesUsed === 0).length;
+      res.json({ unusedCount, totalTopics: items.length });
+    } catch (error) {
+      console.error("Error fetching topic bank stats:", error);
+      res.status(500).json({ error: "Failed to fetch topic bank stats" });
+    }
+  });
+
   app.get("/api/topic-bank/:id", async (req, res) => {
     try {
       const item = await storage.getTopicBankItem(req.params.id);
@@ -4498,6 +4845,116 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
     } catch (error) {
       console.error("Error deleting topic bank item:", error);
       res.status(500).json({ error: "Failed to delete topic bank item" });
+    }
+  });
+
+  // Merge duplicate topics (same title)
+  app.post("/api/topic-bank/merge-duplicates", requirePermission("canDelete"), async (req, res) => {
+    try {
+      const allTopics = await storage.getTopicBankItems({});
+      
+      // Group topics by normalized title (lowercase, trimmed)
+      const topicsByTitle = new Map<string, typeof allTopics>();
+      for (const topic of allTopics) {
+        const normalizedTitle = topic.title.toLowerCase().trim();
+        if (!topicsByTitle.has(normalizedTitle)) {
+          topicsByTitle.set(normalizedTitle, []);
+        }
+        topicsByTitle.get(normalizedTitle)!.push(topic);
+      }
+      
+      let mergedCount = 0;
+      let deletedCount = 0;
+      
+      // Process each group of duplicates
+      for (const [, duplicates] of topicsByTitle) {
+        if (duplicates.length <= 1) continue;
+        
+        // Sort by: priority (desc), timesUsed (desc), createdAt (desc - newest first for ties)
+        duplicates.sort((a, b) => {
+          if ((b.priority || 0) !== (a.priority || 0)) return (b.priority || 0) - (a.priority || 0);
+          if ((b.timesUsed || 0) !== (a.timesUsed || 0)) return (b.timesUsed || 0) - (a.timesUsed || 0);
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime; // Newest first when other fields are equal
+        });
+        
+        // Keep the first one (best), merge data into it
+        const keeper = duplicates[0];
+        const toDelete = duplicates.slice(1);
+        
+        // Merge all fields from duplicates - prefer non-null values
+        const allKeywords = new Set<string>(keeper.keywords || []);
+        let longestOutline = keeper.outline || "";
+        let totalTimesUsed = keeper.timesUsed || 0;
+        let bestCategory = keeper.category;
+        let bestMainCategory = keeper.mainCategory;
+        let bestTopicType = keeper.topicType;
+        let bestViralPotential = keeper.viralPotential;
+        let bestFormat = keeper.format;
+        let bestHeadlineAngle = keeper.headlineAngle;
+        let bestPriority = keeper.priority || 0;
+        let isActive = keeper.isActive === true; // Only true if explicitly true, not undefined
+        
+        for (const dup of toDelete) {
+          // Merge keywords
+          if (dup.keywords) {
+            for (const kw of dup.keywords) {
+              allKeywords.add(kw);
+            }
+          }
+          // Keep longest outline
+          if (dup.outline && dup.outline.length > longestOutline.length) {
+            longestOutline = dup.outline;
+          }
+          // Sum up usage
+          totalTimesUsed += dup.timesUsed || 0;
+          // Prefer non-null values for categorical fields
+          if (!bestCategory && dup.category) bestCategory = dup.category;
+          if (!bestMainCategory && dup.mainCategory) bestMainCategory = dup.mainCategory;
+          if (!bestTopicType && dup.topicType) bestTopicType = dup.topicType;
+          if (!bestViralPotential && dup.viralPotential) bestViralPotential = dup.viralPotential;
+          if (!bestFormat && dup.format) bestFormat = dup.format;
+          if (!bestHeadlineAngle && dup.headlineAngle) bestHeadlineAngle = dup.headlineAngle;
+          // Keep highest priority
+          if ((dup.priority || 0) > bestPriority) bestPriority = dup.priority || 0;
+          // If any duplicate is explicitly active, keep active
+          if (dup.isActive === true) isActive = true;
+        }
+        
+        // Update keeper with merged data
+        await storage.updateTopicBankItem(keeper.id, {
+          keywords: Array.from(allKeywords),
+          outline: longestOutline || null,
+          timesUsed: totalTimesUsed,
+          category: bestCategory,
+          mainCategory: bestMainCategory,
+          topicType: bestTopicType,
+          viralPotential: bestViralPotential,
+          format: bestFormat,
+          headlineAngle: bestHeadlineAngle,
+          priority: bestPriority,
+          isActive: isActive,
+        });
+        
+        // Delete duplicates
+        for (const dup of toDelete) {
+          await storage.deleteTopicBankItem(dup.id);
+          deletedCount++;
+        }
+        
+        mergedCount++;
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Merged ${mergedCount} groups, deleted ${deletedCount} duplicates`,
+        mergedGroups: mergedCount,
+        deletedItems: deletedCount
+      });
+    } catch (error) {
+      console.error("Error merging duplicate topics:", error);
+      res.status(500).json({ error: "Failed to merge duplicate topics" });
     }
   });
 
@@ -4712,6 +5169,177 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
     } catch (error) {
       console.error("Error generating article from topic:", error);
       res.status(500).json({ error: "Failed to generate article from topic" });
+    }
+  });
+
+  // Generate NEWS from Topic Bank item and DELETE the topic after
+  app.post("/api/topic-bank/:id/generate-news", requirePermission("canCreate"), async (req, res) => {
+    try {
+      const openai = getOpenAIClient();
+      if (!openai) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      }
+
+      const topic = await storage.getTopicBankItem(req.params.id);
+      if (!topic) {
+        return res.status(404).json({ error: "Topic not found" });
+      }
+
+      const keywordsContext = topic.keywords?.length
+        ? `Target Keywords: ${topic.keywords.join(", ")}`
+        : "";
+
+      const systemPrompt = `You are an expert Dubai news and viral content writer. Generate a news/trending article based on the topic.
+
+This should be written in a NEWS/trending format - engaging, timely-feeling, and shareable.
+
+Topic Details:
+- Title: ${topic.title}
+- Headline Angle: ${topic.headlineAngle || 'Create an engaging hook'}
+- Format: ${topic.format || 'article'}
+- Viral Potential: ${topic.viralPotential}/5 stars
+- Category: ${topic.mainCategory || topic.category}
+
+OUTPUT FORMAT - Return valid JSON:
+{
+  "title": "Attention-grabbing news headline (50-70 chars)",
+  "metaDescription": "Compelling meta description (150-160 chars)",
+  "slug": "url-friendly-slug",
+  "heroImageAlt": "Descriptive alt text",
+  "blocks": [
+    {
+      "type": "hero",
+      "data": {
+        "title": "Main headline",
+        "subtitle": "Breaking/Trending subheader",
+        "overlayText": "Dubai 2025"
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "heading": "The Story",
+        "content": "Lead paragraph with the key news/trend (200-300 words)..."
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "heading": "Why It Matters",
+        "content": "Context and significance (200-250 words)..."
+      }
+    },
+    {
+      "type": "highlights",
+      "data": {
+        "title": "Key Takeaways",
+        "items": ["Point 1", "Point 2", "Point 3", "Point 4", "Point 5"]
+      }
+    },
+    {
+      "type": "text",
+      "data": {
+        "heading": "What Travelers Need to Know",
+        "content": "Practical info for visitors (200-250 words)..."
+      }
+    },
+    {
+      "type": "tips",
+      "data": {
+        "title": "Quick Tips",
+        "tips": ["Tip 1", "Tip 2", "Tip 3", "Tip 4", "Tip 5"]
+      }
+    },
+    {
+      "type": "faq",
+      "data": {
+        "title": "FAQs",
+        "faqs": [
+          {"question": "Q1?", "answer": "Answer..."},
+          {"question": "Q2?", "answer": "Answer..."},
+          {"question": "Q3?", "answer": "Answer..."}
+        ]
+      }
+    }
+  ]
+}
+
+RULES:
+1. Write 800-1200 words total - news articles are shorter
+2. Use the headline angle: "${topic.headlineAngle || topic.title}"
+3. Make it feel current and newsworthy
+4. Include social-media-friendly quotes/stats
+5. No invented facts or fake statistics`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Generate a viral news article for: ${topic.title}\n${keywordsContext}` },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 3000,
+      });
+
+      const generated = JSON.parse(response.choices[0].message.content || "{}");
+      const blocks = validateAndNormalizeBlocks(generated.blocks || [], generated.title || topic.title);
+
+      const slug = generated.slug || topic.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      // Generate hero image
+      let heroImageUrl = null;
+      try {
+        const generatedImages = await generateContentImages({
+          contentType: 'article',
+          title: generated.title || topic.title,
+          description: generated.metaDescription || topic.title,
+          generateHero: true,
+          generateContentImages: false,
+        });
+
+        if (generatedImages.length > 0) {
+          const heroImage = generatedImages.find(img => img.type === 'hero');
+          if (heroImage) {
+            const persistedUrl = await persistImageToStorage(heroImage.url, heroImage.filename);
+            heroImageUrl = persistedUrl || heroImage.url;
+          }
+        }
+      } catch (imageError) {
+        console.error("Error generating images for news article:", imageError);
+      }
+
+      // Create news article
+      const content = await storage.createContent({
+        title: generated.title || topic.title,
+        slug: `${slug}-${Date.now()}`,
+        type: "article",
+        status: "draft",
+        metaDescription: generated.metaDescription || null,
+        heroImage: heroImageUrl,
+        heroImageAlt: generated.heroImageAlt || `${topic.title} - Dubai News`,
+        blocks: blocks,
+        primaryKeyword: topic.keywords?.[0] || null,
+        secondaryKeywords: topic.keywords?.slice(1) || [],
+      });
+
+      // Create with "news" category
+      await storage.createArticle({ contentId: content.id, category: "news" });
+
+      // DELETE the topic after successful generation
+      await storage.deleteTopicBankItem(req.params.id);
+
+      res.status(201).json({
+        content,
+        generated,
+        topicDeleted: true,
+        message: "News article generated and topic removed from bank"
+      });
+    } catch (error) {
+      console.error("Error generating news from topic:", error);
+      res.status(500).json({ error: "Failed to generate news from topic" });
     }
   });
 
@@ -6107,6 +6735,111 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // ============================================================================
+  // ADMIN SECURITY ENDPOINTS
+  // ============================================================================
+
+  // Get audit logs (admin only)
+  app.get("/api/admin/audit-logs", requirePermission("canPublish"), auditLogReadOnly, (req, res) => {
+    try {
+      const { action, resourceType, userId, limit = 100 } = req.query;
+      const logs = getAuditLogs({
+        action: action as string,
+        resourceType: resourceType as string,
+        userId: userId as string,
+        limit: parseInt(limit as string) || 100,
+      });
+      res.json({ logs, total: logs.length });
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ error: "Failed to fetch audit logs" });
+    }
+  });
+
+  // Get blocked IPs (admin only)
+  app.get("/api/admin/blocked-ips", requirePermission("canPublish"), (req, res) => {
+    try {
+      const blockedIps = getBlockedIps();
+      res.json({ blockedIps, total: blockedIps.length });
+    } catch (error) {
+      console.error("Error fetching blocked IPs:", error);
+      res.status(500).json({ error: "Failed to fetch blocked IPs" });
+    }
+  });
+
+  // ============================================================================
+  // JOB QUEUE ENDPOINTS
+  // ============================================================================
+
+  // Get job queue statistics
+  app.get("/api/admin/jobs/stats", requirePermission("canPublish"), (req, res) => {
+    try {
+      const stats = jobQueue.getStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching job stats:", error);
+      res.status(500).json({ error: "Failed to fetch job statistics" });
+    }
+  });
+
+  // Get jobs by status
+  app.get("/api/admin/jobs", requirePermission("canPublish"), (req, res) => {
+    try {
+      const { status = 'pending' } = req.query;
+      const validStatuses = ['pending', 'processing', 'completed', 'failed'];
+      if (!validStatuses.includes(status as string)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      const jobs = jobQueue.getJobsByStatus(status as any);
+      res.json({ jobs, total: jobs.length });
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      res.status(500).json({ error: "Failed to fetch jobs" });
+    }
+  });
+
+  // Get single job status
+  app.get("/api/admin/jobs/:id", requirePermission("canPublish"), (req, res) => {
+    try {
+      const job = jobQueue.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      console.error("Error fetching job:", error);
+      res.status(500).json({ error: "Failed to fetch job" });
+    }
+  });
+
+  // Cancel a pending job
+  app.delete("/api/admin/jobs/:id", requirePermission("canPublish"), (req, res) => {
+    try {
+      const cancelled = jobQueue.cancelJob(req.params.id);
+      if (!cancelled) {
+        return res.status(400).json({ error: "Cannot cancel job (not pending or not found)" });
+      }
+      res.json({ success: true, message: "Job cancelled" });
+    } catch (error) {
+      console.error("Error cancelling job:", error);
+      res.status(500).json({ error: "Failed to cancel job" });
+    }
+  });
+
+  // Retry a failed job
+  app.post("/api/admin/jobs/:id/retry", requirePermission("canPublish"), (req, res) => {
+    try {
+      const retried = jobQueue.retryJob(req.params.id);
+      if (!retried) {
+        return res.status(400).json({ error: "Cannot retry job (not failed or not found)" });
+      }
+      res.json({ success: true, message: "Job queued for retry" });
+    } catch (error) {
+      console.error("Error retrying job:", error);
+      res.status(500).json({ error: "Failed to retry job" });
+    }
+  });
+
   // Migration endpoint - convert existing content to blocks format
   app.post("/api/admin/migrate-blocks", requirePermission("canPublish"), async (req, res) => {
     try {
@@ -6537,6 +7270,95 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // Sync tags from content - auto-extract tags from site content
+  app.post("/api/tags/sync", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const allContent = await storage.getAllContent();
+      const existingTags = await storage.getTags();
+      const existingTagSlugs = new Set(existingTags.map(t => t.slug));
+
+      // Collect unique tags from content
+      const tagCandidates = new Map<string, { name: string; count: number; color: string }>();
+
+      // Color palette for auto-generated tags
+      const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6366f1", "#14b8a6"];
+      let colorIndex = 0;
+
+      // Extract tags from content types
+      for (const content of allContent) {
+        // From content type
+        const typeTag = content.type;
+        if (typeTag) {
+          const slug = typeTag.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+          if (!tagCandidates.has(slug)) {
+            tagCandidates.set(slug, { name: typeTag.charAt(0).toUpperCase() + typeTag.slice(1), count: 0, color: colors[colorIndex++ % colors.length] });
+          }
+          tagCandidates.get(slug)!.count++;
+        }
+
+        // From primary keywords
+        if (content.primaryKeyword) {
+          const kw = content.primaryKeyword;
+          const slug = kw.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
+          if (slug.length > 2 && !tagCandidates.has(slug)) {
+            tagCandidates.set(slug, { name: kw.slice(0, 50), count: 0, color: colors[colorIndex++ % colors.length] });
+          }
+          if (tagCandidates.has(slug)) tagCandidates.get(slug)!.count++;
+        }
+
+        // From secondary keywords (top 3)
+        if (content.secondaryKeywords && Array.isArray(content.secondaryKeywords)) {
+          for (const kw of content.secondaryKeywords.slice(0, 3)) {
+            const slug = String(kw).toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
+            if (slug.length > 2 && !tagCandidates.has(slug)) {
+              tagCandidates.set(slug, { name: String(kw).slice(0, 50), count: 0, color: colors[colorIndex++ % colors.length] });
+            }
+            if (tagCandidates.has(slug)) tagCandidates.get(slug)!.count++;
+          }
+        }
+      }
+
+      // Create tags that don't exist yet (only those used 2+ times to avoid noise)
+      const created: string[] = [];
+      const skipped: string[] = [];
+
+      for (const [slug, data] of tagCandidates) {
+        if (existingTagSlugs.has(slug)) {
+          skipped.push(slug);
+          continue;
+        }
+        if (data.count >= 2 || slug.length <= 15) { // Create if used 2+ times or short/common
+          try {
+            await storage.createTag({
+              name: data.name,
+              slug,
+              description: `Auto-generated tag from content (${data.count} items)`,
+              color: data.color,
+            });
+            created.push(data.name);
+          } catch (e: any) {
+            if (!e.message?.includes("duplicate")) {
+              console.error(`Error creating tag ${slug}:`, e.message);
+            }
+          }
+        }
+      }
+
+      await logAuditEvent(req, "sync", "tags", "bulk", `Synced tags from content`, { created: created.length, skipped: skipped.length });
+
+      res.json({
+        success: true,
+        created,
+        skipped: skipped.length,
+        total: tagCandidates.size,
+        message: `Created ${created.length} new tags from ${allContent.length} content items`
+      });
+    } catch (error) {
+      console.error("Error syncing tags:", error);
+      res.status(500).json({ error: "Failed to sync tags" });
+    }
+  });
+
   // Content Tags Routes
   app.get("/api/content/:contentId/tags", requireAuth, async (req, res) => {
     try {
@@ -6785,6 +7607,33 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // TRANSLATIONS - DeepL Multi-Language SEO System
   // ============================================================================
 
+  // Get translation coverage for dashboard (simplified stats per language)
+  app.get("/api/translations/coverage", async (req, res) => {
+    try {
+      const contents = await storage.getContents();
+      const publishedContents = contents.filter(c => c.status === "published");
+      const allTranslations = await storage.getAllTranslations();
+
+      const supportedLocales = ["en", "ar", "hi", "zh", "ru", "fr", "de", "es", "ja"];
+
+      const coverage: Record<string, { translated: number; total: number }> = {};
+      for (const locale of supportedLocales) {
+        if (locale === "en") {
+          // English is the source language
+          coverage[locale] = { translated: publishedContents.length, total: publishedContents.length };
+        } else {
+          const localeTranslations = allTranslations.filter(t => t.locale === locale && t.status === "completed");
+          coverage[locale] = { translated: localeTranslations.length, total: publishedContents.length };
+        }
+      }
+
+      res.json(coverage);
+    } catch (error) {
+      console.error("Error fetching translation coverage:", error);
+      res.status(500).json({ error: "Failed to fetch translation coverage" });
+    }
+  });
+
   // Get translation statistics for admin dashboard
   app.get("/api/translations/stats", requirePermission("canViewAnalytics"), async (req, res) => {
     try {
@@ -6884,8 +7733,10 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         return res.status(404).json({ error: "Content not found" });
       }
 
-      const { translateContent, generateContentHash } = await import("./services/deepl-service");
-      
+      // Use translation-service (Claude Haiku) instead of deepl-service
+      const { translateContent, generateContentHash } = await import("./services/translation-service");
+
+      // Note: translation-service uses (content, sourceLocale, targetLocale) order
       const translatedContent = await translateContent(
         {
           title: content.title,
@@ -6893,16 +7744,16 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
           metaDescription: content.metaDescription || undefined,
           blocks: content.blocks || [],
         },
-        targetLocale,
-        sourceLocale
+        sourceLocale,
+        targetLocale
       );
 
       const existingTranslation = await storage.getTranslation(contentId, targetLocale);
-      
+
       if (existingTranslation && existingTranslation.isManualOverride) {
-        return res.status(409).json({ 
+        return res.status(409).json({
           error: "Manual override exists. Use force=true to overwrite.",
-          existingTranslation 
+          existingTranslation
         });
       }
 
@@ -6915,8 +7766,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         metaDescription: translatedContent.metaDescription || null,
         blocks: translatedContent.blocks || [],
         sourceHash: translatedContent.sourceHash,
-        translatedBy: "deepl",
-        translationProvider: "deepl",
+        translatedBy: "claude",
+        translationProvider: "claude",
         isManualOverride: false,
       };
 
@@ -6945,28 +7796,25 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         return res.status(404).json({ error: "Content not found" });
       }
 
-      const { translateToMultipleLanguages, generateContentHash, getDeepLSupportedLocales } = await import("./services/deepl-service");
-      
-      const supportedLocales = getDeepLSupportedLocales().filter(locale => {
-        const localeInfo = SUPPORTED_LOCALES.find(l => l.code === locale);
-        return localeInfo && targetTiers.includes(localeInfo.tier) && locale !== sourceLocale;
-      });
+      // Use translation-service (Claude Haiku) instead of deepl-service
+      const { translateToAllLanguages, generateContentHash } = await import("./services/translation-service");
 
-      const translations = await translateToMultipleLanguages(
+      // translateToAllLanguages handles tier filtering internally
+      const translations = await translateToAllLanguages(
         {
           title: content.title,
           metaTitle: content.metaTitle || undefined,
           metaDescription: content.metaDescription || undefined,
           blocks: content.blocks || [],
         },
-        supportedLocales,
-        sourceLocale
+        sourceLocale as any,
+        targetTiers
       );
 
       const savedTranslations = [];
       for (const [locale, translatedContent] of translations) {
         const existingTranslation = await storage.getTranslation(contentId, locale);
-        
+
         if (existingTranslation?.isManualOverride) {
           continue;
         }
@@ -6980,8 +7828,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
           metaDescription: translatedContent.metaDescription || null,
           blocks: translatedContent.blocks || [],
           sourceHash: translatedContent.sourceHash,
-          translatedBy: "deepl",
-          translationProvider: "deepl",
+          translatedBy: "claude",
+          translationProvider: "claude",
           isManualOverride: false,
         };
 
@@ -7185,714 +8033,107 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // ============================================================================
-  // IMAGE ENGINE API - AI Image Generation and Library Management
+  // ENTERPRISE ROUTES (Teams, Workflows, Notifications, etc.)
+  // ============================================================================
+  registerEnterpriseRoutes(app);
+
+  // ============================================================================
+  // IMAGE LOGIC ROUTES (Smart image selection system)
+  // ============================================================================
+  registerImageLogicRoutes(app);
+
+  // ============================================================================
+  // AUTOMATION ROUTES (Auto SEO, linking, freshness, etc.)
+  // ============================================================================
+  registerAutomationRoutes(app);
+
+  // ============================================================================
+  // CONTENT INTELLIGENCE (Clusters, Gaps, A/B Testing, ROI)
+  // ============================================================================
+  registerContentIntelligenceRoutes(app);
+
+  // ============================================================================
+  // AUTO-PILOT (Zero-touch automation - supervisor only)
+  // ============================================================================
+  registerAutoPilotRoutes(app);
+
+  // ============================================================================
+  // ENHANCEMENTS (Readability, CTAs, Search, Popups, Newsletter, Monetization, PWA)
+  // ============================================================================
+  registerEnhancementRoutes(app);
+
+  // ============================================================================
+  // CUSTOMER JOURNEY ANALYTICS (Page views, clicks, scroll, conversions, heatmaps)
+  // ============================================================================
+  registerCustomerJourneyRoutes(app);
+
+  // ============================================================================
+  // CONTENT RULES - Strict rules for AI content generation
   // ============================================================================
 
-  // Get Dubai keywords database
-  app.get("/api/image-engine/keywords", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+  // Get active content rules
+  app.get("/api/content-rules", requireAuth, async (req, res) => {
     try {
-      const { DUBAI_KEYWORDS, getAllTopics, IMAGE_TYPES } = await import("@shared/dubai-keywords");
-      res.json({
-        categories: DUBAI_KEYWORDS,
-        allTopics: getAllTopics(),
-        imageTypes: IMAGE_TYPES,
-      });
+      const rules = await db.select().from(contentRules).where(eq(contentRules.isActive, true)).limit(1);
+      if (rules.length === 0) {
+        // Return default rules if none exist
+        const { DEFAULT_CONTENT_RULES } = await import("@shared/schema");
+        return res.json({ id: null, ...DEFAULT_CONTENT_RULES });
+      }
+      res.json(rules[0]);
     } catch (error) {
-      console.error("Error fetching keywords:", error);
-      res.status(500).json({ error: "Failed to fetch keywords" });
+      console.error("Error fetching content rules:", error);
+      res.status(500).json({ error: "Failed to fetch content rules" });
     }
   });
 
-  // Search keywords/topics
-  app.get("/api/image-engine/keywords/search", requirePermission("canAccessMediaLibrary"), async (req, res) => {
+  // Save/update content rules
+  app.post("/api/content-rules", requirePermission("canManageSettings"), async (req, res) => {
     try {
-      const { searchTopics } = await import("@shared/dubai-keywords");
-      const query = req.query.q as string || "";
-      const results = searchTopics(query);
-      res.json(results);
-    } catch (error) {
-      console.error("Error searching keywords:", error);
-      res.status(500).json({ error: "Failed to search keywords" });
-    }
-  });
+      const data = req.body;
 
-  // Generate image for a topic
-  app.post("/api/image-engine/generate", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
-    if (safeMode.aiDisabled) {
-      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
-    }
-    try {
-      const { topic, imageType, category, customPrompt } = req.body;
+      // First, deactivate all existing rules
+      await db.update(contentRules).set({ isActive: false });
 
-      if (!topic) {
-        return res.status(400).json({ error: "Topic is required" });
-      }
+      // Check if rule with this name exists
+      const existing = await db.select().from(contentRules).where(eq(contentRules.name, data.name)).limit(1);
 
-      const { generateImagePrompt, slugify } = await import("@shared/dubai-keywords");
-      const prompt = customPrompt || generateImagePrompt(topic, imageType || "hero");
-
-      console.log(`Generating image for topic: ${topic}, type: ${imageType}`);
-      const imageUrl = await generateImage(prompt, {
-        size: imageType === "hero" ? "1792x1024" : "1024x1024",
-        quality: "hd",
-        style: "natural",
-      });
-
-      if (!imageUrl) {
-        return res.status(500).json({ error: "Failed to generate image" });
-      }
-
-      const timestamp = Date.now();
-      const filename = `${slugify(topic)}-${imageType || "hero"}-${timestamp}.jpg`;
-
-      // Persist to Object Storage (DALL-E URLs expire after ~1 hour)
-      let persistedUrl = imageUrl;
-      const storedUrl = await persistImageToStorage(imageUrl, `image-engine/${filename}`);
-      if (storedUrl) {
-        persistedUrl = storedUrl;
-        console.log(`Image persisted to Object Storage: ${storedUrl}`);
+      if (existing.length > 0) {
+        // Update existing rule
+        await db.update(contentRules)
+          .set({ ...data, isActive: true, updatedAt: new Date() })
+          .where(eq(contentRules.name, data.name));
+        res.json({ success: true, updated: true });
       } else {
-        console.warn("Could not persist image to Object Storage, using temporary DALL-E URL");
-      }
-
-      const imageData = {
-        filename,
-        url: persistedUrl,
-        topic,
-        category: category || "general",
-        imageType: imageType || "hero",
-        source: "openai" as const,
-        prompt,
-        keywords: [topic.toLowerCase(), imageType || "hero", "dubai", "tourism"],
-        altText: `${topic} - Dubai Tourism`,
-        caption: `Explore ${topic} in Dubai`,
-      };
-
-      const { aiGeneratedImages } = await import("@shared/schema");
-      const [savedImage] = await db.insert(aiGeneratedImages).values(imageData).returning();
-
-      res.json({
-        success: true,
-        image: savedImage,
-      });
-    } catch (error) {
-      console.error("Error generating image:", error);
-      res.status(500).json({ error: "Failed to generate image" });
-    }
-  });
-
-  // Get all images in library
-  app.get("/api/image-engine/library", requirePermission("canAccessMediaLibrary"), async (req, res) => {
-    try {
-      const { aiGeneratedImages } = await import("@shared/schema");
-      const { desc, eq, like, or, sql } = await import("drizzle-orm");
-      
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
-      const offset = (page - 1) * limit;
-      const search = req.query.search as string;
-      const category = req.query.category as string;
-      const rating = req.query.rating as string;
-      const approved = req.query.approved as string;
-      const source = req.query.source as string;
-
-      const { and } = await import("drizzle-orm");
-      const conditions: any[] = [];
-      
-      if (search) {
-        conditions.push(
-          or(
-            like(aiGeneratedImages.topic, `%${search}%`),
-            like(aiGeneratedImages.altText, `%${search}%`)
-          )
-        );
-      }
-      
-      if (category) {
-        conditions.push(eq(aiGeneratedImages.category, category));
-      }
-      
-      if (rating === "liked") {
-        conditions.push(eq(aiGeneratedImages.userRating, "like"));
-      } else if (rating === "disliked") {
-        conditions.push(eq(aiGeneratedImages.userRating, "dislike"));
-      }
-      
-      if (approved === "true") {
-        conditions.push(eq(aiGeneratedImages.isApproved, true));
-      }
-
-      if (source) {
-        conditions.push(eq(aiGeneratedImages.source, source as any));
-      }
-
-      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-      
-      const images = await db.select()
-        .from(aiGeneratedImages)
-        .where(whereClause)
-        .orderBy(desc(aiGeneratedImages.createdAt))
-        .limit(limit)
-        .offset(offset);
-
-      const countQuery = whereClause 
-        ? db.select({ count: sql`count(*)` }).from(aiGeneratedImages).where(whereClause)
-        : db.select({ count: sql`count(*)` }).from(aiGeneratedImages);
-      const [countResult] = await countQuery;
-      const total = Number(countResult?.count || 0);
-
-      res.json({
-        images,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
-      });
-    } catch (error) {
-      console.error("Error fetching library:", error);
-      res.status(500).json({ error: "Failed to fetch library" });
-    }
-  });
-
-  // Get single image
-  app.get("/api/image-engine/library/:id", requirePermission("canAccessMediaLibrary"), async (req, res) => {
-    try {
-      const { aiGeneratedImages } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      
-      const [image] = await db.select().from(aiGeneratedImages).where(eq(aiGeneratedImages.id, req.params.id));
-      
-      if (!image) {
-        return res.status(404).json({ error: "Image not found" });
-      }
-      
-      res.json(image);
-    } catch (error) {
-      console.error("Error fetching image:", error);
-      res.status(500).json({ error: "Failed to fetch image" });
-    }
-  });
-
-  // Rate an image (like/dislike/skip)
-  app.patch("/api/image-engine/library/:id/rate", requirePermission("canAccessMediaLibrary"), async (req, res) => {
-    try {
-      const { rating } = req.body;
-      
-      if (!["like", "dislike", "skip"].includes(rating)) {
-        return res.status(400).json({ error: "Invalid rating" });
-      }
-
-      const { aiGeneratedImages } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      
-      const [updatedImage] = await db.update(aiGeneratedImages)
-        .set({ userRating: rating, updatedAt: new Date() })
-        .where(eq(aiGeneratedImages.id, req.params.id))
-        .returning();
-      
-      if (!updatedImage) {
-        return res.status(404).json({ error: "Image not found" });
-      }
-      
-      res.json(updatedImage);
-    } catch (error) {
-      console.error("Error rating image:", error);
-      res.status(500).json({ error: "Failed to rate image" });
-    }
-  });
-
-  // Approve/unapprove an image
-  app.patch("/api/image-engine/library/:id/approve", requirePermission("canAccessMediaLibrary"), async (req, res) => {
-    try {
-      const { approved } = req.body;
-
-      const { aiGeneratedImages } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      
-      const [updatedImage] = await db.update(aiGeneratedImages)
-        .set({ isApproved: Boolean(approved), updatedAt: new Date() })
-        .where(eq(aiGeneratedImages.id, req.params.id))
-        .returning();
-      
-      if (!updatedImage) {
-        return res.status(404).json({ error: "Image not found" });
-      }
-      
-      res.json(updatedImage);
-    } catch (error) {
-      console.error("Error approving image:", error);
-      res.status(500).json({ error: "Failed to approve image" });
-    }
-  });
-
-  // Delete an image
-  app.delete("/api/image-engine/library/:id", requirePermission("canDelete"), async (req, res) => {
-    try {
-      const { aiGeneratedImages } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      
-      const [deletedImage] = await db.delete(aiGeneratedImages)
-        .where(eq(aiGeneratedImages.id, req.params.id))
-        .returning();
-      
-      if (!deletedImage) {
-        return res.status(404).json({ error: "Image not found" });
-      }
-      
-      res.json({ success: true, deleted: deletedImage });
-    } catch (error) {
-      console.error("Error deleting image:", error);
-      res.status(500).json({ error: "Failed to delete image" });
-    }
-  });
-
-  // Get library statistics
-  app.get("/api/image-engine/stats", requirePermission("canAccessMediaLibrary"), async (req, res) => {
-    try {
-      const { aiGeneratedImages } = await import("@shared/schema");
-      const { sql, eq } = await import("drizzle-orm");
-      
-      const [totalCount] = await db.select({ count: sql`count(*)` }).from(aiGeneratedImages);
-      const [approvedCount] = await db.select({ count: sql`count(*)` }).from(aiGeneratedImages).where(eq(aiGeneratedImages.isApproved, true));
-      const [likedCount] = await db.select({ count: sql`count(*)` }).from(aiGeneratedImages).where(eq(aiGeneratedImages.userRating, "like"));
-      const [dislikedCount] = await db.select({ count: sql`count(*)` }).from(aiGeneratedImages).where(eq(aiGeneratedImages.userRating, "dislike"));
-
-      const categoryStats = await db.select({
-        category: aiGeneratedImages.category,
-        count: sql`count(*)`
-      })
-      .from(aiGeneratedImages)
-      .groupBy(aiGeneratedImages.category);
-
-      const topicStats = await db.select({
-        topic: aiGeneratedImages.topic,
-        count: sql`count(*)`
-      })
-      .from(aiGeneratedImages)
-      .groupBy(aiGeneratedImages.topic)
-      .limit(20);
-
-      res.json({
-        total: Number(totalCount?.count || 0),
-        approved: Number(approvedCount?.count || 0),
-        liked: Number(likedCount?.count || 0),
-        disliked: Number(dislikedCount?.count || 0),
-        byCategory: categoryStats,
-        topTopics: topicStats,
-      });
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-      res.status(500).json({ error: "Failed to fetch statistics" });
-    }
-  });
-
-  // Collections API
-  app.get("/api/image-engine/collections", requirePermission("canAccessMediaLibrary"), async (req, res) => {
-    try {
-      const { imageCollections } = await import("@shared/schema");
-      const collections = await db.select().from(imageCollections);
-      res.json(collections);
-    } catch (error) {
-      console.error("Error fetching collections:", error);
-      res.status(500).json({ error: "Failed to fetch collections" });
-    }
-  });
-
-  app.post("/api/image-engine/collections", requirePermission("canCreate"), async (req, res) => {
-    try {
-      const { name, description } = req.body;
-      
-      if (!name) {
-        return res.status(400).json({ error: "Collection name is required" });
-      }
-
-      const { imageCollections } = await import("@shared/schema");
-      const [newCollection] = await db.insert(imageCollections).values({
-        name,
-        description: description || null,
-        imageIds: [],
-      }).returning();
-      
-      res.json(newCollection);
-    } catch (error) {
-      console.error("Error creating collection:", error);
-      res.status(500).json({ error: "Failed to create collection" });
-    }
-  });
-
-  app.patch("/api/image-engine/collections/:id/images", requirePermission("canAccessMediaLibrary"), async (req, res) => {
-    try {
-      const { imageIds, action } = req.body;
-      
-      if (!imageIds || !Array.isArray(imageIds)) {
-        return res.status(400).json({ error: "Image IDs array is required" });
-      }
-
-      const { imageCollections } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      
-      const [collection] = await db.select().from(imageCollections).where(eq(imageCollections.id, req.params.id));
-      
-      if (!collection) {
-        return res.status(404).json({ error: "Collection not found" });
-      }
-
-      let updatedImageIds = collection.imageIds || [];
-      
-      if (action === "add") {
-        updatedImageIds = [...new Set([...updatedImageIds, ...imageIds])];
-      } else if (action === "remove") {
-        updatedImageIds = updatedImageIds.filter((id: string) => !imageIds.includes(id));
-      } else {
-        updatedImageIds = imageIds;
-      }
-
-      const [updatedCollection] = await db.update(imageCollections)
-        .set({ imageIds: updatedImageIds, updatedAt: new Date() })
-        .where(eq(imageCollections.id, req.params.id))
-        .returning();
-      
-      res.json(updatedCollection);
-    } catch (error) {
-      console.error("Error updating collection images:", error);
-      res.status(500).json({ error: "Failed to update collection" });
-    }
-  });
-
-  app.delete("/api/image-engine/collections/:id", requirePermission("canDelete"), async (req, res) => {
-    try {
-      const { imageCollections } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      
-      const [deletedCollection] = await db.delete(imageCollections)
-        .where(eq(imageCollections.id, req.params.id))
-        .returning();
-      
-      if (!deletedCollection) {
-        return res.status(404).json({ error: "Collection not found" });
-      }
-      
-      res.json({ success: true, deleted: deletedCollection });
-    } catch (error) {
-      console.error("Error deleting collection:", error);
-      res.status(500).json({ error: "Failed to delete collection" });
-    }
-  });
-
-  // ============================================================================
-  // FREEPIK API ENDPOINTS
-  // ============================================================================
-  
-  app.get("/api/freepik/search", requirePermission("canAccessMediaLibrary"), async (req, res) => {
-    try {
-      const { q, page = "1", limit = "20" } = req.query;
-      
-      if (!q || typeof q !== "string") {
-        return res.status(400).json({ error: "Search query is required" });
-      }
-
-      const freepikApiKey = process.env.FREEPIK_API_KEY;
-      if (!freepikApiKey) {
-        return res.status(503).json({ 
-          error: "Freepik API key not configured",
-          message: "Please add FREEPIK_API_KEY to your secrets"
+        // Insert new rule
+        await db.insert(contentRules).values({
+          ...data,
+          isActive: true,
+          createdBy: (req as any).user?.id,
         });
+        res.json({ success: true, created: true });
       }
-
-      const pageNum = parseInt(page as string) || 1;
-      const limitNum = Math.min(parseInt(limit as string) || 20, 50);
-
-      const searchUrl = new URL("https://api.freepik.com/v1/resources");
-      searchUrl.searchParams.set("term", q);
-      searchUrl.searchParams.set("page", pageNum.toString());
-      searchUrl.searchParams.set("limit", limitNum.toString());
-      searchUrl.searchParams.set("filters[content_type][photo]", "1");
-
-      const response = await fetch(searchUrl.toString(), {
-        headers: {
-          "Accept-Language": "en-US",
-          "Accept": "application/json",
-          "x-freepik-api-key": freepikApiKey,
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Freepik API error:", response.status, errorText);
-        return res.status(response.status).json({ error: "Freepik API error", details: errorText });
-      }
-
-      const data = await response.json();
-      
-      res.json({
-        results: (data.data || []).map((item: any) => ({
-          id: item.id,
-          title: item.title || "Untitled",
-          previewUrl: item.image?.source?.url || item.preview?.url || item.thumbnail?.url,
-          downloadUrl: item.image?.source?.url,
-          author: item.author,
-          width: item.image?.source?.size?.width,
-          height: item.image?.source?.size?.height,
-        })),
-        pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total: data.meta?.pagination?.total || 0,
-          totalPages: data.meta?.pagination?.last_page || 1,
-        },
-      });
     } catch (error) {
-      console.error("Error searching Freepik:", error);
-      res.status(500).json({ error: "Failed to search Freepik" });
+      console.error("Error saving content rules:", error);
+      res.status(500).json({ error: "Failed to save content rules" });
     }
   });
 
-  app.post("/api/freepik/import", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, async (req, res) => {
+  // Get all content rules (including inactive)
+  app.get("/api/content-rules/all", requirePermission("canManageSettings"), async (req, res) => {
     try {
-      const { imageUrl, title, category, topic } = req.body;
-      
-      if (!imageUrl) {
-        return res.status(400).json({ error: "Image URL is required" });
-      }
-
-      const freepikApiKey = process.env.FREEPIK_API_KEY;
-      if (!freepikApiKey) {
-        return res.status(503).json({ 
-          error: "Freepik API key not configured",
-          message: "Please add FREEPIK_API_KEY to your secrets"
-        });
-      }
-
-      const imageResponse = await fetch(imageUrl);
-      if (!imageResponse.ok) {
-        return res.status(400).json({ error: "Failed to fetch image from Freepik" });
-      }
-
-      const imageBuffer = await imageResponse.arrayBuffer();
-      const filename = `freepik-${Date.now()}.jpg`;
-      let persistedUrl = imageUrl;
-
-      const storageClient = getObjectStorageClient();
-      if (storageClient) {
-        const objectPath = `public/images/${filename}`;
-        await storageClient.uploadFromBytes(objectPath, Buffer.from(imageBuffer));
-        persistedUrl = `/object-storage/${objectPath}`;
-      } else {
-        const uploadsDir = path.join(process.cwd(), "uploads");
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
-        }
-        fs.writeFileSync(path.join(uploadsDir, filename), Buffer.from(imageBuffer));
-        persistedUrl = `/uploads/${filename}`;
-      }
-
-      const { aiGeneratedImages } = await import("@shared/schema");
-      const [savedImage] = await db.insert(aiGeneratedImages).values({
-        filename,
-        url: persistedUrl,
-        topic: topic || title || "Freepik Import",
-        category: category || "general",
-        imageType: "hero",
-        source: "freepik" as const,
-        prompt: null,
-        keywords: [topic || title || "freepik", "stock", "dubai"],
-        altText: title || "Freepik stock image",
-        caption: title,
-        size: imageBuffer.byteLength,
-      }).returning();
-
-      res.json({ success: true, image: savedImage });
+      const rules = await db.select().from(contentRules).orderBy(desc(contentRules.createdAt));
+      res.json(rules);
     } catch (error) {
-      console.error("Error importing from Freepik:", error);
-      res.status(500).json({ error: "Failed to import image from Freepik" });
-    }
-  });
-
-  // Bulk upload to Image Engine library
-  app.post("/api/image-engine/bulk-upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.array("files", 50), async (req, res) => {
-    try {
-      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-        return res.status(400).json({ error: "No files uploaded" });
-      }
-
-      const { category, topic } = req.body;
-      const results: any[] = [];
-      const errors: any[] = [];
-      const storageClient = getObjectStorageClient();
-
-      for (const file of req.files) {
-        try {
-          const filename = `upload-${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-          let url: string;
-
-          if (storageClient) {
-            const objectPath = `public/images/${filename}`;
-            await storageClient.uploadFromBytes(objectPath, file.buffer);
-            url = `/object-storage/${objectPath}`;
-          } else {
-            const uploadsDir = path.join(process.cwd(), "uploads");
-            if (!fs.existsSync(uploadsDir)) {
-              fs.mkdirSync(uploadsDir, { recursive: true });
-            }
-            fs.writeFileSync(path.join(uploadsDir, filename), file.buffer);
-            url = `/uploads/${filename}`;
-          }
-
-          const { aiGeneratedImages } = await import("@shared/schema");
-          const [savedImage] = await db.insert(aiGeneratedImages).values({
-            filename,
-            url,
-            topic: topic || file.originalname.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
-            category: category || "general",
-            imageType: "hero",
-            source: "upload" as const,
-            prompt: null,
-            keywords: [topic || "upload", category || "general"],
-            altText: file.originalname.replace(/\.[^/.]+$/, ""),
-            size: file.size,
-          }).returning();
-
-          results.push(savedImage);
-        } catch (fileError) {
-          console.error("Error processing file:", file.originalname, fileError);
-          errors.push({ filename: file.originalname, error: "Failed to process" });
-        }
-      }
-
-      res.json({
-        success: true,
-        uploaded: results.length,
-        failed: errors.length,
-        images: results,
-        errors,
-      });
-    } catch (error) {
-      console.error("Error in bulk upload:", error);
-      res.status(500).json({ error: "Failed to process bulk upload" });
+      console.error("Error fetching all content rules:", error);
+      res.status(500).json({ error: "Failed to fetch content rules" });
     }
   });
 
   // ============================================================================
-  // IMAGE LIBRARY API ENDPOINTS (aliased routes for /api/images)
+  // DOC/DOCX UPLOAD (Import content directly from Word documents)
   // ============================================================================
-  
-  // GET /api/images - List images from library
-  app.get("/api/images", requirePermission("canAccessMediaLibrary"), async (req, res) => {
-    try {
-      const { aiGeneratedImages } = await import("@shared/schema");
-      const { desc, eq, and, sql } = await import("drizzle-orm");
-      
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-      const offset = (page - 1) * limit;
-      const source = req.query.source as string;
-      const category = req.query.category as string;
-
-      const conditions: any[] = [];
-      
-      if (source) {
-        conditions.push(eq(aiGeneratedImages.source, source as any));
-      }
-      
-      if (category) {
-        conditions.push(eq(aiGeneratedImages.category, category));
-      }
-
-      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-      
-      const images = await db.select()
-        .from(aiGeneratedImages)
-        .where(whereClause)
-        .orderBy(desc(aiGeneratedImages.createdAt))
-        .limit(limit)
-        .offset(offset);
-
-      const countQuery = whereClause 
-        ? db.select({ count: sql`count(*)` }).from(aiGeneratedImages).where(whereClause)
-        : db.select({ count: sql`count(*)` }).from(aiGeneratedImages);
-      const [countResult] = await countQuery;
-      const total = Number(countResult?.count || 0);
-
-      res.json({
-        images,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
-      });
-    } catch (error) {
-      console.error("Error fetching images:", error);
-      res.status(500).json({ error: "Failed to fetch images" });
-    }
-  });
-
-  // POST /api/images/bulk-upload - Bulk image upload endpoint
-  app.post("/api/images/bulk-upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.array("files", 50), async (req, res) => {
-    try {
-      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-        return res.status(400).json({ error: "No files uploaded" });
-      }
-
-      const { category, topic } = req.body;
-      const results: any[] = [];
-      const errors: any[] = [];
-      const storageClient = getObjectStorageClient();
-
-      for (const file of req.files) {
-        try {
-          const filename = `upload-${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-          let url: string;
-
-          if (storageClient) {
-            const objectPath = `public/images/${filename}`;
-            await storageClient.uploadFromBytes(objectPath, file.buffer);
-            url = `/object-storage/${objectPath}`;
-          } else {
-            const uploadsDir = path.join(process.cwd(), "uploads");
-            if (!fs.existsSync(uploadsDir)) {
-              fs.mkdirSync(uploadsDir, { recursive: true });
-            }
-            fs.writeFileSync(path.join(uploadsDir, filename), file.buffer);
-            url = `/uploads/${filename}`;
-          }
-
-          const { aiGeneratedImages } = await import("@shared/schema");
-          const [savedImage] = await db.insert(aiGeneratedImages).values({
-            filename,
-            url,
-            topic: topic || file.originalname.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
-            category: category || "general",
-            imageType: "hero",
-            source: "upload" as const,
-            prompt: null,
-            keywords: [topic || "upload", category || "general"],
-            altText: file.originalname.replace(/\.[^/.]+$/, ""),
-            size: file.size,
-          }).returning();
-
-          results.push(savedImage);
-        } catch (fileError) {
-          console.error("Error processing file:", file.originalname, fileError);
-          errors.push({ filename: file.originalname, error: "Failed to process" });
-        }
-      }
-
-      res.json({
-        success: true,
-        uploaded: results.length,
-        failed: errors.length,
-        images: results,
-        errors,
-      });
-    } catch (error) {
-      console.error("Error in bulk upload:", error);
-      res.status(500).json({ error: "Failed to process bulk upload" });
-    }
-  });
+  registerDocUploadRoutes(app);
 
   // ============================================================================
   // SECURE ERROR HANDLER (no stack traces to client)

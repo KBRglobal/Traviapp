@@ -10,11 +10,12 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Lightbulb, Trash2, Edit2, TrendingUp, Clock, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Lightbulb, Trash2, Edit2, TrendingUp, Clock, Sparkles, Loader2, Newspaper, Merge } from "lucide-react";
 import type { TopicBank } from "@shared/schema";
 
 type TopicCategory = "attractions" | "hotels" | "food" | "transport" | "events" | "tips" | "shopping" | "news";
@@ -25,6 +26,7 @@ export default function TopicBankPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<TopicBank | null>(null);
   const [generatingTopicId, setGeneratingTopicId] = useState<string | null>(null);
+  const [generatingNewsId, setGeneratingNewsId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<TopicCategory | "">("");
   const [keywords, setKeywords] = useState("");
@@ -89,9 +91,9 @@ export default function TopicBankPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/topic-bank"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contents?type=article"] });
-      toast({ 
-        title: "Article Generated", 
-        description: `Created draft article: ${data.content?.title}` 
+      toast({
+        title: "Article Generated",
+        description: `Created draft article: ${data.content?.title}`
       });
       // Navigate to the editor to view/edit the generated article
       if (data.content?.id) {
@@ -101,6 +103,47 @@ export default function TopicBankPage() {
     onError: () => {
       setGeneratingTopicId(null);
       toast({ title: "Failed to generate article", variant: "destructive" });
+    },
+  });
+
+  // Generate NEWS and DELETE topic from bank
+  const generateNewsMutation = useMutation({
+    mutationFn: async (id: string) => {
+      setGeneratingNewsId(id);
+      const response = await apiRequest("POST", `/api/topic-bank/${id}/generate-news`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setGeneratingNewsId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/topic-bank"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contents?type=article"] });
+      toast({
+        title: "News Created & Topic Removed",
+        description: `Created news: ${data.content?.title}`
+      });
+    },
+    onError: () => {
+      setGeneratingNewsId(null);
+      toast({ title: "Failed to generate news", variant: "destructive" });
+    },
+  });
+
+  // Merge duplicate topics
+  const mergeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/topic-bank/merge-duplicates");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/topic-bank"] });
+      toast({
+        title: "Duplicates Merged",
+        description: data.message || `Merged ${data.mergedGroups} groups, deleted ${data.deletedItems} duplicates`
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to merge duplicates", variant: "destructive" });
     },
   });
 
@@ -164,13 +207,46 @@ export default function TopicBankPage() {
           <h1 className="text-2xl font-semibold">Topic Bank</h1>
           <p className="text-muted-foreground">Store ideas for AI article generation when RSS lacks content</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setDialogOpen(true); }}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-topic">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Topic
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2 flex-wrap">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={mergeMutation.isPending || !topics || topics.length < 2}
+                data-testid="button-merge-duplicates"
+              >
+                {mergeMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Merge className="h-4 w-4 mr-2" />
+                )}
+                Merge Duplicates
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Merge Duplicate Topics?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will find all topics with identical names and merge them into one. 
+                  Keywords will be combined, the longest outline will be kept, and all metadata 
+                  will be preserved from the best record. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => mergeMutation.mutate()}>
+                  Merge Duplicates
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setDialogOpen(true); }}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-topic">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Topic
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{editingTopic ? "Edit Topic" : "Add Topic"}</DialogTitle>
@@ -250,7 +326,8 @@ export default function TopicBankPage() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {!topics || topics.length === 0 ? (
@@ -319,20 +396,36 @@ export default function TopicBankPage() {
                     ? `Used ${topic.timesUsed} time${topic.timesUsed > 1 ? "s" : ""}`
                     : "Never used"}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button
                     size="sm"
-                    className="flex-1"
+                    variant="default"
+                    onClick={() => generateNewsMutation.mutate(topic.id)}
+                    disabled={generatingTopicId !== null || generatingNewsId !== null}
+                    data-testid={`button-generate-news-${topic.id}`}
+                    title="Generate News & Remove Topic"
+                  >
+                    {generatingNewsId === topic.id ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Newspaper className="h-3 w-3 mr-1" />
+                    )}
+                    News
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => generateMutation.mutate(topic.id)}
-                    disabled={generatingTopicId !== null}
+                    disabled={generatingTopicId !== null || generatingNewsId !== null}
                     data-testid={`button-generate-${topic.id}`}
+                    title="Generate Article (keeps topic)"
                   >
                     {generatingTopicId === topic.id ? (
                       <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                     ) : (
                       <Sparkles className="h-3 w-3 mr-1" />
                     )}
-                    Generate
+                    Article
                   </Button>
                   <Button
                     variant="outline"

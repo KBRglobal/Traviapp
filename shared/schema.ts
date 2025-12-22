@@ -1,14 +1,18 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, pgEnum, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 // Enums
-export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport", "event", "itinerary"]);
+export const contentTypeEnum = pgEnum("content_type", ["attraction", "hotel", "article", "dining", "district", "transport", "event", "itinerary", "landing_page", "case_study", "off_plan"]);
 export const contentStatusEnum = pgEnum("content_status", ["draft", "in_review", "approved", "scheduled", "published"]);
 export const articleCategoryEnum = pgEnum("article_category", ["attractions", "hotels", "food", "transport", "events", "tips", "news", "shopping"]);
 export const userRoleEnum = pgEnum("user_role", ["admin", "editor", "author", "contributor", "viewer"]);
+export const viralPotentialEnum = pgEnum("viral_potential", ["1", "2", "3", "4", "5"]);
+export const topicTypeEnum = pgEnum("topic_type", ["trending", "evergreen", "seasonal"]);
+export const topicFormatEnum = pgEnum("topic_format", ["video_tour", "photo_gallery", "pov_video", "cost_breakdown", "lifestyle_vlog", "documentary", "explainer", "comparison", "walking_tour", "food_tour", "interview", "tutorial", "asmr", "drone_footage", "night_photography", "infographic", "reaction_video", "challenge", "list_video", "guide", "review"]);
+export const topicCategoryEnum = pgEnum("topic_category", ["luxury_lifestyle", "food_dining", "bizarre_unique", "experiences_activities", "money_cost", "expat_living", "dark_side", "myth_busting", "comparisons", "records_superlatives", "future_development", "seasonal_events", "practical_tips"]);
 
 // Role-based permissions
 export const ROLE_PERMISSIONS = {
@@ -127,6 +131,7 @@ export const users = pgTable("users", {
   username: varchar("username").unique(),
   passwordHash: varchar("password_hash"),
   email: varchar("email").unique(),
+  name: varchar("name"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -167,7 +172,13 @@ export const contents = pgTable("contents", {
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_contents_status").on(table.status),
+  index("IDX_contents_type").on(table.type),
+  index("IDX_contents_type_status").on(table.type, table.status),
+  index("IDX_contents_author").on(table.authorId),
+  index("IDX_contents_published_at").on(table.publishedAt),
+]);
 
 // Attractions specific data
 export const attractions = pgTable("attractions", {
@@ -444,7 +455,12 @@ export const internalLinks = pgTable("internal_links", {
 export const topicBank = pgTable("topic_bank", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
+  headlineAngle: text("headline_angle"), // The hook/headline for viral content
   category: articleCategoryEnum("category"),
+  mainCategory: topicCategoryEnum("main_category"), // Main topic category (luxury, food, etc.)
+  viralPotential: viralPotentialEnum("viral_potential").default("3"), // 1-5 stars
+  format: topicFormatEnum("format"), // video_tour, photo_gallery, etc.
+  topicType: topicTypeEnum("topic_type").default("evergreen"), // trending, evergreen, seasonal
   keywords: jsonb("keywords").$type<string[]>().default([]),
   outline: text("outline"),
   priority: integer("priority").default(0),
@@ -586,14 +602,16 @@ export const translations = pgTable("translations", {
   blocks: jsonb("blocks").$type<ContentBlock[]>().default([]),
   translatedBy: varchar("translated_by"),
   reviewedBy: varchar("reviewed_by"),
-  sourceHash: text("source_hash"), // Hash of original content to detect changes
-  isManualOverride: boolean("is_manual_override").default(false), // Manual edits won't be auto-retranslated
-  translationProvider: varchar("translation_provider"), // "deepl" | "anthropic" | "manual"
+  sourceHash: varchar("source_hash"),
+  isManualOverride: boolean("is_manual_override").default(false),
+  translationProvider: varchar("translation_provider"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  uniqueContentLocale: sql`UNIQUE (${table.contentId}, ${table.locale})`,
-}));
+}, (table) => [
+  uniqueIndex("IDX_translations_content_locale").on(table.contentId, table.locale),
+  index("IDX_translations_locale").on(table.locale),
+  index("IDX_translations_status").on(table.status),
+]);
 
 // UI Translations table - for static interface strings
 export const uiTranslations = pgTable("ui_translations", {
@@ -1243,87 +1261,6 @@ export const SUPPORTED_LOCALES: { code: Locale; name: string; nativeName: string
   { code: "he", name: "Hebrew", nativeName: "עברית", region: "Middle East", tier: 4 },
 ];
 
-// Telegram Bot User Profiles - for premium personalized experience
-export const telegramBotLangEnum = pgEnum("telegram_bot_lang", ["en", "he", "ar"]);
-
-export const telegramUserProfiles = pgTable("telegram_user_profiles", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  telegramId: varchar("telegram_id").notNull().unique(),
-  telegramUsername: varchar("telegram_username"),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  language: telegramBotLangEnum("language").notNull().default("en"),
-  interests: jsonb("interests").$type<string[]>().default([]),
-  favorites: jsonb("favorites").$type<string[]>().default([]),
-  tripDates: jsonb("trip_dates").$type<{ arrival?: string; departure?: string }>(),
-  travelStyle: varchar("travel_style"),
-  budget: varchar("budget"),
-  notificationsEnabled: boolean("notifications_enabled").default(true),
-  dailyDigestEnabled: boolean("daily_digest_enabled").default(false),
-  isPremium: boolean("is_premium").default(false),
-  totalInteractions: integer("total_interactions").default(0),
-  badges: jsonb("badges").$type<string[]>().default([]),
-  points: integer("points").default(0),
-  lastActiveAt: timestamp("last_active_at").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Telegram User Favorites - track saved content
-export const telegramUserFavorites = pgTable("telegram_user_favorites", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  telegramUserId: varchar("telegram_user_id").notNull().references(() => telegramUserProfiles.id, { onDelete: "cascade" }),
-  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Telegram User Conversation History - for context memory
-export const telegramConversations = pgTable("telegram_conversations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  telegramUserId: varchar("telegram_user_id").notNull().references(() => telegramUserProfiles.id, { onDelete: "cascade" }),
-  role: varchar("role").notNull(),
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Telegram insert schemas and types
-export const insertTelegramUserProfileSchema = createInsertSchema(telegramUserProfiles).omit({
-  id: true,
-  createdAt: true,
-  lastActiveAt: true,
-  totalInteractions: true,
-  points: true,
-});
-export type InsertTelegramUserProfile = z.infer<typeof insertTelegramUserProfileSchema>;
-export type TelegramUserProfile = typeof telegramUserProfiles.$inferSelect;
-
-export const insertTelegramUserFavoriteSchema = createInsertSchema(telegramUserFavorites).omit({
-  id: true,
-  createdAt: true,
-});
-export type InsertTelegramUserFavorite = z.infer<typeof insertTelegramUserFavoriteSchema>;
-export type TelegramUserFavorite = typeof telegramUserFavorites.$inferSelect;
-
-export const insertTelegramConversationSchema = createInsertSchema(telegramConversations).omit({
-  id: true,
-  createdAt: true,
-});
-export type InsertTelegramConversation = z.infer<typeof insertTelegramConversationSchema>;
-export type TelegramConversation = typeof telegramConversations.$inferSelect;
-
-// Badge definitions
-export const TELEGRAM_BADGES = {
-  explorer: { id: 'explorer', name: { en: 'Explorer', he: 'חוקר', ar: 'مستكشف' }, icon: 'compass', points: 10 },
-  foodie: { id: 'foodie', name: { en: 'Foodie', he: 'גורמה', ar: 'ذواق' }, icon: 'utensils', points: 15 },
-  culture_lover: { id: 'culture_lover', name: { en: 'Culture Lover', he: 'אוהב תרבות', ar: 'محب الثقافة' }, icon: 'landmark', points: 15 },
-  adventurer: { id: 'adventurer', name: { en: 'Adventurer', he: 'הרפתקן', ar: 'مغامر' }, icon: 'mountain', points: 20 },
-  luxury_seeker: { id: 'luxury_seeker', name: { en: 'Luxury Seeker', he: 'מחפש יוקרה', ar: 'باحث عن الفخامة' }, icon: 'gem', points: 25 },
-  dubai_expert: { id: 'dubai_expert', name: { en: 'Dubai Expert', he: 'מומחה דובאי', ar: 'خبير دبي' }, icon: 'star', points: 50 },
-  early_bird: { id: 'early_bird', name: { en: 'Early Bird', he: 'ציפור מוקדמת', ar: 'الطائر المبكر' }, icon: 'sunrise', points: 10 },
-  night_owl: { id: 'night_owl', name: { en: 'Night Owl', he: 'ינשוף לילה', ar: 'بومة الليل' }, icon: 'moon', points: 10 },
-  loyal_traveler: { id: 'loyal_traveler', name: { en: 'Loyal Traveler', he: 'מטייל נאמן', ar: 'مسافر مخلص' }, icon: 'heart', points: 30 },
-  first_timer: { id: 'first_timer', name: { en: 'First Timer', he: 'פעם ראשונה', ar: 'أول مرة' }, icon: 'sparkles', points: 5 },
-} as const;
-
 // Content Tags table - for smart tagging system
 export const tags = pgTable("tags", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1504,3 +1441,413 @@ export type ContentWithRelations = Content & {
   versions?: ContentVersion[];
   seoAnalysis?: SeoAnalysisResult;
 };
+
+// ============================================================================
+// ENTERPRISE FEATURES - Teams, Workflows, Notifications, etc.
+// ============================================================================
+
+// Teams / Departments
+export const teams = pgTable("teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  parentId: varchar("parent_id").references((): any => teams.id),
+  color: varchar("color", { length: 7 }), // hex color
+  icon: varchar("icon", { length: 50 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_teams_parent").on(table.parentId),
+  index("IDX_teams_slug").on(table.slug),
+]);
+
+export const teamMembers = pgTable("team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: varchar("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 50 }).default("member"), // lead, member
+  joinedAt: timestamp("joined_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("IDX_team_members_unique").on(table.teamId, table.userId),
+  index("IDX_team_members_user").on(table.userId),
+]);
+
+export const insertTeamSchema = createInsertSchema(teams).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({ id: true, joinedAt: true });
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
+export type Team = typeof teams.$inferSelect;
+export type TeamMember = typeof teamMembers.$inferSelect;
+
+// Content Workflows
+export const workflowStatusEnum = pgEnum("workflow_status", ["pending", "in_progress", "approved", "rejected", "cancelled"]);
+
+export const workflowTemplates = pgTable("workflow_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  contentTypes: jsonb("content_types").$type<string[]>().default([]), // which content types use this workflow
+  steps: jsonb("steps").$type<WorkflowStep[]>().default([]),
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export interface WorkflowStep {
+  order: number;
+  name: string;
+  description?: string;
+  approverType: "user" | "role" | "team";
+  approverId?: string; // user id, role name, or team id
+  autoApproveAfter?: number; // hours
+  notifyOnPending: boolean;
+}
+
+export const workflowInstances = pgTable("workflow_instances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").references(() => workflowTemplates.id),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  status: workflowStatusEnum("status").default("pending"),
+  currentStep: integer("current_step").default(0),
+  submittedBy: varchar("submitted_by").references(() => users.id),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+}, (table) => [
+  index("IDX_workflow_instances_content").on(table.contentId),
+  index("IDX_workflow_instances_status").on(table.status),
+]);
+
+export const workflowApprovals = pgTable("workflow_approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  instanceId: varchar("instance_id").notNull().references(() => workflowInstances.id, { onDelete: "cascade" }),
+  stepNumber: integer("step_number").notNull(),
+  approverId: varchar("approver_id").references(() => users.id),
+  status: workflowStatusEnum("status").default("pending"),
+  comment: text("comment"),
+  decidedAt: timestamp("decided_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_workflow_approvals_instance").on(table.instanceId),
+  index("IDX_workflow_approvals_approver").on(table.approverId),
+]);
+
+export const insertWorkflowTemplateSchema = createInsertSchema(workflowTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertWorkflowInstanceSchema = createInsertSchema(workflowInstances).omit({ id: true, submittedAt: true });
+export type InsertWorkflowTemplate = z.infer<typeof insertWorkflowTemplateSchema>;
+export type InsertWorkflowInstance = z.infer<typeof insertWorkflowInstanceSchema>;
+export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
+export type WorkflowInstance = typeof workflowInstances.$inferSelect;
+export type WorkflowApproval = typeof workflowApprovals.$inferSelect;
+
+// Activity Feed
+export const activityTypeEnum = pgEnum("activity_type", [
+  "content_created", "content_updated", "content_published", "content_deleted",
+  "comment_added", "workflow_submitted", "workflow_approved", "workflow_rejected",
+  "user_joined", "user_updated", "team_created", "translation_completed",
+  "media_uploaded", "settings_changed", "login", "logout"
+]);
+
+export const activities = pgTable("activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: activityTypeEnum("type").notNull(),
+  actorId: varchar("actor_id").references(() => users.id),
+  targetType: varchar("target_type", { length: 50 }), // content, user, team, etc.
+  targetId: varchar("target_id"),
+  targetTitle: text("target_title"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  teamId: varchar("team_id").references(() => teams.id), // for team-scoped activities
+  isPublic: boolean("is_public").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_activities_actor").on(table.actorId),
+  index("IDX_activities_target").on(table.targetType, table.targetId),
+  index("IDX_activities_team").on(table.teamId),
+  index("IDX_activities_created").on(table.createdAt),
+]);
+
+export const insertActivitySchema = createInsertSchema(activities).omit({ id: true, createdAt: true });
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type Activity = typeof activities.$inferSelect;
+
+// Content Locking
+export const contentLocks = pgTable("content_locks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  lockedAt: timestamp("locked_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isActive: boolean("is_active").default(true),
+}, (table) => [
+  uniqueIndex("IDX_content_locks_active").on(table.contentId).where(sql`is_active = true`),
+  index("IDX_content_locks_user").on(table.userId),
+  index("IDX_content_locks_expires").on(table.expiresAt),
+]);
+
+export const insertContentLockSchema = createInsertSchema(contentLocks).omit({ id: true, lockedAt: true });
+export type InsertContentLock = z.infer<typeof insertContentLockSchema>;
+export type ContentLock = typeof contentLocks.$inferSelect;
+
+// Notifications
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "info", "success", "warning", "error",
+  "workflow_pending", "workflow_approved", "workflow_rejected",
+  "comment_mention", "comment_reply", "content_assigned",
+  "system"
+]);
+
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: notificationTypeEnum("type").default("info"),
+  title: text("title").notNull(),
+  message: text("message"),
+  link: text("link"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_notifications_user").on(table.userId),
+  index("IDX_notifications_unread").on(table.userId, table.isRead),
+  index("IDX_notifications_created").on(table.createdAt),
+]);
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+// Webhooks
+export const webhookEventEnum = pgEnum("webhook_event", [
+  "content.created", "content.updated", "content.published", "content.deleted",
+  "user.created", "user.updated", "translation.completed",
+  "workflow.submitted", "workflow.approved", "workflow.rejected",
+  "comment.created", "media.uploaded"
+]);
+
+export const webhooks = pgTable("webhooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  secret: text("secret"), // for signature verification
+  events: jsonb("events").$type<string[]>().default([]),
+  headers: jsonb("headers").$type<Record<string, string>>(),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_webhooks_active").on(table.isActive),
+]);
+
+export const webhookLogs = pgTable("webhook_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  webhookId: varchar("webhook_id").notNull().references(() => webhooks.id, { onDelete: "cascade" }),
+  event: text("event").notNull(),
+  payload: jsonb("payload"),
+  responseStatus: integer("response_status"),
+  responseBody: text("response_body"),
+  error: text("error"),
+  duration: integer("duration"), // ms
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_webhook_logs_webhook").on(table.webhookId),
+  index("IDX_webhook_logs_created").on(table.createdAt),
+]);
+
+export const insertWebhookSchema = createInsertSchema(webhooks).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+export type Webhook = typeof webhooks.$inferSelect;
+export type WebhookLog = typeof webhookLogs.$inferSelect;
+
+// Comments / Collaboration
+export const comments = pgTable("comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  parentId: varchar("parent_id").references((): any => comments.id, { onDelete: "cascade" }),
+  authorId: varchar("author_id").notNull().references(() => users.id),
+  body: text("body").notNull(),
+  mentions: jsonb("mentions").$type<string[]>().default([]), // user ids mentioned
+  isResolved: boolean("is_resolved").default(false),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  editedAt: timestamp("edited_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_comments_content").on(table.contentId),
+  index("IDX_comments_parent").on(table.parentId),
+  index("IDX_comments_author").on(table.authorId),
+]);
+
+export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type Comment = typeof comments.$inferSelect;
+
+// Scheduled Tasks
+export const scheduledTasks = pgTable("scheduled_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type", { length: 50 }).notNull(), // publish, unpublish, translate, etc.
+  targetType: varchar("target_type", { length: 50 }).notNull(),
+  targetId: varchar("target_id").notNull(),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  payload: jsonb("payload").$type<Record<string, unknown>>(),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, completed, failed, cancelled
+  error: text("error"),
+  createdBy: varchar("created_by").references(() => users.id),
+  executedAt: timestamp("executed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_scheduled_tasks_pending").on(table.scheduledFor).where(sql`status = 'pending'`),
+  index("IDX_scheduled_tasks_target").on(table.targetType, table.targetId),
+]);
+
+export const insertScheduledTaskSchema = createInsertSchema(scheduledTasks).omit({ id: true, createdAt: true });
+export type InsertScheduledTask = z.infer<typeof insertScheduledTaskSchema>;
+export type ScheduledTask = typeof scheduledTasks.$inferSelect;
+
+// ============================================================================
+// TELEGRAM BOT TABLES - For Telegram integration (matching existing DB structure)
+// ============================================================================
+
+export const telegramUserProfiles = pgTable("telegram_user_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  telegramId: varchar("telegram_id").notNull(),
+  telegramUsername: varchar("telegram_username"),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  language: varchar("language"),
+  isPremium: boolean("is_premium").default(false),
+  interests: jsonb("interests").$type<string[]>().default([]),
+  favorites: jsonb("favorites").$type<string[]>().default([]),
+  tripDates: jsonb("trip_dates").$type<Record<string, unknown>>(),
+  travelStyle: varchar("travel_style"),
+  budget: varchar("budget"),
+  notificationsEnabled: boolean("notifications_enabled").default(true),
+  dailyDigestEnabled: boolean("daily_digest_enabled").default(false),
+  totalInteractions: integer("total_interactions").default(0),
+  badges: jsonb("badges").$type<string[]>().default([]),
+  points: integer("points").default(0),
+  lastActiveAt: timestamp("last_active_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const telegramConversations = pgTable("telegram_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  telegramUserId: varchar("telegram_user_id").references(() => telegramUserProfiles.id),
+  role: varchar("role"),
+  content: text("content"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type TelegramUserProfile = typeof telegramUserProfiles.$inferSelect;
+export type TelegramConversation = typeof telegramConversations.$inferSelect;
+
+// ============================================================================
+// CONTENT RULES - Strict rules for AI content generation (cannot be bypassed)
+// ============================================================================
+
+export const contentRules = pgTable("content_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+
+  // Word count rules (STRICT - cannot be bypassed)
+  minWords: integer("min_words").default(1800).notNull(),
+  maxWords: integer("max_words").default(3500).notNull(),
+  optimalMinWords: integer("optimal_min_words").default(2000).notNull(),
+  optimalMaxWords: integer("optimal_max_words").default(2500).notNull(),
+
+  // Structure rules
+  introMinWords: integer("intro_min_words").default(150).notNull(),
+  introMaxWords: integer("intro_max_words").default(200).notNull(),
+
+  quickFactsMin: integer("quick_facts_min").default(5).notNull(),
+  quickFactsMax: integer("quick_facts_max").default(8).notNull(),
+  quickFactsWordsMin: integer("quick_facts_words_min").default(80).notNull(),
+  quickFactsWordsMax: integer("quick_facts_words_max").default(120).notNull(),
+
+  mainSectionsMin: integer("main_sections_min").default(4).notNull(),
+  mainSectionsMax: integer("main_sections_max").default(6).notNull(),
+  mainSectionWordsMin: integer("main_section_words_min").default(200).notNull(),
+  mainSectionWordsMax: integer("main_section_words_max").default(300).notNull(),
+
+  faqsMin: integer("faqs_min").default(6).notNull(),
+  faqsMax: integer("faqs_max").default(10).notNull(),
+  faqAnswerWordsMin: integer("faq_answer_words_min").default(50).notNull(),
+  faqAnswerWordsMax: integer("faq_answer_words_max").default(100).notNull(),
+
+  proTipsMin: integer("pro_tips_min").default(5).notNull(),
+  proTipsMax: integer("pro_tips_max").default(8).notNull(),
+  proTipWordsMin: integer("pro_tip_words_min").default(20).notNull(),
+  proTipWordsMax: integer("pro_tip_words_max").default(35).notNull(),
+
+  conclusionMinWords: integer("conclusion_min_words").default(100).notNull(),
+  conclusionMaxWords: integer("conclusion_max_words").default(150).notNull(),
+
+  // Internal linking rules
+  internalLinksMin: integer("internal_links_min").default(5).notNull(),
+  internalLinksMax: integer("internal_links_max").default(10).notNull(),
+
+  // SEO rules
+  keywordDensityMin: integer("keyword_density_min").default(1).notNull(), // percentage * 10
+  keywordDensityMax: integer("keyword_density_max").default(3).notNull(), // percentage * 10
+  dubaiMentionsMin: integer("dubai_mentions_min").default(5).notNull(),
+
+  // Retry rules
+  maxRetries: integer("max_retries").default(3).notNull(),
+
+  // Content type this rule applies to (null = all types)
+  contentType: contentTypeEnum("content_type"),
+
+  // Metadata
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertContentRulesSchema = createInsertSchema(contentRules).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertContentRules = z.infer<typeof insertContentRulesSchema>;
+export type ContentRules = typeof contentRules.$inferSelect;
+
+// Default rules that will be seeded
+export const DEFAULT_CONTENT_RULES = {
+  name: "dubai-seo-standard",
+  description: "Standard SEO rules for Dubai tourism content - STRICT enforcement",
+  isActive: true,
+  minWords: 1800,
+  maxWords: 3500,
+  optimalMinWords: 2000,
+  optimalMaxWords: 2500,
+  introMinWords: 150,
+  introMaxWords: 200,
+  quickFactsMin: 5,
+  quickFactsMax: 8,
+  quickFactsWordsMin: 80,
+  quickFactsWordsMax: 120,
+  mainSectionsMin: 4,
+  mainSectionsMax: 6,
+  mainSectionWordsMin: 200,
+  mainSectionWordsMax: 300,
+  faqsMin: 6,
+  faqsMax: 10,
+  faqAnswerWordsMin: 50,
+  faqAnswerWordsMax: 100,
+  proTipsMin: 5,
+  proTipsMax: 8,
+  proTipWordsMin: 20,
+  proTipWordsMax: 35,
+  conclusionMinWords: 100,
+  conclusionMaxWords: 150,
+  internalLinksMin: 5,
+  internalLinksMax: 10,
+  keywordDensityMin: 10, // 1.0%
+  keywordDensityMax: 30, // 3.0%
+  dubaiMentionsMin: 5,
+  maxRetries: 3,
+};
+

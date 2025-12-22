@@ -1,4 +1,6 @@
 import { useState, useRef } from "react";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { 
@@ -227,6 +229,7 @@ const famousCases = [
 ];
 
 export default function LandingDubaiLaws() {
+  const { isRTL } = useLocale();
   // Refs for scrolling
   const trafficRef = useRef<HTMLDivElement>(null);
   const behaviorRef = useRef<HTMLDivElement>(null);

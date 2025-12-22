@@ -12,6 +12,7 @@ import { useAnalytics } from "@/hooks/use-analytics";
 import { initGA } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
 import { LocaleProvider } from "@/lib/i18n/LocaleRouter";
+import { FavoritesProvider } from "@/hooks/use-favorites";
 
 // Lazy load all pages for better performance
 const ComingSoon = lazy(() => import("@/pages/coming-soon"));
@@ -97,6 +98,8 @@ const LandingFreeDubai = lazy(() => import("@/pages/landing-free-dubai"));
 const LandingDubaiLaws = lazy(() => import("@/pages/landing-dubai-laws"));
 const LandingSheikhMohammed = lazy(() => import("@/pages/landing-sheikh-mohammed"));
 const LandingDubai247 = lazy(() => import("@/pages/landing-dubai-247"));
+const PublicShopping = lazy(() => import("@/pages/public-shopping"));
+const PublicNews = lazy(() => import("@/pages/public-news"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
@@ -107,6 +110,7 @@ const AffiliateLinks = lazy(() => import("@/pages/affiliate-links"));
 const MediaLibrary = lazy(() => import("@/pages/media-library"));
 const ImageEngine = lazy(() => import("@/pages/admin-image-engine"));
 const Settings = lazy(() => import("@/pages/settings"));
+const ContentRulesPage = lazy(() => import("@/pages/content-rules"));
 const AIArticleGenerator = lazy(() => import("@/pages/ai-article-generator"));
 const TopicBankPage = lazy(() => import("@/pages/topic-bank"));
 const KeywordsPage = lazy(() => import("@/pages/keywords"));
@@ -119,12 +123,20 @@ const AuditLogs = lazy(() => import("@/pages/audit-logs"));
 const NewsletterSubscribers = lazy(() => import("@/pages/newsletter-subscribers"));
 const Campaigns = lazy(() => import("@/pages/campaigns"));
 const TranslationsPage = lazy(() => import("@/pages/translations"));
+const ContentCalendarPage = lazy(() => import("@/pages/content-calendar"));
+const ContentTemplatesPage = lazy(() => import("@/pages/content-templates"));
+const SEOAuditPage = lazy(() => import("@/pages/seo-audit"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Login = lazy(() => import("@/pages/login"));
 const AccessDenied = lazy(() => import("@/pages/access-denied"));
 
 // Eager load AI Assistant as it's critical UI
 import { AIAssistant } from "@/components/ai-assistant";
+import { CommandPalette, useCommandPalette } from "@/components/command-palette";
+import { KeyboardShortcuts, useKeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { NotificationsCenter } from "@/components/notifications-center";
+import { MultiTabProvider, EditorTabBar, TabCountBadge } from "@/components/multi-tab-editor";
+import { ContentExpiryAlerts } from "@/components/content-expiry-alerts";
 
 // Loading fallback component
 function PageLoader() {
@@ -160,6 +172,15 @@ function AdminEvents() {
 function AdminItineraries() {
   return <ContentList type="itinerary" />;
 }
+function AdminLandingPages() {
+  return <ContentList type="landing_page" />;
+}
+function AdminCaseStudies() {
+  return <ContentList type="case_study" />;
+}
+function AdminOffPlan() {
+  return <ContentList type="off_plan" />;
+}
 
 function AdminRouter() {
   return (
@@ -190,6 +211,15 @@ function AdminRouter() {
         <Route path="/admin/itineraries" component={AdminItineraries} />
         <Route path="/admin/itineraries/new" component={ContentEditor} />
         <Route path="/admin/itineraries/:id" component={ContentEditor} />
+        <Route path="/admin/landing-pages" component={AdminLandingPages} />
+        <Route path="/admin/landing-pages/new" component={ContentEditor} />
+        <Route path="/admin/landing-pages/:id" component={ContentEditor} />
+        <Route path="/admin/case-studies" component={AdminCaseStudies} />
+        <Route path="/admin/case-studies/new" component={ContentEditor} />
+        <Route path="/admin/case-studies/:id" component={ContentEditor} />
+        <Route path="/admin/off-plan" component={AdminOffPlan} />
+        <Route path="/admin/off-plan/new" component={ContentEditor} />
+        <Route path="/admin/off-plan/:id" component={ContentEditor} />
         <Route path="/admin/rss-feeds" component={RssFeeds} />
         <Route path="/admin/ai-generator" component={AIArticleGenerator} />
         <Route path="/admin/topic-bank" component={TopicBankPage} />
@@ -200,6 +230,7 @@ function AdminRouter() {
         <Route path="/admin/media" component={MediaLibrary} />
         <Route path="/admin/image-engine" component={ImageEngine} />
         <Route path="/admin/settings" component={Settings} />
+        <Route path="/admin/content-rules" component={ContentRulesPage} />
         <Route path="/admin/users" component={UsersPage} />
         <Route path="/admin/homepage-promotions" component={HomepagePromotions} />
         <Route path="/admin/analytics" component={Analytics} />
@@ -207,6 +238,9 @@ function AdminRouter() {
         <Route path="/admin/newsletter" component={NewsletterSubscribers} />
         <Route path="/admin/campaigns" component={Campaigns} />
         <Route path="/admin/translations" component={TranslationsPage} />
+        <Route path="/admin/calendar" component={ContentCalendarPage} />
+        <Route path="/admin/templates" component={ContentTemplatesPage} />
+        <Route path="/admin/seo-audit" component={SEOAuditPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -215,6 +249,8 @@ function AdminRouter() {
 
 function AdminLayout() {
   const { user, isLoading, isAuthenticated } = useAuth();
+  const { open: commandPaletteOpen, setOpen: setCommandPaletteOpen } = useCommandPalette();
+  const { open: shortcutsOpen, setOpen: setShortcutsOpen } = useKeyboardShortcuts();
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -233,21 +269,33 @@ function AdminLayout() {
   }
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex h-screen w-full">
-        <AppSidebar user={user} />
-        <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex items-center justify-between gap-4 p-3 border-b sticky top-0 z-50 bg-background">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
-          </header>
-          <main className="flex-1 overflow-auto p-6">
-            <AdminRouter />
-          </main>
+    <MultiTabProvider>
+      <SidebarProvider style={style as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AppSidebar user={user} />
+          <div className="flex flex-col flex-1 min-w-0">
+            <header className="flex items-center justify-between gap-4 p-3 border-b sticky top-0 z-50 bg-background">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <TabCountBadge />
+              </div>
+              <div className="flex items-center gap-2">
+                <ContentExpiryAlerts compact />
+                <NotificationsCenter />
+                <ThemeToggle />
+              </div>
+            </header>
+            <EditorTabBar />
+            <main className="flex-1 overflow-auto p-6">
+              <AdminRouter />
+            </main>
+          </div>
+          <AIAssistant />
+          <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+          <KeyboardShortcuts open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
         </div>
-        <AIAssistant />
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </MultiTabProvider>
   );
 }
 
@@ -263,8 +311,7 @@ const publicRoutes = [
   { path: "/hotels/:slug", component: PublicContentViewer },
   { path: "/dining", component: PublicDining },
   { path: "/dining/:slug", component: PublicContentViewer },
-  { path: "/districts", component: PublicDistricts },
-  { path: "/districts/:slug", component: PublicContentViewer },
+  // Districts now handled by DistrictsGateway and specific district pages below
   { path: "/transport/:slug", component: PublicContentViewer },
   { path: "/articles", component: PublicArticles },
   { path: "/articles/:slug", component: PublicContentViewer },
@@ -330,6 +377,10 @@ const publicRoutes = [
   { path: "/dubai/laws-for-tourists", component: LandingDubaiLaws },
   { path: "/dubai/sheikh-mohammed-bin-rashid", component: LandingSheikhMohammed },
   { path: "/dubai/24-hours-open", component: LandingDubai247 },
+  // Shopping page
+  { path: "/shopping", component: PublicShopping },
+  // News portal
+  { path: "/news", component: PublicNews },
   // District pages
   { path: "/districts", component: DistrictsGateway },
   { path: "/districts/downtown-dubai", component: DistrictDowntownDubai },
@@ -400,16 +451,18 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <LocaleProvider>
-        <TooltipProvider>
-          <Suspense fallback={<PageLoader />}>
-            {isAdminRoute ? (
-              <AdminLayout />
-            ) : (
-              <PublicRouter />
-            )}
-          </Suspense>
-          <Toaster />
-        </TooltipProvider>
+        <FavoritesProvider>
+          <TooltipProvider>
+            <Suspense fallback={<PageLoader />}>
+              {isAdminRoute ? (
+                <AdminLayout />
+              ) : (
+                <PublicRouter />
+              )}
+            </Suspense>
+            <Toaster />
+          </TooltipProvider>
+        </FavoritesProvider>
       </LocaleProvider>
     </QueryClientProvider>
   );

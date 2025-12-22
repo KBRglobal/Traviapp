@@ -1,0 +1,153 @@
+~/workspace$ git pull origin claude/website-localization-7gzaS && npm run db:push
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 4 (delta 2), reused 4 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (4/4), 1.65 KiB | 842.00 KiB/s, done.
+From https://github.com/traviquackson-spec/Traviapp
+ * branch            claude/website-localization-7gzaS -> FETCH_HEAD
+   fc3d3af..ad5c22a  claude/website-localization-7gzaS -> origin/claude/website-localization-7gzaS
+Updating fc3d3af..ad5c22a
+Fast-forward
+ shared/schema.ts | 91 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 91 insertions(+)
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/home/runner/workspace/drizzle.config.ts'
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
++ activity_type enum will be created
++ notification_type enum will be created
++ topic_category enum will be created
++ topic_format enum will be created
++ topic_type enum will be created
++ viral_potential enum will be created
++ webhook_event enum will be created
++ workflow_status enum will be created
+--- all enum conflicts resolved ---
+
++ activities table will be created
++ comments table will be created
++ content_locks table will be created
++ notifications table will be created
++ scheduled_tasks table will be created
++ team_members table will be created
++ teams table will be created
++ webhook_logs table will be created
++ webhooks table will be created
++ workflow_approvals table will be created
++ workflow_instances table will be created
++ workflow_templates table will be created
+--- all table conflicts resolved ---
+
+
++ username column will be created
+
++ language_code column will be created
+
++ is_bot column will be created
+
++ metadata column will be created
+
++ updated_at column will be created
+--- all columns conflicts in telegram_user_profiles table resolved ---
+
+
++ chat_id column will be created
+
++ message_id column will be created
+
++ direction column will be created
+
++ message_type column will be created
+
++ metadata column will be created
+--- all columns conflicts in telegram_conversations table resolved ---
+
+
++ extension_defaults column will be created
+
++ seo_defaults column will be created
+
++ is_public column will be created
+
++ usage_count column will be created
+
++ created_by column will be created
+--- all columns conflicts in content_templates table resolved ---
+
+
++ overall_score column will be created
+
++ title_score column will be created
+
++ meta_description_score column will be created
+
++ keyword_score column will be created
+
++ content_score column will be created
+
++ readability_score column will be created
+
++ technical_score column will be created
+--- all columns conflicts in seo_analysis_results table resolved ---
+
+
++ negative_prompt column will be created
+
++ model column will be created
+
++ provider column will be created
+
++ seed column will be created
+
++ image_url column will be created
+
++ thumbnail_url column will be created
+
++ status column will be created
+
++ error column will be created
+
++ cost column will be created
+
++ content_id column will be created
+
++ created_by column will be created
+--- all columns conflicts in ai_generated_images table resolved ---
+
+
++ name column will be created
+
++ slug column will be created
+
++ description column will be created
+
++ color column will be created
+
++ icon column will be created
+
++ is_active column will be created
+--- all columns conflicts in topic_clusters table resolved ---
+
+
++ topic_bank_id column will be created
+
++ position column will be created
+--- all columns conflicts in topic_cluster_items table resolved ---
+
+· You're about to add telegram_user_profiles_telegram_id_unique unique constraint to the table, which contains 1 items. If this statement fails, you will receive an error from the database. Do you want to truncate telegram_user_profiles table?
+
+· You're about to add users_username_unique unique constraint to the table, which contains 18 items. If this statement fails, you will receive an error from the database. Do you want to truncate users table?
+
+· You're about to add users_email_unique unique constraint to the table, which contains 18 items. If this statement fails, you will receive an error from the database. Do you want to truncate users table?
+
+· You're about to add newsletter_subscribers_email_unique unique constraint to the table, which contains 4 items. If this statement fails, you will receive an error from the database. Do you want to truncate newsletter_subscribers table?
+
+· You're about to add topic_clusters_slug_unique unique constraint to the table, which contains 84 items. If this statement fails, you will receive an error from the database. Do you want to truncate topic_clusters table?
+
+❯ No, add the constraint without truncating the table
+  Yes, truncate the table

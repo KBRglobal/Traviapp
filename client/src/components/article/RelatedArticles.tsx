@@ -57,15 +57,15 @@ export function RelatedArticles({
         <div className="flex items-center justify-between mb-10">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <BookOpen className="w-5 h-5 text-[#02A65C]" />
-              <span className="text-[#02A65C] font-medium text-sm uppercase tracking-wider">
+              <BookOpen className="w-5 h-5 text-travi-green" />
+              <span className="text-travi-green font-medium text-sm uppercase tracking-wider">
                 Keep Reading
               </span>
             </div>
             <h2 className="text-3xl lg:text-4xl font-bold text-foreground">
               Related{" "}
               <span
-                className="italic font-normal text-[#6443F4]"
+                className="italic font-normal text-travi-purple"
                 style={{ fontFamily: "Georgia, serif" }}
               >
                 Articles
@@ -75,7 +75,7 @@ export function RelatedArticles({
 
           <Link
             href="/articles"
-            className="hidden sm:flex items-center gap-2 text-[#6443F4] font-medium hover:underline underline-offset-4"
+            className="hidden sm:flex items-center gap-2 text-travi-purple font-medium hover:underline underline-offset-4"
             data-testid="link-view-all-articles"
           >
             View All
@@ -103,7 +103,7 @@ export function RelatedArticles({
                     <div className="absolute top-3 right-3">
                       <Badge
                         variant="secondary"
-                        className="bg-white/90 dark:bg-slate-900/90 text-foreground backdrop-blur-sm text-xs gap-1"
+                        className="bg-white/90 dark:bg-card/90 text-foreground backdrop-blur-sm text-xs gap-1"
                       >
                         <Calendar className="w-3 h-3" />
                         {formatDate(article.publishedAt)}
@@ -114,12 +114,12 @@ export function RelatedArticles({
 
                 <div className="flex-1 flex flex-col">
                   {article.category && (
-                    <span className="text-xs font-medium uppercase tracking-wider text-[#02A65C] mb-2">
+                    <span className="text-xs font-medium uppercase tracking-wider text-travi-green mb-2">
                       {article.category}
                     </span>
                   )}
 
-                  <h3 className="font-semibold text-foreground line-clamp-2 group-hover:text-[#6443F4] transition-colors mb-2">
+                  <h3 className="font-semibold text-foreground line-clamp-2 group-hover:text-travi-purple transition-colors mb-2">
                     {article.title}
                   </h3>
 
@@ -129,7 +129,7 @@ export function RelatedArticles({
                     </p>
                   )}
 
-                  <div className="mt-3 flex items-center gap-1 text-sm text-[#6443F4] font-medium">
+                  <div className="mt-3 flex items-center gap-1 text-sm text-travi-purple font-medium">
                     Read More
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </div>
@@ -142,7 +142,7 @@ export function RelatedArticles({
         <div className="sm:hidden mt-8 text-center">
           <Link
             href="/articles"
-            className="inline-flex items-center gap-2 text-[#6443F4] font-medium hover:underline underline-offset-4"
+            className="inline-flex items-center gap-2 text-travi-purple font-medium hover:underline underline-offset-4"
             data-testid="link-view-all-articles-mobile"
           >
             View All Articles

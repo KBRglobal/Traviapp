@@ -52,7 +52,14 @@ import {
   Download,
   ChevronDown,
   AlertTriangle,
+  Megaphone,
+  FileBarChart2,
+  Building,
+  LayoutGrid,
+  List,
+  Kanban,
 } from "lucide-react";
+import { ContentKanban } from "@/components/content-kanban";
 import type { ContentWithRelations, Tag as TagType } from "@shared/schema";
 
 interface DeleteWarning {
@@ -63,7 +70,7 @@ interface DeleteWarning {
 }
 
 interface ContentListProps {
-  type: "attraction" | "hotel" | "article" | "dining" | "district" | "transport" | "event" | "itinerary";
+  type: "attraction" | "hotel" | "article" | "dining" | "district" | "transport" | "event" | "itinerary" | "landing_page" | "case_study" | "off_plan";
 }
 
 const typeConfig = {
@@ -123,6 +130,27 @@ const typeConfig = {
     basePath: "/admin/itineraries",
     wordTarget: "~1500 words",
   },
+  landing_page: {
+    title: "Landing Pages",
+    singular: "Landing Page",
+    icon: Megaphone,
+    basePath: "/admin/landing-pages",
+    wordTarget: "~1800-2500 words",
+  },
+  case_study: {
+    title: "Case Studies",
+    singular: "Case Study",
+    icon: FileBarChart2,
+    basePath: "/admin/case-studies",
+    wordTarget: "~2000-3000 words",
+  },
+  off_plan: {
+    title: "Off-Plan Properties",
+    singular: "Off-Plan Property",
+    icon: Building,
+    basePath: "/admin/off-plan",
+    wordTarget: "~2500-3500 words",
+  },
 };
 
 export default function ContentList({ type }: ContentListProps) {
@@ -136,6 +164,7 @@ export default function ContentList({ type }: ContentListProps) {
   const [deleteWarnings, setDeleteWarnings] = useState<DeleteWarning[]>([]);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [isCheckingDelete, setIsCheckingDelete] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
   const { data: contents, isLoading } = useQuery<ContentWithRelations[]>({
     queryKey: [`/api/contents?type=${type}`],
@@ -307,6 +336,9 @@ export default function ContentList({ type }: ContentListProps) {
           transport: "transport",
           event: "events",
           itinerary: "itineraries",
+          landing_page: "landing",
+          case_study: "case-studies",
+          off_plan: "off-plan",
         };
         window.open(`/${pathMap[type]}/${item.slug}`, "_blank");
       },
@@ -379,6 +411,26 @@ export default function ContentList({ type }: ContentListProps) {
                   <X className="h-4 w-4" />
                 </Button>
               )}
+              <div className="border-l pl-2 ml-2 flex items-center gap-1">
+                <Button
+                  variant={viewMode === "table" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("table")}
+                  data-testid="button-view-table"
+                  title="Table view"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "kanban" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("kanban")}
+                  data-testid="button-view-kanban"
+                  title="Kanban view"
+                >
+                  <Kanban className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -498,6 +550,12 @@ export default function ContentList({ type }: ContentListProps) {
               }
               actionLabel={hasFilters ? "Clear filters" : `Create ${config.singular}`}
               onAction={hasFilters ? handleClearFilters : () => navigate(`${config.basePath}/new`)}
+            />
+          ) : viewMode === "kanban" ? (
+            <ContentKanban
+              contents={filteredContents}
+              type={type}
+              basePath={config.basePath}
             />
           ) : (
             <DataTable

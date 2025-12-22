@@ -62,7 +62,7 @@ export function NewsletterSignup({
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${backgroundImage})` }}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-[#6443F4]/90 via-[#6443F4]/80 to-[#F94498]/70" />
+        <div className="absolute inset-0 bg-gradient-to-r from-travi-purple/90 via-travi-purple/80 to-travi-pink/70" />
       </div>
 
       <div className="absolute inset-0 opacity-30">
@@ -71,7 +71,7 @@ export function NewsletterSignup({
           aria-hidden="true"
         />
         <div
-          className="absolute bottom-0 right-0 w-96 h-96 bg-[#FF9327]/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"
+          className="absolute bottom-0 right-0 w-96 h-96 bg-travi-orange/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"
           aria-hidden="true"
         />
       </div>
@@ -102,7 +102,7 @@ export function NewsletterSignup({
             className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm rounded-lg px-6 py-4"
             data-testid="newsletter-success-message"
           >
-            <CheckCircle className="w-6 h-6 text-[#59ED63]" />
+            <CheckCircle className="w-6 h-6 text-travi-green" />
             <span className="text-white font-medium">
               You're all set! Welcome to the Travi family.
             </span>
@@ -129,7 +129,7 @@ export function NewsletterSignup({
               type="submit"
               size="lg"
               disabled={subscribeMutation.isPending}
-              className="h-14 px-8 bg-[#FF9327] text-white border-0 font-semibold gap-2"
+              className="h-14 px-8 bg-travi-orange text-white border-0 font-semibold gap-2"
               data-testid="button-newsletter-subscribe"
             >
               {subscribeMutation.isPending ? (

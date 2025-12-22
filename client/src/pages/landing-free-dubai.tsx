@@ -1,4 +1,6 @@
-import { useRef, useState, useMemo } from "react";
+import { useRef, useMemo, useState } from "react";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -195,12 +197,17 @@ const faqData = [
 ];
 
 export default function LandingFreeDubai() {
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [tripDays, setTripDays] = useState([7]);
-  const [familySize, setFamilySize] = useState([2]);
-  
+  const { isRTL } = useLocale();
+  const beachesRef = useRef<HTMLDivElement>(null);
+  const heritageRef = useRef<HTMLDivElement>(null);
+  const skylineRef = useRef<HTMLDivElement>(null);
+  const parksRef = useRef<HTMLDivElement>(null);
   const exploreRef = useRef<HTMLDivElement>(null);
   const calculatorRef = useRef<HTMLDivElement>(null);
+  
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [tripDays, setTripDays] = useState([3]);
+  const [familySize, setFamilySize] = useState([2]);
 
   useDocumentMeta({
     title: "70+ Free Things to Do in Dubai 2026 - Complete Guide | Save AED 2,500+",

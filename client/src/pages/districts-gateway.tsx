@@ -1,4 +1,6 @@
 import { Link } from "wouter";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
 import { 
@@ -312,6 +314,7 @@ function DistrictCard({ district, index }: { district: typeof districts[0]; inde
 }
 
 export default function DistrictsGateway() {
+  const { isRTL } = useLocale();
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
@@ -347,7 +350,7 @@ export default function DistrictsGateway() {
   const otherDistricts = districts.slice(6);
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
       <PublicNav variant="transparent" />
       
       {/* Hero Section */}

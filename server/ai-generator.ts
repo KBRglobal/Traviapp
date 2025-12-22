@@ -16,10 +16,50 @@ function getOpenAIClient(): OpenAI | null {
   if (!apiKey) {
     return null;
   }
-  return new OpenAI({ 
+  return new OpenAI({
     apiKey,
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
   });
+}
+
+// ============================================================================
+// AI MODEL COST OPTIMIZATION
+// ============================================================================
+// Tiered model selection for cost optimization:
+// - GPT-4o: Premium content generation (hotels, complex articles) - $2.50/$10 per 1M tokens
+// - GPT-4o-mini: Standard tasks (prompts, SEO, translations, simple content) - $0.15/$0.60 per 1M tokens
+// Estimated savings: 80-95% on non-premium tasks
+
+type ContentTier = 'premium' | 'standard';
+
+interface ModelConfig {
+  model: string;
+  maxTokens: number;
+  temperature: number;
+}
+
+const MODEL_CONFIGS: Record<ContentTier, ModelConfig> = {
+  premium: {
+    model: "gpt-4o",           // For complex, high-value content
+    maxTokens: 16000,
+    temperature: 0.7,
+  },
+  standard: {
+    model: "gpt-4o-mini",      // 95% cheaper for routine tasks
+    maxTokens: 8000,
+    temperature: 0.7,
+  },
+};
+
+// Determine tier based on content type
+function getContentTier(contentType: string): ContentTier {
+  // Premium: Complex, high-value content that needs best quality
+  const premiumTypes = ['hotel', 'attraction', 'itinerary'];
+  return premiumTypes.includes(contentType.toLowerCase()) ? 'premium' : 'standard';
+}
+
+function getModelConfig(tier: ContentTier): ModelConfig {
+  return MODEL_CONFIGS[tier];
 }
 
 function generateBlockId(): string {
@@ -153,7 +193,7 @@ export async function generateImagePrompt(
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",  // Optimized: Image prompts don't need GPT-4o (saves 95%)
       messages: [
         {
           role: "system",
@@ -189,8 +229,95 @@ Return ONLY the prompt text, no additional explanation.`
   }
 }
 
-// Generate image using DALL-E
-export async function generateImage(
+// ============================================================================
+// IMAGE GENERATION PROVIDERS
+// ============================================================================
+// Multi-provider image generation for cost optimization:
+// - DALL-E 3: $0.080/image (HD) - Best for complex scenes
+// - Flux 1.1 Pro: ~$0.03/image via Replicate (67% savings) - Great for photorealistic
+
+type ImageProvider = 'dalle3' | 'flux' | 'auto';
+
+interface ImageGenerationConfig {
+  provider: ImageProvider;
+  size: '1024x1024' | '1792x1024' | '1024x1792';
+  quality: 'standard' | 'hd';
+  style: 'vivid' | 'natural';
+}
+
+// Get Replicate client for Flux
+async function generateWithFlux(
+  prompt: string,
+  aspectRatio: '16:9' | '1:1' | '9:16' = '16:9'
+): Promise<string | null> {
+  const replicateApiKey = process.env.REPLICATE_API_KEY;
+  if (!replicateApiKey) {
+    console.log("Replicate API key not configured, falling back to DALL-E");
+    return null;
+  }
+
+  try {
+    // Using Replicate's HTTP API for Flux 1.1 Pro
+    const response = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${replicateApiKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'wait'  // Wait for result synchronously
+      },
+      body: JSON.stringify({
+        version: "black-forest-labs/flux-1.1-pro",
+        input: {
+          prompt: prompt,
+          aspect_ratio: aspectRatio,
+          output_format: "jpg",
+          output_quality: 90,
+          safety_tolerance: 2,
+          prompt_upsampling: true
+        }
+      })
+    });
+
+    if (!response.ok) {
+      console.error("Flux API error:", await response.text());
+      return null;
+    }
+
+    const result = await response.json();
+
+    // If using 'wait' header, output should be ready
+    if (result.output) {
+      return Array.isArray(result.output) ? result.output[0] : result.output;
+    }
+
+    // If not ready, poll for result (max 60 seconds)
+    if (result.urls?.get) {
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const pollResponse = await fetch(result.urls.get, {
+          headers: { 'Authorization': `Bearer ${replicateApiKey}` }
+        });
+        const pollResult = await pollResponse.json();
+
+        if (pollResult.status === 'succeeded' && pollResult.output) {
+          return Array.isArray(pollResult.output) ? pollResult.output[0] : pollResult.output;
+        }
+        if (pollResult.status === 'failed') {
+          console.error("Flux generation failed:", pollResult.error);
+          return null;
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error generating with Flux:", error);
+    return null;
+  }
+}
+
+// Generate image using DALL-E 3
+async function generateWithDalle(
   prompt: string,
   options: {
     size?: '1024x1024' | '1792x1024' | '1024x1792';
@@ -206,7 +333,7 @@ export async function generateImage(
       model: "dall-e-3",
       prompt: prompt,
       n: 1,
-      size: options.size || '1792x1024', // Wide for hero images
+      size: options.size || '1792x1024',
       quality: options.quality || 'hd',
       style: options.style || 'natural',
     });
@@ -216,6 +343,40 @@ export async function generateImage(
     console.error("Error generating image with DALL-E:", error);
     return null;
   }
+}
+
+// Main image generation with provider selection
+export async function generateImage(
+  prompt: string,
+  options: {
+    size?: '1024x1024' | '1792x1024' | '1024x1792';
+    quality?: 'standard' | 'hd';
+    style?: 'vivid' | 'natural';
+    provider?: ImageProvider;
+    imageType?: 'hero' | 'content';
+  } = {}
+): Promise<string | null> {
+  // Auto-select provider based on image type for cost optimization
+  // Hero images: Flux (67% cheaper, excellent for photorealistic Dubai scenes)
+  // Content images: DALL-E (better for specific detailed scenes)
+  const provider = options.provider || (options.imageType === 'hero' ? 'flux' : 'dalle3');
+
+  if (provider === 'flux' || provider === 'auto') {
+    // Map size to aspect ratio for Flux
+    const aspectRatio = options.size === '1792x1024' ? '16:9' :
+                        options.size === '1024x1792' ? '9:16' : '1:1';
+
+    const fluxResult = await generateWithFlux(prompt, aspectRatio);
+    if (fluxResult) return fluxResult;
+
+    // Fallback to DALL-E if Flux fails
+    if (provider === 'auto') {
+      console.log("Flux failed, falling back to DALL-E");
+      return generateWithDalle(prompt, options);
+    }
+  }
+
+  return generateWithDalle(prompt, options);
 }
 
 // Generate all images for content
@@ -239,6 +400,7 @@ export async function generateContentImages(
         size: '1792x1024',
         quality: 'hd',
         style: 'natural',
+        imageType: 'hero',  // Uses Flux for 67% cost savings
       });
 
       if (heroUrl) {
@@ -268,6 +430,7 @@ export async function generateContentImages(
           size: '1024x1024',
           quality: 'standard',
           style: 'natural',
+          imageType: 'content',  // Uses DALL-E for detailed scenes
         });
 
         if (contentUrl) {
@@ -1691,23 +1854,35 @@ OUTPUT JSON STRUCTURE:
         "order": 6
       },
       {
+        "id": "quote_block",
+        "type": "quote",
+        "data": {
+          "text": "A compelling, memorable quote about the topic - could be from a local expert, traveler review, historical figure, or famous saying. Make it inspiring and relevant to the article content.",
+          "author": "Name of person quoted (optional)",
+          "source": "Title or context of source (optional)"
+        },
+        "order": 5
+      },
+      {
         "id": "main_content_3",
         "type": "text",
         "data": {
           "heading": "H2 for third section (if needed for structure)",
           "content": "200-300 words. Additional content matching your structure (e.g., comparison details, story continuation, more list items). Keep momentum. Use different transitional phrases than previous sections."
         },
-        "order": 7
+        "order": 6
       },
       {
-        "id": "image_3",
-        "type": "image",
+        "id": "experience_banner",
+        "type": "banner",
         "data": {
-          "searchQuery": "Third image search query matching article topic (e.g., 'Dubai beach sunset palm trees', 'Dubai hotel luxury pool view')",
-          "alt": "Alt text describing the visual with location specifics",
-          "caption": "Caption adding practical info or emotional appeal"
+          "title": "EXPERIENCE DUBAI",
+          "subtitle": "Discover the magic",
+          "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920",
+          "ctaText": "Explore More",
+          "ctaLink": "/attractions"
         },
-        "order": 8
+        "order": 7
       },
       {
         "id": "pro_tips",
@@ -1722,6 +1897,49 @@ OUTPUT JSON STRUCTURE:
             "Photo opportunity tip 5 (e.g., 'Best Instagram shots from the 3rd floor viewing deck at sunset')",
             "Cultural/etiquette tip 6 (e.g., 'Modest dress required: cover shoulders and knees, scarves available at entrance')",
             "Bonus hack tip 7 (e.g., 'Free parking after 6 PM in adjacent P2 garage, entrance on Al Wasl Road')"
+          ]
+        },
+        "order": 8
+      },
+      {
+        "id": "recommendations_block",
+        "type": "recommendations",
+        "data": {
+          "title": "Travi Recommends",
+          "subtitle": "Handpicked experiences to enhance your visit",
+          "items": [
+            {
+              "title": "Related Experience 1 (e.g., 'Book Burj Khalifa Sky Tickets')",
+              "description": "Brief compelling description of this recommended experience",
+              "image": "https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=400",
+              "ctaText": "Book Now",
+              "ctaLink": "/attractions/burj-khalifa",
+              "price": "From AED 149"
+            },
+            {
+              "title": "Related Experience 2 (e.g., 'Desert Safari Adventure')",
+              "description": "Brief compelling description of this recommended experience",
+              "image": "https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=400",
+              "ctaText": "Book Now",
+              "ctaLink": "/attractions/desert-safari",
+              "price": "From AED 199"
+            },
+            {
+              "title": "Related Experience 3 (e.g., 'Luxury Marina Dinner Cruise')",
+              "description": "Brief compelling description of this recommended experience",
+              "image": "https://images.unsplash.com/photo-1512100356356-de1b84283e18?w=400",
+              "ctaText": "Book Now",
+              "ctaLink": "/dining/marina-cruise",
+              "price": "From AED 299"
+            },
+            {
+              "title": "Related Experience 4 (e.g., 'Miracle Garden Entry Pass')",
+              "description": "Brief compelling description of this recommended experience",
+              "image": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400",
+              "ctaText": "Book Now",
+              "ctaLink": "/attractions/miracle-garden",
+              "price": "From AED 55"
+            }
           ]
         },
         "order": 9
@@ -1748,19 +1966,51 @@ OUTPUT JSON STRUCTURE:
             {"question": "Do I need to book in advance?", "answer": "150-200 words covering walk-in vs booking, peak times requiring reservation, how far ahead to book, cancellation policy, where to book"},
             {"question": "What should I wear/bring to [topic]?", "answer": "150-200 words covering dress code, cultural considerations, weather prep, what's provided vs what to bring, prohibited items, bag policy"},
             {"question": "How long should I spend at [location]?", "answer": "150-200 words covering typical duration, rush visit vs thorough experience, what affects timing, combined with other activities"},
-            {"question": "Are there any restrictions or rules?", "answer": "150-200 words covering photography policy, food/drink rules, behavior expectations, accessibility limitations, what's not allowed"},
-            {"question": "What's included in the price?", "answer": "150-200 words covering what's included, what costs extra, package deals, worth-it assessment, comparison to alternatives"},
-            {"question": "Can I get a refund if I cancel?", "answer": "150-200 words covering cancellation policy, refund terms, modification options, travel insurance recommendation, no-show policy"}
+            {"question": "Are there any restrictions or rules?", "answer": "150-200 words covering photography policy, food/drink rules, behavior expectations, accessibility limitations, what's not allowed"}
           ]
         },
         "order": 11
       },
       {
-        "id": "related_links",
-        "type": "text",
+        "id": "related_articles_block",
+        "type": "related_articles",
         "data": {
-          "heading": "Related Articles",
-          "content": "Short paragraph (50-80 words) with 3-5 internal links to related content. Use natural anchor text: 'For more Dubai attractions, see our guide to [link]top Dubai attractions[/link]. If you're interested in dining nearby, check out [link]best restaurants in [Area][/link].' Links should flow naturally in sentences."
+          "title": "Related Articles",
+          "subtitle": "Explore more Dubai travel guides and tips",
+          "articles": [
+            {
+              "title": "Related Article 1 Title",
+              "description": "Brief 1-2 sentence description of related article",
+              "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400",
+              "date": "25",
+              "category": "Dubai Guide",
+              "slug": "related-article-1-slug"
+            },
+            {
+              "title": "Related Article 2 Title",
+              "description": "Brief 1-2 sentence description of related article",
+              "image": "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400",
+              "date": "25",
+              "category": "Attractions",
+              "slug": "related-article-2-slug"
+            },
+            {
+              "title": "Related Article 3 Title",
+              "description": "Brief 1-2 sentence description of related article",
+              "image": "https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=400",
+              "date": "25",
+              "category": "Tips",
+              "slug": "related-article-3-slug"
+            },
+            {
+              "title": "Related Article 4 Title",
+              "description": "Brief 1-2 sentence description of related article",
+              "image": "https://images.unsplash.com/photo-1546412414-e1885259563a?w=400",
+              "date": "25",
+              "category": "Hotels",
+              "slug": "related-article-4-slug"
+            }
+          ]
         },
         "order": 12
       },
@@ -3627,9 +3877,10 @@ export async function generateHotelContent(hotelName: string): Promise<Generated
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('premium'); // Hotels = premium content
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: HOTEL_SYSTEM_PROMPT },
         { 
@@ -3691,9 +3942,10 @@ export async function generateAttractionContent(attractionName: string): Promise
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('premium'); // Attractions = premium content
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: ATTRACTION_SYSTEM_PROMPT },
         { 
@@ -3767,61 +4019,52 @@ export async function generateArticleContent(
       ? `The article category should be "${category}".` 
       : "Determine the most appropriate category based on the topic.";
 
+    // Use GPT-4o for articles to ensure proper word count (mini often produces shorter content)
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o",  // Using GPT-4o for articles to ensure 1200+ word count
+      max_tokens: 16000,
       messages: [
         { role: "system", content: ARTICLE_SYSTEM_PROMPT },
-        { 
-          role: "user", 
+        {
+          role: "user",
           content: `Generate a comprehensive article about: "${topic}"
 
 ${categoryInstruction}
 
-REQUIREMENTS (VERY IMPORTANT - IRON RULE FOR WORD COUNT):
-- Total word count: 2000-3500 words across all text blocks
-- Choose the most appropriate writing personality (A-E) for this topic
-- Choose the most appropriate article structure (1-6) for this topic
-- Write engaging, SEO-optimized content valuable for Dubai travelers
+⚠️ CRITICAL WORD COUNT REQUIREMENT ⚠️
+MINIMUM TOTAL: 1,200 words | TARGET: 1,500-2,000 words
+Articles under 1,200 words will be REJECTED. Write DETAILED, COMPREHENSIVE content.
 
-WORD COUNT DISTRIBUTION (MUST FOLLOW):
-- Opening/Introduction: 150-200 words (~8% of content)
-- Quick Facts highlights: 80-120 words (~5% of content)
-- Main Sections (4-6 sections): 800-1800 words TOTAL (~60% of content)
-- FAQ (6-10 questions): 300-1000 words TOTAL (~20% of content)
-- Pro Tips (5-8 tips): 100-280 words TOTAL (~7% of content)
-- Summary/Conclusion: 100-150 words (~5% of content)
+Each text block MUST meet these MINIMUM word counts:
+- Introduction: AT LEAST 300 words (hook readers, establish context, preview content)
+- Main Section 1: AT LEAST 350 words (deep dive, specific examples, data points)
+- Main Section 2: AT LEAST 350 words (comprehensive coverage, practical details)
+- Main Section 3: AT LEAST 300 words (additional insights, local perspective)
+- Practical Information: AT LEAST 250 words (actionable guidance)
 
-MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
+MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array):
 1. hero block - with compelling title, subtitle, overlayText
-2. text block - "Introduction" (150-200 words, engaging hook that draws reader in)
-3. highlights block - Quick Facts (80-120 words: location, price, hours, booking, best time to visit)
-4. text block - Main content section 1 with H2 heading (250-350 words)
-5. image block - with searchQuery for Freepik, alt text, and caption (REQUIRED)
-6. text block - Main content section 2 with H2 heading (250-350 words)
-7. image block - second image with different searchQuery relevant to content (REQUIRED)
-8. text block - Main content section 3 with H2 heading (200-300 words)
-9. image block - third image with relevant searchQuery (REQUIRED)
-10. text block - Main content section 4 with H2 heading (200-300 words) - OPTIONAL but recommended
-11. tips block - with 5-8 detailed, actionable expert tips (this is REQUIRED, do NOT skip) - 100-280 words total
-12. faq block - with 6-10 FAQ items, each answer 50-100 words (this is REQUIRED, do NOT skip) - 300-1000 words total
-13. text block - "Summary" or "Conclusion" (100-150 words wrapping up key points)
-14. cta block - with relevant call to action
-
-IMAGE BLOCKS ARE MANDATORY - Each image block must include:
-- searchQuery: Specific search term for finding relevant stock images (e.g., "Dubai Marina waterfront sunset", "Burj Khalifa observation deck")
-- alt: SEO-optimized alt text describing the image with Dubai location context
-- caption: Engaging caption that adds value for the reader
+2. text block - "Introduction" (300+ words, engaging hook with context)
+3. text block - Main content section 1 (350+ words, detailed exploration)
+4. text block - Main content section 2 (350+ words, practical insights)
+5. text block - Main content section 3 (300+ words, local tips and perspective)
+6. highlights block - with 6 key takeaways (REQUIRED)
+7. text block - "Practical Information" (250+ words, concrete guidance)
+8. tips block - with 7 detailed, actionable expert tips (each tip 30-50 words)
+9. faq block - with 8 FAQ items, each answer 150-200 words (this is REQUIRED)
+10. cta block - with relevant call to action
 
 ALSO REQUIRED in article object:
-- 5-8 quick facts
-- 5-8 pro tips
+- 5 quick facts
+- 7 pro tips (each 40-60 words with specific actionable advice)
 - Relevant warnings
-- 6-10 FAQ items with detailed 50-100 word answers each
+- 8 FAQ items with detailed 150-200 word answers
 - 4 related topics for internal linking
 - 4 image descriptions with SEO alt text and captions
 - Comprehensive Article JSON-LD schema
 
-DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
+REMEMBER: Write LONG, DETAILED paragraphs. Each section should thoroughly cover its topic.
+DO NOT produce short, superficial content. Quality AND quantity are required.
 Output valid JSON only, no markdown code blocks.`
         }
       ],
@@ -3831,141 +4074,44 @@ Output valid JSON only, no markdown code blocks.`
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
 
+    // Calculate actual word count
+    let wordCount = 0;
     if (result.content?.blocks) {
-      result.content.blocks = result.content.blocks.map((block: ContentBlock, index: number) => ({
-        ...block,
-        id: block.id || generateBlockId(),
-        order: index
-      }));
-
-      // Validate and ensure all mandatory blocks exist
-      result.content.blocks = ensureRequiredArticleBlocks(result.content.blocks, topic);
+      result.content.blocks = result.content.blocks.map((block: ContentBlock, index: number) => {
+        // Count words in text blocks
+        if (block.type === 'text' && block.data?.content) {
+          wordCount += (block.data.content as string).split(/\s+/).filter(Boolean).length;
+        }
+        if (block.type === 'faq' && block.data?.faqs) {
+          for (const faq of block.data.faqs as any[]) {
+            wordCount += (faq.question + ' ' + faq.answer).split(/\s+/).filter(Boolean).length;
+          }
+        }
+        if (block.type === 'tips' && block.data?.tips) {
+          for (const tip of block.data.tips as string[]) {
+            wordCount += tip.split(/\s+/).filter(Boolean).length;
+          }
+        }
+        return {
+          ...block,
+          id: block.id || generateBlockId(),
+          order: index
+        };
+      });
     }
+
+    // Store word count in result
+    if (result.content) {
+      result.content.wordCount = wordCount;
+    }
+
+    console.log(`Generated article "${topic}" with ${wordCount} words`);
 
     return result as GeneratedArticleContent;
   } catch (error) {
     console.error("Error generating article content:", error);
     throw error;
   }
-}
-
-// Helper function to ensure all required blocks exist in article content
-function ensureRequiredArticleBlocks(blocks: ContentBlock[], topic: string): ContentBlock[] {
-  const blockTypes = blocks.map(b => b.type);
-  const existingBlocks = [...blocks];
-
-  // Check for required block types and add placeholders if missing
-  const requiredBlocks: { type: string; template: () => ContentBlock }[] = [
-    {
-      type: 'hero',
-      template: () => ({
-        id: generateBlockId(),
-        type: 'hero' as const,
-        data: { title: topic, subtitle: `Complete guide to ${topic}`, overlayText: 'Travel Guide' },
-        order: 0
-      })
-    },
-    {
-      type: 'highlights',
-      template: () => ({
-        id: generateBlockId(),
-        type: 'highlights' as const,
-        data: {
-          title: 'Quick Facts',
-          items: [
-            '📍 Location: Dubai, UAE',
-            '💰 Price: Varies',
-            '⏰ Hours: Check official website',
-            '🎫 Booking: Recommended',
-            '⏱️ Duration: 2-3 hours'
-          ]
-        },
-        order: 2
-      })
-    },
-    {
-      type: 'tips',
-      template: () => ({
-        id: generateBlockId(),
-        type: 'tips' as const,
-        data: {
-          title: `Pro Tips for ${topic}`,
-          tips: [
-            'Book tickets online in advance to skip queues and often save 10-15%',
-            'Visit during weekday mornings for fewer crowds',
-            'Wear comfortable shoes as there is significant walking involved',
-            'Bring sunscreen and water, especially during summer months',
-            'Check for combo deals with nearby attractions',
-            'Download the official app for navigation and updates',
-            'Consider visiting during golden hour for the best photos'
-          ]
-        },
-        order: 9
-      })
-    },
-    {
-      type: 'faq',
-      template: () => ({
-        id: generateBlockId(),
-        type: 'faq' as const,
-        data: {
-          title: 'Frequently Asked Questions',
-          faqs: [
-            { question: `What is the best time to visit ${topic}?`, answer: `The best time to visit is during the cooler months from October to April. Morning visits (9-11 AM) typically offer the best experience with fewer crowds.` },
-            { question: `How much does ${topic} cost?`, answer: `Prices vary depending on the experience. Standard admission typically ranges from AED 100-300 per person. Children and seniors often receive discounts.` },
-            { question: `How do I get to ${topic}?`, answer: `You can reach here by metro, taxi, or car. The nearest metro station is usually within walking distance. Taxis and Careem are widely available.` },
-            { question: `Is ${topic} suitable for families?`, answer: `Yes, it's family-friendly with activities for all ages. Stroller access is available. Some attractions may have age or height restrictions.` },
-            { question: `Do I need to book in advance?`, answer: `Advance booking is highly recommended, especially during weekends. Online booking often provides discounts and guaranteed entry.` },
-            { question: `What should I bring?`, answer: `Bring comfortable shoes, sunscreen, a hat, and water. Check dress code requirements as some areas may require modest clothing.` },
-            { question: `How long should I spend here?`, answer: `Plan for 2-4 hours for a full experience. A quick visit can be done in 1-2 hours, but allocate more time to avoid rushing.` },
-            { question: `Are there dining options available?`, answer: `Yes, multiple dining options are available from quick snacks to restaurants. Prices are typically higher than outside.` }
-          ]
-        },
-        order: 11
-      })
-    },
-    {
-      type: 'text',
-      template: () => ({
-        id: generateBlockId(),
-        type: 'text' as const,
-        data: {
-          title: 'Summary',
-          content: `${topic} offers an unforgettable Dubai experience that combines world-class attractions with the unique charm of this dynamic city. Whether you're visiting for the first time or returning for another adventure, this destination delivers memorable moments for travelers of all types. Plan your visit during the cooler months, book in advance for the best experience, and don't forget to explore the surrounding areas to make the most of your Dubai adventure.`
-        },
-        order: 12
-      })
-    }
-  ];
-
-  let orderOffset = existingBlocks.length;
-
-  // Check for standard required blocks by type
-  for (const required of requiredBlocks) {
-    // For text type, we need special handling since there are multiple text blocks
-    if (required.type === 'text') {
-      // Check if summary block exists by looking for title containing "Summary" or "Conclusion"
-      const hasSummary = existingBlocks.some(b =>
-        b.type === 'text' &&
-        (String(b.data?.title || '').toLowerCase().includes('summary') ||
-         String(b.data?.title || '').toLowerCase().includes('conclusion'))
-      );
-      if (!hasSummary) {
-        console.log(`[AI Generator] Missing Summary/Conclusion text block, adding placeholder`);
-        const newBlock = required.template();
-        newBlock.order = orderOffset++;
-        existingBlocks.push(newBlock);
-      }
-    } else if (!blockTypes.includes(required.type)) {
-      console.log(`[AI Generator] Missing required block type: ${required.type}, adding placeholder`);
-      const newBlock = required.template();
-      newBlock.order = orderOffset++;
-      existingBlocks.push(newBlock);
-    }
-  }
-
-  // Re-order all blocks
-  return existingBlocks.map((block, index) => ({ ...block, order: index }));
 }
 
 export async function generateDiningContent(
@@ -3976,9 +4122,10 @@ export async function generateDiningContent(
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('standard'); // Dining = standard (GPT-4o-mini for cost savings)
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: DINING_SYSTEM_PROMPT },
         { 
@@ -4046,9 +4193,10 @@ export async function generateDistrictContent(
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('standard'); // Districts = standard (GPT-4o-mini for cost savings)
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: DISTRICT_SYSTEM_PROMPT },
         { 
@@ -4117,9 +4265,10 @@ export async function generateTransportContent(
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('standard'); // Transport = standard (GPT-4o-mini for cost savings)
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: TRANSPORT_SYSTEM_PROMPT },
         { 
@@ -4187,9 +4336,10 @@ export async function generateEventContent(
     throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
   }
 
+  const modelConfig = getModelConfig('standard'); // Events = standard (GPT-4o-mini for cost savings)
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: EVENT_SYSTEM_PROMPT },
         { 
@@ -4260,12 +4410,13 @@ export async function generateItineraryContent(
   }
 
   try {
-    const tripTypeInstruction = tripType 
-      ? `This is a "${tripType}" trip (e.g., family, romantic, adventure, luxury, budget).` 
+    const tripTypeInstruction = tripType
+      ? `This is a "${tripType}" trip (e.g., family, romantic, adventure, luxury, budget).`
       : "Create a general-purpose itinerary suitable for most travelers.";
 
+    const modelConfig = getModelConfig('premium'); // Itineraries = premium (complex multi-day planning)
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: modelConfig.model,
       messages: [
         { role: "system", content: ITINERARY_SYSTEM_PROMPT },
         { 
@@ -4375,8 +4526,9 @@ export async function analyzeSeoScore(
 
     const wordCount = blocksText.split(/\s+/).filter(Boolean).length;
 
+    // SEO analysis uses GPT-4o-mini (95% cost savings, sufficient for scoring)
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -4468,8 +4620,9 @@ export async function improveContentForSeo(
   if (!openai) return null;
 
   try {
+    // SEO improvement uses GPT-4o-mini (95% cost savings)
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",

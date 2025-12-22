@@ -4,6 +4,7 @@ import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { MapPin, Camera, Building2, Utensils, Compass, Calculator, BookOpen, Globe, Mail, Phone, Clock, Sun, Gift, Scale, Crown, Coffee } from "lucide-react";
 import { SiInstagram, SiFacebook, SiX, SiYoutube, SiTiktok } from "react-icons/si";
 import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
+import { BackToTop } from "@/components/ui/back-to-top";
 
 export function PublicFooter() {
   const { t, isRTL, localePath } = useLocale();
@@ -13,14 +14,14 @@ export function PublicFooter() {
     { href: "/hotels", icon: Building2, label: t('nav.hotels') },
     { href: "/districts", icon: MapPin, label: t('nav.districts') },
     { href: "/dining", icon: Utensils, label: t('nav.dining') },
-    { href: "/articles", icon: Compass, label: t('nav.articles') },
+    { href: "/news", icon: Compass, label: t('nav.news') },
   ];
 
   const featuredGuides = [
-    { href: "/dubai/free-things-to-do", icon: Gift, label: "70+ Free Things to Do" },
-    { href: "/dubai/24-hours-open", icon: Coffee, label: "Open 24 Hours" },
-    { href: "/dubai/sheikh-mohammed-bin-rashid", icon: Crown, label: "Tribute to HH Sheikh Mohammed" },
-    { href: "/dubai/laws-for-tourists", icon: Scale, label: "Laws for Tourists" },
+    { href: "/dubai/free-things-to-do", icon: Gift, label: t('footer.freeThingsToDo') },
+    { href: "/dubai/24-hours-open", icon: Coffee, label: t('footer.open24Hours') },
+    { href: "/dubai/sheikh-mohammed-bin-rashid", icon: Crown, label: t('footer.tributeToSheikh') },
+    { href: "/dubai/laws-for-tourists", icon: Scale, label: t('footer.lawsForTourists') },
   ];
 
   const toolLinks = [
@@ -41,13 +42,13 @@ export function PublicFooter() {
   return (
     <footer className="relative overflow-hidden" dir={isRTL ? "rtl" : "ltr"} data-testid="footer">
       {/* Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-purple-50/30 to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950" />
+      <div className="absolute inset-0 bg-gradient-to-b from-muted via-background to-muted/30 dark:from-card dark:via-background dark:to-card/50" />
       
       {/* Main Footer Content */}
       <div className="relative z-10 pt-20 pb-8">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           {/* Top Section - Brand Story */}
-          <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 mb-16 pb-16 border-b border-slate-200/50 dark:border-slate-800/50">
+          <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 mb-16 pb-16 border-b border-border">
             {/* Brand Column */}
             <div className="lg:w-1/3">
               <div className="flex items-center gap-4 mb-6">
@@ -58,22 +59,22 @@ export function PublicFooter() {
                   className="w-12 h-12 -ml-2"
                 />
               </div>
-              <p className="text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+              <p className="text-muted-foreground mb-6 leading-relaxed">
                 Your friendly guide to Dubai's wonders. From iconic landmarks to hidden gems, 
                 we help you discover the magic of this extraordinary city.
               </p>
               
               {/* Dubai Live Info */}
               <div className="flex flex-wrap gap-4 text-sm">
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex items-center justify-center">
-                    <Sun className="w-4 h-4 text-amber-500" />
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="w-8 h-8 rounded-full bg-travi-orange/10 flex items-center justify-center">
+                    <Sun className="w-4 h-4 text-travi-orange" />
                   </div>
                   <span>Dubai, UAE</span>
                 </div>
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 flex items-center justify-center">
-                    <Clock className="w-4 h-4 text-[#6C5CE7]" />
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="w-8 h-8 rounded-full bg-travi-purple/10 flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-travi-purple" />
                   </div>
                   <span>GMT+4</span>
                 </div>
@@ -84,7 +85,7 @@ export function PublicFooter() {
             <div className="lg:w-2/3 grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
               {/* Explore Column */}
               <div>
-                <h4 className="font-semibold text-slate-900 dark:text-white mb-5 text-sm uppercase tracking-wide">
+                <h4 className="font-semibold text-foreground mb-5 text-sm uppercase tracking-wide">
                   {t('footer.explore')}
                 </h4>
                 <ul className="space-y-3">
@@ -94,7 +95,7 @@ export function PublicFooter() {
                       <li key={link.href}>
                         <Link 
                           href={localePath(link.href)} 
-                          className="group flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-[#6C5CE7] dark:hover:text-[#6C5CE7] transition-colors text-sm"
+                          className="group flex items-center gap-2 text-muted-foreground hover:text-travi-purple transition-colors text-sm"
                         >
                           <IconComponent className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" />
                           {link.label}
@@ -107,8 +108,8 @@ export function PublicFooter() {
 
               {/* Featured Guides Column */}
               <div>
-                <h4 className="font-semibold text-slate-900 dark:text-white mb-5 text-sm uppercase tracking-wide">
-                  Featured Guides
+                <h4 className="font-semibold text-foreground mb-5 text-sm uppercase tracking-wide">
+                  {t('footer.featuredGuides')}
                 </h4>
                 <ul className="space-y-3">
                   {featuredGuides.map((link) => {
@@ -117,7 +118,7 @@ export function PublicFooter() {
                       <li key={link.href}>
                         <Link 
                           href={localePath(link.href)} 
-                          className="group flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-[#6C5CE7] dark:hover:text-[#6C5CE7] transition-colors text-sm"
+                          className="group flex items-center gap-2 text-muted-foreground hover:text-travi-purple transition-colors text-sm"
                         >
                           <IconComponent className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" />
                           {link.label}
@@ -130,7 +131,7 @@ export function PublicFooter() {
 
               {/* Tools Column */}
               <div>
-                <h4 className="font-semibold text-slate-900 dark:text-white mb-5 text-sm uppercase tracking-wide">
+                <h4 className="font-semibold text-foreground mb-5 text-sm uppercase tracking-wide">
                   {t('footer.tools')}
                 </h4>
                 <ul className="space-y-3">
@@ -138,7 +139,7 @@ export function PublicFooter() {
                     <li key={link.href}>
                       <Link 
                         href={localePath(link.href)} 
-                        className="text-slate-500 dark:text-slate-400 hover:text-[#6C5CE7] dark:hover:text-[#6C5CE7] transition-colors text-sm"
+                        className="text-muted-foreground hover:text-travi-purple transition-colors text-sm"
                       >
                         {link.label}
                       </Link>
@@ -149,14 +150,14 @@ export function PublicFooter() {
 
               {/* Company Column */}
               <div>
-                <h4 className="font-semibold text-slate-900 dark:text-white mb-5 text-sm uppercase tracking-wide">
+                <h4 className="font-semibold text-foreground mb-5 text-sm uppercase tracking-wide">
                   {t('footer.aboutUs')}
                 </h4>
                 <ul className="space-y-3">
                   <li>
                     <Link 
                       href={localePath("/about")} 
-                      className="text-slate-500 dark:text-slate-400 hover:text-[#6C5CE7] dark:hover:text-[#6C5CE7] transition-colors text-sm"
+                      className="text-muted-foreground hover:text-travi-purple transition-colors text-sm"
                     >
                       About Travi
                     </Link>
@@ -193,7 +194,7 @@ export function PublicFooter() {
           {/* Bottom Section */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             {/* Copyright */}
-            <p className="text-sm text-slate-400 dark:text-slate-500 order-2 md:order-1">
+            <p className="text-sm text-muted-foreground order-2 md:order-1">
               {new Date().getFullYear()} Travi. {t('footer.allRightsReserved')}
             </p>
 
@@ -207,7 +208,7 @@ export function PublicFooter() {
                     href={social.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-gradient-to-br hover:from-[#6C5CE7] hover:to-[#EC4899] hover:text-white transition-all duration-300"
+                    className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-gradient-to-br hover:from-travi-purple hover:to-travi-pink hover:text-white transition-all duration-300"
                     aria-label={social.label}
                     data-testid={`social-${social.label.toLowerCase()}`}
                   >
@@ -219,6 +220,7 @@ export function PublicFooter() {
           </div>
         </div>
       </div>
+      <BackToTop />
     </footer>
   );
 }

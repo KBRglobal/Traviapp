@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Tags as TagsIcon, Trash2, Edit2, FileText } from "lucide-react";
+import { Plus, Tags as TagsIcon, Trash2, Edit2, FileText, RefreshCw } from "lucide-react";
 import { insertTagSchema, type Tag, type Content, type InsertTag } from "@shared/schema";
 import {
   Form,
@@ -98,6 +98,20 @@ export default function TagsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tags"] });
       toast({ title: "Tag deleted" });
+    },
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/tags/sync"),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tags"] });
+      toast({
+        title: "Tags synced successfully",
+        description: `Created ${data.created?.length || 0} new tags from content`
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to sync tags", variant: "destructive" });
     },
   });
 
@@ -187,13 +201,23 @@ export default function TagsPage() {
           <h1 className="text-2xl font-semibold">Tags</h1>
           <p className="text-muted-foreground">Organize content with tags for better discoverability</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-tag">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Tag
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            data-testid="button-sync-tags"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncMutation.isPending ? "animate-spin" : ""}`} />
+            {syncMutation.isPending ? "Syncing..." : "Sync from Content"}
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-tag">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Tag
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{editingTag ? "Edit Tag" : "Add Tag"}</DialogTitle>
@@ -297,6 +321,7 @@ export default function TagsPage() {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

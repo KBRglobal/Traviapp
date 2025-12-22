@@ -25,11 +25,11 @@ const placeholderImages = [
 ];
 
 const typeColors: Record<string, string> = {
-  attraction: "bg-[#01BEFF]",
-  hotel: "bg-[#FF9327]",
-  article: "bg-[#02A65C]",
-  dining: "bg-[#F94498]",
-  district: "bg-[#6443F4]",
+  attraction: "bg-info",
+  hotel: "bg-travi-orange",
+  article: "bg-travi-green",
+  dining: "bg-travi-pink",
+  district: "bg-travi-purple",
 };
 
 export function TraviRecommends({ recommendations, className = "" }: TraviRecommendsProps) {
@@ -47,15 +47,15 @@ export function TraviRecommends({ recommendations, className = "" }: TraviRecomm
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-[#FF9327]" />
-            <span className="text-[#FF9327] font-medium text-sm uppercase tracking-wider">
+            <Sparkles className="w-5 h-5 text-travi-orange" />
+            <span className="text-travi-orange font-medium text-sm uppercase tracking-wider">
               Curated for You
             </span>
           </div>
           <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-2">
             Travi{" "}
             <span
-              className="italic font-normal text-[#F94498]"
+              className="italic font-normal text-travi-pink"
               style={{ fontFamily: "Georgia, serif" }}
             >
               Recommends
@@ -84,14 +84,14 @@ export function TraviRecommends({ recommendations, className = "" }: TraviRecomm
                   
                   <div className="absolute top-3 left-3">
                     <Badge
-                      className={`${typeColors[item.type] || "bg-[#6443F4]"} text-white border-0 text-xs`}
+                      className={`${typeColors[item.type] || "bg-travi-purple"} text-white border-0 text-xs`}
                     >
                       {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                     </Badge>
                   </div>
                 </div>
 
-                <h3 className="font-semibold text-foreground line-clamp-2 group-hover:text-[#6443F4] transition-colors">
+                <h3 className="font-semibold text-foreground line-clamp-2 group-hover:text-travi-purple transition-colors">
                   {item.title}
                 </h3>
 
@@ -101,7 +101,7 @@ export function TraviRecommends({ recommendations, className = "" }: TraviRecomm
                   </p>
                 )}
 
-                <div className="mt-3 flex items-center gap-1 text-sm text-[#6443F4] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="mt-3 flex items-center gap-1 text-sm text-travi-purple font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                   Explore
                   <ArrowRight className="w-4 h-4" />
                 </div>

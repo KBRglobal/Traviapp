@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { 
@@ -974,8 +975,9 @@ function CTASection() {
 }
 
 export default function DistrictOldDubai() {
+  const { isRTL } = useLocale();
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
       <PublicNav variant="transparent" />
       <HeroSection />
       <QuickNavSection />

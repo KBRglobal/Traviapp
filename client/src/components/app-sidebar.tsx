@@ -31,13 +31,20 @@ import {
   Home,
   BarChart3,
   ClipboardList,
+  Shield,
   Mail,
   Send,
   Calendar,
+  CalendarDays,
   Route,
   Network,
   Tags,
   Languages,
+  Megaphone,
+  FileBarChart2,
+  Building,
+  LayoutTemplate,
+  SearchCheck,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -107,6 +114,21 @@ const contentItems = [
     url: "/admin/itineraries",
     icon: Route,
   },
+  {
+    title: "Landing Pages",
+    url: "/admin/landing-pages",
+    icon: Megaphone,
+  },
+  {
+    title: "Case Studies",
+    url: "/admin/case-studies",
+    icon: FileBarChart2,
+  },
+  {
+    title: "Off-Plan",
+    url: "/admin/off-plan",
+    icon: Building,
+  },
 ];
 
 const managementItems: Array<{
@@ -122,9 +144,21 @@ const managementItems: Array<{
     requiredPermission: "canPublish",
   },
   {
+    title: "Calendar",
+    url: "/admin/calendar",
+    icon: CalendarDays,
+    requiredPermission: "canViewAll",
+  },
+  {
     title: "Analytics",
     url: "/admin/analytics",
     icon: BarChart3,
+    requiredPermission: "canViewAnalytics",
+  },
+  {
+    title: "SEO Audit",
+    url: "/admin/seo-audit",
+    icon: SearchCheck,
     requiredPermission: "canViewAnalytics",
   },
   {
@@ -143,6 +177,12 @@ const managementItems: Array<{
     title: "AI Generator",
     url: "/admin/ai-generator",
     icon: Sparkles,
+    requiredPermission: "canCreate",
+  },
+  {
+    title: "Templates",
+    url: "/admin/templates",
+    icon: LayoutTemplate,
     requiredPermission: "canCreate",
   },
   {
@@ -211,6 +251,12 @@ const systemItems: Array<{
     title: "Settings",
     url: "/admin/settings",
     icon: Settings,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Content Rules",
+    url: "/admin/content-rules",
+    icon: Shield,
     requiredPermission: "canManageSettings",
   },
   {
