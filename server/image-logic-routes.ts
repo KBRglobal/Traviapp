@@ -774,21 +774,25 @@ export function registerImageLogicRoutes(app: Express) {
 
   // -------------------------------------------------------------------------
   // GET /api/image-seo/rules
-  // Get SEO rules and requirements
+  // Get SEO rules and requirements - ALL FIELDS ARE REQUIRED
   // -------------------------------------------------------------------------
   app.get("/api/image-seo/rules", async (req: Request, res: Response) => {
     try {
       res.json({
         rules: SEO_RULES,
-        required: ['alt', 'title'],
-        recommended: ['caption', 'keywords', 'contentLocation', 'altHe'],
+        required: ['alt', 'altHe', 'title', 'caption', 'keywords', 'contentLocation', 'filename'],
+        recommended: [], // No optional fields - everything is required
+        strict: true,
         tips: [
-          'Alt text should be 50-125 characters, describing what is shown',
-          'Title format: "Place Name - Interesting Fact | TripMD"',
-          'Use hyphens in filenames, not underscores',
-          'Include location context for local SEO',
-          'Add Hebrew alt text for multilingual support',
+          'Alt text: 20-125 characters, describe what is shown (REQUIRED)',
+          'Hebrew alt text: Required for multilingual SEO (REQUIRED)',
+          'Title: "Place Name - Interesting Fact | TripMD" (REQUIRED)',
+          'Caption: 30-200 characters with useful context (REQUIRED)',
+          'Keywords: 3-10 relevant terms (REQUIRED)',
+          'Location: Dubai area name + coordinates (REQUIRED)',
+          'Filename: lowercase, hyphens only, no generic names (REQUIRED)',
         ],
+        message: 'ALL fields are required. Images cannot be saved without complete SEO metadata.',
       });
     } catch (error) {
       console.error("[ImageSeo] Error fetching rules:", error);

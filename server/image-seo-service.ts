@@ -52,11 +52,15 @@ export interface ImageSeoResult {
 
 // ==================== Constants ====================
 
-// Required fields - image CANNOT be saved without these
-const REQUIRED_FIELDS = ['alt', 'title'] as const;
-
-// Recommended fields - warnings if missing
-const RECOMMENDED_FIELDS = ['caption', 'keywords', 'contentLocation'] as const;
+// ALL fields are REQUIRED - image CANNOT be saved without these
+const REQUIRED_FIELDS = [
+  'alt',
+  'title',
+  'caption',
+  'keywords',
+  'contentLocation',
+  'altHe',
+] as const;
 
 // Dubai areas for location context
 const DUBAI_AREAS = [
@@ -76,6 +80,12 @@ export const SEO_RULES = {
     required: true,
     description: 'Alt text must be 20-125 characters, descriptive, not generic',
   },
+  altHe: {
+    minLength: 10,
+    maxLength: 125,
+    required: true,
+    description: 'Hebrew alt text is required for multilingual SEO',
+  },
   title: {
     minLength: 10,
     maxLength: 100,
@@ -85,20 +95,24 @@ export const SEO_RULES = {
   caption: {
     minLength: 30,
     maxLength: 200,
-    required: false,
-    description: 'Caption should be 30-200 characters with useful context',
+    required: true,
+    description: 'Caption must be 30-200 characters with useful context',
   },
   filename: {
     pattern: /^[a-z0-9-]+\.(webp|jpg|jpeg|png)$/,
     maxLength: 80,
-    required: false,
+    required: true,
     description: 'Filename must be lowercase, use hyphens, no underscores/spaces',
   },
   keywords: {
     minCount: 3,
     maxCount: 10,
-    required: false,
-    description: 'Include 3-10 relevant keywords',
+    required: true,
+    description: 'Must include 3-10 relevant keywords',
+  },
+  contentLocation: {
+    required: true,
+    description: 'Location data is required for local SEO',
   },
 };
 
@@ -106,64 +120,88 @@ export const SEO_RULES = {
 
 /**
  * Validate image SEO completeness
+ * ALL FIELDS ARE REQUIRED - no optional fields
  */
 export function validateImageSeo(tags: Partial<ImageSeoTags>): ImageSeoValidation {
   const missingFields: string[] = [];
   const warnings: string[] = [];
   let score = 100;
 
-  // Check required fields
+  // ========== ALT TEXT (REQUIRED) ==========
   if (!tags.alt || tags.alt.trim().length === 0) {
     missingFields.push('alt');
-    score -= 30;
+    score -= 20;
   } else {
-    // Validate alt text quality
     if (tags.alt.length < SEO_RULES.alt.minLength) {
-      warnings.push(`Alt text too short (${tags.alt.length} chars, min ${SEO_RULES.alt.minLength})`);
-      score -= 10;
+      missingFields.push(`alt (too short: ${tags.alt.length}/${SEO_RULES.alt.minLength} chars)`);
+      score -= 15;
     }
     if (tags.alt.length > SEO_RULES.alt.maxLength) {
-      warnings.push(`Alt text too long (${tags.alt.length} chars, max ${SEO_RULES.alt.maxLength})`);
+      warnings.push(`Alt text too long (${tags.alt.length}/${SEO_RULES.alt.maxLength} chars)`);
       score -= 5;
     }
     // Check for generic alt text
     const genericPatterns = /^(image|photo|picture|pic|img|untitled)(\s+of)?$/i;
     if (genericPatterns.test(tags.alt.trim())) {
-      warnings.push('Alt text is generic - describe what is actually shown');
+      missingFields.push('alt (generic text not allowed)');
       score -= 15;
     }
   }
 
+  // ========== HEBREW ALT TEXT (REQUIRED) ==========
+  if (!tags.altHe || tags.altHe.trim().length === 0) {
+    missingFields.push('altHe');
+    score -= 15;
+  } else if (tags.altHe.length < SEO_RULES.altHe.minLength) {
+    missingFields.push(`altHe (too short: ${tags.altHe.length}/${SEO_RULES.altHe.minLength} chars)`);
+    score -= 10;
+  }
+
+  // ========== TITLE (REQUIRED) ==========
   if (!tags.title || tags.title.trim().length === 0) {
     missingFields.push('title');
-    score -= 20;
-  } else {
-    if (tags.title.length < SEO_RULES.title.minLength) {
-      warnings.push(`Title too short (${tags.title.length} chars)`);
+    score -= 15;
+  } else if (tags.title.length < SEO_RULES.title.minLength) {
+    missingFields.push(`title (too short: ${tags.title.length}/${SEO_RULES.title.minLength} chars)`);
+    score -= 10;
+  }
+
+  // ========== CAPTION (REQUIRED) ==========
+  if (!tags.caption || tags.caption.trim().length === 0) {
+    missingFields.push('caption');
+    score -= 10;
+  } else if (tags.caption.length < SEO_RULES.caption.minLength) {
+    missingFields.push(`caption (too short: ${tags.caption.length}/${SEO_RULES.caption.minLength} chars)`);
+    score -= 5;
+  }
+
+  // ========== KEYWORDS (REQUIRED) ==========
+  if (!tags.keywords || tags.keywords.length === 0) {
+    missingFields.push('keywords');
+    score -= 10;
+  } else if (tags.keywords.length < SEO_RULES.keywords.minCount) {
+    missingFields.push(`keywords (need ${SEO_RULES.keywords.minCount}, have ${tags.keywords.length})`);
+    score -= 5;
+  }
+
+  // ========== CONTENT LOCATION (REQUIRED) ==========
+  if (!tags.contentLocation || !tags.contentLocation.name) {
+    missingFields.push('contentLocation');
+    score -= 10;
+  }
+
+  // ========== FILENAME QUALITY (REQUIRED) ==========
+  if (tags.filename) {
+    const filenamePattern = /^[a-z0-9-]+\.(webp|jpg|jpeg|png)$/;
+    if (!filenamePattern.test(tags.filename)) {
+      missingFields.push('filename (must be lowercase with hyphens, no underscores)');
       score -= 5;
     }
-  }
-
-  // Check recommended fields
-  if (!tags.caption) {
-    warnings.push('Caption missing - recommended for SEO');
-    score -= 5;
-  }
-
-  if (!tags.keywords || tags.keywords.length < SEO_RULES.keywords.minCount) {
-    warnings.push('Keywords missing or insufficient');
-    score -= 5;
-  }
-
-  if (!tags.contentLocation) {
-    warnings.push('Content location missing - recommended for local SEO');
-    score -= 5;
-  }
-
-  // Check multilingual
-  if (!tags.altHe) {
-    warnings.push('Hebrew alt text missing');
-    score -= 3;
+    const genericFilenamePatterns = /^(img|image|photo|picture|untitled|dsc|img_|photo_|\d+)\.(jpg|jpeg|png|webp|gif)$/i;
+    if (genericFilenamePatterns.test(tags.filename)) {
+      missingFields.push('filename (generic name not allowed)');
+      score -= 5;
+    }
   }
 
   return {
