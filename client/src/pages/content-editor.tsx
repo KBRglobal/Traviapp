@@ -1423,8 +1423,133 @@ export default function ContentEditor() {
         setPrimaryKeyword(result.content.primaryKeyword || "");
         if (result.content.heroImage) setHeroImage(result.content.heroImage);
         setHeroImageAlt(result.content.heroImageAlt || "");
-        setBlocks(Array.isArray(result.content.blocks) ? result.content.blocks : []);
+
+        // Process blocks - expand FAQ and Tips blocks that have arrays
+        let processedBlocks: ContentBlock[] = [];
+        let orderIndex = 0;
+        const rawBlocks = Array.isArray(result.content.blocks) ? result.content.blocks : [];
+
+        for (const block of rawBlocks) {
+          // Handle FAQ blocks with faqs array
+          if (block.type === "faq" && Array.isArray(block.data?.faqs)) {
+            for (const faqItem of block.data.faqs) {
+              processedBlocks.push({
+                id: `faq-${Math.random().toString(36).substring(2, 9)}`,
+                type: "faq",
+                data: { question: faqItem.question || "", answer: faqItem.answer || "" },
+                order: orderIndex++,
+              });
+            }
+          }
+          // Handle tips blocks with tips array
+          else if (block.type === "tips" && Array.isArray(block.data?.tips)) {
+            processedBlocks.push({
+              id: block.id || `tips-${Math.random().toString(36).substring(2, 9)}`,
+              type: "tips",
+              data: { content: block.data.tips.join("\n") },
+              order: orderIndex++,
+            });
+          }
+          // Handle highlights blocks with items array
+          else if (block.type === "highlights" && Array.isArray(block.data?.items)) {
+            const items = block.data.items.map((item: string | { title?: string; description?: string }) =>
+              typeof item === "string" ? item : `${item.title || ""}: ${item.description || ""}`
+            );
+            processedBlocks.push({
+              id: block.id || `highlights-${Math.random().toString(36).substring(2, 9)}`,
+              type: "highlights",
+              data: { content: items.join("\n") },
+              order: orderIndex++,
+            });
+          }
+          // Keep other blocks as-is
+          else {
+            processedBlocks.push({
+              ...block,
+              id: block.id || `block-${Math.random().toString(36).substring(2, 9)}`,
+              order: orderIndex++,
+            });
+          }
+        }
+
+        setBlocks(processedBlocks);
       }
+
+      // Populate attraction-specific SEO data if available
+      if (result.attraction && contentType === "attraction") {
+        setAttractionSeoData({
+          introText: result.attraction.introText || "",
+          expandedIntroText: result.attraction.expandedIntroText || "",
+          quickInfoBar: result.attraction.quickInfoBar || [],
+          highlights: result.attraction.highlights || [],
+          ticketInfo: result.attraction.ticketInfo || [],
+          essentialInfo: result.attraction.essentialInfo || [],
+          visitorTips: result.attraction.visitorTips || [],
+          relatedAttractions: result.attraction.relatedAttractions || result.attraction.nearbyAttractions || [],
+          trustSignals: result.attraction.trustSignals || [],
+          primaryCta: result.attraction.primaryCta || "",
+          location: result.attraction.location || "",
+          priceFrom: result.attraction.priceFrom || "",
+          duration: result.attraction.duration || "",
+        });
+      }
+
+      // Populate hotel-specific SEO data if available
+      if (result.hotel && contentType === "hotel") {
+        setHotelSeoData({
+          introText: result.hotel.introText || "",
+          expandedIntroText: result.hotel.expandedIntroText || "",
+          quickInfoBar: result.hotel.quickInfoBar || [],
+          highlights: result.hotel.highlights || [],
+          roomTypes: result.hotel.roomTypes || [],
+          amenities: result.hotel.amenities || [],
+          diningOptions: result.hotel.diningOptions || [],
+          nearbyAttractions: result.hotel.nearbyAttractions || [],
+          trustSignals: result.hotel.trustSignals || [],
+          primaryCta: result.hotel.primaryCta || "",
+          location: result.hotel.location || "",
+          priceFrom: result.hotel.priceFrom || "",
+          starRating: result.hotel.starRating || 5,
+        });
+      }
+
+      // Populate dining-specific SEO data if available
+      if (result.dining && contentType === "dining") {
+        setDiningSeoData({
+          introText: result.dining.introText || "",
+          expandedIntroText: result.dining.expandedIntroText || "",
+          quickInfoBar: result.dining.quickInfoBar || [],
+          highlights: result.dining.highlights || [],
+          menuHighlights: result.dining.menuHighlights || [],
+          atmosphere: result.dining.atmosphere || [],
+          practicalInfo: result.dining.practicalInfo || [],
+          nearbyAttractions: result.dining.nearbyAttractions || [],
+          trustSignals: result.dining.trustSignals || [],
+          primaryCta: result.dining.primaryCta || "",
+          location: result.dining.location || "",
+          priceRange: result.dining.priceRange || "",
+          cuisineType: result.dining.cuisineType || "",
+        });
+      }
+
+      // Populate district-specific SEO data if available
+      if (result.district && contentType === "district") {
+        setDistrictSeoData({
+          introText: result.district.introText || "",
+          expandedIntroText: result.district.expandedIntroText || "",
+          quickInfoBar: result.district.quickInfoBar || [],
+          highlights: result.district.highlights || [],
+          topAttractions: result.district.topAttractions || [],
+          diningOptions: result.district.diningOptions || [],
+          shoppingOptions: result.district.shoppingOptions || [],
+          transportation: result.district.transportation || [],
+          trustSignals: result.district.trustSignals || [],
+          primaryCta: result.district.primaryCta || "",
+          location: result.district.location || "",
+          bestTimeToVisit: result.district.bestTimeToVisit || "",
+        });
+      }
+
       setAiGenerateDialogOpen(false);
       setAiGenerateInput("");
       toast({ title: "Generated", description: "AI content generated. Review and edit as needed." });

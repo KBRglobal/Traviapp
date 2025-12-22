@@ -3947,8 +3947,19 @@ export async function generateAttractionContent(attractionName: string): Promise
     const response = await openai.chat.completions.create({
       model: modelConfig.model,
       max_tokens: 16000,
+      temperature: 0.8, // Slightly higher for more creative, longer content
       messages: [
-        { role: "system", content: ATTRACTION_SYSTEM_PROMPT },
+        { role: "system", content: ATTRACTION_SYSTEM_PROMPT + `
+
+CRITICAL WORD COUNT ENFORCEMENT:
+You MUST generate AT LEAST 2000 words of content. This is non-negotiable.
+- Each text block content must be MINIMUM 200-400 words
+- The "About" section MUST be 400-500 words
+- The "Complete Experience" section MUST be 300-400 words
+- The "Planning Your Visit" section MUST be 200-300 words
+- Each FAQ answer MUST be 100-150 words (8 FAQs = 800-1200 words)
+- Tips section MUST have 7-8 detailed tips
+Count your words before finalizing. Articles under 2000 words will be REJECTED.` },
         {
           role: "user",
           content: `Generate comprehensive content for a Dubai attraction called "${attractionName}".
@@ -3997,12 +4008,15 @@ DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - 
 Output valid JSON only, no markdown code blocks.`
         }
       ],
-      temperature: 0.7,
       response_format: { type: "json_object" }
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
-    
+
+    // Log word count for debugging
+    const totalWords = JSON.stringify(result).split(/\s+/).length;
+    console.log(`[AI Attraction] Generated content for "${attractionName}" - approx ${totalWords} words in response`);
+
     if (result.content?.blocks) {
       result.content.blocks = result.content.blocks.map((block: ContentBlock, index: number) => ({
         ...block,
