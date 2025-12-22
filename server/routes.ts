@@ -85,6 +85,8 @@ import { registerEnhancementRoutes } from "./enhancement-routes";
 import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
 import { registerDocUploadRoutes } from "./doc-upload-routes";
 import { registerImageRoutes } from "./routes/image-routes";
+import { getStorageManager } from "./services/storage-adapter";
+import { uploadImage, uploadImageFromUrl } from "./services/image-service";
 import { cache, cacheKeys } from "./cache";
 import {
   getContentWriterSystemPrompt,
@@ -3842,72 +3844,48 @@ export async function registerRoutes(
 
   app.post("/api/media/upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.single("file"), validateMediaUpload, async (req, res) => {
     console.log("[Media Upload] Request received");
-    let localPath: string | null = null;
-    let objectPath: string | null = null;
 
     try {
       if (!req.file) {
         console.log("[Media Upload] ERROR: No file in request");
         return res.status(400).json({ error: "No file uploaded" });
       }
-      console.log(`[Media Upload] Processing file: ${req.file.originalname}, size: ${req.file.size}`)
+      console.log(`[Media Upload] Processing file: ${req.file.originalname}, size: ${req.file.size}`);
 
-      // Convert images to WebP for optimization
-      const converted = await convertToWebP(
+      // Use the new unified ImageService for upload
+      const result = await uploadImage(
         req.file.buffer,
         req.file.originalname,
-        req.file.mimetype
+        req.file.mimetype,
+        {
+          source: "upload",
+          altText: req.body.altText,
+        }
       );
 
-      const filename = `${Date.now()}-${converted.filename}`;
-      let url = `/uploads/${filename}`;
-      let useLocalStorage = true;
-
-      // Try Object Storage first, fallback to local if it fails
-      const storageClient = getObjectStorageClient();
-      if (storageClient) {
-        try {
-          objectPath = `public/${filename}`;
-          await storageClient.uploadFromBytes(objectPath, converted.buffer);
-          url = `/object-storage/${objectPath}`;
-          useLocalStorage = false;
-          console.log(`[Media Upload] Stored to Object Storage: ${url}`);
-        } catch (objStorageError) {
-          console.warn("[Media Upload] Object Storage failed, falling back to local:", objStorageError);
-          useLocalStorage = true;
-        }
+      if (!result.success) {
+        console.error("[Media Upload] ERROR:", result.error);
+        return res.status(400).json({ error: result.error });
       }
 
-      // Save to local filesystem (either as primary or fallback)
-      if (useLocalStorage) {
-        const uploadsDir = path.join(process.cwd(), "uploads");
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
-        }
-        localPath = path.join(uploadsDir, filename);
-        fs.writeFileSync(localPath, converted.buffer);
-        url = `/uploads/${filename}`;
-        console.log(`[Media Upload] Stored locally: ${url}`);
-      }
+      const image = result.image;
 
+      // Save to database for media library
       const mediaFile = await storage.createMediaFile({
-        filename,
-        originalFilename: req.file.originalname,
-        mimeType: converted.mimeType,
-        size: converted.buffer.length,
-        url,
+        filename: image.filename,
+        originalFilename: image.originalFilename,
+        mimeType: image.mimeType,
+        size: image.size,
+        url: image.url,
         altText: req.body.altText || null,
-        width: converted.width || (req.body.width ? parseInt(req.body.width) : null),
-        height: converted.height || (req.body.height ? parseInt(req.body.height) : null),
+        width: image.width || (req.body.width ? parseInt(req.body.width) : null),
+        height: image.height || (req.body.height ? parseInt(req.body.height) : null),
       });
 
       await logAuditEvent(req, "media_upload", "media", mediaFile.id, `Uploaded media: ${mediaFile.originalFilename}`, undefined, { filename: mediaFile.originalFilename, mimeType: mediaFile.mimeType, size: mediaFile.size, originalSize: req.file.size });
       console.log(`[Media Upload] SUCCESS: ${mediaFile.filename} -> ${mediaFile.url}`);
       res.status(201).json(mediaFile);
     } catch (error) {
-      if (localPath && fs.existsSync(localPath)) {
-        try { fs.unlinkSync(localPath); } catch (e) { console.log("Cleanup failed:", e); }
-      }
       console.error("[Media Upload] ERROR:", error);
       res.status(500).json({ error: "Failed to upload media file" });
     }
@@ -4689,60 +4667,29 @@ Output format:
         });
       }
 
-      // Store images in object storage if available
-      const storageClient = getObjectStorageClient();
+      // Store images using unified ImageService
       const storedImages: GeneratedImage[] = [];
 
       console.log(`[AI Images] Processing ${images.length} generated images...`);
       for (const image of images) {
         try {
-          console.log(`[AI Images] Downloading image from: ${image.url.substring(0, 100)}...`);
-          // Download image from URL
-          const imageResponse = await fetch(image.url);
-          if (!imageResponse.ok) {
-            console.error(`[AI Images] Failed to fetch image: ${imageResponse.status} ${imageResponse.statusText}`);
-            continue;
-          }
+          console.log(`[AI Images] Downloading and storing: ${image.filename}`);
 
-          const imageBuffer = await imageResponse.arrayBuffer();
-          const buffer = Buffer.from(imageBuffer);
-          console.log(`[AI Images] Downloaded ${buffer.length} bytes`);
+          // Use unified ImageService for download and storage
+          const result = await uploadImageFromUrl(image.url, image.filename, {
+            source: "ai",
+            altText: image.alt,
+            metadata: { type: image.type, originalUrl: image.url },
+          });
 
-          let storedUrl: string | null = null;
-          let useLocalStorage = true;
-
-          // Try Object Storage first
-          if (storageClient) {
-            try {
-              const objectPath = `public/ai-generated/${image.filename}`;
-              await storageClient.uploadFromBytes(objectPath, buffer);
-              storedUrl = `/api/ai-images/${image.filename}`;
-              useLocalStorage = false;
-              console.log(`[AI Images] Stored to object storage: ${storedUrl}`);
-            } catch (objError) {
-              console.warn(`[AI Images] Object Storage failed, falling back to local:`, objError);
-              useLocalStorage = true;
-            }
-          }
-
-          // Fallback to local storage
-          if (useLocalStorage) {
-            const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
-            if (!fs.existsSync(uploadsDir)) {
-              fs.mkdirSync(uploadsDir, { recursive: true });
-            }
-            const localPath = path.join(uploadsDir, image.filename);
-            fs.writeFileSync(localPath, buffer);
-            storedUrl = `/uploads/ai-generated/${image.filename}`;
-            console.log(`[AI Images] Stored locally: ${storedUrl}`);
-          }
-
-          // Add to stored images (works for both Object Storage and local)
-          if (storedUrl) {
+          if (result.success) {
             storedImages.push({
               ...image,
-              url: storedUrl,
+              url: result.image.url,
             });
+            console.log(`[AI Images] Stored: ${result.image.url}`);
+          } else {
+            console.error(`[AI Images] Failed to store ${image.filename}:`, result.error);
           }
         } catch (imgError) {
           console.error(`[AI Images] Error storing image ${image.filename}:`, imgError);
@@ -4784,47 +4731,18 @@ Output format:
         return res.status(500).json({ error: "Failed to generate image" });
       }
 
-      // Download and store image
-      const imageResponse = await fetch(imageUrl);
-      if (!imageResponse.ok) {
-        return res.status(500).json({ error: "Failed to download generated image" });
-      }
-
-      const imageBuffer = await imageResponse.arrayBuffer();
-      const buffer = Buffer.from(imageBuffer);
+      // Download and store image using unified ImageService
       const finalFilename = filename || `ai-image-${Date.now()}.jpg`;
+      const result = await uploadImageFromUrl(imageUrl, finalFilename, {
+        source: "ai",
+        metadata: { prompt, size: imageSize, quality, style },
+      });
 
-      const storageClient = getObjectStorageClient();
-      let storedUrl: string = "";
-      let useLocalStorage = true;
-
-      // Try Object Storage first
-      if (storageClient) {
-        try {
-          const objectPath = `public/ai-generated/${finalFilename}`;
-          await storageClient.uploadFromBytes(objectPath, buffer);
-          storedUrl = `/api/ai-images/${finalFilename}`;
-          useLocalStorage = false;
-          console.log(`[AI Single Image] Stored to object storage: ${storedUrl}`);
-        } catch (objError) {
-          console.warn(`[AI Single Image] Object Storage failed, falling back to local:`, objError);
-          useLocalStorage = true;
-        }
+      if (!result.success) {
+        return res.status(500).json({ error: result.error || "Failed to store generated image" });
       }
 
-      // Fallback to local storage
-      if (useLocalStorage) {
-        const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
-        }
-        const localPath = path.join(uploadsDir, finalFilename);
-        fs.writeFileSync(localPath, buffer);
-        storedUrl = `/uploads/ai-generated/${finalFilename}`;
-        console.log(`[AI Single Image] Stored locally: ${storedUrl}`);
-      }
-
-      res.json({ url: storedUrl, filename: finalFilename });
+      res.json({ url: result.image.url, filename: result.image.filename });
     } catch (error) {
       console.error("Error generating single image:", error);
       const message = error instanceof Error ? error.message : "Failed to generate image";

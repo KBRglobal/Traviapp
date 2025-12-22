@@ -3,7 +3,8 @@
  * Handles image validation, conversion, resizing, and optimization
  */
 
-import * as sharp from "sharp";
+// @ts-ignore - sharp has complex types
+import sharp from "sharp";
 
 export interface ImageMetadata {
   width: number;
