@@ -3946,40 +3946,53 @@ export async function generateAttractionContent(attractionName: string): Promise
   try {
     const response = await openai.chat.completions.create({
       model: modelConfig.model,
+      max_tokens: 16000,
       messages: [
         { role: "system", content: ATTRACTION_SYSTEM_PROMPT },
-        { 
-          role: "user", 
+        {
+          role: "user",
           content: `Generate comprehensive content for a Dubai attraction called "${attractionName}".
 
-REQUIREMENTS (VERY IMPORTANT):
-- Total word count: 1500-2500 words across all text blocks
-- Write engaging, SEO-optimized content that helps tourists plan their visit
-- All information must be accurate and realistic for Dubai
+⚠️ CRITICAL WORD COUNT REQUIREMENTS (IRON RULE - MUST FOLLOW) ⚠️
+TOTAL WORD COUNT: 2000-3500 words MINIMUM - Articles under 2000 words will be REJECTED.
+
+Word count distribution (MANDATORY):
+- Opening/Introduction: 150-200 words (~8% of total)
+- Quick Facts section: 80-120 words (~5% of total)
+- Main Content Sections (4-6 sections): 800-1800 words combined (~60% of total)
+- FAQ Section (6-10 questions): 300-1000 words combined (~20% of total)
+- Pro Tips (5-8 tips): 100-280 words combined (~7% of total)
+- Summary/Conclusion: 100-150 words (~5% of total)
+
+Write engaging, SEO-optimized content that helps tourists plan their visit.
+All information must be accurate and realistic for Dubai.
 
 MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array - do NOT skip ANY):
 1. hero block - with title, subtitle, overlayText
-2. text block - "About [Attraction Name]" (350-450 words minimum, detailed introduction)
-3. highlights block - with 6 items, each with 50-80 word descriptions (REQUIRED)
-4. text block - "The Complete Experience" (250-350 words, visitor journey)
-5. text block - "Planning Your Visit" (200-250 words, practical info)
-6. text block - "Nearby Attractions" (150-200 words)
-7. tips block - with 7 detailed, actionable visitor tips (this is REQUIRED, do NOT skip)
-8. faq block - with 8 FAQ items, each answer 100-200 words (this is REQUIRED, do NOT skip)
-9. cta block - with booking call to action
+2. text block - "About [Attraction Name]" (400-500 words MINIMUM, detailed introduction covering what makes it special)
+3. highlights block - with 6 items, each with 60-100 word descriptions (REQUIRED)
+4. text block - "The Complete Experience" (350-450 words, comprehensive visitor journey)
+5. text block - "Planning Your Visit" (250-350 words, detailed practical info)
+6. text block - "What Makes It Unique" (200-300 words, differentiators)
+7. text block - "Nearby Attractions" (150-200 words)
+8. tips block - with 7-8 detailed, actionable visitor tips, each 30-40 words (this is REQUIRED, do NOT skip)
+9. faq block - with 8-10 FAQ items, each answer 100-150 words (this is REQUIRED, do NOT skip)
+10. text block - "Final Thoughts" (100-150 words, summary with CTA)
+11. cta block - with booking call to action
 
 ALSO REQUIRED in attraction object:
-- 6 highlights with 50-80 word descriptions each
-- 4 ticket options with descriptions and pricing
+- 6 highlights with 60-100 word descriptions each
+- 4 ticket options with detailed descriptions and pricing
 - 12 essential info items
 - 8 quick info bar items
-- 7 visitor tips
-- 8 FAQ items with detailed 100-200 word answers
-- 4 nearby attractions
+- 7-8 visitor tips (each 30-40 words for 100-280 words total)
+- 8-10 FAQ items with detailed 100-150 word answers (300-1000 words total)
+- 4 nearby attractions with descriptions
 - 5 image descriptions with SEO alt text and captions
 - Comprehensive TouristAttraction JSON-LD schema with geo coordinates
 - Trust signals and related keywords
 
+⚠️ IMPORTANT: Count your words! The total MUST be between 2000-3500 words. DO NOT produce less.
 DO NOT SKIP any blocks. The tips block and faq block are ESPECIALLY important - they MUST be included.
 Output valid JSON only, no markdown code blocks.`
         }
@@ -4031,38 +4044,50 @@ export async function generateArticleContent(
 
 ${categoryInstruction}
 
-⚠️ CRITICAL WORD COUNT REQUIREMENT ⚠️
-MINIMUM TOTAL: 1,200 words | TARGET: 1,500-2,000 words
-Articles under 1,200 words will be REJECTED. Write DETAILED, COMPREHENSIVE content.
+⚠️ CRITICAL WORD COUNT REQUIREMENTS (IRON RULE - MUST FOLLOW) ⚠️
+TOTAL WORD COUNT: 2000-3500 words MINIMUM - Articles under 2000 words will be REJECTED.
+
+Word count distribution (MANDATORY):
+- Opening/Introduction: 150-200 words (~8% of total)
+- Quick Facts section: 80-120 words (~5% of total)
+- Main Content Sections (4-6 sections): 800-1800 words combined (~60% of total)
+- FAQ Section (6-10 questions): 300-1000 words combined (~20% of total)
+- Pro Tips (5-8 tips): 100-280 words combined (~7% of total)
+- Summary/Conclusion: 100-150 words (~5% of total)
 
 Each text block MUST meet these MINIMUM word counts:
-- Introduction: AT LEAST 300 words (hook readers, establish context, preview content)
+- Introduction: AT LEAST 200 words (hook readers, establish context, preview content)
 - Main Section 1: AT LEAST 350 words (deep dive, specific examples, data points)
 - Main Section 2: AT LEAST 350 words (comprehensive coverage, practical details)
-- Main Section 3: AT LEAST 300 words (additional insights, local perspective)
+- Main Section 3: AT LEAST 350 words (additional insights, local perspective)
+- Main Section 4: AT LEAST 300 words (more depth and context)
 - Practical Information: AT LEAST 250 words (actionable guidance)
+- Summary: AT LEAST 150 words (wrap-up with strong CTA)
 
 MANDATORY CONTENT BLOCKS (ALL must be in content.blocks array):
 1. hero block - with compelling title, subtitle, overlayText
-2. text block - "Introduction" (300+ words, engaging hook with context)
+2. text block - "Introduction" (200+ words, engaging hook with context)
 3. text block - Main content section 1 (350+ words, detailed exploration)
 4. text block - Main content section 2 (350+ words, practical insights)
-5. text block - Main content section 3 (300+ words, local tips and perspective)
-6. highlights block - with 6 key takeaways (REQUIRED)
-7. text block - "Practical Information" (250+ words, concrete guidance)
-8. tips block - with 7 detailed, actionable expert tips (each tip 30-50 words)
-9. faq block - with 8 FAQ items, each answer 150-200 words (this is REQUIRED)
-10. cta block - with relevant call to action
+5. text block - Main content section 3 (350+ words, local tips and perspective)
+6. text block - Main content section 4 (300+ words, additional depth)
+7. highlights block - with 6 key takeaways (REQUIRED)
+8. text block - "Practical Information" (250+ words, concrete guidance)
+9. tips block - with 7-8 detailed, actionable expert tips (each tip 35-50 words for 100-280 total)
+10. faq block - with 8-10 FAQ items, each answer 100-150 words (this is REQUIRED, 300-1000 words total)
+11. text block - "Summary" (150+ words, conclusion with CTA)
+12. cta block - with relevant call to action
 
 ALSO REQUIRED in article object:
-- 5 quick facts
-- 7 pro tips (each 40-60 words with specific actionable advice)
+- 5 quick facts (80-120 words total)
+- 7-8 pro tips (each 35-50 words with specific actionable advice)
 - Relevant warnings
-- 8 FAQ items with detailed 150-200 word answers
+- 8-10 FAQ items with detailed 100-150 word answers
 - 4 related topics for internal linking
 - 4 image descriptions with SEO alt text and captions
 - Comprehensive Article JSON-LD schema
 
+⚠️ IMPORTANT: Count your words! The total MUST be between 2000-3500 words. DO NOT produce less.
 REMEMBER: Write LONG, DETAILED paragraphs. Each section should thoroughly cover its topic.
 DO NOT produce short, superficial content. Quality AND quantity are required.
 Output valid JSON only, no markdown code blocks.`
