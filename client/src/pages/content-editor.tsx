@@ -2162,8 +2162,8 @@ export default function ContentEditor() {
         </div>
 
         {/* Right Panel - Settings */}
-        <div className="w-80 border-l bg-background shrink-0 flex flex-col">
-          <div className="p-3 border-b">
+        <div className="w-80 border-l bg-background shrink-0 flex flex-col overflow-hidden">
+          <div className="p-3 border-b shrink-0">
             <h3 className="font-medium text-sm flex items-center gap-2">
               {selectedBlock ? (
                 <>
@@ -2178,8 +2178,8 @@ export default function ContentEditor() {
               )}
             </h3>
           </div>
-          <ScrollArea className="flex-1">
-            <div className="p-4">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-4 pb-8">
               {selectedBlock ? (
                 <BlockSettingsPanel
                   block={selectedBlock}
