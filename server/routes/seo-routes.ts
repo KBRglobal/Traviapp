@@ -48,7 +48,40 @@ export function registerSEORoutes(app: Express) {
         autoFixable: result.autoFixableIssues.length
       });
 
-      res.json(result);
+      // Transform result to frontend expected format
+      const transformTier = (tierName: string, score: number) => {
+        const tierChecks = result.checks.filter(c => c.tier === tierName);
+        const maxScore = tierChecks.length * 100;
+        const passedCount = tierChecks.filter(c => c.passed).length;
+
+        return {
+          score: passedCount,
+          maxScore: tierChecks.length,
+          percentage: score,
+          issues: tierChecks
+            .filter(c => !c.passed)
+            .map(c => ({
+              field: c.name,
+              issue: c.message,
+              severity: tierName === "tier1_critical" ? "critical" : tierName === "tier2_essential" ? "warning" : "info",
+              fixable: c.autoFixable || false,
+              suggestion: c.fixSuggestion
+            }))
+        };
+      };
+
+      const transformedResult = {
+        overallScore: result.overallScore,
+        tier1_critical: transformTier("tier1_critical", result.tier1Score),
+        tier2_essential: transformTier("tier2_essential", result.tier2Score),
+        tier3_technical: transformTier("tier3_technical", result.tier3Score),
+        tier4_quality: transformTier("tier4_quality", result.tier4Score),
+        canPublish: result.canPublish,
+        publishBlockReason: result.publishBlockReasons.length > 0 ? result.publishBlockReasons.join("; ") : undefined,
+        fixableIssuesCount: result.autoFixableIssues.length
+      };
+
+      res.json(transformedResult);
     } catch (error) {
       logger.seo.error("SEO validation error", { error: String(error) });
       res.status(500).json({ error: "Failed to validate SEO" });
