@@ -3514,9 +3514,9 @@ export async function registerRoutes(
 
       const items = await parseRssFeed(feed.url);
 
+      // Update lastFetchedAt timestamp
       await storage.updateRssFeed(req.params.id, {
-        // lastFetched: new Date(), // Not in schema
-        // itemCount: items.length, // Not in schema
+        lastFetchedAt: new Date(),
       });
 
       res.json({ items, count: items.length });
