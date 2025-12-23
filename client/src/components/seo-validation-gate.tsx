@@ -215,14 +215,17 @@ export function SEOValidationGate({
   const [expandedTiers, setExpandedTiers] = useState<Record<string, boolean>>({});
   const [autoValidated, setAutoValidated] = useState(false);
 
-  // Map content type to page type
+  // Map content type to page type for SEO validation
   const getPageType = (): string => {
     switch (contentType) {
       case "attraction": return "attraction";
       case "hotel": return "hotel";
       case "article": return "article";
-      case "dining": return "restaurant";
-      case "district": return "neighborhood";
+      case "dining": return "dining";
+      case "district": return "district";
+      case "event": return "event";
+      case "itinerary": return "itinerary";
+      case "transport": return "transport";
       default: return "article";
     }
   };

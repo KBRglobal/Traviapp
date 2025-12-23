@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 const router = Router();
 
-const BASE_URL = process.env.BASE_URL || "https://travi.com";
+const BASE_URL = process.env.BASE_URL || "https://travi.world";
 
 // Supported locales (excluding 'en' as it's the default)
 const LOCALES = [
