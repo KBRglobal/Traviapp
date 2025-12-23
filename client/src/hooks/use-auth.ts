@@ -8,7 +8,7 @@ export type User = {
   firstName: string | null;
   lastName: string | null;
   profileImageUrl: string | null;
-  role: "admin" | "editor" | "viewer";
+  role: "admin" | "editor" | "author" | "contributor" | "viewer";
   isActive: boolean;
 };
 

@@ -2188,7 +2188,43 @@ export async function registerRoutes(
       res.status(500).json({ error: "Login failed" });
     }
   });
-  
+
+  // Logout endpoint for password-based authentication
+  app.post('/api/auth/logout', (req: Request, res: Response) => {
+    const userId = (req as any).user?.claims?.sub;
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
+    req.logout((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ error: "Logout failed" });
+      }
+
+      // Destroy the session
+      req.session?.destroy((sessionErr) => {
+        if (sessionErr) {
+          console.error("Session destroy error:", sessionErr);
+        }
+
+        // Log the logout event
+        if (userId) {
+          logSecurityEvent({
+            action: 'logout',
+            resourceType: 'auth',
+            userId,
+            ip,
+            userAgent: req.get('User-Agent'),
+            details: { method: 'password' },
+          });
+        }
+
+        // Clear the session cookie
+        res.clearCookie('connect.sid');
+        res.json({ success: true, message: "Logged out successfully" });
+      });
+    });
+  });
+
   // Get current authenticated user
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
