@@ -2292,15 +2292,14 @@ export async function registerRoutes(
     }
   });
 
-  // Admin/CMS content by ID - TEMPORARILY no auth for testing (TODO: restore auth)
-  app.get("/api/contents/:id", async (req, res) => {
+  // Admin/CMS content by ID - requires authentication
+  app.get("/api/contents/:id", requireAuth, async (req, res) => {
     try {
       const content = await storage.getContent(req.params.id);
       if (!content) {
         return res.status(404).json({ error: "Content not found" });
       }
-      
-      // TEMPORARILY: Return full content for all users (auth disabled for CMS testing)
+
       res.json(content);
     } catch (error) {
       console.error("Error fetching content:", error);
@@ -2308,15 +2307,25 @@ export async function registerRoutes(
     }
   });
 
-  // Public content by slug - TEMPORARILY no auth for testing (TODO: restore auth)
+  // Content by slug - requires authentication for unpublished, public for published
   app.get("/api/contents/slug/:slug", async (req, res) => {
     try {
       const content = await storage.getContentBySlug(req.params.slug);
       if (!content) {
         return res.status(404).json({ error: "Content not found" });
       }
-      
-      // TEMPORARILY: Return full content for all users (auth disabled for CMS testing)
+
+      // If content is published, allow public access
+      if (content.status === "published") {
+        return res.json(content);
+      }
+
+      // For unpublished content, require authentication
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ error: "Authentication required for unpublished content" });
+      }
+
       res.json(content);
     } catch (error) {
       console.error("Error fetching content by slug:", error);
@@ -6722,11 +6731,37 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     try {
       const { campaignId, subscriberId } = req.params;
       const { url } = req.query;
-      
+
       if (!url || typeof url !== "string") {
         return res.status(400).send("Missing URL parameter");
       }
-      
+
+      // Security: Validate redirect URL to prevent open redirect attacks
+      const allowedDomains = ["travi.world", "www.travi.world", "localhost"];
+      let isValidRedirect = false;
+
+      try {
+        // Allow relative URLs
+        if (url.startsWith("/") && !url.startsWith("//")) {
+          isValidRedirect = true;
+        } else {
+          // Parse absolute URLs and validate domain
+          const parsedUrl = new URL(url);
+          const hostname = parsedUrl.hostname.toLowerCase();
+          isValidRedirect = allowedDomains.some(domain =>
+            hostname === domain || hostname.endsWith(`.${domain}`)
+          );
+        }
+      } catch {
+        // Invalid URL format
+        isValidRedirect = false;
+      }
+
+      if (!isValidRedirect) {
+        console.warn(`[Tracking] Blocked redirect to untrusted URL: ${url}`);
+        return res.status(400).send("Invalid redirect URL");
+      }
+
       // Record the click event
       await storage.createCampaignEvent({
         campaignId,
@@ -6738,29 +6773,14 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
           ip: req.ip || "unknown",
         },
       });
-      
-      // Update campaign stats
-      // Note: totalClicked can't be updated via updateCampaign (omitted from InsertCampaign)
-      // const campaign = await storage.getCampaign(campaignId);
-      // if (campaign) {
-      //   await storage.updateCampaign(campaignId, {
-      //     totalClicked: campaign.totalClicked + 1,
-      //   });
-      // }
 
       console.log(`[Tracking] Click recorded: campaign=${campaignId}, subscriber=${subscriberId}, url=${url}`);
-      
-      // Redirect to the actual URL
+
+      // Redirect to the validated URL
       res.redirect(url);
     } catch (error) {
       console.error("[Tracking] Error recording click:", error);
-      // Try to redirect anyway
-      const { url } = req.query;
-      if (url && typeof url === "string") {
-        res.redirect(url);
-      } else {
-        res.status(500).send("Tracking error");
-      }
+      res.status(500).send("Tracking error");
     }
   });
 

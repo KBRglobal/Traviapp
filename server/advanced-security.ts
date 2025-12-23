@@ -9,7 +9,7 @@
 
 import { db } from "./db";
 import { users, auditLogs } from "@shared/schema";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, like } from "drizzle-orm";
 import { cache } from "./cache";
 import * as crypto from "crypto";
 
@@ -467,39 +467,76 @@ export const auditLogger = {
     logs: Array<AuditLogEntry & { id: string; timestamp: Date }>;
     total: number;
   }> {
-    let filtered = [...auditLogStore];
+    // Read from database for persistence (not just in-memory)
+    try {
+      const conditions = [];
 
-    if (filters.userId) {
-      filtered = filtered.filter(l => l.userId === filters.userId);
-    }
-    if (filters.action) {
-      filtered = filtered.filter(l => l.action.includes(filters.action!));
-    }
-    if (filters.severity) {
-      filtered = filtered.filter(l => l.severity === filters.severity);
-    }
-    if (filters.startDate) {
-      filtered = filtered.filter(l => l.timestamp >= filters.startDate!);
-    }
-    if (filters.endDate) {
-      filtered = filtered.filter(l => l.timestamp <= filters.endDate!);
-    }
+      if (filters.userId) {
+        conditions.push(eq(auditLogs.userId, filters.userId));
+      }
+      if (filters.action) {
+        conditions.push(like(auditLogs.description, `%${filters.action}%`));
+      }
+      if (filters.startDate) {
+        conditions.push(gte(auditLogs.timestamp, filters.startDate));
+      }
+      if (filters.endDate) {
+        conditions.push(lte(auditLogs.timestamp, filters.endDate));
+      }
 
-    // Sort by timestamp descending
-    filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const total = filtered.length;
-    const offset = filters.offset || 0;
-    const limit = filters.limit || 50;
+      // Get total count
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(auditLogs)
+        .where(whereClause);
+      const total = Number(countResult[0]?.count || 0);
 
-    return {
-      logs: filtered.slice(offset, offset + limit),
-      total,
-    };
+      // Get paginated results
+      const offset = filters.offset || 0;
+      const limit = filters.limit || 50;
+
+      const results = await db
+        .select()
+        .from(auditLogs)
+        .where(whereClause)
+        .orderBy(desc(auditLogs.timestamp))
+        .limit(limit)
+        .offset(offset);
+
+      // Transform to expected format
+      const logs: Array<AuditLogEntry & { id: string; timestamp: Date }> = results.map(row => ({
+        id: row.id,
+        timestamp: row.timestamp,
+        action: row.description,
+        userId: row.userId,
+        targetType: row.entityType as string,
+        targetId: row.entityId ?? undefined,
+        details: row.afterState || {},
+        severity: "info" as const,
+        ipAddress: row.ipAddress ?? undefined,
+        userAgent: row.userAgent ?? undefined,
+      }));
+
+      return { logs, total };
+    } catch (error) {
+      console.error("Error fetching audit logs from database:", error);
+      // Fallback to in-memory if database fails
+      let filtered = [...auditLogStore];
+      if (filters.userId) filtered = filtered.filter(l => l.userId === filters.userId);
+      if (filters.action) filtered = filtered.filter(l => l.action.includes(filters.action!));
+      if (filters.startDate) filtered = filtered.filter(l => l.timestamp >= filters.startDate!);
+      if (filters.endDate) filtered = filtered.filter(l => l.timestamp <= filters.endDate!);
+      filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      const offset = filters.offset || 0;
+      const limit = filters.limit || 50;
+      return { logs: filtered.slice(offset, offset + limit), total: filtered.length };
+    }
   },
 
   /**
-   * Get user activity summary
+   * Get user activity summary from database
    */
   async getUserActivity(userId: string, days: number = 30): Promise<{
     totalActions: number;
@@ -508,31 +545,43 @@ export const auditLogger = {
     recentActivity: Array<{ action: string; timestamp: Date }>;
   }> {
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    const userLogs = auditLogStore.filter(
-      l => l.userId === userId && l.timestamp >= cutoff
-    );
 
-    const byAction: Record<string, number> = {};
-    const bySeverity: Record<string, number> = {};
+    try {
+      const userLogs = await db
+        .select()
+        .from(auditLogs)
+        .where(and(
+          eq(auditLogs.userId, userId),
+          gte(auditLogs.timestamp, cutoff)
+        ))
+        .orderBy(desc(auditLogs.timestamp));
 
-    for (const log of userLogs) {
-      byAction[log.action] = (byAction[log.action] || 0) + 1;
-      bySeverity[log.severity] = (bySeverity[log.severity] || 0) + 1;
+      const byAction: Record<string, number> = {};
+      const bySeverity: Record<string, number> = {};
+
+      for (const log of userLogs) {
+        const actionType = log.actionType || "unknown";
+        byAction[actionType] = (byAction[actionType] || 0) + 1;
+        bySeverity["info"] = (bySeverity["info"] || 0) + 1;
+      }
+
+      return {
+        totalActions: userLogs.length,
+        byAction,
+        bySeverity,
+        recentActivity: userLogs.slice(0, 10).map(l => ({
+          action: l.description,
+          timestamp: l.timestamp,
+        })),
+      };
+    } catch (error) {
+      console.error("Error fetching user activity from database:", error);
+      return { totalActions: 0, byAction: {}, bySeverity: {}, recentActivity: [] };
     }
-
-    return {
-      totalActions: userLogs.length,
-      byAction,
-      bySeverity,
-      recentActivity: userLogs.slice(0, 10).map(l => ({
-        action: l.action,
-        timestamp: l.timestamp,
-      })),
-    };
   },
 
   /**
-   * Get security summary
+   * Get security summary from database
    */
   async getSecuritySummary(hours: number = 24): Promise<{
     totalEvents: number;
@@ -543,42 +592,54 @@ export const auditLogger = {
     suspiciousIps: Array<{ ip: string; events: number }>;
   }> {
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
-    const recentLogs = auditLogStore.filter(l => l.timestamp >= cutoff);
 
-    const actionCounts: Record<string, number> = {};
-    const ipCounts: Record<string, number> = {};
-    let warnings = 0, errors = 0, critical = 0;
+    try {
+      const recentLogs = await db
+        .select()
+        .from(auditLogs)
+        .where(gte(auditLogs.timestamp, cutoff));
 
-    for (const log of recentLogs) {
-      actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
+      const actionCounts: Record<string, number> = {};
+      const ipCounts: Record<string, number> = {};
+      let warnings = 0, errors = 0, critical = 0;
 
-      if (log.ipAddress) {
-        ipCounts[log.ipAddress] = (ipCounts[log.ipAddress] || 0) + 1;
+      for (const log of recentLogs) {
+        const actionType = log.actionType || "unknown";
+        actionCounts[actionType] = (actionCounts[actionType] || 0) + 1;
+
+        if (log.ipAddress) {
+          ipCounts[log.ipAddress] = (ipCounts[log.ipAddress] || 0) + 1;
+        }
+
+        // Check description for severity indicators
+        const desc = log.description.toLowerCase();
+        if (desc.includes("warning") || desc.includes("failed")) warnings++;
+        else if (desc.includes("error")) errors++;
+        else if (desc.includes("critical") || desc.includes("breach")) critical++;
       }
 
-      if (log.severity === "warning") warnings++;
-      else if (log.severity === "error") errors++;
-      else if (log.severity === "critical") critical++;
+      // Find suspicious IPs (many events)
+      const suspiciousIps = Object.entries(ipCounts)
+        .filter(([, count]) => count > 50)
+        .map(([ip, events]) => ({ ip, events }))
+        .sort((a, b) => b.events - a.events)
+        .slice(0, 10);
+
+      return {
+        totalEvents: recentLogs.length,
+        warnings,
+        errors,
+        critical,
+        topActions: Object.entries(actionCounts)
+          .map(([action, count]) => ({ action, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10),
+        suspiciousIps,
+      };
+    } catch (error) {
+      console.error("Error fetching security summary from database:", error);
+      return { totalEvents: 0, warnings: 0, errors: 0, critical: 0, topActions: [], suspiciousIps: [] };
     }
-
-    // Find suspicious IPs (many events or mostly warnings/errors)
-    const suspiciousIps = Object.entries(ipCounts)
-      .filter(([, count]) => count > 50)
-      .map(([ip, events]) => ({ ip, events }))
-      .sort((a, b) => b.events - a.events)
-      .slice(0, 10);
-
-    return {
-      totalEvents: recentLogs.length,
-      warnings,
-      errors,
-      critical,
-      topActions: Object.entries(actionCounts)
-        .map(([action, count]) => ({ action, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10),
-      suspiciousIps,
-    };
   },
 
   /**
