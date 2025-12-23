@@ -3,6 +3,44 @@ import { storage } from "./storage";
 import { ROLE_PERMISSIONS, type UserRole } from "@shared/schema";
 
 // ============================================================================
+// AUTH USER TYPES
+// ============================================================================
+export interface AuthUserClaims {
+  sub: string;
+  email?: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+}
+
+export interface AuthenticatedUser {
+  claims: AuthUserClaims;
+}
+
+/**
+ * Type guard to check if req.user is an authenticated user
+ */
+export function isAuthenticatedUser(user: unknown): user is AuthenticatedUser {
+  return (
+    typeof user === "object" &&
+    user !== null &&
+    "claims" in user &&
+    typeof (user as AuthenticatedUser).claims?.sub === "string"
+  );
+}
+
+/**
+ * Safely get user ID from request
+ */
+export function getUserId(req: Request): string | undefined {
+  if (isAuthenticatedUser(req.user)) {
+    return req.user.claims.sub;
+  }
+  return undefined;
+}
+
+// ============================================================================
 // SAFE MODE CONFIGURATION
 // Toggle via environment variables - no code changes needed
 // ============================================================================
@@ -47,7 +85,7 @@ export function createRateLimiter(config: RateLimitConfig) {
 
   return (req: Request, res: Response, next: NextFunction) => {
     const ip = req.ip || req.socket.remoteAddress || "unknown";
-    const userId = (req.user as any)?.claims?.sub || "anonymous";
+    const userId = getUserId(req) || "anonymous";
     const key = `${keyPrefix}:${ip}:${userId}`;
 
     const now = Date.now();
@@ -120,7 +158,7 @@ export function checkAiUsageLimit(req: Request, res: Response, next: NextFunctio
     });
   }
 
-  const userId = (req.user as any)?.claims?.sub;
+  const userId = getUserId(req);
   if (!userId) {
     return res.status(401).json({ error: "Authentication required for AI features" });
   }
@@ -150,8 +188,7 @@ export function checkAiUsageLimit(req: Request, res: Response, next: NextFunctio
 // AUTHENTICATION MIDDLEWARE
 // ============================================================================
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const user = req.user as any;
-  if (!req.isAuthenticated() || !user?.claims?.sub) {
+  if (!req.isAuthenticated() || !getUserId(req)) {
     return res.status(401).json({ error: "Not authenticated" });
   }
   next();
@@ -182,12 +219,12 @@ function hasPermission(role: UserRole, permission: PermissionKey): boolean {
 
 export function requirePermission(permission: PermissionKey) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const user = req.user as any;
-    if (!req.isAuthenticated() || !user?.claims?.sub) {
+    const userId = getUserId(req);
+    if (!req.isAuthenticated() || !userId) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const dbUser = await storage.getUser(user.claims.sub);
+    const dbUser = await storage.getUser(userId);
     const userRole: UserRole = dbUser?.role || "viewer";
 
     if (!hasPermission(userRole, permission)) {
