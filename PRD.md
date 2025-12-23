@@ -532,28 +532,28 @@ The block-based editor supports:
 
 ## 15. Known Issues & TODOs
 
-### 15.1 Security - CRITICAL
-5 API endpoints have authentication temporarily disabled for testing:
-- `GET /api/contents/:id`
-- `POST /api/contents`
-- `PATCH /api/contents/:id`
-- `DELETE /api/contents/:id`
-- `POST /api/contents/bulk-delete`
+### 15.1 Security - ✅ RESOLVED
+All API endpoints are properly protected:
+- `GET /api/contents` - Protected with `requireAuth`
+- `GET /api/contents/:id` - Protected with `requireAuth`
+- `POST /api/contents` - Protected with `requirePermission("canCreate")`
+- `PATCH /api/contents/:id` - Protected with `requireOwnContentOrPermission("canEdit")`
+- `DELETE /api/contents/:id` - Protected with `requirePermission("canDelete")`
+- `POST /api/contents/bulk-delete` - Protected with `requirePermission("canDelete")`
 
 ### 15.2 Public Site
-- Homepage shows "Coming Soon" placeholder
-- Missing list pages for all content types
-- Missing search functionality
-- Missing homepage content curation display
+- Homepage shows "Coming Soon" placeholder (content pending)
+- List pages available for published content
+- Search functionality available at `/api/search`
+- Homepage promotions system ready for content
 
-### 15.3 Placeholders in AI Templates
-- GPS coordinates: `25.XXXX, 55.XXXX`
-- Phone numbers: `+971-XX-XXX-XXXX`
-- Price ranges: `AED XXX-XXX`
+### 15.3 AI Templates
+- AI generates placeholder data that should be verified before publishing
+- GPS coordinates, phone numbers, and prices require manual verification
 
-### 15.4 Telegram Bot
-- Requires valid `TELEGRAM_BOT_TOKEN`
-- Currently shows "token invalid" warning
+### 15.4 Telegram Bot - ARCHIVED
+- Telegram integration has been archived (see ARCHIVED_CODE_v1.0.md)
+- Database tables remain for potential future use
 
 ---
 
