@@ -5,9 +5,8 @@ async function checkSchema() {
   const tables = [
     'ai_generated_images',
     'topic_clusters',
-    'topic_cluster_items',
-    'telegram_user_profiles',
-    'telegram_conversations'
+    'topic_cluster_items'
+    // Telegram tables archived - see ARCHIVED_CODE_v1.0.md
   ];
 
   for (const table of tables) {

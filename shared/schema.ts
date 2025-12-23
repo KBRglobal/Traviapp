@@ -1732,41 +1732,9 @@ export type InsertScheduledTask = z.infer<typeof insertScheduledTaskSchema>;
 export type ScheduledTask = typeof scheduledTasks.$inferSelect;
 
 // ============================================================================
-// TELEGRAM BOT TABLES - For Telegram integration (matching existing DB structure)
+// TELEGRAM BOT TABLES - ARCHIVED (see ARCHIVED_CODE_v1.0.md)
+// Tables exist in database but code integration removed for optimization
 // ============================================================================
-
-export const telegramUserProfiles = pgTable("telegram_user_profiles", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  telegramId: varchar("telegram_id").notNull(),
-  telegramUsername: varchar("telegram_username"),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  language: varchar("language"),
-  isPremium: boolean("is_premium").default(false),
-  interests: jsonb("interests").$type<string[]>().default([]),
-  favorites: jsonb("favorites").$type<string[]>().default([]),
-  tripDates: jsonb("trip_dates").$type<Record<string, unknown>>(),
-  travelStyle: varchar("travel_style"),
-  budget: varchar("budget"),
-  notificationsEnabled: boolean("notifications_enabled").default(true),
-  dailyDigestEnabled: boolean("daily_digest_enabled").default(false),
-  totalInteractions: integer("total_interactions").default(0),
-  badges: jsonb("badges").$type<string[]>().default([]),
-  points: integer("points").default(0),
-  lastActiveAt: timestamp("last_active_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const telegramConversations = pgTable("telegram_conversations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  telegramUserId: varchar("telegram_user_id").references(() => telegramUserProfiles.id),
-  role: varchar("role"),
-  content: text("content"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export type TelegramUserProfile = typeof telegramUserProfiles.$inferSelect;
-export type TelegramConversation = typeof telegramConversations.$inferSelect;
 
 // ============================================================================
 // CONTENT RULES - Strict rules for AI content generation (cannot be bypassed)
