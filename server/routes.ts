@@ -125,6 +125,12 @@ function requireRole(role: UserRole | UserRole[]) {
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Security: Sanitize user input for logging to prevent log injection
+function sanitizeForLog(input: string): string {
+  if (!input) return "";
+  return input.replace(/[\r\n\x00]/g, "").substring(0, 200);
+}
+
 // WebP conversion settings
 const WEBP_QUALITY = 80;
 const SUPPORTED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -1718,6 +1724,20 @@ export async function registerRoutes(
   // Serve AI-generated images from storage
   app.get("/api/ai-images/:filename", async (req: Request, res: Response) => {
     const filename = req.params.filename;
+
+    // Security: Prevent path traversal attacks
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      res.status(400).send('Invalid filename');
+      return;
+    }
+
+    // Security: Only allow specific file extensions
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    const ext = filename.split('.').pop()?.toLowerCase();
+    if (!ext || !allowedExtensions.includes(ext)) {
+      res.status(400).send('Invalid file type');
+      return;
+    }
 
     try {
       const objectPath = `public/ai-generated/${filename}`;
@@ -3851,7 +3871,7 @@ export async function registerRoutes(
         console.log("[Media Upload] ERROR: No file in request");
         return res.status(400).json({ error: "No file uploaded" });
       }
-      console.log(`[Media Upload] Processing file: ${req.file.originalname}, size: ${req.file.size}`);
+      console.log(`[Media Upload] Processing file: ${sanitizeForLog(req.file.originalname)}, size: ${req.file.size}`);
 
       // Use the new unified ImageService for upload
       const result = await uploadImage(

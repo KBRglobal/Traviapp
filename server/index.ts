@@ -3,8 +3,15 @@ import compression from "compression";
 import { registerRoutes, autoProcessRssFeeds } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { securityHeaders } from "./security";
 
 const app = express();
+
+// Disable X-Powered-By header globally
+app.disable('x-powered-by');
+
+// Apply security headers to all requests
+app.use(securityHeaders);
 
 // Enable gzip/deflate compression for all responses
 app.use(compression({
@@ -24,15 +31,20 @@ declare module "http" {
   }
 }
 
+// Security: Limit request body size to prevent DoS attacks
 app.use(
   express.json({
+    limit: '10mb',  // Maximum JSON body size
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({
+  extended: false,
+  limit: '10mb',  // Maximum URL-encoded body size
+}));
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -97,6 +109,12 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
+
+  // Security: Set server timeouts to prevent slow loris attacks
+  httpServer.timeout = 120000;        // 2 minutes for complete request
+  httpServer.keepAliveTimeout = 65000; // Keep alive timeout
+  httpServer.headersTimeout = 66000;   // Headers timeout (must be > keepAliveTimeout)
+
   httpServer.listen(
     {
       port,

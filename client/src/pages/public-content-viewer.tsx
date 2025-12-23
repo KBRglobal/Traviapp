@@ -2,6 +2,7 @@ import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Loader2, MapPin, Clock, Star, Users, DollarSign, Calendar, Building, Utensils, Tag } from "lucide-react";
+import DOMPurify from "dompurify";
 import posthog from "posthog-js";
 import type { Content, Attraction, Hotel, Dining, District, Transport, Article, HighlightItem, RoomTypeItem, FaqItem, ContentCluster, ContentWithRelations } from "@shared/schema";
 import { PublicNav } from "@/components/public-nav";
@@ -89,7 +90,7 @@ function renderBlock(block: any, index: number) {
       return (
         <div key={index} className="prose prose-lg max-w-none dark:prose-invert py-6">
           {data.title && <h2 className="text-2xl font-semibold mb-4">{data.title}</h2>}
-          <div dangerouslySetInnerHTML={{ __html: data.content || "" }} />
+          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.content || "") }} />
         </div>
       );
 

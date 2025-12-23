@@ -542,6 +542,10 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
+  // Remove server fingerprinting headers
+  res.removeHeader('X-Powered-By');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+
   next();
 }
 

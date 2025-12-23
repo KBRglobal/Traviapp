@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import DOMPurify from "dompurify";
 import {
   Accordion,
   AccordionContent,
@@ -167,7 +168,7 @@ function TextBlock({ data }: { data: TextBlockData }) {
       )}
       <div 
         className="prose prose-neutral dark:prose-invert max-w-none text-muted-foreground"
-        dangerouslySetInnerHTML={{ __html: data.content }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.content || "") }}
       />
     </Card>
   );

@@ -1,5 +1,6 @@
 import { ChevronDown, Lightbulb, Star, AlertCircle, CheckCircle } from "lucide-react";
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 import {
   Accordion,
   AccordionContent,
@@ -13,14 +14,18 @@ marked.setOptions({
   gfm: true,
 });
 
-// Helper to convert markdown to HTML
+// Helper to convert markdown to HTML with XSS protection
 function parseMarkdown(content: string): string {
   if (!content) return "";
   // Check if content already contains HTML tags
+  let html: string;
   if (/<[a-z][\s\S]*>/i.test(content)) {
-    return content;
+    html = content;
+  } else {
+    html = marked.parse(content) as string;
   }
-  return marked.parse(content) as string;
+  // Sanitize to prevent XSS attacks
+  return DOMPurify.sanitize(html);
 }
 
 interface FaqItem {
