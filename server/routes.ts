@@ -1729,6 +1729,47 @@ export async function registerRoutes(
     res.status(statusCode).json(health);
   });
 
+  // System status endpoint - shows which services are configured
+  app.get("/api/system-status", requireAuth, async (_req: Request, res: Response) => {
+    const status = {
+      timestamp: new Date().toISOString(),
+      services: {
+        openai: {
+          configured: !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY),
+          model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        },
+        replicate: {
+          configured: !!process.env.REPLICATE_API_KEY,
+        },
+        freepik: {
+          configured: !!process.env.FREEPIK_API_KEY,
+        },
+        deepl: {
+          configured: !!process.env.DEEPL_API_KEY,
+        },
+        resend: {
+          configured: !!process.env.RESEND_API_KEY,
+        },
+        cloudflare: {
+          configured: !!(process.env.R2_BUCKET_NAME && process.env.R2_ACCESS_KEY_ID),
+        },
+        google: {
+          analyticsConfigured: !!process.env.GOOGLE_ANALYTICS_ID,
+          searchConsoleConfigured: !!process.env.GOOGLE_SITE_VERIFICATION,
+        },
+      },
+      features: {
+        aiContentGeneration: !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY),
+        aiImageGeneration: !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || process.env.REPLICATE_API_KEY),
+        translations: !!process.env.DEEPL_API_KEY,
+        emailCampaigns: !!process.env.RESEND_API_KEY,
+        cloudStorage: !!(process.env.R2_BUCKET_NAME && process.env.R2_ACCESS_KEY_ID),
+      },
+      safeMode: safeMode,
+    };
+    res.json(status);
+  });
+
   // Serve AI-generated images from storage
   app.get("/api/ai-images/:filename", async (req: Request, res: Response) => {
     const filename = req.params.filename;
