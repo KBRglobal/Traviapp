@@ -91,6 +91,51 @@ function getOpenAIClient(): OpenAI | null {
   });
 }
 
+// Gemini via OpenAI-compatible API
+function getGeminiClient(): OpenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.gemini;
+  if (!apiKey) return null;
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+  });
+}
+
+// OpenRouter - supports many models
+function getOpenRouterClient(): OpenAI | null {
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.openrouterapi || process.env.OPENROUTERAPI;
+  if (!apiKey) return null;
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": process.env.APP_URL || "https://travi.world",
+      "X-Title": "Travi CMS",
+    },
+  });
+}
+
+// Get best available AI client with fallbacks
+function getAIClient(): { client: OpenAI; provider: string } | null {
+  const openai = getOpenAIClient();
+  if (openai) return { client: openai, provider: "openai" };
+  const gemini = getGeminiClient();
+  if (gemini) return { client: gemini, provider: "gemini" };
+  const openrouter = getOpenRouterClient();
+  if (openrouter) return { client: openrouter, provider: "openrouter" };
+  return null;
+}
+
+// Get model for provider
+function getModelForProvider(provider: string): string {
+  switch (provider) {
+    case "openai": return "gpt-4o-mini";
+    case "gemini": return "gemini-1.5-flash";
+    case "openrouter": return "google/gemini-flash-1.5";
+    default: return "gpt-4o-mini";
+  }
+}
+
 // Initialize Anthropic client for Claude translations (RECOMMENDED)
 function getAnthropicClient(): Anthropic | null {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -457,18 +502,19 @@ export async function translateText(
   };
 
   try {
-    const openai = getOpenAIClient();
-    if (!openai) {
+    const aiClient = getAIClient();
+    if (!aiClient) {
       return {
         translatedText: "",
         locale: targetLocale,
         success: false,
-        error: "OpenAI client not initialized - check API key",
+        error: "No AI client configured - check OPENAI_API_KEY, GEMINI, or openrouterapi",
       };
     }
+    const { client: openai, provider } = aiClient;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",  // Cost-effective fallback
+      model: getModelForProvider(provider),
       max_tokens: 4096,
       messages: [
         {
@@ -775,9 +821,10 @@ export const batchTranslation = {
       contentType?: "title" | "description" | "body" | "meta";
     }>
   ): Promise<string> {
+    // Batch API is OpenAI-specific, requires direct OpenAI client
     const openai = getOpenAIClient();
     if (!openai) {
-      throw new Error("OpenAI client not configured");
+      throw new Error("OpenAI client required for batch processing - OPENAI_API_KEY not configured");
     }
 
     const jobId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

@@ -1369,12 +1369,14 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
     }
 
     const pendingClusters = await storage.getTopicClusters({ status: "pending" });
-    const openai = getOpenAIClient();
-    
-    if (!openai) {
-      console.log("[RSS Auto-Process] OpenAI not configured, skipping article generation");
+    const aiClient = getAIClient();
+
+    if (!aiClient) {
+      console.log("[RSS Auto-Process] No AI provider configured, skipping article generation");
       return result;
     }
+    const { client: openai, provider } = aiClient;
+    const model = getModelForProvider(provider);
 
     console.log(`[RSS Auto-Process] Found ${pendingClusters.length} pending clusters to process`);
 
@@ -1425,7 +1427,7 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
           }
 
           const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: provider === "openai" ? "gpt-4o" : model, // Use GPT-4o for OpenAI, otherwise use provider's model
             messages,
             response_format: { type: "json_object" },
             temperature: attempts === 1 ? 0.7 : 0.5, // Lower temp on retries for more predictable output
@@ -3755,18 +3757,19 @@ export async function registerRoutes(
       const category = determineContentCategory(combinedText);
       const sourceContent = sources.map(s => `${s.title}: ${s.description}`).join('\n\n');
 
-      // Use OpenAI to merge the articles with enhanced prompting
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "OpenAI API not configured. Please set OPENAI_API_KEY." });
+      // Use AI to merge the articles with enhanced prompting
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "No AI provider configured. Please set OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       // Build the enhanced system and user prompts using centralized content rules
       const systemPrompt = await getContentWriterSystemPrompt(category);
       const userPrompt = await buildArticleGenerationPrompt(cluster.topic || combinedText, sourceContent);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -4260,11 +4263,12 @@ export async function registerRoutes(
 
   app.post("/api/ai/generate", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
-      
+      const { client: openai, provider } = aiClient;
+
       // Check safe mode
       if (safeMode.aiDisabled) {
         return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
@@ -4286,7 +4290,7 @@ export async function registerRoutes(
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           { role: "system", content: systemPrompt },
           {
@@ -4332,16 +4336,17 @@ Format the response as JSON with the following structure:
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { contentId, text } = req.body;
-      
+
       const allContents = await storage.getContents();
       const otherContents = allContents.filter(c => c.id !== contentId);
-      
+
       if (otherContents.length === 0) {
         return res.json({ suggestions: [] });
       }
@@ -4349,7 +4354,7 @@ Format the response as JSON with the following structure:
       const contentList = otherContents.map(c => `- ${c.title} (${c.type}): ${c.slug}`).join("\n");
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           {
             role: "system",
@@ -4580,10 +4585,11 @@ Return valid JSON only.`;
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { type, title, description, data } = req.body;
 
@@ -4593,7 +4599,7 @@ Return valid JSON only.`;
       else if (type === "article") schemaType = "Article";
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           {
             role: "system",
@@ -4675,10 +4681,11 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { sectionType, title, existingContent, contentType } = req.body;
 
@@ -4745,7 +4752,7 @@ Output format:
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         max_tokens: 4000,
         temperature: 0.7,
         messages: [
@@ -4756,7 +4763,7 @@ Output format:
       });
 
       const result = JSON.parse(response.choices[0].message.content || "{}");
-      console.log(`[AI Section] Generated ${sectionType} for "${title}"`);
+      console.log(`[AI Section] Generated ${sectionType} for "${title}" using ${provider}`);
       res.json(result);
     } catch (error) {
       console.error("Error generating section content:", error);
@@ -5098,10 +5105,11 @@ Output format:
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { action, content, context, targetLanguage } = req.body;
 
@@ -5144,7 +5152,7 @@ Output format:
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -5166,10 +5174,11 @@ Output format:
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(500).json({ error: "OpenAI not configured" });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { prompt } = req.body;
 
@@ -5178,7 +5187,7 @@ Output format:
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           {
             role: "system",
@@ -5411,10 +5420,11 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
   // Auto-generate article from Topic Bank item
   app.post("/api/topic-bank/:id/generate", requirePermission("canCreate"), async (req, res) => {
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const topic = await storage.getTopicBankItem(req.params.id);
       if (!topic) {
@@ -5533,7 +5543,7 @@ ${outlineContext}
 Create engaging, informative content that would appeal to Dubai travelers. Return valid JSON only.`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -5612,10 +5622,11 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
   // Generate NEWS from Topic Bank item and DELETE the topic after
   app.post("/api/topic-bank/:id/generate-news", requirePermission("canCreate"), async (req, res) => {
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const topic = await storage.getTopicBankItem(req.params.id);
       if (!topic) {
@@ -5709,7 +5720,7 @@ RULES:
 5. No invented facts or fake statistics`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Generate a viral news article for: ${topic.title}\n${keywordsContext}` },
@@ -5783,10 +5794,11 @@ RULES:
   // Batch auto-generate from priority topics (for when RSS lacks content)
   app.post("/api/topic-bank/auto-generate", requirePermission("canCreate"), async (req, res) => {
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { count = 1, category } = req.body;
       const limit = Math.min(Math.max(1, count), 5); // Max 5 at a time
@@ -5815,12 +5827,12 @@ RULES:
       const results = [];
       for (const topic of sortedTopics) {
         try {
-          const keywordsContext = topic.keywords?.length 
-            ? `Target Keywords: ${topic.keywords.join(", ")}` 
+          const keywordsContext = topic.keywords?.length
+            ? `Target Keywords: ${topic.keywords.join(", ")}`
             : "";
-          
+
           const response = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
             messages: [
               {
                 role: "system",

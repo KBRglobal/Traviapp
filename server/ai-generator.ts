@@ -32,13 +32,78 @@ function getValidOpenAIKey(): string | null {
 function getOpenAIClient(): OpenAI | null {
   const apiKey = getValidOpenAIKey();
   if (!apiKey) {
-    console.warn("[AI Generator] No valid OpenAI API key configured");
     return null;
   }
   return new OpenAI({
     apiKey,
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
   });
+}
+
+// Gemini via OpenAI-compatible API
+function getGeminiClient(): OpenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.gemini;
+  if (!apiKey) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+  });
+}
+
+// OpenRouter - supports many models
+function getOpenRouterClient(): OpenAI | null {
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.openrouterapi || process.env.OPENROUTERAPI;
+  if (!apiKey) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": process.env.APP_URL || "https://travi.world",
+      "X-Title": "Travi CMS",
+    },
+  });
+}
+
+// Get best available AI client with fallbacks
+function getAIClient(): { client: OpenAI; provider: string } | null {
+  // Try OpenAI first
+  const openai = getOpenAIClient();
+  if (openai) {
+    return { client: openai, provider: "openai" };
+  }
+
+  // Try Gemini
+  const gemini = getGeminiClient();
+  if (gemini) {
+    return { client: gemini, provider: "gemini" };
+  }
+
+  // Try OpenRouter
+  const openrouter = getOpenRouterClient();
+  if (openrouter) {
+    return { client: openrouter, provider: "openrouter" };
+  }
+
+  console.warn("[AI Generator] No AI provider configured");
+  return null;
+}
+
+// Get appropriate model based on provider and tier
+function getModelForProvider(provider: string, tier: ContentTier = "standard"): string {
+  switch (provider) {
+    case "openai":
+      return tier === "premium" ? "gpt-4o" : "gpt-4o-mini";
+    case "gemini":
+      return tier === "premium" ? "gemini-1.5-pro" : "gemini-1.5-flash";
+    case "openrouter":
+      return tier === "premium" ? "google/gemini-pro-1.5" : "google/gemini-flash-1.5";
+    default:
+      return "gpt-4o-mini";
+  }
 }
 
 // Client for image generation (DALL-E) - must use direct API, no proxy
@@ -70,14 +135,12 @@ interface ModelConfig {
   temperature: number;
 }
 
-const MODEL_CONFIGS: Record<ContentTier, ModelConfig> = {
+const MODEL_CONFIGS: Record<ContentTier, Omit<ModelConfig, 'model'>> = {
   premium: {
-    model: "gpt-4o",           // For complex, high-value content
     maxTokens: 16000,
     temperature: 0.7,
   },
   standard: {
-    model: "gpt-4o-mini",      // 95% cheaper for routine tasks
     maxTokens: 8000,
     temperature: 0.7,
   },
@@ -90,8 +153,13 @@ function getContentTier(contentType: string): ContentTier {
   return premiumTypes.includes(contentType.toLowerCase()) ? 'premium' : 'standard';
 }
 
-function getModelConfig(tier: ContentTier): ModelConfig {
-  return MODEL_CONFIGS[tier];
+function getModelConfig(tier: ContentTier, provider: string = "openai"): ModelConfig {
+  const config = MODEL_CONFIGS[tier];
+  return {
+    model: getModelForProvider(provider, tier),
+    maxTokens: config.maxTokens,
+    temperature: config.temperature,
+  };
 }
 
 function generateBlockId(): string {
@@ -220,12 +288,13 @@ Always recommend 3-5 images total, balanced between inspiration and practical va
 export async function generateImagePrompt(
   options: ImageGenerationOptions
 ): Promise<string | null> {
-  const openai = getOpenAIClient();
-  if (!openai) return null;
+  const aiClient = getAIClient();
+  if (!aiClient) return null;
+  const { client: openai, provider } = aiClient;
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",  // Optimized: Image prompts don't need GPT-4o (saves 95%)
+      model: getModelForProvider(provider, "standard"),
       messages: [
         {
           role: "system",
@@ -3932,12 +4001,13 @@ OUTPUT STRUCTURE:
 Generate unique IDs for each block. Make content inspiring, practical for Dubai trip planning, and SEO-optimized.`;
 
 export async function generateHotelContent(hotelName: string): Promise<GeneratedHotelContent | null> {
-  const openai = getOpenAIClient();
-  if (!openai) {
-    throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("No AI provider configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi.");
   }
+  const { client: openai, provider } = aiClient;
 
-  const modelConfig = getModelConfig('premium'); // Hotels = premium content
+  const modelConfig = getModelConfig('premium', provider); // Hotels = premium content
   try {
     const response = await openai.chat.completions.create({
       model: modelConfig.model,
@@ -3997,17 +4067,19 @@ Output valid JSON only, no markdown code blocks.`
 }
 
 export async function generateAttractionContent(attractionName: string, options?: { primaryKeyword?: string }): Promise<GeneratedAttractionContent | null> {
-  const openai = getOpenAIClient();
-  if (!openai) {
-    throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("No AI provider configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi.");
   }
+  const { client: openai, provider } = aiClient;
 
   const primaryKeyword = options?.primaryKeyword || attractionName;
+  const modelConfig = getModelConfig('premium', provider);
 
-  // Use GPT-4o directly for attractions to ensure quality and word count
+  // Use premium model for attractions to ensure quality and word count
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",  // Force GPT-4o for attractions to ensure word count
+      model: modelConfig.model,
       max_tokens: 16000,
       temperature: 0.8,
       messages: [
@@ -4100,22 +4172,24 @@ Output valid JSON only.`
 }
 
 export async function generateArticleContent(
-  topic: string, 
+  topic: string,
   category?: string
 ): Promise<GeneratedArticleContent | null> {
-  const openai = getOpenAIClient();
-  if (!openai) {
-    throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("No AI provider configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi.");
   }
+  const { client: openai, provider } = aiClient;
+  const modelConfig = getModelConfig('premium', provider);
 
   try {
-    const categoryInstruction = category 
-      ? `The article category should be "${category}".` 
+    const categoryInstruction = category
+      ? `The article category should be "${category}".`
       : "Determine the most appropriate category based on the topic.";
 
-    // Use GPT-4o for articles to ensure proper word count (mini often produces shorter content)
+    // Use premium model for articles to ensure proper word count
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",  // Using GPT-4o for articles to ensure 1200+ word count
+      model: modelConfig.model,
       max_tokens: 16000,
       messages: [
         { role: "system", content: ARTICLE_SYSTEM_PROMPT },
@@ -4223,12 +4297,13 @@ Output valid JSON only, no markdown code blocks.`
 export async function generateDiningContent(
   restaurantName: string
 ): Promise<GeneratedDiningContent | null> {
-  const openai = getOpenAIClient();
-  if (!openai) {
-    throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("No AI provider configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi.");
   }
+  const { client: openai, provider } = aiClient;
 
-  const modelConfig = getModelConfig('standard'); // Dining = standard (GPT-4o-mini for cost savings)
+  const modelConfig = getModelConfig('standard', provider); // Dining = standard for cost savings
   try {
     const response = await openai.chat.completions.create({
       model: modelConfig.model,
@@ -4294,12 +4369,13 @@ Output valid JSON only, no markdown code blocks.`
 export async function generateDistrictContent(
   districtName: string
 ): Promise<GeneratedDistrictContent | null> {
-  const openai = getOpenAIClient();
-  if (!openai) {
-    throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("No AI provider configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi.");
   }
+  const { client: openai, provider } = aiClient;
 
-  const modelConfig = getModelConfig('standard'); // Districts = standard (GPT-4o-mini for cost savings)
+  const modelConfig = getModelConfig('standard', provider); // Districts = standard for cost savings
   try {
     const response = await openai.chat.completions.create({
       model: modelConfig.model,
@@ -4366,12 +4442,13 @@ Output valid JSON only, no markdown code blocks.`
 export async function generateTransportContent(
   transportType: string
 ): Promise<GeneratedTransportContent | null> {
-  const openai = getOpenAIClient();
-  if (!openai) {
-    throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("No AI provider configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi.");
   }
+  const { client: openai, provider } = aiClient;
 
-  const modelConfig = getModelConfig('standard'); // Transport = standard (GPT-4o-mini for cost savings)
+  const modelConfig = getModelConfig('standard', provider); // Transport = standard for cost savings
   try {
     const response = await openai.chat.completions.create({
       model: modelConfig.model,
@@ -4437,12 +4514,13 @@ Output valid JSON only, no markdown code blocks.`
 export async function generateEventContent(
   eventName: string
 ): Promise<GeneratedEventContent | null> {
-  const openai = getOpenAIClient();
-  if (!openai) {
-    throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("No AI provider configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi.");
   }
+  const { client: openai, provider } = aiClient;
 
-  const modelConfig = getModelConfig('standard'); // Events = standard (GPT-4o-mini for cost savings)
+  const modelConfig = getModelConfig('standard', provider); // Events = standard for cost savings
   try {
     const response = await openai.chat.completions.create({
       model: modelConfig.model,
@@ -4510,17 +4588,18 @@ export async function generateItineraryContent(
   duration: string,
   tripType?: string
 ): Promise<GeneratedItineraryContent | null> {
-  const openai = getOpenAIClient();
-  if (!openai) {
-    throw new Error("OpenAI not configured. Please add OPENAI_API_KEY.");
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("No AI provider configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi.");
   }
+  const { client: openai, provider } = aiClient;
 
   try {
     const tripTypeInstruction = tripType
       ? `This is a "${tripType}" trip (e.g., family, romantic, adventure, luxury, budget).`
       : "Create a general-purpose itinerary suitable for most travelers.";
 
-    const modelConfig = getModelConfig('premium'); // Itineraries = premium (complex multi-day planning)
+    const modelConfig = getModelConfig('premium', provider); // Itineraries = premium (complex multi-day planning)
     const response = await openai.chat.completions.create({
       model: modelConfig.model,
       messages: [
@@ -4614,11 +4693,12 @@ export async function analyzeSeoScore(
     heroImageAlt?: string | null;
   }
 ): Promise<SeoScoreResult | null> {
-  const openai = getOpenAIClient();
-  if (!openai) {
-    console.warn("OpenAI not configured for SEO analysis");
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    console.warn("No AI provider configured for SEO analysis");
     return null;
   }
+  const { client: openai, provider } = aiClient;
 
   try {
     const blocksText = content.blocks?.map(b => {
@@ -4632,9 +4712,9 @@ export async function analyzeSeoScore(
 
     const wordCount = blocksText.split(/\s+/).filter(Boolean).length;
 
-    // SEO analysis uses GPT-4o-mini (95% cost savings, sufficient for scoring)
+    // SEO analysis uses standard model for cost savings
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: getModelForProvider(provider, "standard"),
       messages: [
         {
           role: "system",
@@ -4722,13 +4802,14 @@ export async function improveContentForSeo(
   metaDescription: string;
   improvedBlocks: any[];
 } | null> {
-  const openai = getOpenAIClient();
-  if (!openai) return null;
+  const aiClient = getAIClient();
+  if (!aiClient) return null;
+  const { client: openai, provider } = aiClient;
 
   try {
-    // SEO improvement uses GPT-4o-mini (95% cost savings)
+    // SEO improvement uses standard model for cost savings
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: getModelForProvider(provider, "standard"),
       messages: [
         {
           role: "system",
