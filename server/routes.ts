@@ -87,6 +87,7 @@ import { registerAutoPilotRoutes } from "./auto-pilot-routes";
 import { registerEnhancementRoutes } from "./enhancement-routes";
 import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
 import { registerDocUploadRoutes } from "./doc-upload-routes";
+import translateRouter from "./routes/translate";
 import { getStorageManager } from "./services/storage-adapter";
 import { uploadImage, uploadImageFromUrl } from "./services/image-service";
 import { cache, cacheKeys } from "./cache";
@@ -8623,6 +8624,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // CUSTOMER JOURNEY ANALYTICS (Page views, clicks, scroll, conversions, heatmaps)
   // ============================================================================
   registerCustomerJourneyRoutes(app);
+
+  // ============================================================================
+  // TRANSLATION ROUTES (Multi-provider translation: Claude, GPT, DeepL)
+  // ============================================================================
+  app.use('/api/translate', translateRouter);
 
   // ============================================================================
   // CONTENT RULES - Strict rules for AI content generation
