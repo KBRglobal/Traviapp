@@ -27,8 +27,8 @@ import {
   generateAIImagePrompt,
   generateImageFilename,
   ImageSEOContext,
-  ContentType,
   ImageCategory,
+  ContentType,
   ImagePurpose,
   DUBAI_AREAS,
 } from "../services/image-seo-service";
@@ -665,6 +665,98 @@ export function registerImageRoutes(app: Express) {
     } catch (error) {
       console.error("[ImageRoutes] HTML generation error:", error);
       const message = error instanceof Error ? error.message : "HTML generation failed";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ============================================================================
+  // IMAGE SEO ENFORCEMENT (For Image Editor Component)
+  // ============================================================================
+
+  /**
+   * POST /api/image-seo/enforce
+   * Generates missing SEO tags while preserving existing ones
+   * Used by the ImageSEOEditor component
+   */
+  app.post("/api/image-seo/enforce", requirePermission("canCreate"), async (req: Request, res: Response) => {
+    try {
+      const { url, contentType, context: contentTitle, existingTags } = req.body;
+
+      if (!url) {
+        return res.status(400).json({ error: "Image URL is required" });
+      }
+
+      // Build SEO context from the request
+      // Map content type to a valid ImageCategory
+      const categoryMap: Record<string, ImageCategory> = {
+        hotel: "exterior",
+        dining: "dining",
+        attraction: "exterior",
+        event: "crowd",
+        article: "hero",
+        district: "panorama",
+        itinerary: "activity",
+        transport: "exterior",
+      };
+
+      // Create slug from entity name
+      const entitySlug = (contentTitle || "dubai-image")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      const seoContext: ImageSEOContext = {
+        contentType: (contentType || "article") as ContentType,
+        entityName: contentTitle || "Dubai Image",
+        entitySlug,
+        category: categoryMap[contentType] || "hero",
+        purpose: "content" as ImagePurpose,
+        location: {
+          area: existingTags?.contentLocation || "Dubai",
+        },
+        language: "en",
+      };
+
+      const seoService = getImageSEOService();
+      const generatedMetadata = seoService.generateSEOMetadata(seoContext, url);
+
+      // Merge existing tags with generated ones (existing takes priority)
+      const tags = {
+        alt: existingTags?.alt || generatedMetadata.alt.en || "",
+        altHe: existingTags?.altHe || generatedMetadata.alt.he || "",
+        altAr: existingTags?.altAr || generatedMetadata.alt.ar || "",
+        title: existingTags?.title || generatedMetadata.title.en || "",
+        caption: existingTags?.caption || generatedMetadata.caption.en || "",
+        keywords: existingTags?.keywords || [],
+        contentLocation: existingTags?.contentLocation || "Dubai, UAE",
+      };
+
+      // Auto-generate keywords if empty
+      if (!tags.keywords || tags.keywords.length === 0) {
+        const keywordsFromTitle = (contentTitle || "")
+          .toLowerCase()
+          .split(/[\s,]+/)
+          .filter((word: string) => word.length > 3)
+          .slice(0, 5);
+        const keywordsFromType = [contentType, "dubai", "travel"].filter(Boolean);
+        tags.keywords = [...new Set([...keywordsFromTitle, ...keywordsFromType])].slice(0, 10);
+      }
+
+      res.json({
+        success: true,
+        tags,
+        generated: {
+          alt: !existingTags?.alt,
+          altHe: !existingTags?.altHe,
+          altAr: !existingTags?.altAr,
+          title: !existingTags?.title,
+          caption: !existingTags?.caption,
+          keywords: !existingTags?.keywords || existingTags.keywords.length === 0,
+        },
+      });
+    } catch (error) {
+      console.error("[ImageRoutes] SEO enforce error:", error);
+      const message = error instanceof Error ? error.message : "SEO enforcement failed";
       res.status(500).json({ error: message });
     }
   });
