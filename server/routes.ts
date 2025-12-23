@@ -283,6 +283,42 @@ function getModelForProvider(provider: string, task: "chat" | "image" = "chat"):
   }
 }
 
+// Server-side HTML sanitization for RSS content to prevent XSS
+function sanitizeHtmlContent(html: string): string {
+  if (!html) return "";
+
+  // Remove script tags and their content
+  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+
+  // Remove event handlers (onclick, onerror, onload, etc.)
+  sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, "");
+  sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]+/gi, "");
+
+  // Remove javascript: protocol URLs
+  sanitized = sanitized.replace(/javascript\s*:/gi, "");
+
+  // Remove data: URLs that could contain scripts
+  sanitized = sanitized.replace(/data\s*:\s*text\/html/gi, "");
+
+  // Remove style tags (can contain expressions)
+  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
+
+  // Remove iframe, object, embed, form tags
+  sanitized = sanitized.replace(/<(iframe|object|embed|form|base|meta|link)[^>]*>/gi, "");
+  sanitized = sanitized.replace(/<\/(iframe|object|embed|form|base|meta|link)>/gi, "");
+
+  // Remove SVG with potential script content
+  sanitized = sanitized.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, "");
+
+  // Remove expression() and url() from inline styles (IE vulnerability)
+  sanitized = sanitized.replace(/expression\s*\([^)]*\)/gi, "");
+
+  // Clean up any remaining dangerous attributes
+  sanitized = sanitized.replace(/\s*(src|href|action)\s*=\s*["']?\s*javascript:[^"'\s>]*/gi, "");
+
+  return sanitized.trim();
+}
+
 async function parseRssFeed(url: string): Promise<{ title: string; link: string; description: string; pubDate?: string }[]> {
   // SSRF Protection: Validate URL before fetching
   const ssrfCheck = validateUrlForSSRF(url);
@@ -304,10 +340,15 @@ async function parseRssFeed(url: string): Promise<{ title: string; link: string;
       const dateMatch = itemXml.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i);
       
       if (titleMatch && linkMatch) {
+        // Sanitize all content from RSS to prevent XSS attacks
+        const rawTitle = titleMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '');
+        const rawLink = linkMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '');
+        const rawDescription = descMatch ? descMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '') : '';
+
         items.push({
-          title: titleMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, ''),
-          link: linkMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, ''),
-          description: descMatch ? descMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '').substring(0, 500) : '',
+          title: sanitizeHtmlContent(rawTitle),
+          link: rawLink, // URLs are validated separately
+          description: sanitizeHtmlContent(rawDescription).substring(0, 500),
           pubDate: dateMatch ? dateMatch[1].trim() : undefined,
         });
       }
@@ -2598,7 +2639,7 @@ export async function registerRoutes(
     });
   });
 
-  app.get("/api/stats", async (req, res) => {
+  app.get("/api/stats", requireAuth, async (req, res) => {
     try {
       const stats = await storage.getStats();
       res.json(stats);
@@ -2622,8 +2663,8 @@ export async function registerRoutes(
     return publicContent;
   }
 
-  // Admin/CMS content list - temporarily no auth for testing
-  app.get("/api/contents", async (req, res) => {
+  // Admin/CMS content list - requires authentication
+  app.get("/api/contents", requireAuth, async (req, res) => {
     try {
       const { type, status, search } = req.query;
       const filters = {
@@ -2641,8 +2682,8 @@ export async function registerRoutes(
     }
   });
 
-  // Content needing attention for dashboard
-  app.get("/api/contents/attention", async (req, res) => {
+  // Content needing attention for dashboard - requires authentication
+  app.get("/api/contents/attention", requireAuth, async (req, res) => {
     try {
       const contents = await storage.getContentsWithRelations({});
       const now = new Date();
@@ -4184,7 +4225,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/media", async (req, res) => {
+  app.get("/api/media", requirePermission("canAccessMediaLibrary"), async (req, res) => {
     try {
       const files = await storage.getMediaFiles();
       res.json(files);
@@ -4194,7 +4235,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/media/:id", async (req, res) => {
+  app.get("/api/media/:id", requirePermission("canAccessMediaLibrary"), async (req, res) => {
     try {
       const file = await storage.getMediaFile(req.params.id);
       if (!file) {
@@ -6159,8 +6200,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  // Get scheduled content ready for publishing
-  app.get("/api/scheduled-content", async (req, res) => {
+  // Get scheduled content ready for publishing - admin only
+  app.get("/api/scheduled-content", requirePermission("canManageSettings"), async (req, res) => {
     try {
       const scheduledContent = await storage.getScheduledContentToPublish();
       res.json(scheduledContent);
@@ -6899,18 +6940,79 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // Verify Resend/Svix webhook signature
+  const verifyResendWebhookSignature = (req: Request): boolean => {
+    const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+
+    // If no secret configured, log warning but allow in development
+    if (!webhookSecret) {
+      console.warn("[Resend Webhook] RESEND_WEBHOOK_SECRET not configured - signature verification skipped");
+      return process.env.NODE_ENV !== "production";
+    }
+
+    const svixId = req.headers["svix-id"] as string;
+    const svixTimestamp = req.headers["svix-timestamp"] as string;
+    const svixSignature = req.headers["svix-signature"] as string;
+
+    if (!svixId || !svixTimestamp || !svixSignature) {
+      console.warn("[Resend Webhook] Missing Svix headers");
+      return false;
+    }
+
+    // Check timestamp is not too old (5 minutes tolerance)
+    const timestampSeconds = parseInt(svixTimestamp, 10);
+    const now = Math.floor(Date.now() / 1000);
+    if (Math.abs(now - timestampSeconds) > 300) {
+      console.warn("[Resend Webhook] Timestamp too old or in future");
+      return false;
+    }
+
+    // Create the signed payload
+    const payload = JSON.stringify(req.body);
+    const signedPayload = `${svixId}.${svixTimestamp}.${payload}`;
+
+    // Extract the secret (remove "whsec_" prefix if present)
+    const secretBytes = webhookSecret.startsWith("whsec_")
+      ? Buffer.from(webhookSecret.slice(6), "base64")
+      : Buffer.from(webhookSecret, "base64");
+
+    // Calculate expected signature
+    const expectedSignature = crypto
+      .createHmac("sha256", secretBytes)
+      .update(signedPayload)
+      .digest("base64");
+
+    // Svix sends multiple signatures separated by space, check if any match
+    const signatures = svixSignature.split(" ");
+    for (const sig of signatures) {
+      const [version, signature] = sig.split(",");
+      if (version === "v1" && signature === expectedSignature) {
+        return true;
+      }
+    }
+
+    console.warn("[Resend Webhook] Signature verification failed");
+    return false;
+  };
+
   // Resend Webhook for bounce/complaint handling
   // This endpoint receives events from Resend about email delivery status
   app.post("/api/webhooks/resend", async (req, res) => {
     try {
+      // Verify webhook signature before processing
+      if (!verifyResendWebhookSignature(req)) {
+        console.error("[Resend Webhook] Invalid signature - rejecting request");
+        return res.status(401).json({ error: "Invalid webhook signature" });
+      }
+
       const event = req.body;
-      
+
       // Resend sends webhook events with these types:
-      // email.sent, email.delivered, email.delivery_delayed, 
+      // email.sent, email.delivered, email.delivery_delayed,
       // email.complained, email.bounced, email.opened, email.clicked
       const eventType = event.type;
       const eventData = event.data;
-      
+
       if (!eventType || !eventData) {
         console.log("[Resend Webhook] Invalid event received:", event);
         return res.status(400).json({ error: "Invalid event format" });

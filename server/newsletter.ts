@@ -85,6 +85,8 @@ export interface AutomatedSequence {
 const subscriberStore: Map<string, Subscriber> = new Map();
 const campaignStore: Map<string, EmailCampaign> = new Map();
 const sequenceStore: Map<string, AutomatedSequence> = new Map();
+// Store confirmation tokens mapped to subscriber IDs (token -> { subscriberId, expiresAt })
+const confirmationTokenStore: Map<string, { subscriberId: string; expiresAt: Date }> = new Map();
 
 // ============================================================================
 // SUBSCRIBER MANAGEMENT
@@ -144,6 +146,13 @@ export const subscribers = {
 
     subscriberStore.set(id, subscriber);
 
+    // Store the confirmation token with 24-hour expiry
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    confirmationTokenStore.set(confirmationToken, {
+      subscriberId: id,
+      expiresAt: tokenExpiry,
+    });
+
     // In production, send confirmation email here
     // await this.sendConfirmationEmail(subscriber, confirmationToken);
 
@@ -151,24 +160,52 @@ export const subscribers = {
   },
 
   /**
-   * Confirm subscription
+   * Confirm subscription - validates token before activating
    */
   async confirm(token: string): Promise<Subscriber | null> {
-    // In production, verify token from database
-    // For demo, just activate the most recent pending subscriber
-    for (const [id, sub] of subscriberStore) {
-      if (sub.status === "pending") {
-        sub.status = "active";
-        sub.confirmedAt = new Date();
-        subscriberStore.set(id, sub);
+    // Validate the confirmation token
+    const tokenData = confirmationTokenStore.get(token);
 
-        // Trigger welcome sequence
-        await automatedSequences.triggerForSubscriber(sub.id, "signup");
-
-        return sub;
-      }
+    if (!tokenData) {
+      console.log("[Newsletter] Invalid confirmation token");
+      return null;
     }
-    return null;
+
+    // Check if token has expired
+    if (new Date() > tokenData.expiresAt) {
+      console.log("[Newsletter] Confirmation token expired");
+      confirmationTokenStore.delete(token);
+      return null;
+    }
+
+    // Get the subscriber
+    const subscriber = subscriberStore.get(tokenData.subscriberId);
+
+    if (!subscriber) {
+      console.log("[Newsletter] Subscriber not found for token");
+      confirmationTokenStore.delete(token);
+      return null;
+    }
+
+    if (subscriber.status !== "pending") {
+      console.log("[Newsletter] Subscriber already confirmed or unsubscribed");
+      confirmationTokenStore.delete(token);
+      return subscriber;
+    }
+
+    // Activate the subscriber
+    subscriber.status = "active";
+    subscriber.confirmedAt = new Date();
+    subscriberStore.set(subscriber.id, subscriber);
+
+    // Remove the used token
+    confirmationTokenStore.delete(token);
+
+    // Trigger welcome sequence
+    await automatedSequences.triggerForSubscriber(subscriber.id, "signup");
+
+    console.log(`[Newsletter] Subscriber confirmed: ${subscriber.email}`);
+    return subscriber;
   },
 
   /**
