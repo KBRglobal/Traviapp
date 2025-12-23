@@ -21,6 +21,7 @@ import {
   SEOImageMetadata,
   generateImageFilename,
 } from "./image-seo-service";
+import { validateUrlForSSRF } from "../security";
 
 export type ImageSource = "upload" | "ai" | "freepik" | "external";
 
@@ -187,10 +188,21 @@ export class ImageService {
     filename: string,
     options: ImageUploadOptions
   ): Promise<ImageUploadResponse> {
-    try {
-      console.log(`[ImageService] Downloading from URL: ${url}`);
+    // SSRF Protection: Validate URL for external sources
+    // AI/Freepik sources use trusted CDNs, but we validate anyway for defense in depth
+    const ssrfCheck = validateUrlForSSRF(url);
+    if (!ssrfCheck.valid) {
+      return {
+        success: false,
+        error: `Invalid image URL: ${ssrfCheck.error}`,
+        code: "SSRF_BLOCKED",
+      };
+    }
 
-      const response = await fetch(url);
+    try {
+      console.log(`[ImageService] Downloading from URL: ${ssrfCheck.sanitizedUrl}`);
+
+      const response = await fetch(ssrfCheck.sanitizedUrl!);
       if (!response.ok) {
         return {
           success: false,

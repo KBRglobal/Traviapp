@@ -56,6 +56,7 @@ import {
   logAuditEvent as logSecurityEvent,
   getAuditLogs,
   getBlockedIps,
+  validateUrlForSSRF,
 } from "./security";
 import * as fs from "fs";
 import * as path from "path";
@@ -205,8 +206,14 @@ function getOpenAIClient(): OpenAI | null {
 }
 
 async function parseRssFeed(url: string): Promise<{ title: string; link: string; description: string; pubDate?: string }[]> {
+  // SSRF Protection: Validate URL before fetching
+  const ssrfCheck = validateUrlForSSRF(url);
+  if (!ssrfCheck.valid) {
+    throw new Error(`Invalid RSS feed URL: ${ssrfCheck.error}`);
+  }
+
   try {
-    const response = await fetch(url);
+    const response = await fetch(ssrfCheck.sanitizedUrl!);
     const text = await response.text();
     
     const items: { title: string; link: string; description: string; pubDate?: string }[] = [];

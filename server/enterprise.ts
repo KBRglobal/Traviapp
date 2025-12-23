@@ -20,6 +20,7 @@ import {
   type ScheduledTask, type InsertScheduledTask,
 } from "@shared/schema";
 import crypto from "crypto";
+import { validateUrlForSSRF } from "./security";
 
 // ============================================================================
 // TEAMS SERVICE
@@ -471,12 +472,27 @@ export const webhooksService = {
     for (const webhook of targetWebhooks) {
       const startTime = Date.now();
       try {
+        // SSRF Protection: Validate webhook URL before sending
+        const ssrfCheck = validateUrlForSSRF(webhook.url);
+        if (!ssrfCheck.valid) {
+          console.warn(`[Webhook] SSRF blocked for webhook ${webhook.id}: ${ssrfCheck.error}`);
+          await db.insert(webhookLogs).values({
+            webhookId: webhook.id,
+            event,
+            payload,
+            responseStatus: 0,
+            error: `SSRF blocked: ${ssrfCheck.error}`,
+            duration: Date.now() - startTime,
+          });
+          continue;
+        }
+
         const signature = crypto
           .createHmac("sha256", webhook.secret || "")
           .update(JSON.stringify(payload))
           .digest("hex");
 
-        const response = await fetch(webhook.url, {
+        const response = await fetch(ssrfCheck.sanitizedUrl!, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -637,6 +637,140 @@ export function ipBlockMiddleware(req: Request, res: Response, next: NextFunctio
 }
 
 // ============================================================================
+// SSRF PROTECTION - Validate URLs before server-side requests
+// ============================================================================
+
+interface SSRFValidationResult {
+  valid: boolean;
+  error?: string;
+  sanitizedUrl?: string;
+}
+
+// Private IP ranges that should be blocked
+const PRIVATE_IP_PATTERNS = [
+  /^127\./,                          // Loopback
+  /^10\./,                           // Private Class A
+  /^172\.(1[6-9]|2[0-9]|3[0-1])\./,  // Private Class B
+  /^192\.168\./,                     // Private Class C
+  /^169\.254\./,                     // Link-local (AWS metadata, etc.)
+  /^0\./,                            // Current network
+  /^100\.(6[4-9]|[7-9][0-9]|1[0-2][0-9])\./,  // Shared address space
+  /^198\.18\./,                      // Benchmark testing
+  /^::1$/,                           // IPv6 loopback
+  /^fe80:/i,                         // IPv6 link-local
+  /^fc00:/i,                         // IPv6 unique local
+  /^fd00:/i,                         // IPv6 unique local
+];
+
+// Blocked hostnames
+const BLOCKED_HOSTNAMES = [
+  'localhost',
+  'localhost.localdomain',
+  '0.0.0.0',
+  '[::1]',
+  'metadata.google.internal',
+  'metadata.google.com',
+  'instance-data',
+  'instance-metadata',
+];
+
+// Only allow these protocols
+const ALLOWED_PROTOCOLS = ['http:', 'https:'];
+
+/**
+ * Validate a URL to prevent SSRF attacks
+ * Call this before making any server-side HTTP request to user-provided URLs
+ */
+export function validateUrlForSSRF(urlString: string): SSRFValidationResult {
+  if (!urlString || typeof urlString !== 'string') {
+    return { valid: false, error: 'URL is required' };
+  }
+
+  try {
+    const url = new URL(urlString.trim());
+
+    // Check protocol
+    if (!ALLOWED_PROTOCOLS.includes(url.protocol)) {
+      return {
+        valid: false,
+        error: `Protocol not allowed: ${url.protocol}. Only HTTP and HTTPS are permitted.`
+      };
+    }
+
+    // Check for blocked hostnames
+    const hostname = url.hostname.toLowerCase();
+    if (BLOCKED_HOSTNAMES.some(blocked => hostname === blocked || hostname.endsWith('.' + blocked))) {
+      return { valid: false, error: 'Hostname not allowed' };
+    }
+
+    // Check if hostname is an IP address and validate it
+    const ipMatch = hostname.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$|^\[(.+)\]$/);
+    if (ipMatch) {
+      const ip = ipMatch[1] || ipMatch[2];
+      if (isPrivateIP(ip)) {
+        return { valid: false, error: 'Private IP addresses are not allowed' };
+      }
+    }
+
+    // Check for suspicious port usage (common internal service ports)
+    const port = url.port ? parseInt(url.port, 10) : (url.protocol === 'https:' ? 443 : 80);
+    const suspiciousPorts = [22, 23, 25, 3306, 5432, 6379, 11211, 27017, 9200, 9300];
+    if (suspiciousPorts.includes(port)) {
+      return { valid: false, error: `Port ${port} is not allowed for security reasons` };
+    }
+
+    // Check for URL with credentials (user:pass@host)
+    if (url.username || url.password) {
+      return { valid: false, error: 'URLs with credentials are not allowed' };
+    }
+
+    // Prevent DNS rebinding by checking for numeric-looking hostnames
+    if (/^[0-9.]+$/.test(hostname) && !ipMatch) {
+      return { valid: false, error: 'Invalid hostname format' };
+    }
+
+    return {
+      valid: true,
+      sanitizedUrl: url.toString()
+    };
+  } catch (err) {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+}
+
+/**
+ * Check if an IP address is private/internal
+ */
+function isPrivateIP(ip: string): boolean {
+  return PRIVATE_IP_PATTERNS.some(pattern => pattern.test(ip));
+}
+
+/**
+ * Middleware to validate URL parameters for SSRF
+ */
+export function ssrfProtectionMiddleware(urlParamName: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const url = req.body?.[urlParamName] || req.query?.[urlParamName];
+
+    if (url) {
+      const result = validateUrlForSSRF(url);
+      if (!result.valid) {
+        return res.status(400).json({
+          error: 'Invalid URL',
+          details: result.error,
+        });
+      }
+      // Replace with sanitized URL
+      if (req.body?.[urlParamName]) {
+        req.body[urlParamName] = result.sanitizedUrl;
+      }
+    }
+
+    next();
+  };
+}
+
+// ============================================================================
 // PUBLIC API - List of blocked IPs (for admin)
 // ============================================================================
 export function getBlockedIps(): Array<{ ip: string; blockedUntil: string; failedAttempts: number }> {

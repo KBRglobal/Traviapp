@@ -8,6 +8,7 @@ import { contents, translations, mediaFiles, siteSettings, tags, contentTags } f
 import { eq, desc, lt, gt, and, sql, like, isNull, or } from "drizzle-orm";
 import { cache, cacheKeys } from "./cache";
 import { jobQueue } from "./job-queue";
+import { validateUrlForSSRF } from "./security";
 
 // ============================================================================
 // AUTO INTERNAL LINKING
@@ -408,11 +409,17 @@ export const brokenLinksDetector = {
         return exists ? { ok: true, status: 200 } : { ok: false, status: 404, error: "Content not found" };
       }
 
+      // SSRF Protection: Validate URL before making request
+      const ssrfCheck = validateUrlForSSRF(url);
+      if (!ssrfCheck.valid) {
+        return { ok: false, error: `SSRF blocked: ${ssrfCheck.error}` };
+      }
+
       // For external links, make HTTP request
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch(url, {
+      const response = await fetch(ssrfCheck.sanitizedUrl!, {
         method: "HEAD",
         signal: controller.signal,
         headers: { "User-Agent": "TraviBot/1.0 (link-checker)" },
