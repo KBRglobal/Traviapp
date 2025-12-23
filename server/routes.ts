@@ -2131,9 +2131,8 @@ export async function registerRoutes(
     }
   });
 
-  // Sitemap and robots.txt routes
-  const sitemapRoutes = (await import("./routes/sitemap")).default;
-  app.use(sitemapRoutes);
+  // NOTE: Sitemap routes are defined later in this file (line ~8728)
+  // They use sitemap-service.ts which supports multilingual sitemaps
 
   // Security headers for all responses (CSP, X-Frame-Options, etc.)
   app.use(securityHeaders);
@@ -8730,11 +8729,12 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     try {
       const { generateSitemapIndex } = await import("./services/sitemap-service");
       const sitemapIndex = await generateSitemapIndex();
-      res.set("Content-Type", "application/xml");
+      res.set("Content-Type", "application/xml; charset=utf-8");
+      res.set("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
       res.send(sitemapIndex);
     } catch (error) {
       console.error("Error generating sitemap index:", error);
-      res.status(500).send("Error generating sitemap");
+      res.status(500).set("Content-Type", "text/plain").send("Error generating sitemap");
     }
   });
 
@@ -8745,16 +8745,17 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
 
       // Validate locale
       if (!SUPPORTED_LOCALES.some(l => l.code === locale)) {
-        return res.status(404).send("Sitemap not found");
+        return res.status(404).set("Content-Type", "text/plain").send("Sitemap not found");
       }
 
       const { generateLocaleSitemap } = await import("./services/sitemap-service");
       const sitemap = await generateLocaleSitemap(locale);
-      res.set("Content-Type", "application/xml");
+      res.set("Content-Type", "application/xml; charset=utf-8");
+      res.set("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
       res.send(sitemap);
     } catch (error) {
       console.error("Error generating locale sitemap:", error);
-      res.status(500).send("Error generating sitemap");
+      res.status(500).set("Content-Type", "text/plain").send("Error generating sitemap");
     }
   });
 
@@ -8763,11 +8764,12 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     try {
       const { generateRobotsTxt } = await import("./services/sitemap-service");
       const robotsTxt = generateRobotsTxt();
-      res.set("Content-Type", "text/plain");
+      res.set("Content-Type", "text/plain; charset=utf-8");
+      res.set("Cache-Control", "public, max-age=86400"); // Cache for 24 hours
       res.send(robotsTxt);
     } catch (error) {
       console.error("Error generating robots.txt:", error);
-      res.status(500).send("Error generating robots.txt");
+      res.status(500).set("Content-Type", "text/plain").send("Error generating robots.txt");
     }
   });
 
