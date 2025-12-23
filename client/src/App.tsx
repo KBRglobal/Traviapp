@@ -138,6 +138,7 @@ import { KeyboardShortcuts, useKeyboardShortcuts } from "@/components/keyboard-s
 import { NotificationsCenter } from "@/components/notifications-center";
 import { MultiTabProvider, EditorTabBar, TabCountBadge } from "@/components/multi-tab-editor";
 import { ContentExpiryAlerts } from "@/components/content-expiry-alerts";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 // Loading fallback component
 function PageLoader() {
@@ -289,7 +290,9 @@ function AdminLayout() {
             </header>
             <EditorTabBar />
             <main className="flex-1 overflow-auto p-6">
-              <AdminRouter />
+              <ErrorBoundary>
+                <AdminRouter />
+              </ErrorBoundary>
             </main>
           </div>
           <AIAssistant />
