@@ -194,15 +194,92 @@ async function convertToWebP(buffer: Buffer, originalFilename: string, mimeType:
 // Object storage is now handled through the unified StorageManager
 // See: ./services/storage-adapter.ts
 
+// AI Provider Configuration
+interface AIProvider {
+  name: string;
+  client: OpenAI | null;
+  available: boolean;
+}
+
 function getOpenAIClient(): OpenAI | null {
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return null;
   }
-  return new OpenAI({ 
+  return new OpenAI({
     apiKey,
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
   });
+}
+
+// Gemini via OpenAI-compatible API
+function getGeminiClient(): OpenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.gemini;
+  if (!apiKey) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+  });
+}
+
+// OpenRouter - supports many models
+function getOpenRouterClient(): OpenAI | null {
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.openrouterapi || process.env.OPENROUTERAPI;
+  if (!apiKey) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": process.env.APP_URL || "https://travi.world",
+      "X-Title": "Travi CMS",
+    },
+  });
+}
+
+// Get the best available AI client with fallbacks
+function getAIClient(): { client: OpenAI; provider: string } | null {
+  // Try OpenAI first
+  const openai = getOpenAIClient();
+  if (openai) {
+    return { client: openai, provider: "openai" };
+  }
+
+  // Try Gemini
+  const gemini = getGeminiClient();
+  if (gemini) {
+    return { client: gemini, provider: "gemini" };
+  }
+
+  // Try OpenRouter (has free models)
+  const openrouter = getOpenRouterClient();
+  if (openrouter) {
+    return { client: openrouter, provider: "openrouter" };
+  }
+
+  return null;
+}
+
+// Get appropriate model based on provider
+function getModelForProvider(provider: string, task: "chat" | "image" = "chat"): string {
+  if (task === "image") {
+    if (provider === "openai") return "dall-e-3";
+    return "dall-e-3"; // OpenRouter can proxy to DALL-E
+  }
+
+  switch (provider) {
+    case "openai":
+      return process.env.OPENAI_MODEL || "gpt-4o-mini";
+    case "gemini":
+      return "gemini-1.5-flash";
+    case "openrouter":
+      return "google/gemini-flash-1.5"; // Free on OpenRouter
+    default:
+      return "gpt-4o-mini";
+  }
 }
 
 async function parseRssFeed(url: string): Promise<{ title: string; link: string; description: string; pubDate?: string }[]> {
@@ -1744,6 +1821,12 @@ export async function registerRoutes(
         freepik: {
           configured: !!process.env.FREEPIK_API_KEY,
         },
+        gemini: {
+          configured: !!(process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.gemini),
+        },
+        openrouter: {
+          configured: !!(process.env.OPENROUTER_API_KEY || process.env.openrouterapi || process.env.OPENROUTERAPI),
+        },
         deepl: {
           configured: !!process.env.DEEPL_API_KEY,
         },
@@ -1758,8 +1841,9 @@ export async function registerRoutes(
           searchConsoleConfigured: !!process.env.GOOGLE_SITE_VERIFICATION,
         },
       },
+      activeAIProvider: getAIClient()?.provider || "none",
       features: {
-        aiContentGeneration: !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY),
+        aiContentGeneration: !!getAIClient(),
         aiImageGeneration: !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || process.env.REPLICATE_API_KEY),
         translations: !!process.env.DEEPL_API_KEY,
         emailCampaigns: !!process.env.RESEND_API_KEY,
@@ -4294,11 +4378,15 @@ Format the response as JSON with the following structure:
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        addSystemLog("error", "ai", "AI article generation failed - OPENAI_API_KEY not configured");
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        addSystemLog("error", "ai", "AI article generation failed - no AI provider configured (need OPENAI_API_KEY, GEMINI, or openrouterapi)");
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi to Secrets." });
       }
+
+      const { client: openai, provider } = aiClient;
+      const model = getModelForProvider(provider);
+      addSystemLog("info", "ai", `Using AI provider: ${provider} with model: ${model}`);
 
       const { title, topic, summary, sourceUrl, sourceText, inputType = "title_only" } = req.body;
 
@@ -4430,12 +4518,12 @@ Ensure article is 800-1800 words total.
 Return valid JSON only.`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        response_format: { type: "json_object" },
+        ...(provider === "openai" ? { response_format: { type: "json_object" } } : {}),
         max_tokens: 4096,
       });
 
