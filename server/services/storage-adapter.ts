@@ -317,13 +317,26 @@ export class StorageManager {
    * Download file from storage
    */
   async download(key: string): Promise<Buffer | null> {
+    // Security: Sanitize key to prevent path traversal
+    const sanitizedKey = sanitizePath(key);
+
     const primary = await this.ensurePrimaryAdapter();
     if (primary && "download" in primary) {
-      const data = await (primary as ObjectStorageAdapter).download(key);
+      const data = await (primary as ObjectStorageAdapter).download(sanitizedKey);
       if (data) return data;
     }
-    // Try local fallback
-    const localPath = path.join(process.cwd(), "uploads", key.replace(/^public\//, ""));
+    // Try local fallback with path traversal protection
+    const uploadsDir = path.join(process.cwd(), "uploads");
+    const localPath = path.join(uploadsDir, sanitizedKey.replace(/^public\//, ""));
+
+    // Security: Verify resolved path is within uploads directory
+    const resolvedPath = path.resolve(localPath);
+    const resolvedBase = path.resolve(uploadsDir);
+    if (!resolvedPath.startsWith(resolvedBase)) {
+      console.warn(`[StorageManager] Path traversal attempt blocked: ${key}`);
+      return null;
+    }
+
     if (fs.existsSync(localPath)) {
       return fs.promises.readFile(localPath);
     }
