@@ -1674,7 +1674,7 @@ export default function ContentEditor() {
   };
 
   const { data: versions = [], isLoading: isLoadingVersions } = useQuery<ContentVersion[]>({
-    queryKey: ['/api/contents', contentId, 'versions'],
+    queryKey: [`/api/contents/${contentId}/versions`],
     enabled: !!contentId && versionHistoryOpen,
   });
 
@@ -1685,7 +1685,7 @@ export default function ContentEditor() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: [`/api/contents/${contentId}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/contents', contentId, 'versions'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contents/${contentId}/versions`] });
       setVersionHistoryOpen(false);
       setSelectedVersion(null);
       if (result) {

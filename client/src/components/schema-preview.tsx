@@ -28,7 +28,7 @@ export function SchemaPreview({ contentId }: SchemaPreviewProps) {
   const { toast } = useToast();
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<SchemaResponse>({
-    queryKey: ["/api/contents", contentId, "schema"],
+    queryKey: [`/api/contents/${contentId}/schema`],
     queryFn: async () => {
       const res = await fetch(`/api/contents/${contentId}/schema`);
       if (!res.ok) throw new Error("Failed to fetch schema");

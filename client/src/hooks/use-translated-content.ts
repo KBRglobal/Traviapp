@@ -18,7 +18,7 @@ export function useTranslatedContent(contentId: number | undefined) {
   const { locale } = useLocale();
 
   return useQuery<TranslatedContent | null>({
-    queryKey: ["/api/translations", contentId, locale],
+    queryKey: [`/api/translations/${contentId}/${locale}`],
     queryFn: async () => {
       if (!contentId || locale === "en") return null;
       const response = await fetch(`/api/translations/${contentId}/${locale}`);

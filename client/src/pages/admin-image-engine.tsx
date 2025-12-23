@@ -134,12 +134,12 @@ export default function AdminImageEngine() {
   });
 
   const { data: searchResults } = useQuery<string[]>({
-    queryKey: ["/api/image-engine/keywords/search", { q: topicSearch }],
+    queryKey: [`/api/image-engine/keywords/search?q=${encodeURIComponent(topicSearch)}`],
     enabled: topicSearch.length > 2,
   });
 
   const { data: freepikData, isLoading: freepikLoading, refetch: refetchFreepik } = useQuery<FreepikSearchResponse>({
-    queryKey: ["/api/freepik/search", { q: freepikSearchTerm }],
+    queryKey: [`/api/freepik/search?q=${encodeURIComponent(freepikSearchTerm)}`],
     enabled: freepikSearchTerm.length > 0,
   });
 

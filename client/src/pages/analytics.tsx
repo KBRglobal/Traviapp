@@ -122,12 +122,12 @@ export default function Analytics() {
   });
 
   const { data: viewsOverTime, isLoading: viewsLoading } = useQuery<ViewsOverTime[]>({
-    queryKey: ["/api/analytics/views-over-time", { days: 30 }],
+    queryKey: ["/api/analytics/views-over-time?days=30"],
     enabled: canViewAnalytics,
   });
 
   const { data: topContent, isLoading: topLoading } = useQuery<TopContent[]>({
-    queryKey: ["/api/analytics/top-content", { limit: 10 }],
+    queryKey: ["/api/analytics/top-content?limit=10"],
     enabled: canViewAnalytics,
   });
 
