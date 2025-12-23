@@ -8,7 +8,9 @@ import {
   articles,
   events,
   itineraries,
+  dining,
   districts,
+  transports,
   rssFeeds,
   affiliateLinks,
   mediaFiles,
@@ -43,7 +45,12 @@ import {
   type InsertEvent,
   type Itinerary,
   type InsertItinerary,
+  type Dining,
+  type InsertDining,
   type District,
+  type InsertDistrict,
+  type Transport,
+  type InsertTransport,
   type RssFeed,
   type InsertRssFeed,
   type AffiliateLink,
@@ -493,9 +500,15 @@ export class DatabaseStorage implements IStorage {
     } else if (content.type === "itinerary") {
       const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, id));
       result.itinerary = itinerary;
+    } else if (content.type === "dining") {
+      const [diningItem] = await db.select().from(dining).where(eq(dining.contentId, id));
+      result.dining = diningItem;
     } else if (content.type === "district") {
       const [district] = await db.select().from(districts).where(eq(districts.contentId, id));
       result.district = district;
+    } else if (content.type === "transport") {
+      const [transport] = await db.select().from(transports).where(eq(transports.contentId, id));
+      result.transport = transport;
     }
 
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, id));
@@ -531,9 +544,15 @@ export class DatabaseStorage implements IStorage {
     } else if (content.type === "itinerary") {
       const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, content.id));
       result.itinerary = itinerary;
+    } else if (content.type === "dining") {
+      const [diningItem] = await db.select().from(dining).where(eq(dining.contentId, content.id));
+      result.dining = diningItem;
     } else if (content.type === "district") {
       const [district] = await db.select().from(districts).where(eq(districts.contentId, content.id));
       result.district = district;
+    } else if (content.type === "transport") {
+      const [transport] = await db.select().from(transports).where(eq(transports.contentId, content.id));
+      result.transport = transport;
     }
 
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, content.id));
@@ -665,6 +684,66 @@ export class DatabaseStorage implements IStorage {
       .where(eq(itineraries.contentId, contentId))
       .returning();
     return itinerary;
+  }
+
+  // Dining CRUD
+  async getDining(contentId: string): Promise<Dining | undefined> {
+    const [diningItem] = await db.select().from(dining).where(eq(dining.contentId, contentId));
+    return diningItem;
+  }
+
+  async createDining(insertDining: InsertDining): Promise<Dining> {
+    const [diningItem] = await db.insert(dining).values(insertDining as any).returning();
+    return diningItem;
+  }
+
+  async updateDining(contentId: string, updateData: Partial<InsertDining>): Promise<Dining | undefined> {
+    const [diningItem] = await db
+      .update(dining)
+      .set(updateData as any)
+      .where(eq(dining.contentId, contentId))
+      .returning();
+    return diningItem;
+  }
+
+  // District CRUD
+  async getDistrict(contentId: string): Promise<District | undefined> {
+    const [district] = await db.select().from(districts).where(eq(districts.contentId, contentId));
+    return district;
+  }
+
+  async createDistrict(insertDistrict: InsertDistrict): Promise<District> {
+    const [district] = await db.insert(districts).values(insertDistrict as any).returning();
+    return district;
+  }
+
+  async updateDistrict(contentId: string, updateData: Partial<InsertDistrict>): Promise<District | undefined> {
+    const [district] = await db
+      .update(districts)
+      .set(updateData as any)
+      .where(eq(districts.contentId, contentId))
+      .returning();
+    return district;
+  }
+
+  // Transport CRUD
+  async getTransport(contentId: string): Promise<Transport | undefined> {
+    const [transport] = await db.select().from(transports).where(eq(transports.contentId, contentId));
+    return transport;
+  }
+
+  async createTransport(insertTransport: InsertTransport): Promise<Transport> {
+    const [transport] = await db.insert(transports).values(insertTransport as any).returning();
+    return transport;
+  }
+
+  async updateTransport(contentId: string, updateData: Partial<InsertTransport>): Promise<Transport | undefined> {
+    const [transport] = await db
+      .update(transports)
+      .set(updateData as any)
+      .where(eq(transports.contentId, contentId))
+      .returning();
+    return transport;
   }
 
   async getRssFeeds(): Promise<RssFeed[]> {

@@ -2820,7 +2820,14 @@ export async function registerRoutes(
       } else if (parsed.type === "itinerary" && req.body.itinerary) {
         const itineraryData = insertItinerarySchema.omit({ contentId: true }).parse(req.body.itinerary);
         await storage.createItinerary({ ...itineraryData, contentId: content.id });
+      } else if (parsed.type === "dining" && req.body.dining) {
+        await storage.createDining({ ...req.body.dining, contentId: content.id });
+      } else if (parsed.type === "district" && req.body.district) {
+        await storage.createDistrict({ ...req.body.district, contentId: content.id });
+      } else if (parsed.type === "transport" && req.body.transport) {
+        await storage.createTransport({ ...req.body.transport, contentId: content.id });
       } else {
+        // Create empty type-specific record if data not provided
         if (parsed.type === "attraction") {
           await storage.createAttraction({ contentId: content.id });
         } else if (parsed.type === "hotel") {
@@ -2831,6 +2838,12 @@ export async function registerRoutes(
           await storage.createEvent({ contentId: content.id });
         } else if (parsed.type === "itinerary") {
           await storage.createItinerary({ contentId: content.id });
+        } else if (parsed.type === "dining") {
+          await storage.createDining({ contentId: content.id });
+        } else if (parsed.type === "district") {
+          await storage.createDistrict({ contentId: content.id });
+        } else if (parsed.type === "transport") {
+          await storage.createTransport({ contentId: content.id });
         }
       }
 
@@ -2876,14 +2889,19 @@ export async function registerRoutes(
         changeNote: req.body.changeNote || null,
       });
 
-      const { attraction, hotel, article, event, itinerary, dining, district, changedBy, changeNote, ...contentData } = req.body;
+      const { attraction, hotel, article, event, itinerary, dining, district, transport, changedBy, changeNote, ...contentData } = req.body;
 
       // Convert date strings to Date objects for database
       if (contentData.publishedAt && typeof contentData.publishedAt === 'string') {
         contentData.publishedAt = new Date(contentData.publishedAt);
       }
-      if (contentData.scheduledPublishAt && typeof contentData.scheduledPublishAt === 'string') {
-        contentData.scheduledPublishAt = new Date(contentData.scheduledPublishAt);
+      if (contentData.scheduledAt && typeof contentData.scheduledAt === 'string') {
+        contentData.scheduledAt = new Date(contentData.scheduledAt);
+      }
+
+      // Auto-set publishedAt when content is being published for the first time
+      if (contentData.status === "published" && existingContent.status !== "published" && !contentData.publishedAt) {
+        contentData.publishedAt = new Date();
       }
 
       const updatedContent = await storage.updateContent(req.params.id, contentData);
@@ -2899,9 +2917,13 @@ export async function registerRoutes(
         await storage.updateEvent(req.params.id, req.body.event);
       } else if (existingContent.type === "itinerary" && itinerary) {
         await storage.updateItinerary(req.params.id, itinerary);
+      } else if (existingContent.type === "dining" && dining) {
+        await storage.updateDining(req.params.id, dining);
+      } else if (existingContent.type === "district" && district) {
+        await storage.updateDistrict(req.params.id, district);
+      } else if (existingContent.type === "transport" && transport) {
+        await storage.updateTransport(req.params.id, transport);
       }
-      // Note: dining and district content types don't have separate extension tables
-      // Their SEO data is stored directly in the content blocks
 
       const fullContent = await storage.getContent(req.params.id);
       
