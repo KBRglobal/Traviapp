@@ -24,10 +24,7 @@ export function NewsletterSignup({
 
   const subscribeMutation = useMutation({
     mutationFn: async (emailAddress: string) => {
-      return apiRequest("/api/newsletter/subscribe", {
-        method: "POST",
-        body: JSON.stringify({ email: emailAddress }),
-      });
+      return apiRequest("POST", "/api/newsletter/subscribe", { email: emailAddress });
     },
     onSuccess: () => {
       setIsSubscribed(true);

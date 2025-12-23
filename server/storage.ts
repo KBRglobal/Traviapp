@@ -181,7 +181,7 @@ export interface IStorage {
   getTopicBankItems(filters?: { category?: string; isActive?: boolean }): Promise<TopicBank[]>;
   getTopicBankItem(id: string): Promise<TopicBank | undefined>;
   createTopicBankItem(item: InsertTopicBank): Promise<TopicBank>;
-  updateTopicBankItem(id: string, data: Partial<InsertTopicBank>): Promise<TopicBank | undefined>;
+  updateTopicBankItem(id: string, data: Partial<Omit<TopicBank, 'id' | 'createdAt'>>): Promise<TopicBank | undefined>;
   deleteTopicBankItem(id: string): Promise<boolean>;
   incrementTopicUsage(id: string): Promise<TopicBank | undefined>;
 
@@ -828,7 +828,7 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
-  async updateTopicBankItem(id: string, updateData: Partial<InsertTopicBank>): Promise<TopicBank | undefined> {
+  async updateTopicBankItem(id: string, updateData: Partial<Omit<TopicBank, 'id' | 'createdAt'>>): Promise<TopicBank | undefined> {
     const [item] = await db.update(topicBank).set(updateData as any).where(eq(topicBank.id, id)).returning();
     return item;
   }

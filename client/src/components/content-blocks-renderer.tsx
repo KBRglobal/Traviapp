@@ -422,7 +422,7 @@ function TipsBlock({ data }: { data: TipsBlockData }) {
             {data.title || "Pro Tips"}
           </h2>
           <ul className="space-y-2" role="list">
-            {tips.map((tip, index) => (
+            {data.tips.map((tip: string, index: number) => (
               <li key={index} className="text-muted-foreground text-sm" role="listitem">
                 {tip}
               </li>

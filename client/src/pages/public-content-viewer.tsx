@@ -363,16 +363,16 @@ function ArticleDetailView({ content }: { content: ContentWithExtensions }) {
   const currentKeywords = new Set([
     ...(content.secondaryKeywords || []),
     ...(content.lsiKeywords || []),
-    ...(content.focusKeyword ? [content.focusKeyword] : []),
+    ...(content.primaryKeyword ? [content.primaryKeyword] : []),
   ].map(k => k.toLowerCase()));
-  
+
   const relatedArticles = allArticles
     .filter((a) => a.id !== content.id)
     .map((a) => {
       const articleKeywords = [
         ...(a.secondaryKeywords || []),
         ...(a.lsiKeywords || []),
-        ...(a.focusKeyword ? [a.focusKeyword] : []),
+        ...(a.primaryKeyword ? [a.primaryKeyword] : []),
       ].map(k => k.toLowerCase());
       
       // Calculate relevance score: +3 for category match, +1 for each keyword match

@@ -337,7 +337,7 @@ export class SEOValidationAgent {
     // 8. Hero Image with Alt Text
     const heroImage = content.heroImage || content.image;
     const heroAlt = typeof heroImage === "object" ? heroImage?.altText || heroImage?.alt : "";
-    const hasHeroWithAlt = !!heroImage && heroAlt && heroAlt.length >= 20;
+    const hasHeroWithAlt = !!heroImage && !!heroAlt && heroAlt.length >= 20;
 
     checks.push({
       name: "hero_image_alt",

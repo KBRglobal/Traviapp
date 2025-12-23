@@ -1039,13 +1039,14 @@ async function processImageBlocks(blocks: ContentBlock[], category: string = "ge
   
   for (const block of blocks) {
     if (block.type === 'image' && block.data) {
-      const searchQuery = block.data.searchQuery || block.data.query || block.data.alt || 'dubai travel';
+      const rawSearchQuery = block.data.searchQuery || block.data.query || block.data.alt || 'dubai travel';
+      const searchQuery = typeof rawSearchQuery === 'string' ? rawSearchQuery : 'dubai travel';
       console.log(`[Image Processor] Fetching image for: "${searchQuery}"`);
-      
+
       try {
         // Use existing image finder function
         const imageResult = await findOrCreateArticleImage(searchQuery, [searchQuery, category], category);
-        
+
         if (imageResult) {
           processedBlocks.push({
             ...block,
@@ -2908,7 +2909,8 @@ export async function registerRoutes(
       
       let cancelledCount = 0;
       for (const translation of pendingTranslations) {
-        await storage.updateTranslation(translation.id, { status: "cancelled" });
+        // Mark cancelled translations as needing review instead of using unsupported "cancelled" status
+        await storage.updateTranslation(translation.id, { status: "needs_review" });
         cancelledCount++;
       }
 
@@ -7392,7 +7394,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // Sync tags from content - auto-extract tags from site content
   app.post("/api/tags/sync", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
-      const allContent = await storage.getAllContent();
+      const allContent = await storage.getContents();
       const existingTags = await storage.getTags();
       const existingTagSlugs = new Set(existingTags.map(t => t.slug));
 
@@ -7463,7 +7465,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         }
       }
 
-      await logAuditEvent(req, "sync", "tags", "bulk", `Synced tags from content`, { created: created.length, skipped: skipped.length });
+      await logAuditEvent(req, "create", "tag", "bulk", `Synced tags from content`, { created: created.length, skipped: skipped.length });
 
       res.json({
         success: true,
@@ -7964,7 +7966,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       res.json({
         success: true,
         translatedCount: savedTranslations.length,
-        targetLocales: supportedLocales,
+        targetLocales: SUPPORTED_LOCALES,
         translations: savedTranslations,
       });
     } catch (error) {

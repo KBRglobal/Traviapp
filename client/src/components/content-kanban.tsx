@@ -298,7 +298,7 @@ export function ContentKanban({ contents, type, basePath }: ContentKanbanProps) 
                               <TooltipContent>Preview</TooltipContent>
                             </Tooltip>
 
-                            {item.viewCount !== undefined && item.viewCount > 0 && (
+                            {item.viewCount != null && item.viewCount > 0 && (
                               <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
                                 <Eye className="h-3 w-3" />
                                 {item.viewCount}
