@@ -134,4 +134,34 @@ app.use((req, res, next) => {
       }, RSS_AUTO_PROCESS_INTERVAL_MS);
     },
   );
+
+  // Graceful shutdown handling
+  const shutdown = async (signal: string) => {
+    log(`${signal} received. Starting graceful shutdown...`, "server");
+
+    // Stop accepting new connections
+    httpServer.close(() => {
+      log("HTTP server closed", "server");
+    });
+
+    // Give existing requests 10 seconds to complete
+    setTimeout(() => {
+      log("Forcing shutdown after timeout", "server");
+      process.exit(0);
+    }, 10000);
+
+    try {
+      // Close database pool
+      const { pool } = await import("./db");
+      await pool.end();
+      log("Database pool closed", "server");
+    } catch (error) {
+      log(`Error closing database pool: ${error}`, "server");
+    }
+
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 })();

@@ -1672,6 +1672,49 @@ export async function registerRoutes(
   }
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
 
+  // Health check endpoint for monitoring and load balancers
+  app.get("/api/health", async (_req: Request, res: Response) => {
+    const startTime = Date.now();
+    const health = {
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: process.env.npm_package_version || "1.0.0",
+      checks: {
+        database: { status: "unknown" as string, latency: 0 },
+        memory: { status: "healthy" as string, usage: 0 },
+      }
+    };
+
+    try {
+      // Check database connectivity
+      const dbStart = Date.now();
+      await db.execute(sql`SELECT 1`);
+      health.checks.database = {
+        status: "healthy",
+        latency: Date.now() - dbStart
+      };
+    } catch (error) {
+      health.status = "unhealthy";
+      health.checks.database = {
+        status: "unhealthy",
+        latency: Date.now() - startTime
+      };
+    }
+
+    // Check memory usage
+    const memUsage = process.memoryUsage();
+    const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+    const heapTotalMB = Math.round(memUsage.heapTotal / 1024 / 1024);
+    health.checks.memory = {
+      status: heapUsedMB / heapTotalMB > 0.9 ? "warning" : "healthy",
+      usage: Math.round((heapUsedMB / heapTotalMB) * 100)
+    };
+
+    const statusCode = health.status === "healthy" ? 200 : 503;
+    res.status(statusCode).json(health);
+  });
+
   // Serve AI-generated images from storage
   app.get("/api/ai-images/:filename", async (req: Request, res: Response) => {
     const filename = req.params.filename;
