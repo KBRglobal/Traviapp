@@ -1,7 +1,9 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import crypto from "crypto";
-import { SUPPORTED_LOCALES, type Locale, type ContentBlock } from "@shared/schema";
+import { SUPPORTED_LOCALES, type Locale, type ContentBlock, translationBatchJobs } from "@shared/schema";
+import { db } from "../db";
+import { eq } from "drizzle-orm";
 
 // Generate a hash of the content for tracking translation freshness
 export function generateContentHash(content: {
@@ -805,8 +807,7 @@ interface BatchTranslationJob {
   batchId?: string;  // OpenAI batch ID
 }
 
-// In-memory store for batch jobs (in production, persist to database)
-const batchJobs: Map<string, BatchTranslationJob> = new Map();
+// Note: Batch jobs are now persisted to PostgreSQL via translationBatchJobs table
 
 export const batchTranslation = {
   /**
@@ -884,23 +885,23 @@ ${req.text}`,
         completion_window: '24h',
       });
 
-      // Store job
-      const job: BatchTranslationJob = {
-        id: jobId,
-        status: 'processing',
-        requests: requests.map((req, index) => ({
-          customId: `req_${index}`,
-          text: req.text,
-          sourceLocale: req.sourceLocale,
-          targetLocale: req.targetLocale,
-          contentType: req.contentType || "body",
-        })),
-        createdAt: new Date(),
-        batchId: batch.id,
-      };
+      // Store job in database
+      const [row] = await db.insert(translationBatchJobs)
+        .values({
+          id: jobId,
+          status: 'processing',
+          batchId: batch.id,
+          requests: requests.map((req, index) => ({
+            customId: `req_${index}`,
+            text: req.text,
+            sourceLocale: req.sourceLocale,
+            targetLocale: req.targetLocale,
+            contentType: req.contentType || "body",
+          })),
+        })
+        .returning();
 
-      batchJobs.set(jobId, job);
-      return jobId;
+      return row.id;
     } catch (error) {
       console.error("Error creating batch translation job:", error);
       throw error;
@@ -911,8 +912,23 @@ ${req.text}`,
    * Check status of a batch translation job
    */
   async getJobStatus(jobId: string): Promise<BatchTranslationJob | null> {
-    const job = batchJobs.get(jobId);
-    if (!job) return null;
+    // Query from database
+    const [row] = await db.select()
+      .from(translationBatchJobs)
+      .where(eq(translationBatchJobs.id, jobId));
+
+    if (!row) return null;
+
+    // Convert DB row to BatchTranslationJob format
+    const job: BatchTranslationJob = {
+      id: row.id,
+      status: row.status as BatchTranslationJob['status'],
+      requests: row.requests as BatchTranslationJob['requests'],
+      results: row.results ? new Map(Object.entries(row.results)) : undefined,
+      createdAt: row.createdAt,
+      completedAt: row.completedAt || undefined,
+      batchId: row.batchId || undefined,
+    };
 
     if (job.status === 'processing' && job.batchId) {
       const openai = getOpenAIClient();
@@ -937,11 +953,25 @@ ${req.text}`,
               }
             }
 
+            // Update database with completed status
+            await db.update(translationBatchJobs)
+              .set({
+                status: 'completed',
+                results: Object.fromEntries(results),
+                completedAt: new Date(),
+              })
+              .where(eq(translationBatchJobs.id, jobId));
+
             job.status = 'completed';
             job.results = results;
             job.completedAt = new Date();
           }
         } else if (batch.status === 'failed' || batch.status === 'expired' || batch.status === 'cancelled') {
+          // Update database with failed status
+          await db.update(translationBatchJobs)
+            .set({ status: 'failed' })
+            .where(eq(translationBatchJobs.id, jobId));
+
           job.status = 'failed';
         }
       } catch (error) {

@@ -1240,6 +1240,47 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
 
+// Search Queries table for analytics
+export const searchQueries = pgTable("search_queries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  query: varchar("query").notNull(),
+  resultsCount: integer("results_count").notNull().default(0),
+  clickedResultId: varchar("clicked_result_id"),
+  locale: varchar("locale").notNull().default("en"),
+  sessionId: varchar("session_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_search_query").on(table.query),
+  index("IDX_search_created").on(table.createdAt),
+  index("IDX_search_results").on(table.resultsCount),
+]);
+
+export type SearchQuery = typeof searchQueries.$inferSelect;
+export type InsertSearchQuery = typeof searchQueries.$inferInsert;
+
+// Translation batch jobs table
+export const translationBatchJobs = pgTable("translation_batch_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  status: varchar("status").notNull().default("pending"),
+  batchId: varchar("batch_id"), // OpenAI batch ID
+  requests: jsonb("requests").$type<Array<{
+    customId: string;
+    text: string;
+    sourceLocale: string;
+    targetLocale: string;
+    contentType: "title" | "description" | "body" | "meta";
+  }>>().notNull().default([]),
+  results: jsonb("results").$type<Record<string, string>>().default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("IDX_batch_status").on(table.status),
+  index("IDX_batch_created").on(table.createdAt),
+]);
+
+export type TranslationBatchJob = typeof translationBatchJobs.$inferSelect;
+export type InsertTranslationBatchJob = typeof translationBatchJobs.$inferInsert;
+
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({
   author: one(users, {

@@ -54,16 +54,20 @@ export const safeMode = {
 };
 
 // ============================================================================
-// RATE LIMITING
-// Short-term rate limits use in-memory storage for performance.
-// For multi-instance deployments, replace with Redis.
-// Long-term limits (AI daily) use database persistence (see below).
+// RATE LIMITING (In-memory for performance, Redis recommended for production)
+// ============================================================================
+// Architecture:
+// - Short-term limits: In-memory (acceptable data loss on restart)
+// - Long-term AI limits: Database-backed with cache (see aiUsageCache)
+// - IP blocking: In-memory transient (see suspiciousIps)
+// For multi-instance/distributed deployments, replace with Redis.
 // ============================================================================
 interface RateLimitEntry {
   count: number;
   resetTime: number;
 }
 
+// In-memory rate limit store - use Redis for distributed deployments
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 // Clean up expired entries every 5 minutes
