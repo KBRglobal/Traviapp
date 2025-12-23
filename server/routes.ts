@@ -7495,9 +7495,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // ============================================================================
 
   // Get job queue statistics
-  app.get("/api/admin/jobs/stats", requirePermission("canPublish"), (req, res) => {
+  app.get("/api/admin/jobs/stats", requirePermission("canPublish"), async (req, res) => {
     try {
-      const stats = jobQueue.getStats();
+      const stats = await jobQueue.getStats();
       res.json(stats);
     } catch (error) {
       console.error("Error fetching job stats:", error);
@@ -7506,14 +7506,14 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // Get jobs by status
-  app.get("/api/admin/jobs", requirePermission("canPublish"), (req, res) => {
+  app.get("/api/admin/jobs", requirePermission("canPublish"), async (req, res) => {
     try {
       const { status = 'pending' } = req.query;
       const validStatuses = ['pending', 'processing', 'completed', 'failed'];
       if (!validStatuses.includes(status as string)) {
         return res.status(400).json({ error: "Invalid status" });
       }
-      const jobs = jobQueue.getJobsByStatus(status as any);
+      const jobs = await jobQueue.getJobsByStatus(status as any);
       res.json({ jobs, total: jobs.length });
     } catch (error) {
       console.error("Error fetching jobs:", error);
@@ -7522,9 +7522,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // Get single job status
-  app.get("/api/admin/jobs/:id", requirePermission("canPublish"), (req, res) => {
+  app.get("/api/admin/jobs/:id", requirePermission("canPublish"), async (req, res) => {
     try {
-      const job = jobQueue.getJob(req.params.id);
+      const job = await jobQueue.getJob(req.params.id);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
@@ -7536,9 +7536,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // Cancel a pending job
-  app.delete("/api/admin/jobs/:id", requirePermission("canPublish"), (req, res) => {
+  app.delete("/api/admin/jobs/:id", requirePermission("canPublish"), async (req, res) => {
     try {
-      const cancelled = jobQueue.cancelJob(req.params.id);
+      const cancelled = await jobQueue.cancelJob(req.params.id);
       if (!cancelled) {
         return res.status(400).json({ error: "Cannot cancel job (not pending or not found)" });
       }
@@ -7550,9 +7550,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // Retry a failed job
-  app.post("/api/admin/jobs/:id/retry", requirePermission("canPublish"), (req, res) => {
+  app.post("/api/admin/jobs/:id/retry", requirePermission("canPublish"), async (req, res) => {
     try {
-      const retried = jobQueue.retryJob(req.params.id);
+      const retried = await jobQueue.retryJob(req.params.id);
       if (!retried) {
         return res.status(400).json({ error: "Cannot retry job (not failed or not found)" });
       }

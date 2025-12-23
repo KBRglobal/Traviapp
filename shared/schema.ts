@@ -837,6 +837,139 @@ export const abTests = pgTable("ab_tests", {
 export type ABTest = typeof abTests.$inferSelect;
 export type InsertABTest = typeof abTests.$inferInsert;
 
+// ============================================================================
+// MONETIZATION TABLES
+// ============================================================================
+
+// Premium content access type enum
+export const premiumAccessTypeEnum = pgEnum("premium_access_type", ["one-time", "subscription"]);
+
+// Premium Content table
+export const premiumContent = pgTable("premium_content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().unique(),
+  isPremium: boolean("is_premium").notNull().default(true),
+  previewPercentage: integer("preview_percentage").notNull().default(20),
+  price: integer("price").notNull(), // In cents
+  currency: varchar("currency").notNull().default("USD"),
+  accessType: premiumAccessTypeEnum("access_type").notNull().default("one-time"),
+  subscriptionTier: varchar("subscription_tier"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_premium_content_id").on(table.contentId),
+]);
+
+export type PremiumContentRow = typeof premiumContent.$inferSelect;
+export type InsertPremiumContent = typeof premiumContent.$inferInsert;
+
+// Purchase status enum
+export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "completed", "refunded"]);
+
+// Content Purchases table
+export const contentPurchases = pgTable("content_purchases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  contentId: varchar("content_id").notNull(),
+  amount: integer("amount").notNull(),
+  currency: varchar("currency").notNull().default("USD"),
+  paymentMethod: varchar("payment_method").notNull(),
+  paymentId: varchar("payment_id"),
+  status: purchaseStatusEnum("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"),
+}, (table) => [
+  index("IDX_purchases_user").on(table.userId),
+  index("IDX_purchases_content").on(table.contentId),
+]);
+
+export type ContentPurchase = typeof contentPurchases.$inferSelect;
+export type InsertContentPurchase = typeof contentPurchases.$inferInsert;
+
+// Business type enum
+export const businessTypeEnum = pgEnum("business_type", ["restaurant", "hotel", "tour", "shop", "service"]);
+
+// Business tier enum
+export const businessTierEnum = pgEnum("business_tier", ["basic", "premium", "enterprise"]);
+
+// Business status enum
+export const businessStatusEnum = pgEnum("business_status", ["active", "pending", "expired", "cancelled"]);
+
+// Business Listings table
+export const businessListings = pgTable("business_listings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessName: varchar("business_name").notNull(),
+  businessType: businessTypeEnum("business_type").notNull(),
+  contactEmail: varchar("contact_email").notNull(),
+  contactPhone: varchar("contact_phone"),
+  website: varchar("website"),
+  contentIds: jsonb("content_ids").$type<string[]>().notNull().default([]),
+  tier: businessTierEnum("tier").notNull().default("basic"),
+  status: businessStatusEnum("status").notNull().default("pending"),
+  features: jsonb("features").$type<string[]>().notNull().default([]),
+  monthlyPrice: integer("monthly_price").notNull().default(0),
+  startDate: timestamp("start_date").notNull().defaultNow(),
+  endDate: timestamp("end_date"),
+  impressions: integer("impressions").notNull().default(0),
+  clicks: integer("clicks").notNull().default(0),
+  leads: integer("leads").notNull().default(0),
+  conversions: integer("conversions").notNull().default(0),
+  settings: jsonb("settings").$type<{
+    showPhone: boolean;
+    showEmail: boolean;
+    enableLeadForm: boolean;
+    enableBookingWidget: boolean;
+    featuredPlacement: boolean;
+  }>().notNull().default({
+    showPhone: true,
+    showEmail: true,
+    enableLeadForm: true,
+    enableBookingWidget: false,
+    featuredPlacement: false,
+  }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_business_status").on(table.status),
+  index("IDX_business_type").on(table.businessType),
+]);
+
+export type BusinessListing = typeof businessListings.$inferSelect;
+export type InsertBusinessListing = typeof businessListings.$inferInsert;
+
+// Lead type enum
+export const leadTypeEnum = pgEnum("lead_type", ["inquiry", "booking_request", "quote_request", "contact"]);
+
+// Lead status enum
+export const leadStatusEnum = pgEnum("lead_status", ["new", "contacted", "qualified", "converted", "lost"]);
+
+// Leads table
+export const leads = pgTable("leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessId: varchar("business_id").notNull().references(() => businessListings.id, { onDelete: "cascade" }),
+  contentId: varchar("content_id").notNull(),
+  type: leadTypeEnum("type").notNull(),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
+  message: text("message"),
+  checkIn: timestamp("check_in"),
+  checkOut: timestamp("check_out"),
+  guests: integer("guests"),
+  budget: varchar("budget"),
+  source: varchar("source").notNull(),
+  status: leadStatusEnum("status").notNull().default("new"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_leads_business").on(table.businessId),
+  index("IDX_leads_status").on(table.status),
+]);
+
+export type Lead = typeof leads.$inferSelect;
+export type InsertLead = typeof leads.$inferInsert;
+
 // Subscriber status enum for newsletter
 export const subscriberStatusEnum = pgEnum("subscriber_status", [
   "pending_confirmation",
@@ -861,15 +994,23 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   email: varchar("email").notNull().unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  locale: varchar("locale").default("en"),
   source: varchar("source").default("coming_soon"),
   status: subscriberStatusEnum("status").notNull().default("pending_confirmation"),
   ipAddress: varchar("ip_address"),
   confirmToken: varchar("confirm_token"),
+  tags: jsonb("tags").$type<string[]>().default([]),
+  preferences: jsonb("preferences").$type<{ frequency: string; categories: string[] }>().default({ frequency: "weekly", categories: [] }),
   subscribedAt: timestamp("subscribed_at").defaultNow(),
   confirmedAt: timestamp("confirmed_at"),
   unsubscribedAt: timestamp("unsubscribed_at"),
+  lastEmailAt: timestamp("last_email_at"),
+  emailsReceived: integer("emails_received").default(0),
+  emailsOpened: integer("emails_opened").default(0),
+  emailsClicked: integer("emails_clicked").default(0),
   consentLog: jsonb("consent_log").$type<ConsentLogEntry[]>().default([]),
   isActive: boolean("is_active").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertNewsletterSubscriberSchema = createInsertSchema(newsletterSubscribers).omit({
@@ -884,7 +1025,7 @@ export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
 export type SubscriberStatus = "pending_confirmation" | "subscribed" | "unsubscribed" | "bounced" | "complained";
 
 // Lead status enum for property inquiries
-export const leadStatusEnum = pgEnum("lead_status", [
+export const propertyLeadStatusEnum = pgEnum("property_lead_status", [
   "new",
   "contacted",
   "qualified",
@@ -906,7 +1047,7 @@ export const propertyLeads = pgTable("property_leads", {
   timeline: varchar("timeline"),
   message: text("message"),
   source: varchar("source").default("off-plan-form"),
-  status: leadStatusEnum("status").notNull().default("new"),
+  status: propertyLeadStatusEnum("status").notNull().default("new"),
   ipAddress: varchar("ip_address"),
   userAgent: text("user_agent"),
   consentGiven: boolean("consent_given").notNull().default(false),
@@ -949,9 +1090,14 @@ export const newsletterCampaigns = pgTable("newsletter_campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
   subject: varchar("subject").notNull(),
+  subjectHe: varchar("subject_he"),
   previewText: varchar("preview_text"),
+  previewTextHe: varchar("preview_text_he"),
   htmlContent: text("html_content").notNull(),
+  htmlContentHe: text("html_content_he"),
   status: campaignStatusEnum("status").notNull().default("draft"),
+  targetTags: jsonb("target_tags").$type<string[]>(),
+  targetLocales: jsonb("target_locales").$type<string[]>(),
   scheduledAt: timestamp("scheduled_at"),
   sentAt: timestamp("sent_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1002,6 +1148,97 @@ export const insertCampaignEventSchema = createInsertSchema(campaignEvents).omit
 export type InsertCampaignEvent = z.infer<typeof insertCampaignEventSchema>;
 export type CampaignEvent = typeof campaignEvents.$inferSelect;
 export type EmailEventType = "sent" | "delivered" | "opened" | "clicked" | "bounced" | "complained" | "unsubscribed";
+
+// Sequence trigger enum
+export const sequenceTriggerEnum = pgEnum("sequence_trigger", [
+  "signup",
+  "tag_added",
+  "inactivity",
+  "custom"
+]);
+
+// Sequence email structure type
+export interface SequenceEmail {
+  delayDays: number;
+  subject: string;
+  subjectHe: string;
+  contentHtml: string;
+  contentHtmlHe: string;
+}
+
+// Automated Sequences table
+export const automatedSequences = pgTable("automated_sequences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  trigger: sequenceTriggerEnum("trigger").notNull(),
+  triggerValue: varchar("trigger_value"),
+  emails: jsonb("emails").$type<SequenceEmail[]>().notNull().default([]),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type AutomatedSequence = typeof automatedSequences.$inferSelect;
+export type InsertAutomatedSequence = typeof automatedSequences.$inferInsert;
+
+// Job status enum
+export const jobStatusEnum = pgEnum("job_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed"
+]);
+
+// Job type enum
+export const jobTypeEnum = pgEnum("job_type", [
+  "translate",
+  "ai_generate",
+  "email",
+  "image_process",
+  "cleanup"
+]);
+
+// Background Jobs table
+export const backgroundJobs = pgTable("background_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: jobTypeEnum("type").notNull(),
+  status: jobStatusEnum("status").notNull().default("pending"),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+  result: jsonb("result").$type<Record<string, unknown>>(),
+  error: text("error"),
+  retries: integer("retries").notNull().default(0),
+  maxRetries: integer("max_retries").notNull().default(3),
+  priority: integer("priority").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("IDX_jobs_status").on(table.status),
+  index("IDX_jobs_type").on(table.type),
+  index("IDX_jobs_priority").on(table.priority),
+]);
+
+export type BackgroundJob = typeof backgroundJobs.$inferSelect;
+export type InsertBackgroundJob = typeof backgroundJobs.$inferInsert;
+
+// Push Subscriptions table for PWA notifications
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dhKey: text("p256dh_key").notNull(),
+  authKey: text("auth_key").notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  locale: varchar("locale").notNull().default("en"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_push_user").on(table.userId),
+  index("IDX_push_locale").on(table.locale),
+]);
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
 
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({

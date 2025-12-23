@@ -1,7 +1,12 @@
 /**
- * Simple in-memory job queue for background processing
+ * Database-backed job queue for background processing
  * Handles tasks like translation, AI generation, email sending
+ * Persists jobs to PostgreSQL for reliability
  */
+
+import { db } from "./db";
+import { backgroundJobs } from "@shared/schema";
+import { eq, desc, and, lt, inArray, sql, count } from "drizzle-orm";
 
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type JobType = 'translate' | 'ai_generate' | 'email' | 'image_process' | 'cleanup';
@@ -23,8 +28,25 @@ export interface Job<T = unknown> {
 
 type JobHandler<T = unknown> = (data: T) => Promise<unknown>;
 
+// Helper to convert DB row to Job type
+function dbToJob(row: typeof backgroundJobs.$inferSelect): Job {
+  return {
+    id: row.id,
+    type: row.type,
+    status: row.status,
+    data: row.data,
+    result: row.result || undefined,
+    error: row.error || undefined,
+    retries: row.retries,
+    maxRetries: row.maxRetries,
+    createdAt: row.createdAt,
+    startedAt: row.startedAt || undefined,
+    completedAt: row.completedAt || undefined,
+    priority: row.priority,
+  };
+}
+
 class JobQueue {
-  private jobs: Map<string, Job> = new Map();
   private handlers: Map<JobType, JobHandler> = new Map();
   private processing: Set<string> = new Set();
   private maxConcurrent: number = 3;
@@ -32,7 +54,8 @@ class JobQueue {
   private intervalId: NodeJS.Timeout | null = null;
 
   constructor() {
-    this.startProcessing();
+    // Delay starting to allow DB to initialize
+    setTimeout(() => this.startProcessing(), 2000);
   }
 
   /**
@@ -46,22 +69,49 @@ class JobQueue {
   /**
    * Add a job to the queue
    */
-  addJob<T>(type: JobType, data: T, options?: { priority?: number; maxRetries?: number }): string {
+  async addJob<T extends Record<string, unknown>>(
+    type: JobType,
+    data: T,
+    options?: { priority?: number; maxRetries?: number }
+  ): Promise<string> {
+    const [job] = await db.insert(backgroundJobs)
+      .values({
+        type,
+        status: "pending",
+        data,
+        retries: 0,
+        maxRetries: options?.maxRetries ?? 3,
+        priority: options?.priority ?? 0,
+      })
+      .returning();
+
+    console.log(`[JobQueue] Added job ${job.id} of type ${type}`);
+    return job.id;
+  }
+
+  /**
+   * Synchronous add (for backward compatibility) - queues async insert
+   */
+  addJobSync<T extends Record<string, unknown>>(
+    type: JobType,
+    data: T,
+    options?: { priority?: number; maxRetries?: number }
+  ): string {
     const id = `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    const job: Job<T> = {
-      id,
-      type,
-      status: 'pending',
-      data,
-      retries: 0,
-      maxRetries: options?.maxRetries ?? 3,
-      createdAt: new Date(),
-      priority: options?.priority ?? 0,
-    };
-
-    this.jobs.set(id, job as Job);
-    console.log(`[JobQueue] Added job ${id} of type ${type}`);
+    // Insert async
+    db.insert(backgroundJobs)
+      .values({
+        id,
+        type,
+        status: "pending",
+        data,
+        retries: 0,
+        maxRetries: options?.maxRetries ?? 3,
+        priority: options?.priority ?? 0,
+      })
+      .then(() => console.log(`[JobQueue] Added job ${id} of type ${type}`))
+      .catch(err => console.error(`[JobQueue] Failed to add job ${id}:`, err));
 
     return id;
   }
@@ -69,28 +119,56 @@ class JobQueue {
   /**
    * Get job status
    */
-  getJob(id: string): Job | undefined {
-    return this.jobs.get(id);
+  async getJob(id: string): Promise<Job | undefined> {
+    const [row] = await db.select()
+      .from(backgroundJobs)
+      .where(eq(backgroundJobs.id, id))
+      .limit(1);
+
+    return row ? dbToJob(row) : undefined;
   }
 
   /**
    * Get all jobs by status
    */
-  getJobsByStatus(status: JobStatus): Job[] {
-    return Array.from(this.jobs.values()).filter(job => job.status === status);
+  async getJobsByStatus(status: JobStatus): Promise<Job[]> {
+    const rows = await db.select()
+      .from(backgroundJobs)
+      .where(eq(backgroundJobs.status, status))
+      .orderBy(desc(backgroundJobs.priority), backgroundJobs.createdAt);
+
+    return rows.map(dbToJob);
   }
 
   /**
    * Get queue statistics
    */
-  getStats(): { pending: number; processing: number; completed: number; failed: number; total: number } {
-    const jobs = Array.from(this.jobs.values());
+  async getStats(): Promise<{ pending: number; processing: number; completed: number; failed: number; total: number }> {
+    const [pending] = await db.select({ count: count() })
+      .from(backgroundJobs)
+      .where(eq(backgroundJobs.status, "pending"));
+
+    const [processing] = await db.select({ count: count() })
+      .from(backgroundJobs)
+      .where(eq(backgroundJobs.status, "processing"));
+
+    const [completed] = await db.select({ count: count() })
+      .from(backgroundJobs)
+      .where(eq(backgroundJobs.status, "completed"));
+
+    const [failed] = await db.select({ count: count() })
+      .from(backgroundJobs)
+      .where(eq(backgroundJobs.status, "failed"));
+
+    const total = (pending?.count || 0) + (processing?.count || 0) +
+                  (completed?.count || 0) + (failed?.count || 0);
+
     return {
-      pending: jobs.filter(j => j.status === 'pending').length,
-      processing: jobs.filter(j => j.status === 'processing').length,
-      completed: jobs.filter(j => j.status === 'completed').length,
-      failed: jobs.filter(j => j.status === 'failed').length,
-      total: jobs.length,
+      pending: pending?.count || 0,
+      processing: processing?.count || 0,
+      completed: completed?.count || 0,
+      failed: failed?.count || 0,
+      total,
     };
   }
 
@@ -103,6 +181,27 @@ class JobQueue {
     this.isRunning = true;
     this.intervalId = setInterval(() => this.processNext(), 1000);
     console.log('[JobQueue] Started processing');
+
+    // Recover any stuck "processing" jobs on startup
+    this.recoverStuckJobs();
+  }
+
+  /**
+   * Recover jobs stuck in processing state (from crashed instance)
+   */
+  private async recoverStuckJobs() {
+    try {
+      const result = await db.update(backgroundJobs)
+        .set({ status: "pending" })
+        .where(eq(backgroundJobs.status, "processing"))
+        .returning();
+
+      if (result.length > 0) {
+        console.log(`[JobQueue] Recovered ${result.length} stuck jobs`);
+      }
+    } catch (err) {
+      console.error('[JobQueue] Failed to recover stuck jobs:', err);
+    }
   }
 
   /**
@@ -123,75 +222,113 @@ class JobQueue {
   private async processNext() {
     if (this.processing.size >= this.maxConcurrent) return;
 
-    // Get next pending job (highest priority first)
-    const pendingJobs = Array.from(this.jobs.values())
-      .filter(job => job.status === 'pending')
-      .sort((a, b) => b.priority - a.priority);
-
-    const job = pendingJobs[0];
-    if (!job) return;
-
-    const handler = this.handlers.get(job.type);
-    if (!handler) {
-      console.warn(`[JobQueue] No handler registered for job type: ${job.type}`);
-      return;
-    }
-
-    // Mark job as processing
-    job.status = 'processing';
-    job.startedAt = new Date();
-    this.processing.add(job.id);
-
-    console.log(`[JobQueue] Processing job ${job.id} of type ${job.type}`);
-
     try {
-      const result = await handler(job.data);
-      job.status = 'completed';
-      job.result = result;
-      job.completedAt = new Date();
-      console.log(`[JobQueue] Completed job ${job.id}`);
-    } catch (error) {
-      job.retries++;
-      if (job.retries < job.maxRetries) {
-        job.status = 'pending'; // Retry
-        console.warn(`[JobQueue] Job ${job.id} failed, retrying (${job.retries}/${job.maxRetries})`);
-      } else {
-        job.status = 'failed';
-        job.error = error instanceof Error ? error.message : String(error);
-        job.completedAt = new Date();
-        console.error(`[JobQueue] Job ${job.id} failed permanently:`, error);
-      }
-    } finally {
-      this.processing.delete(job.id);
-    }
+      // Get next pending job (highest priority first)
+      const [jobRow] = await db.select()
+        .from(backgroundJobs)
+        .where(eq(backgroundJobs.status, "pending"))
+        .orderBy(desc(backgroundJobs.priority), backgroundJobs.createdAt)
+        .limit(1);
 
-    // Clean up old completed/failed jobs (keep last 1000)
-    this.cleanup();
+      if (!jobRow) return;
+
+      const handler = this.handlers.get(jobRow.type);
+      if (!handler) {
+        console.warn(`[JobQueue] No handler registered for job type: ${jobRow.type}`);
+        return;
+      }
+
+      // Mark job as processing
+      await db.update(backgroundJobs)
+        .set({ status: "processing", startedAt: new Date() })
+        .where(eq(backgroundJobs.id, jobRow.id));
+
+      this.processing.add(jobRow.id);
+      console.log(`[JobQueue] Processing job ${jobRow.id} of type ${jobRow.type}`);
+
+      try {
+        const result = await handler(jobRow.data);
+
+        await db.update(backgroundJobs)
+          .set({
+            status: "completed",
+            result: result as Record<string, unknown>,
+            completedAt: new Date()
+          })
+          .where(eq(backgroundJobs.id, jobRow.id));
+
+        console.log(`[JobQueue] Completed job ${jobRow.id}`);
+      } catch (error) {
+        const newRetries = jobRow.retries + 1;
+
+        if (newRetries < jobRow.maxRetries) {
+          // Retry
+          await db.update(backgroundJobs)
+            .set({ status: "pending", retries: newRetries })
+            .where(eq(backgroundJobs.id, jobRow.id));
+
+          console.warn(`[JobQueue] Job ${jobRow.id} failed, retrying (${newRetries}/${jobRow.maxRetries})`);
+        } else {
+          // Failed permanently
+          await db.update(backgroundJobs)
+            .set({
+              status: "failed",
+              retries: newRetries,
+              error: error instanceof Error ? error.message : String(error),
+              completedAt: new Date()
+            })
+            .where(eq(backgroundJobs.id, jobRow.id));
+
+          console.error(`[JobQueue] Job ${jobRow.id} failed permanently:`, error);
+        }
+      } finally {
+        this.processing.delete(jobRow.id);
+      }
+
+      // Clean up old completed/failed jobs periodically
+      if (Math.random() < 0.01) { // 1% chance each run
+        await this.cleanup();
+      }
+    } catch (err) {
+      console.error('[JobQueue] Error processing jobs:', err);
+    }
   }
 
   /**
-   * Clean up old jobs to prevent memory bloat
+   * Clean up old jobs to prevent DB bloat
    */
-  private cleanup() {
+  private async cleanup() {
     const maxJobs = 1000;
-    const jobs = Array.from(this.jobs.entries())
-      .filter(([_, job]) => job.status === 'completed' || job.status === 'failed')
-      .sort((a, b) => (b[1].completedAt?.getTime() || 0) - (a[1].completedAt?.getTime() || 0));
+    const cutoffDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days old
 
-    if (jobs.length > maxJobs) {
-      const toRemove = jobs.slice(maxJobs);
-      toRemove.forEach(([id]) => this.jobs.delete(id));
-      console.log(`[JobQueue] Cleaned up ${toRemove.length} old jobs`);
+    try {
+      const result = await db.delete(backgroundJobs)
+        .where(and(
+          inArray(backgroundJobs.status, ["completed", "failed"]),
+          lt(backgroundJobs.completedAt, cutoffDate)
+        ))
+        .returning();
+
+      if (result.length > 0) {
+        console.log(`[JobQueue] Cleaned up ${result.length} old jobs`);
+      }
+    } catch (err) {
+      console.error('[JobQueue] Cleanup failed:', err);
     }
   }
 
   /**
    * Cancel a pending job
    */
-  cancelJob(id: string): boolean {
-    const job = this.jobs.get(id);
-    if (job && job.status === 'pending') {
-      this.jobs.delete(id);
+  async cancelJob(id: string): Promise<boolean> {
+    const result = await db.delete(backgroundJobs)
+      .where(and(
+        eq(backgroundJobs.id, id),
+        eq(backgroundJobs.status, "pending")
+      ))
+      .returning();
+
+    if (result.length > 0) {
       console.log(`[JobQueue] Cancelled job ${id}`);
       return true;
     }
@@ -201,13 +338,21 @@ class JobQueue {
   /**
    * Retry a failed job
    */
-  retryJob(id: string): boolean {
-    const job = this.jobs.get(id);
-    if (job && job.status === 'failed') {
-      job.status = 'pending';
-      job.retries = 0;
-      job.error = undefined;
-      job.completedAt = undefined;
+  async retryJob(id: string): Promise<boolean> {
+    const result = await db.update(backgroundJobs)
+      .set({
+        status: "pending",
+        retries: 0,
+        error: null,
+        completedAt: null
+      })
+      .where(and(
+        eq(backgroundJobs.id, id),
+        eq(backgroundJobs.status, "failed")
+      ))
+      .returning();
+
+    if (result.length > 0) {
       console.log(`[JobQueue] Retrying job ${id}`);
       return true;
     }

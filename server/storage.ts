@@ -1621,7 +1621,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCampaign(campaign: InsertCampaign): Promise<NewsletterCampaign> {
-    const [newCampaign] = await db.insert(newsletterCampaigns).values(campaign).returning();
+    const [newCampaign] = await db.insert(newsletterCampaigns).values(campaign as any).returning();
     return newCampaign;
   }
 

@@ -8,8 +8,15 @@
  */
 
 import { db } from "./db";
-import { contents } from "@shared/schema";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import {
+  contents,
+  newsletterSubscribers,
+  newsletterCampaigns,
+  campaignEvents,
+  automatedSequences,
+  type SequenceEmail
+} from "@shared/schema";
+import { eq, desc, and, gte, sql, like, inArray, count } from "drizzle-orm";
 import { cache } from "./cache";
 import * as crypto from "crypto";
 
@@ -79,18 +86,62 @@ export interface AutomatedSequence {
 }
 
 // ============================================================================
-// IN-MEMORY STORAGE (use database in production)
+// DATABASE PERSISTENCE - In-memory caches for performance
 // ============================================================================
 
-const subscriberStore: Map<string, Subscriber> = new Map();
-const campaignStore: Map<string, EmailCampaign> = new Map();
-const sequenceStore: Map<string, AutomatedSequence> = new Map();
-// Store confirmation tokens mapped to subscriber IDs (token -> { subscriberId, expiresAt })
-const confirmationTokenStore: Map<string, { subscriberId: string; expiresAt: Date }> = new Map();
+// Cache for frequently accessed subscribers (by email)
+const subscriberCache = new Map<string, Subscriber>();
+const SUBSCRIBER_CACHE_TTL = 60000; // 1 minute
+
+// Map internal status to DB status
+type DbStatus = "pending_confirmation" | "subscribed" | "unsubscribed" | "bounced" | "complained";
+type InternalStatus = "active" | "unsubscribed" | "bounced" | "pending";
+
+function toDbStatus(status: InternalStatus): DbStatus {
+  switch (status) {
+    case "active": return "subscribed";
+    case "pending": return "pending_confirmation";
+    default: return status as DbStatus;
+  }
+}
+
+function toInternalStatus(status: DbStatus): InternalStatus {
+  switch (status) {
+    case "subscribed": return "active";
+    case "pending_confirmation": return "pending";
+    case "complained": return "bounced";
+    default: return status as InternalStatus;
+  }
+}
 
 // ============================================================================
 // SUBSCRIBER MANAGEMENT
 // ============================================================================
+
+// Helper to convert DB row to Subscriber type
+function dbToSubscriber(row: typeof newsletterSubscribers.$inferSelect): Subscriber {
+  const prefs = row.preferences as { frequency?: string; categories?: string[] } | null;
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.firstName || undefined,
+    locale: row.locale || "en",
+    status: toInternalStatus(row.status),
+    source: row.source || "website",
+    tags: row.tags || [],
+    preferences: {
+      frequency: (prefs?.frequency as "daily" | "weekly" | "monthly") || "weekly",
+      categories: prefs?.categories || [],
+    },
+    confirmedAt: row.confirmedAt || undefined,
+    unsubscribedAt: row.unsubscribedAt || undefined,
+    createdAt: row.subscribedAt || new Date(),
+    lastEmailAt: row.lastEmailAt || undefined,
+    emailsReceived: row.emailsReceived || 0,
+    emailsOpened: row.emailsOpened || 0,
+    emailsClicked: row.emailsClicked || 0,
+  };
+}
 
 export const subscribers = {
   /**
@@ -110,51 +161,46 @@ export const subscribers = {
     isNew: boolean;
     confirmationToken?: string;
   }> {
-    const existingId = [...subscriberStore.values()].find(s => s.email.toLowerCase() === email.toLowerCase())?.id;
+    // Check for existing subscriber
+    const [existing] = await db.select()
+      .from(newsletterSubscribers)
+      .where(eq(newsletterSubscribers.email, email.toLowerCase()))
+      .limit(1);
 
-    if (existingId) {
-      const existing = subscriberStore.get(existingId)!;
+    if (existing) {
+      const subscriber = dbToSubscriber(existing);
       // Reactivate if unsubscribed
       if (existing.status === "unsubscribed") {
-        existing.status = "pending";
-        existing.unsubscribedAt = undefined;
-        subscriberStore.set(existingId, existing);
+        await db.update(newsletterSubscribers)
+          .set({
+            status: "pending_confirmation",
+            unsubscribedAt: null,
+            updatedAt: new Date()
+          })
+          .where(eq(newsletterSubscribers.id, existing.id));
+        subscriber.status = "pending";
+        subscriber.unsubscribedAt = undefined;
       }
-      return { subscriber: existing, isNew: false };
+      return { subscriber, isNew: false };
     }
 
-    const id = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const confirmationToken = crypto.randomBytes(32).toString("hex");
 
-    const subscriber: Subscriber = {
-      id,
-      email: email.toLowerCase(),
-      name: options.name,
-      locale: options.locale || "en",
-      status: "pending",
-      source: options.source || "website",
-      tags: options.tags || [],
-      preferences: options.preferences || {
-        frequency: "weekly",
-        categories: [],
-      },
-      createdAt: new Date(),
-      emailsReceived: 0,
-      emailsOpened: 0,
-      emailsClicked: 0,
-    };
+    const [newSub] = await db.insert(newsletterSubscribers)
+      .values({
+        email: email.toLowerCase(),
+        firstName: options.name,
+        locale: options.locale || "en",
+        status: "pending_confirmation",
+        source: options.source || "website",
+        tags: options.tags || [],
+        preferences: options.preferences || { frequency: "weekly", categories: [] },
+        confirmToken: confirmationToken,
+        isActive: true,
+      })
+      .returning();
 
-    subscriberStore.set(id, subscriber);
-
-    // Store the confirmation token with 24-hour expiry
-    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    confirmationTokenStore.set(confirmationToken, {
-      subscriberId: id,
-      expiresAt: tokenExpiry,
-    });
-
-    // In production, send confirmation email here
-    // await this.sendConfirmationEmail(subscriber, confirmationToken);
+    const subscriber = dbToSubscriber(newSub);
 
     return { subscriber, isNew: true, confirmationToken };
   },
@@ -163,46 +209,40 @@ export const subscribers = {
    * Confirm subscription - validates token before activating
    */
   async confirm(token: string): Promise<Subscriber | null> {
-    // Validate the confirmation token
-    const tokenData = confirmationTokenStore.get(token);
+    // Find subscriber by token
+    const [row] = await db.select()
+      .from(newsletterSubscribers)
+      .where(eq(newsletterSubscribers.confirmToken, token))
+      .limit(1);
 
-    if (!tokenData) {
+    if (!row) {
       console.log("[Newsletter] Invalid confirmation token");
       return null;
     }
 
-    // Check if token has expired
-    if (new Date() > tokenData.expiresAt) {
-      console.log("[Newsletter] Confirmation token expired");
-      confirmationTokenStore.delete(token);
-      return null;
-    }
+    // Token expiry check would require storing expiry in DB
+    // For now, tokens don't expire (would need schema update for expiry)
 
-    // Get the subscriber
-    const subscriber = subscriberStore.get(tokenData.subscriberId);
-
-    if (!subscriber) {
-      console.log("[Newsletter] Subscriber not found for token");
-      confirmationTokenStore.delete(token);
-      return null;
-    }
-
-    if (subscriber.status !== "pending") {
+    if (row.status !== "pending_confirmation") {
       console.log("[Newsletter] Subscriber already confirmed or unsubscribed");
-      confirmationTokenStore.delete(token);
-      return subscriber;
+      return dbToSubscriber(row);
     }
 
     // Activate the subscriber
-    subscriber.status = "active";
-    subscriber.confirmedAt = new Date();
-    subscriberStore.set(subscriber.id, subscriber);
+    const [updated] = await db.update(newsletterSubscribers)
+      .set({
+        status: "subscribed",
+        confirmedAt: new Date(),
+        confirmToken: null, // Clear the token
+        updatedAt: new Date()
+      })
+      .where(eq(newsletterSubscribers.id, row.id))
+      .returning();
 
-    // Remove the used token
-    confirmationTokenStore.delete(token);
+    const subscriber = dbToSubscriber(updated);
 
     // Trigger welcome sequence
-    await automatedSequences.triggerForSubscriber(subscriber.id, "signup");
+    await automatedSequencesObj.triggerForSubscriber(subscriber.id, "signup");
 
     console.log(`[Newsletter] Subscriber confirmed: ${subscriber.email}`);
     return subscriber;
@@ -212,17 +252,17 @@ export const subscribers = {
    * Unsubscribe
    */
   async unsubscribe(email: string, reason?: string): Promise<boolean> {
-    const subscriber = [...subscriberStore.values()].find(
-      s => s.email.toLowerCase() === email.toLowerCase()
-    );
+    const result = await db.update(newsletterSubscribers)
+      .set({
+        status: "unsubscribed",
+        unsubscribedAt: new Date(),
+        isActive: false,
+        updatedAt: new Date()
+      })
+      .where(eq(newsletterSubscribers.email, email.toLowerCase()))
+      .returning();
 
-    if (!subscriber) return false;
-
-    subscriber.status = "unsubscribed";
-    subscriber.unsubscribedAt = new Date();
-    subscriberStore.set(subscriber.id, subscriber);
-
-    return true;
+    return result.length > 0;
   },
 
   /**
@@ -232,31 +272,57 @@ export const subscribers = {
     subscriberId: string,
     preferences: Partial<Subscriber["preferences"]>
   ): Promise<Subscriber | null> {
-    const subscriber = subscriberStore.get(subscriberId);
-    if (!subscriber) return null;
+    const [existing] = await db.select()
+      .from(newsletterSubscribers)
+      .where(eq(newsletterSubscribers.id, subscriberId))
+      .limit(1);
 
-    subscriber.preferences = { ...subscriber.preferences, ...preferences };
-    subscriberStore.set(subscriberId, subscriber);
+    if (!existing) return null;
 
-    return subscriber;
+    const currentPrefs = existing.preferences as { frequency?: string; categories?: string[] } | null;
+    const mergedPreferences = {
+      frequency: preferences.frequency || currentPrefs?.frequency || "weekly",
+      categories: preferences.categories || currentPrefs?.categories || [],
+    };
+
+    const [updated] = await db.update(newsletterSubscribers)
+      .set({
+        preferences: mergedPreferences,
+        updatedAt: new Date()
+      })
+      .where(eq(newsletterSubscribers.id, subscriberId))
+      .returning();
+
+    return dbToSubscriber(updated);
   },
 
   /**
    * Add tags to subscriber
    */
   async addTags(subscriberId: string, tags: string[]): Promise<Subscriber | null> {
-    const subscriber = subscriberStore.get(subscriberId);
-    if (!subscriber) return null;
+    const [existing] = await db.select()
+      .from(newsletterSubscribers)
+      .where(eq(newsletterSubscribers.id, subscriberId))
+      .limit(1);
 
-    subscriber.tags = [...new Set([...subscriber.tags, ...tags])];
-    subscriberStore.set(subscriberId, subscriber);
+    if (!existing) return null;
+
+    const mergedTags = [...new Set([...(existing.tags || []), ...tags])];
+
+    const [updated] = await db.update(newsletterSubscribers)
+      .set({
+        tags: mergedTags,
+        updatedAt: new Date()
+      })
+      .where(eq(newsletterSubscribers.id, subscriberId))
+      .returning();
 
     // Trigger tag-based sequences
     for (const tag of tags) {
-      await automatedSequences.triggerForSubscriber(subscriberId, "tag_added", tag);
+      await automatedSequencesObj.triggerForSubscriber(subscriberId, "tag_added", tag);
     }
 
-    return subscriber;
+    return dbToSubscriber(updated);
   },
 
   /**
@@ -267,7 +333,11 @@ export const subscribers = {
     tags?: string[];
     frequency?: string;
   }): Promise<Subscriber[]> {
-    let result = [...subscriberStore.values()].filter(s => s.status === "active");
+    const rows = await db.select()
+      .from(newsletterSubscribers)
+      .where(eq(newsletterSubscribers.status, "subscribed"));
+
+    let result = rows.map(dbToSubscriber);
 
     if (filters?.locale) {
       result = result.filter(s => s.locale === filters.locale);
@@ -295,25 +365,27 @@ export const subscribers = {
     byLocale: Record<string, number>;
     growth: Array<{ date: string; subscribers: number }>;
   }> {
-    const all = [...subscriberStore.values()];
+    const all = await db.select().from(newsletterSubscribers);
 
     const bySource: Record<string, number> = {};
     const byLocale: Record<string, number> = {};
 
     for (const sub of all) {
-      bySource[sub.source] = (bySource[sub.source] || 0) + 1;
-      byLocale[sub.locale] = (byLocale[sub.locale] || 0) + 1;
+      const source = sub.source || "unknown";
+      const locale = sub.locale || "en";
+      bySource[source] = (bySource[source] || 0) + 1;
+      byLocale[locale] = (byLocale[locale] || 0) + 1;
     }
 
     return {
       total: all.length,
-      active: all.filter(s => s.status === "active").length,
-      pending: all.filter(s => s.status === "pending").length,
+      active: all.filter(s => s.status === "subscribed").length,
+      pending: all.filter(s => s.status === "pending_confirmation").length,
       unsubscribed: all.filter(s => s.status === "unsubscribed").length,
-      bounced: all.filter(s => s.status === "bounced").length,
+      bounced: all.filter(s => s.status === "bounced" || s.status === "complained").length,
       bySource,
       byLocale,
-      growth: [], // Would calculate from database
+      growth: [], // Would calculate from database with date grouping
     };
   },
 };
@@ -322,44 +394,79 @@ export const subscribers = {
 // EMAIL CAMPAIGNS
 // ============================================================================
 
+// Helper to convert DB row to EmailCampaign type
+function dbToCampaign(row: typeof newsletterCampaigns.$inferSelect): EmailCampaign {
+  return {
+    id: row.id,
+    name: row.name,
+    subject: row.subject,
+    subjectHe: row.subjectHe || "",
+    previewText: row.previewText || "",
+    previewTextHe: row.previewTextHe || "",
+    contentHtml: row.htmlContent,
+    contentHtmlHe: row.htmlContentHe || "",
+    status: row.status as EmailCampaign["status"],
+    targetTags: row.targetTags || undefined,
+    targetLocales: row.targetLocales || undefined,
+    scheduledAt: row.scheduledAt || undefined,
+    sentAt: row.sentAt || undefined,
+    stats: {
+      sent: row.totalSent || 0,
+      delivered: row.totalSent || 0, // Assume delivered = sent for now
+      opened: row.totalOpened || 0,
+      clicked: row.totalClicked || 0,
+      bounced: row.totalBounced || 0,
+      unsubscribed: row.totalUnsubscribed || 0,
+    },
+    createdAt: row.createdAt || new Date(),
+  };
+}
+
 export const campaigns = {
   /**
    * Create campaign
    */
   async create(data: Omit<EmailCampaign, "id" | "status" | "stats" | "createdAt">): Promise<EmailCampaign> {
-    const id = `camp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const [row] = await db.insert(newsletterCampaigns)
+      .values({
+        name: data.name,
+        subject: data.subject,
+        subjectHe: data.subjectHe || null,
+        previewText: data.previewText || null,
+        previewTextHe: data.previewTextHe || null,
+        htmlContent: data.contentHtml,
+        htmlContentHe: data.contentHtmlHe || null,
+        status: "draft",
+        targetTags: data.targetTags || null,
+        targetLocales: data.targetLocales || null,
+        scheduledAt: data.scheduledAt || null,
+      })
+      .returning();
 
-    const campaign: EmailCampaign = {
-      ...data,
-      id,
-      status: "draft",
-      stats: {
-        sent: 0,
-        delivered: 0,
-        opened: 0,
-        clicked: 0,
-        bounced: 0,
-        unsubscribed: 0,
-      },
-      createdAt: new Date(),
-    };
-
-    campaignStore.set(id, campaign);
-    return campaign;
+    return dbToCampaign(row);
   },
 
   /**
    * Schedule campaign
    */
   async schedule(campaignId: string, scheduledAt: Date): Promise<EmailCampaign | null> {
-    const campaign = campaignStore.get(campaignId);
-    if (!campaign || campaign.status !== "draft") return null;
+    const [existing] = await db.select()
+      .from(newsletterCampaigns)
+      .where(eq(newsletterCampaigns.id, campaignId))
+      .limit(1);
 
-    campaign.status = "scheduled";
-    campaign.scheduledAt = scheduledAt;
-    campaignStore.set(campaignId, campaign);
+    if (!existing || existing.status !== "draft") return null;
 
-    return campaign;
+    const [updated] = await db.update(newsletterCampaigns)
+      .set({
+        status: "scheduled",
+        scheduledAt,
+        updatedAt: new Date()
+      })
+      .where(eq(newsletterCampaigns.id, campaignId))
+      .returning();
+
+    return dbToCampaign(updated);
   },
 
   /**
@@ -369,13 +476,21 @@ export const campaigns = {
     success: boolean;
     recipientCount: number;
   }> {
-    const campaign = campaignStore.get(campaignId);
-    if (!campaign || !["draft", "scheduled"].includes(campaign.status)) {
+    const [existing] = await db.select()
+      .from(newsletterCampaigns)
+      .where(eq(newsletterCampaigns.id, campaignId))
+      .limit(1);
+
+    if (!existing || !["draft", "scheduled"].includes(existing.status)) {
       return { success: false, recipientCount: 0 };
     }
 
-    campaign.status = "sending";
-    campaignStore.set(campaignId, campaign);
+    // Mark as sending
+    await db.update(newsletterCampaigns)
+      .set({ status: "sending", updatedAt: new Date() })
+      .where(eq(newsletterCampaigns.id, campaignId));
+
+    const campaign = dbToCampaign(existing);
 
     // Get target subscribers
     const targetSubscribers = await subscribers.getActive({
@@ -384,14 +499,27 @@ export const campaigns = {
     });
 
     // In production, queue emails for sending
+    let sentCount = 0;
     for (const subscriber of targetSubscribers) {
-      // await emailService.send(subscriber.email, campaign);
-      campaign.stats.sent++;
+      // Record sent event
+      await db.insert(campaignEvents).values({
+        campaignId,
+        subscriberId: subscriber.id,
+        eventType: "sent",
+      });
+      sentCount++;
     }
 
-    campaign.status = "sent";
-    campaign.sentAt = new Date();
-    campaignStore.set(campaignId, campaign);
+    // Mark as sent
+    await db.update(newsletterCampaigns)
+      .set({
+        status: "sent",
+        sentAt: new Date(),
+        totalSent: sentCount,
+        totalRecipients: targetSubscribers.length,
+        updatedAt: new Date()
+      })
+      .where(eq(newsletterCampaigns.id, campaignId));
 
     return {
       success: true,
@@ -403,36 +531,57 @@ export const campaigns = {
    * Track email open
    */
   async trackOpen(campaignId: string, subscriberId: string): Promise<void> {
-    const campaign = campaignStore.get(campaignId);
-    const subscriber = subscriberStore.get(subscriberId);
+    // Record open event
+    await db.insert(campaignEvents).values({
+      campaignId,
+      subscriberId,
+      eventType: "opened",
+    });
 
-    if (campaign) {
-      campaign.stats.opened++;
-      campaignStore.set(campaignId, campaign);
-    }
+    // Increment campaign open count
+    await db.update(newsletterCampaigns)
+      .set({
+        totalOpened: sql`${newsletterCampaigns.totalOpened} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(newsletterCampaigns.id, campaignId));
 
-    if (subscriber) {
-      subscriber.emailsOpened++;
-      subscriberStore.set(subscriberId, subscriber);
-    }
+    // Increment subscriber open count
+    await db.update(newsletterSubscribers)
+      .set({
+        emailsOpened: sql`${newsletterSubscribers.emailsOpened} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(newsletterSubscribers.id, subscriberId));
   },
 
   /**
    * Track link click
    */
   async trackClick(campaignId: string, subscriberId: string, url: string): Promise<void> {
-    const campaign = campaignStore.get(campaignId);
-    const subscriber = subscriberStore.get(subscriberId);
+    // Record click event
+    await db.insert(campaignEvents).values({
+      campaignId,
+      subscriberId,
+      eventType: "clicked",
+      metadata: { url },
+    });
 
-    if (campaign) {
-      campaign.stats.clicked++;
-      campaignStore.set(campaignId, campaign);
-    }
+    // Increment campaign click count
+    await db.update(newsletterCampaigns)
+      .set({
+        totalClicked: sql`${newsletterCampaigns.totalClicked} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(newsletterCampaigns.id, campaignId));
 
-    if (subscriber) {
-      subscriber.emailsClicked++;
-      subscriberStore.set(subscriberId, subscriber);
-    }
+    // Increment subscriber click count
+    await db.update(newsletterSubscribers)
+      .set({
+        emailsClicked: sql`${newsletterSubscribers.emailsClicked} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(newsletterSubscribers.id, subscriberId));
   },
 
   /**
@@ -445,9 +594,14 @@ export const campaigns = {
     bounceRate: number;
     unsubscribeRate: number;
   } | null> {
-    const campaign = campaignStore.get(campaignId);
-    if (!campaign) return null;
+    const [row] = await db.select()
+      .from(newsletterCampaigns)
+      .where(eq(newsletterCampaigns.id, campaignId))
+      .limit(1);
 
+    if (!row) return null;
+
+    const campaign = dbToCampaign(row);
     const sent = campaign.stats.sent || 1;
 
     return {
@@ -521,7 +675,15 @@ export const campaigns = {
 // AUTOMATED SEQUENCES
 // ============================================================================
 
-const defaultSequences: AutomatedSequence[] = [
+// Default sequences to seed database
+const defaultSequences: Array<{
+  id: string;
+  name: string;
+  trigger: "signup" | "tag_added" | "inactivity" | "custom";
+  triggerValue?: string;
+  emails: SequenceEmail[];
+  isActive: boolean;
+}> = [
   {
     id: "welcome",
     name: "Welcome Sequence",
@@ -569,10 +731,45 @@ const defaultSequences: AutomatedSequence[] = [
   },
 ];
 
-// Initialize sequences
-defaultSequences.forEach(s => sequenceStore.set(s.id, s));
+// Seed default sequences on startup
+async function seedDefaultSequences(): Promise<void> {
+  for (const seq of defaultSequences) {
+    const [existing] = await db.select()
+      .from(automatedSequences)
+      .where(eq(automatedSequences.id, seq.id))
+      .limit(1);
 
-export const automatedSequences = {
+    if (!existing) {
+      await db.insert(automatedSequences).values({
+        id: seq.id,
+        name: seq.name,
+        trigger: seq.trigger,
+        triggerValue: seq.triggerValue || null,
+        emails: seq.emails,
+        isActive: seq.isActive,
+      });
+    }
+  }
+}
+
+// Seed on module load (non-blocking)
+seedDefaultSequences().catch(err => {
+  console.error("[Newsletter] Failed to seed default sequences:", err);
+});
+
+// Helper to convert DB row to AutomatedSequence type
+function dbToSequence(row: typeof automatedSequences.$inferSelect): AutomatedSequence {
+  return {
+    id: row.id,
+    name: row.name,
+    trigger: row.trigger,
+    triggerValue: row.triggerValue || undefined,
+    emails: row.emails,
+    isActive: row.isActive,
+  };
+}
+
+export const automatedSequencesObj = {
   /**
    * Trigger sequence for subscriber
    */
@@ -581,11 +778,20 @@ export const automatedSequences = {
     trigger: AutomatedSequence["trigger"],
     triggerValue?: string
   ): Promise<void> {
-    const subscriber = subscriberStore.get(subscriberId);
-    if (!subscriber || subscriber.status !== "active") return;
+    // Check subscriber is active
+    const [subscriber] = await db.select()
+      .from(newsletterSubscribers)
+      .where(eq(newsletterSubscribers.id, subscriberId))
+      .limit(1);
 
-    const matchingSequences = [...sequenceStore.values()].filter(seq => {
-      if (!seq.isActive) return false;
+    if (!subscriber || subscriber.status !== "subscribed") return;
+
+    // Find matching sequences
+    const allSequences = await db.select()
+      .from(automatedSequences)
+      .where(eq(automatedSequences.isActive, true));
+
+    const matchingSequences = allSequences.filter(seq => {
       if (seq.trigger !== trigger) return false;
       if (seq.triggerValue && seq.triggerValue !== triggerValue) return false;
       return true;
@@ -601,20 +807,30 @@ export const automatedSequences = {
    * Get all sequences
    */
   async getAll(): Promise<AutomatedSequence[]> {
-    return [...sequenceStore.values()];
+    const rows = await db.select().from(automatedSequences);
+    return rows.map(dbToSequence);
   },
 
   /**
    * Update sequence
    */
   async update(id: string, updates: Partial<AutomatedSequence>): Promise<AutomatedSequence | null> {
-    const sequence = sequenceStore.get(id);
-    if (!sequence) return null;
+    const [existing] = await db.select()
+      .from(automatedSequences)
+      .where(eq(automatedSequences.id, id))
+      .limit(1);
 
-    Object.assign(sequence, updates);
-    sequenceStore.set(id, sequence);
+    if (!existing) return null;
 
-    return sequence;
+    const [updated] = await db.update(automatedSequences)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(automatedSequences.id, id))
+      .returning();
+
+    return dbToSequence(updated);
   },
 };
 
@@ -625,7 +841,7 @@ export const automatedSequences = {
 export const newsletter = {
   subscribers,
   campaigns,
-  sequences: automatedSequences,
+  sequences: automatedSequencesObj,
 };
 
 export default newsletter;

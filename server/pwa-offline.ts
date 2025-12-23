@@ -8,8 +8,8 @@
  */
 
 import { db } from "./db";
-import { contents, siteSettings } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { contents, siteSettings, pushSubscriptions } from "@shared/schema";
+import { eq, desc, count } from "drizzle-orm";
 
 // ============================================================================
 // MANIFEST CONFIGURATION
@@ -638,10 +638,10 @@ console.log('[SW] Service Worker loaded');
 };
 
 // ============================================================================
-// PUSH NOTIFICATIONS
+// PUSH NOTIFICATIONS - Database-backed storage
 // ============================================================================
 
-export interface PushSubscription {
+export interface PushSubscriptionData {
   endpoint: string;
   keys: {
     p256dh: string;
@@ -649,33 +649,55 @@ export interface PushSubscription {
   };
   userId?: string;
   locale: string;
+  userAgent?: string;
   createdAt: Date;
 }
-
-// In-memory store (use database in production)
-const pushSubscriptions: Map<string, PushSubscription> = new Map();
 
 export const pushNotifications = {
   /**
    * Save push subscription
    */
   async subscribe(
-    subscription: Omit<PushSubscription, "createdAt">,
+    subscription: Omit<PushSubscriptionData, "createdAt">,
     userId?: string
   ): Promise<void> {
-    const key = subscription.endpoint;
-    pushSubscriptions.set(key, {
-      ...subscription,
-      userId,
-      createdAt: new Date(),
-    });
+    // Check if subscription already exists
+    const [existing] = await db.select()
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.endpoint, subscription.endpoint))
+      .limit(1);
+
+    if (existing) {
+      // Update existing subscription
+      await db.update(pushSubscriptions)
+        .set({
+          p256dhKey: subscription.keys.p256dh,
+          authKey: subscription.keys.auth,
+          userId: userId || null,
+          locale: subscription.locale,
+          userAgent: subscription.userAgent || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(pushSubscriptions.endpoint, subscription.endpoint));
+    } else {
+      // Create new subscription
+      await db.insert(pushSubscriptions).values({
+        endpoint: subscription.endpoint,
+        p256dhKey: subscription.keys.p256dh,
+        authKey: subscription.keys.auth,
+        userId: userId || null,
+        locale: subscription.locale,
+        userAgent: subscription.userAgent || null,
+      });
+    }
   },
 
   /**
    * Remove push subscription
    */
   async unsubscribe(endpoint: string): Promise<void> {
-    pushSubscriptions.delete(endpoint);
+    await db.delete(pushSubscriptions)
+      .where(eq(pushSubscriptions.endpoint, endpoint));
   },
 
   /**
@@ -696,7 +718,7 @@ export const pushNotifications = {
     // const webpush = require('web-push');
     // webpush.setVapidDetails(...)
 
-    let targets = [...pushSubscriptions.values()];
+    let targets = await db.select().from(pushSubscriptions);
 
     if (options?.targetUsers) {
       targets = targets.filter(s => s.userId && options.targetUsers!.includes(s.userId));
@@ -711,13 +733,17 @@ export const pushNotifications = {
     for (const subscription of targets) {
       try {
         // In production:
-        // await webpush.sendNotification(subscription, JSON.stringify({ title, body, ...options }));
+        // await webpush.sendNotification({
+        //   endpoint: subscription.endpoint,
+        //   keys: { p256dh: subscription.p256dhKey, auth: subscription.authKey }
+        // }, JSON.stringify({ title, body, ...options }));
         sent++;
       } catch (error) {
         failed++;
-        // Remove invalid subscriptions
+        // Remove invalid subscriptions (gone)
         if ((error as any).statusCode === 410) {
-          pushSubscriptions.delete(subscription.endpoint);
+          await db.delete(pushSubscriptions)
+            .where(eq(pushSubscriptions.endpoint, subscription.endpoint));
         }
       }
     }
@@ -734,7 +760,7 @@ export const pushNotifications = {
     withUser: number;
     anonymous: number;
   }> {
-    const all = [...pushSubscriptions.values()];
+    const all = await db.select().from(pushSubscriptions);
     const byLocale: Record<string, number> = {};
 
     for (const sub of all) {
@@ -747,6 +773,24 @@ export const pushNotifications = {
       withUser: all.filter(s => s.userId).length,
       anonymous: all.filter(s => !s.userId).length,
     };
+  },
+
+  /**
+   * Get all subscriptions (for admin)
+   */
+  async getAll(): Promise<PushSubscriptionData[]> {
+    const rows = await db.select().from(pushSubscriptions);
+    return rows.map(r => ({
+      endpoint: r.endpoint,
+      keys: {
+        p256dh: r.p256dhKey,
+        auth: r.authKey,
+      },
+      userId: r.userId || undefined,
+      locale: r.locale,
+      userAgent: r.userAgent || undefined,
+      createdAt: r.createdAt,
+    }));
   },
 };
 
