@@ -1399,9 +1399,17 @@ export default function ContentEditor() {
     },
     onSuccess: (result) => {
       setStatus("published");
+      // Invalidate admin content caches
       queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
       queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${contentType}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      // Invalidate public content caches so published content appears immediately
+      queryClient.invalidateQueries({ queryKey: ["/api/public/contents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/public/contents?includeExtensions=true"] });
+      // Invalidate specific slug cache if editing existing content
+      if (slug) {
+        queryClient.invalidateQueries({ queryKey: ["/api/contents/slug", slug] });
+      }
       toast({ title: "Published", description: "Your content is now live." });
       if (isNew && result?.id) {
         navigate(`/admin/${contentType}s/${result.id}`);
