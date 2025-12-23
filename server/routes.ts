@@ -4319,6 +4319,35 @@ export async function registerRoutes(
     }
   });
 
+  // AI Status endpoint - check if AI is available
+  app.get("/api/ai/status", async (req, res) => {
+    try {
+      const aiClient = getAIClient();
+      const hasOpenAI = !!getOpenAIClient();
+      const hasGemini = !!(process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.gemini);
+      const hasOpenRouter = !!(process.env.OPENROUTER_API_KEY || process.env.openrouterapi || process.env.OPENROUTERAPI);
+
+      res.json({
+        available: !!aiClient && !safeMode.aiDisabled,
+        provider: aiClient?.provider || null,
+        safeMode: safeMode.aiDisabled,
+        providers: {
+          openai: hasOpenAI,
+          gemini: hasGemini,
+          openrouter: hasOpenRouter,
+        },
+        features: {
+          textGeneration: !!aiClient,
+          imageGeneration: hasOpenAI, // DALL-E requires OpenAI
+          translation: !!aiClient,
+        }
+      });
+    } catch (error) {
+      console.error("Error checking AI status:", error);
+      res.status(500).json({ error: "Failed to check AI status" });
+    }
+  });
+
   app.post("/api/ai/generate", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     try {
       const aiClient = getAIClient();
