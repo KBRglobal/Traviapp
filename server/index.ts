@@ -86,12 +86,39 @@ app.use((req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  // Global error handler middleware
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    // Log the error
+    log(`Error: ${err.message || 'Unknown error'} - ${req.method} ${req.path}`, 'error');
+    if (process.env.NODE_ENV === 'development') {
+      console.error(err.stack);
+    }
 
-    res.status(status).json({ message });
-    throw err;
+    // Handle Zod validation errors
+    if (err.name === 'ZodError' && err.errors) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        details: err.errors.map((e: any) => ({
+          field: e.path?.join('.') || 'unknown',
+          message: e.message
+        }))
+      });
+    }
+
+    // Handle known operational errors
+    if (err.isOperational) {
+      return res.status(err.statusCode || err.status || 400).json({
+        error: err.message
+      });
+    }
+
+    // Get appropriate status code
+    const status = err.status || err.statusCode || 500;
+    const message = process.env.NODE_ENV === 'production' && status === 500
+      ? 'Internal Server Error'
+      : err.message || 'Internal Server Error';
+
+    res.status(status).json({ error: message });
   });
 
   // importantly only setup vite in development and after
