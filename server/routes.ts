@@ -2871,7 +2871,25 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Content not found" });
       }
 
-      // TEMPORARILY: Skip publish permission check for testing
+      // Check publish permission when changing status to "published" or "scheduled"
+      const newStatus = req.body.status;
+      const isPublishing = (newStatus === "published" || newStatus === "scheduled") &&
+                           existingContent.status !== "published" &&
+                           existingContent.status !== "scheduled";
+
+      if (isPublishing) {
+        const user = req.user as any;
+        const userId = user?.claims?.sub;
+        const dbUser = userId ? await storage.getUser(userId) : null;
+        const userRole = dbUser?.role || "viewer";
+        const permissions = ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS];
+
+        if (!permissions?.canPublish) {
+          return res.status(403).json({
+            error: "Permission denied: You do not have permission to publish content"
+          });
+        }
+      }
 
       // Auto-create version before update
       const latestVersion = await storage.getLatestVersionNumber(req.params.id);
@@ -6158,7 +6176,40 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     try {
       const contentToPublish = await storage.getScheduledContentToPublish();
       for (const content of contentToPublish) {
+        // Create version history before auto-publishing
+        const latestVersion = await storage.getLatestVersionNumber(content.id);
+        await storage.createContentVersion({
+          contentId: content.id,
+          versionNumber: latestVersion + 1,
+          title: content.title,
+          slug: content.slug,
+          metaTitle: content.metaTitle,
+          metaDescription: content.metaDescription,
+          primaryKeyword: content.primaryKeyword,
+          heroImage: content.heroImage,
+          heroImageAlt: content.heroImageAlt,
+          blocks: content.blocks || [],
+          changedBy: "system-scheduler",
+          changeNote: "Auto-published by scheduler",
+        });
+
         await storage.publishScheduledContent(content.id);
+
+        // Create audit log for auto-publish
+        await storage.createAuditLog({
+          userId: null,
+          userName: "System Scheduler",
+          userRole: "system",
+          actionType: "publish",
+          entityType: "content",
+          entityId: content.id,
+          description: `Auto-published scheduled content: ${content.title}`,
+          beforeState: { status: content.status, scheduledAt: content.scheduledAt },
+          afterState: { status: "published", publishedAt: new Date() },
+          ipAddress: "system",
+          userAgent: "scheduled-publishing-job",
+        });
+
         console.log(`Auto-published scheduled content: ${content.title} (ID: ${content.id})`);
       }
       if (contentToPublish.length > 0) {
