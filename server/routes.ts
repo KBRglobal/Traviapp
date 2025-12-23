@@ -1872,6 +1872,22 @@ export async function registerRoutes(
     res.status(statusCode).json(health);
   });
 
+  // Kubernetes liveness probe - is the process alive?
+  app.get("/api/health/live", (_req: Request, res: Response) => {
+    res.status(200).json({ status: "alive", timestamp: new Date().toISOString() });
+  });
+
+  // Kubernetes readiness probe - is the service ready to accept traffic?
+  app.get("/api/health/ready", async (_req: Request, res: Response) => {
+    try {
+      // Check database connectivity
+      await db.execute(sql`SELECT 1`);
+      res.status(200).json({ status: "ready", timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(503).json({ status: "not ready", error: "Database unavailable" });
+    }
+  });
+
   // System status endpoint - shows which services are configured
   app.get("/api/system-status", requireAuth, async (_req: Request, res: Response) => {
     const status = {

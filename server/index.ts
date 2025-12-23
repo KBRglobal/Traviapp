@@ -3,15 +3,16 @@ import compression from "compression";
 import { registerRoutes, autoProcessRssFeeds } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { securityHeaders } from "./security";
+import { securityHeaders, corsMiddleware, sanitizeInput } from "./security";
 
 const app = express();
 
 // Disable X-Powered-By header globally
 app.disable('x-powered-by');
 
-// Apply security headers to all requests
+// Apply security headers and CORS to all requests
 app.use(securityHeaders);
+app.use(corsMiddleware);
 
 // Enable gzip/deflate compression for all responses
 app.use(compression({
@@ -45,6 +46,9 @@ app.use(express.urlencoded({
   extended: false,
   limit: '10mb',  // Maximum URL-encoded body size
 }));
+
+// Sanitize incoming request data (remove null bytes, control chars)
+app.use(sanitizeInput);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

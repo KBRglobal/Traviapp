@@ -658,6 +658,136 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
 }
 
 // ============================================================================
+// CORS CONFIGURATION
+// ============================================================================
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5000',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL,
+  process.env.SITE_URL,
+].filter(Boolean) as string[];
+
+// In development, allow all Replit preview URLs
+const isReplitOrigin = (origin: string) => {
+  return origin.includes('.replit.dev') ||
+         origin.includes('.replit.app') ||
+         origin.includes('.repl.co');
+};
+
+/**
+ * CORS middleware with proper origin validation
+ */
+export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
+  const origin = req.headers.origin;
+
+  // Allow requests with no origin (mobile apps, curl, Postman, same-origin)
+  if (!origin) {
+    return next();
+  }
+
+  // Check if origin is allowed
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) ||
+                    (process.env.NODE_ENV !== 'production' && isReplitOrigin(origin));
+
+  if (isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count, X-Page, X-Limit');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
+  next();
+}
+
+// ============================================================================
+// INPUT SANITIZATION MIDDLEWARE
+// ============================================================================
+// HTML entity encoding for untrusted input
+function escapeHtml(str: string): string {
+  const htmlEscapes: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;',
+  };
+  return str.replace(/[&<>"'/]/g, char => htmlEscapes[char]);
+}
+
+// Remove null bytes and other dangerous characters
+function sanitizeString(value: string): string {
+  // Remove null bytes
+  let sanitized = value.replace(/\0/g, '');
+
+  // Remove other control characters (except newline and tab)
+  sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+  return sanitized.trim();
+}
+
+// Recursively sanitize an object
+function sanitizeObject(obj: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    // Skip sensitive fields that shouldn't be modified
+    if (['password', 'secret', 'token', 'apiKey', 'api_key'].includes(key.toLowerCase())) {
+      sanitized[key] = value;
+      continue;
+    }
+
+    if (typeof value === 'string') {
+      // For short strings (likely form fields), sanitize more strictly
+      if (value.length < 500) {
+        sanitized[key] = sanitizeString(value);
+      } else {
+        // For longer content (like body/content), just remove dangerous control chars
+        sanitized[key] = value.replace(/\0/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+      }
+    } else if (Array.isArray(value)) {
+      sanitized[key] = value.map(item => {
+        if (typeof item === 'string') return sanitizeString(item);
+        if (typeof item === 'object' && item !== null) return sanitizeObject(item as Record<string, unknown>);
+        return item;
+      });
+    } else if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizeObject(value as Record<string, unknown>);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+
+  return sanitized;
+}
+
+/**
+ * Middleware to sanitize incoming request body and query parameters
+ * Removes null bytes, control characters, and trims whitespace
+ */
+export function sanitizeInput(req: Request, res: Response, next: NextFunction) {
+  // Sanitize body
+  if (req.body && typeof req.body === 'object') {
+    req.body = sanitizeObject(req.body);
+  }
+
+  // Sanitize query parameters
+  if (req.query && typeof req.query === 'object') {
+    req.query = sanitizeObject(req.query as Record<string, unknown>) as typeof req.query;
+  }
+
+  next();
+}
+
+// ============================================================================
 // IP BLOCKING - Track and block suspicious IPs
 // ============================================================================
 interface SuspiciousIpEntry {
