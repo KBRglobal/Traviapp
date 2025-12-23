@@ -706,6 +706,22 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 
+// Rate Limits table - for persistent rate limiting (especially AI usage)
+export const rateLimits = pgTable("rate_limits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key").notNull().unique(),  // e.g., "ai_daily:user123"
+  count: integer("count").notNull().default(0),
+  resetAt: timestamp("reset_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_rate_limits_key").on(table.key),
+  index("IDX_rate_limits_reset").on(table.resetAt),
+]);
+
+export type RateLimit = typeof rateLimits.$inferSelect;
+export type InsertRateLimit = typeof rateLimits.$inferInsert;
+
 // Subscriber status enum for newsletter
 export const subscriberStatusEnum = pgEnum("subscriber_status", [
   "pending_confirmation",

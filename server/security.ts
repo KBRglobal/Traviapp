@@ -55,7 +55,9 @@ export const safeMode = {
 
 // ============================================================================
 // RATE LIMITING
-// In-memory rate limiting (for single-instance deployment)
+// Short-term rate limits use in-memory storage for performance.
+// For multi-instance deployments, replace with Redis.
+// Long-term limits (AI daily) use database persistence (see below).
 // ============================================================================
 interface RateLimitEntry {
   count: number;
@@ -139,18 +141,19 @@ export const rateLimiters = {
 };
 
 // ============================================================================
-// AI USAGE LIMITS (per user, per day)
+// AI USAGE LIMITS (per user, per day) - Database-backed for persistence
 // ============================================================================
 interface AiUsageEntry {
   count: number;
   resetTime: number;
 }
 
-const aiUsageStore = new Map<string, AiUsageEntry>();
+// In-memory cache for fast lookups (synced with DB)
+const aiUsageCache = new Map<string, AiUsageEntry>();
 
 const AI_DAILY_LIMIT = 100; // requests per user per day
 
-export function checkAiUsageLimit(req: Request, res: Response, next: NextFunction) {
+export async function checkAiUsageLimit(req: Request, res: Response, next: NextFunction) {
   if (safeMode.aiDisabled) {
     return res.status(503).json({
       error: "AI features are temporarily disabled",
@@ -165,11 +168,26 @@ export function checkAiUsageLimit(req: Request, res: Response, next: NextFunctio
 
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
-  const entry = aiUsageStore.get(userId);
+  const key = `ai_daily:${userId}`;
 
+  // Check in-memory cache first
+  let entry = aiUsageCache.get(key);
+
+  // If not in cache or expired, check database
   if (!entry || entry.resetTime < now) {
-    aiUsageStore.set(userId, { count: 1, resetTime: now + dayMs });
-    return next();
+    try {
+      const dbLimit = await storage.getRateLimit(key);
+      if (dbLimit && dbLimit.resetAt.getTime() > now) {
+        entry = { count: dbLimit.count, resetTime: dbLimit.resetAt.getTime() };
+        aiUsageCache.set(key, entry);
+      } else {
+        // Reset or new entry
+        entry = { count: 0, resetTime: now + dayMs };
+      }
+    } catch (err) {
+      console.error('[RateLimit] DB lookup failed, using cache:', err);
+      entry = entry || { count: 0, resetTime: now + dayMs };
+    }
   }
 
   if (entry.count >= AI_DAILY_LIMIT) {
@@ -180,7 +198,15 @@ export function checkAiUsageLimit(req: Request, res: Response, next: NextFunctio
     });
   }
 
+  // Increment count
   entry.count++;
+  aiUsageCache.set(key, entry);
+
+  // Persist to database asynchronously (don't block request)
+  storage.incrementRateLimit(key, new Date(entry.resetTime)).catch(err => {
+    console.error('[RateLimit] DB persist failed:', err);
+  });
+
   next();
 }
 
@@ -478,48 +504,89 @@ export interface AuditLogEntry {
   details?: Record<string, unknown>;
 }
 
-const auditLogStore: AuditLogEntry[] = [];
-const MAX_AUDIT_LOGS = 10000; // Keep last 10k entries in memory
+// Audit logs are now persisted to database via storage.createAuditLog()
+// In-memory store only used as fallback if DB write fails
+const auditLogFallback: AuditLogEntry[] = [];
+const MAX_FALLBACK_LOGS = 100;
 
-export function logAuditEvent(entry: Omit<AuditLogEntry, 'timestamp'>) {
+// Map audit actions to valid database enum values
+function mapActionToDbEnum(action: AuditLogEntry['action']): 'create' | 'update' | 'delete' | 'publish' | 'login' | 'logout' {
+  switch (action) {
+    case 'translate': return 'update';  // Translation is a form of update
+    case 'ai_generate': return 'create'; // AI generation creates new content
+    default: return action;
+  }
+}
+
+export async function logAuditEvent(entry: Omit<AuditLogEntry, 'timestamp'>) {
   const logEntry: AuditLogEntry = {
     ...entry,
     timestamp: new Date().toISOString(),
   };
 
-  auditLogStore.push(logEntry);
-
-  // Trim old entries
-  if (auditLogStore.length > MAX_AUDIT_LOGS) {
-    auditLogStore.splice(0, auditLogStore.length - MAX_AUDIT_LOGS);
-  }
-
-  // Console log for persistence (can be picked up by logging services)
+  // Console log for immediate visibility (with original action for debugging)
   console.log('[AUDIT]', JSON.stringify(logEntry));
+
+  try {
+    // Persist to database (map action to valid DB enum)
+    await storage.createAuditLog({
+      userId: entry.userId,
+      userName: entry.userEmail,
+      actionType: mapActionToDbEnum(entry.action),
+      entityType: entry.resourceType as any,
+      entityId: entry.resourceId,
+      description: `${entry.action} on ${entry.resourceType}${entry.resourceId ? ` (${entry.resourceId})` : ''}`,
+      ipAddress: entry.ip,
+      userAgent: entry.userAgent,
+      afterState: entry.details as Record<string, unknown>,
+    });
+  } catch (err) {
+    // Fallback to in-memory if DB fails
+    console.error('[AUDIT] Failed to persist to DB:', err);
+    auditLogFallback.push(logEntry);
+    if (auditLogFallback.length > MAX_FALLBACK_LOGS) {
+      auditLogFallback.splice(0, auditLogFallback.length - MAX_FALLBACK_LOGS);
+    }
+  }
 }
 
-export function getAuditLogs(options?: {
+export async function getAuditLogs(options?: {
   action?: string;
   resourceType?: string;
   userId?: string;
   limit?: number;
-}): AuditLogEntry[] {
-  let logs = [...auditLogStore];
+}): Promise<AuditLogEntry[]> {
+  try {
+    // Query from database
+    const dbLogs = await storage.getAuditLogs({
+      actionType: options?.action as any,
+      entityType: options?.resourceType,
+      userId: options?.userId,
+      limit: options?.limit || 100,
+    });
 
-  if (options?.action) {
-    logs = logs.filter(l => l.action === options.action);
+    // Convert to AuditLogEntry format
+    return dbLogs.map(log => ({
+      timestamp: log.timestamp.toISOString(),
+      action: log.actionType as AuditLogEntry['action'],
+      resourceType: log.entityType,
+      resourceId: log.entityId || undefined,
+      userId: log.userId || undefined,
+      userEmail: log.userName || undefined,
+      ip: log.ipAddress || 'unknown',
+      userAgent: log.userAgent || undefined,
+      details: log.afterState || undefined,
+    }));
+  } catch (err) {
+    console.error('[AUDIT] Failed to read from DB:', err);
+    // Return fallback logs if DB fails
+    let logs = [...auditLogFallback];
+    if (options?.action) logs = logs.filter(l => l.action === options.action);
+    if (options?.resourceType) logs = logs.filter(l => l.resourceType === options.resourceType);
+    if (options?.userId) logs = logs.filter(l => l.userId === options.userId);
+    logs.reverse();
+    return options?.limit ? logs.slice(0, options.limit) : logs;
   }
-  if (options?.resourceType) {
-    logs = logs.filter(l => l.resourceType === options.resourceType);
-  }
-  if (options?.userId) {
-    logs = logs.filter(l => l.userId === options.userId);
-  }
-
-  // Return newest first
-  logs.reverse();
-
-  return options?.limit ? logs.slice(0, options.limit) : logs;
 }
 
 // Middleware to auto-log requests

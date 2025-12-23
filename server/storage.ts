@@ -1,4 +1,4 @@
-import { eq, desc, sql, and, ilike, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, ilike, inArray, or } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
@@ -22,6 +22,7 @@ import {
   contentFingerprints,
   contentViews,
   auditLogs,
+  rateLimits,
   newsletterSubscribers,
   contentClusters,
   clusterMembers,
@@ -1485,6 +1486,51 @@ export class DatabaseStorage implements IStorage {
     return result[0]?.count || 0;
   }
 
+  // Rate Limits - for persistent rate limiting
+  async getRateLimit(key: string): Promise<{ count: number; resetAt: Date } | null> {
+    const [limit] = await db.select().from(rateLimits).where(eq(rateLimits.key, key));
+    if (!limit) return null;
+    return { count: limit.count, resetAt: limit.resetAt };
+  }
+
+  async incrementRateLimit(key: string, resetAt: Date): Promise<{ count: number; resetAt: Date }> {
+    // Use upsert with increment
+    const [result] = await db
+      .insert(rateLimits)
+      .values({ key, count: 1, resetAt, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: rateLimits.key,
+        set: {
+          count: sql`${rateLimits.count} + 1`,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return { count: result.count, resetAt: result.resetAt };
+  }
+
+  async resetRateLimit(key: string, resetAt: Date): Promise<void> {
+    await db
+      .insert(rateLimits)
+      .values({ key, count: 1, resetAt, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: rateLimits.key,
+        set: {
+          count: 1,
+          resetAt,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  async cleanupExpiredRateLimits(): Promise<number> {
+    const result = await db
+      .delete(rateLimits)
+      .where(sql`${rateLimits.resetAt} < NOW()`)
+      .returning();
+    return result.length;
+  }
+
   // Newsletter Subscribers
   async getNewsletterSubscribers(filters?: { status?: string }): Promise<NewsletterSubscriber[]> {
     if (filters?.status) {
@@ -1637,18 +1683,20 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  // Cluster Members
+  // Cluster Members - Fixed N+1 with batch query
   async getClusterMembers(clusterId: string): Promise<(ClusterMember & { content?: Content })[]> {
     const members = await db.select().from(clusterMembers)
       .where(eq(clusterMembers.clusterId, clusterId))
       .orderBy(clusterMembers.position);
-    
-    const result: (ClusterMember & { content?: Content })[] = [];
-    for (const member of members) {
-      const [content] = await db.select().from(contents).where(eq(contents.id, member.contentId));
-      result.push({ ...member, content });
-    }
-    return result;
+
+    if (members.length === 0) return [];
+
+    // Batch fetch all contents at once
+    const contentIds = [...new Set(members.map(m => m.contentId))];
+    const allContents = await db.select().from(contents).where(inArray(contents.id, contentIds));
+    const contentMap = new Map(allContents.map(c => [c.id, c]));
+
+    return members.map(member => ({ ...member, content: contentMap.get(member.contentId) }));
   }
 
   async addClusterMember(member: InsertClusterMember): Promise<ClusterMember> {
@@ -1714,29 +1762,33 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  // Content Tags
+  // Content Tags - Fixed N+1 with batch query
   async getContentTags(contentId: string): Promise<(ContentTag & { tag?: Tag })[]> {
     const cts = await db.select().from(contentTags)
       .where(eq(contentTags.contentId, contentId));
-    
-    const result: (ContentTag & { tag?: Tag })[] = [];
-    for (const ct of cts) {
-      const [tag] = await db.select().from(tags).where(eq(tags.id, ct.tagId));
-      result.push({ ...ct, tag });
-    }
-    return result;
+
+    if (cts.length === 0) return [];
+
+    // Batch fetch all tags at once
+    const tagIds = [...new Set(cts.map(ct => ct.tagId))];
+    const allTags = await db.select().from(tags).where(inArray(tags.id, tagIds));
+    const tagMap = new Map(allTags.map(t => [t.id, t]));
+
+    return cts.map(ct => ({ ...ct, tag: tagMap.get(ct.tagId) }));
   }
 
   async getTagContents(tagId: string): Promise<(ContentTag & { content?: Content })[]> {
     const cts = await db.select().from(contentTags)
       .where(eq(contentTags.tagId, tagId));
-    
-    const result: (ContentTag & { content?: Content })[] = [];
-    for (const ct of cts) {
-      const [content] = await db.select().from(contents).where(eq(contents.id, ct.contentId));
-      result.push({ ...ct, content });
-    }
-    return result;
+
+    if (cts.length === 0) return [];
+
+    // Batch fetch all contents at once
+    const contentIds = [...new Set(cts.map(ct => ct.contentId))];
+    const allContents = await db.select().from(contents).where(inArray(contents.id, contentIds));
+    const contentMap = new Map(allContents.map(c => [c.id, c]));
+
+    return cts.map(ct => ({ ...ct, content: contentMap.get(ct.contentId) }));
   }
 
   async addContentTag(contentTag: InsertContentTag): Promise<ContentTag> {
@@ -1778,17 +1830,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async bulkAddTagToContents(contentIds: string[], tagId: string): Promise<number> {
-    let added = 0;
-    for (const contentId of contentIds) {
-      const existing = await db.select().from(contentTags)
-        .where(and(eq(contentTags.contentId, contentId), eq(contentTags.tagId, tagId)));
-      if (existing.length === 0) {
-        await db.insert(contentTags).values({ contentId, tagId });
-        added++;
-      }
-    }
+    if (contentIds.length === 0) return 0;
+
+    // Batch check for existing tags
+    const existing = await db.select({ contentId: contentTags.contentId })
+      .from(contentTags)
+      .where(and(
+        inArray(contentTags.contentId, contentIds),
+        eq(contentTags.tagId, tagId)
+      ));
+
+    const existingSet = new Set(existing.map(e => e.contentId));
+    const toAdd = contentIds.filter(id => !existingSet.has(id));
+
+    if (toAdd.length === 0) return 0;
+
+    // Batch insert all new tags at once
+    await db.insert(contentTags).values(
+      toAdd.map(contentId => ({ contentId, tagId }))
+    );
+
     await this.updateTagUsageCount(tagId);
-    return added;
+    return toAdd.length;
   }
 
   async bulkRemoveTagFromContents(contentIds: string[], tagId: string): Promise<number> {
@@ -1868,35 +1931,28 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount ?? 0) > 0;
   }
 
-  // Media Usage Check
+  // Media Usage Check - Optimized with database-level search
   async checkMediaUsage(mediaUrl: string): Promise<{ isUsed: boolean; usedIn: { id: string; title: string; type: string }[] }> {
-    const usedIn: { id: string; title: string; type: string }[] = [];
-    
-    // Check heroImage
-    const heroMatches = await db
+    // Use database LIKE/ILIKE to search in JSON blocks - avoids full table scan in JS
+    // Combine heroImage check and blocks search in single queries
+    const results = await db
       .select({ id: contents.id, title: contents.title, type: contents.type })
       .from(contents)
-      .where(and(eq(contents.heroImage, mediaUrl), sql`${contents.deletedAt} IS NULL`));
-    
-    for (const match of heroMatches) {
-      usedIn.push({ id: match.id, title: match.title, type: match.type });
-    }
-    
-    // Check blocks JSON for image URLs
-    const allContent = await db
-      .select({ id: contents.id, title: contents.title, type: contents.type, blocks: contents.blocks })
-      .from(contents)
-      .where(sql`${contents.deletedAt} IS NULL`);
-    
-    for (const content of allContent) {
-      const blocksStr = JSON.stringify(content.blocks || []);
-      if (blocksStr.includes(mediaUrl)) {
-        if (!usedIn.find(u => u.id === content.id)) {
-          usedIn.push({ id: content.id, title: content.title, type: content.type });
-        }
-      }
-    }
-    
+      .where(and(
+        sql`${contents.deletedAt} IS NULL`,
+        or(
+          eq(contents.heroImage, mediaUrl),
+          sql`${contents.blocks}::text LIKE ${`%${mediaUrl}%`}`
+        )
+      ))
+      .limit(100); // Limit results to prevent huge responses
+
+    const usedIn = results.map(r => ({
+      id: r.id,
+      title: r.title,
+      type: r.type
+    }));
+
     return { isUsed: usedIn.length > 0, usedIn };
   }
 

@@ -7462,11 +7462,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // ADMIN SECURITY ENDPOINTS
   // ============================================================================
 
-  // Get audit logs (admin only)
-  app.get("/api/admin/audit-logs", requirePermission("canPublish"), auditLogReadOnly, (req, res) => {
+  // Get audit logs (admin only) - now reads from database
+  app.get("/api/admin/audit-logs", requirePermission("canPublish"), auditLogReadOnly, async (req, res) => {
     try {
       const { action, resourceType, userId, limit = 100 } = req.query;
-      const logs = getAuditLogs({
+      const logs = await getAuditLogs({
         action: action as string,
         resourceType: resourceType as string,
         userId: userId as string,
