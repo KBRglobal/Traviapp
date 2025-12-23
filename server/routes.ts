@@ -106,20 +106,42 @@ import {
 // Permission checking utilities (imported from security.ts for route-level checks)
 type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
 
-// Role checking middleware
+// Authenticated request type for route handlers
+// Use intersection type to avoid interface compatibility issues
+type AuthRequest = Request & {
+  isAuthenticated(): boolean;
+  user?: { claims?: { sub: string; email?: string; name?: string } };
+  session: Request["session"] & {
+    userId?: string;
+    save(callback?: (err?: unknown) => void): void;
+  };
+  login(user: unknown, callback: (err?: unknown) => void): void;
+};
+
+// Helper to safely get user ID from authenticated request (after isAuthenticated middleware)
+function getUserId(req: AuthRequest): string {
+  // After isAuthenticated middleware, user.claims.sub is guaranteed to exist
+  return req.user!.claims!.sub;
+}
+
+// Role checking middleware with proper Express types
 function requireRole(role: UserRole | UserRole[]) {
-  return async (req: any, res: any, next: any) => {
-    if (!req.isAuthenticated() || !req.user?.claims?.sub) {
-      return res.status(401).json({ error: "Not authenticated" });
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const authReq = req as Request & { isAuthenticated(): boolean; user?: { claims?: { sub?: string } } };
+    if (!authReq.isAuthenticated() || !authReq.user?.claims?.sub) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
     }
-    const userId = req.user.claims.sub;
+    const userId = authReq.user.claims.sub;
     const user = await storage.getUser(userId);
     if (!user) {
-      return res.status(401).json({ error: "User not found" });
+      res.status(401).json({ error: "User not found" });
+      return;
     }
     const allowedRoles = Array.isArray(role) ? role : [role];
     if (!allowedRoles.includes(user.role as UserRole)) {
-      return res.status(403).json({ error: "Insufficient permissions", requiredRole: role, currentRole: user.role });
+      res.status(403).json({ error: "Insufficient permissions", requiredRole: role, currentRole: user.role });
+      return;
     }
     next();
   };
@@ -2268,9 +2290,9 @@ export async function registerRoutes(
   });
 
   // Get current authenticated user
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -2283,9 +2305,9 @@ export async function registerRoutes(
   });
   
   // Get current user role and permissions
-  app.get("/api/user/permissions", isAuthenticated, async (req: any, res) => {
+  app.get("/api/user/permissions", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const user = await storage.getUser(userId);
       const userRole: UserRole = user?.role || "viewer";
       const permissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS.viewer;
@@ -2299,9 +2321,9 @@ export async function registerRoutes(
   // TOTP 2FA Routes
   
   // Get TOTP status for current user
-  app.get("/api/totp/status", isAuthenticated, async (req: any, res) => {
+  app.get("/api/totp/status", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -2317,9 +2339,9 @@ export async function registerRoutes(
   });
 
   // Setup TOTP - Generate secret and QR code
-  app.post("/api/totp/setup", isAuthenticated, async (req: any, res) => {
+  app.post("/api/totp/setup", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -2365,9 +2387,9 @@ export async function registerRoutes(
   });
 
   // Verify TOTP and enable 2FA
-  app.post("/api/totp/verify", isAuthenticated, async (req: any, res) => {
+  app.post("/api/totp/verify", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { code } = req.body;
       
       if (!code || typeof code !== "string") {
@@ -2413,9 +2435,9 @@ export async function registerRoutes(
   });
 
   // Disable TOTP
-  app.post("/api/totp/disable", isAuthenticated, async (req: any, res) => {
+  app.post("/api/totp/disable", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { code } = req.body;
       
       if (!code || typeof code !== "string") {
@@ -2454,9 +2476,9 @@ export async function registerRoutes(
   const TOTP_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
   // Validate TOTP code (requires authenticated session - used after OIDC login)
-  app.post("/api/totp/validate", isAuthenticated, async (req: any, res) => {
+  app.post("/api/totp/validate", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { code } = req.body;
       
       if (!code) {
@@ -2519,9 +2541,9 @@ export async function registerRoutes(
   const RECOVERY_LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
 
   // Validate recovery code (alternative to TOTP code)
-  app.post("/api/totp/validate-recovery", isAuthenticated, async (req: any, res) => {
+  app.post("/api/totp/validate-recovery", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { code } = req.body;
       
       if (!code) {
@@ -3339,7 +3361,7 @@ export async function registerRoutes(
   // ========== Site Settings API ==========
   
   // Get all settings
-  app.get("/api/settings", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+  app.get("/api/settings", isAuthenticated, requireRole("admin"), async (req: AuthRequest, res: Response) => {
     try {
       const settings = await storage.getSettings();
       res.json(settings);
@@ -3350,7 +3372,7 @@ export async function registerRoutes(
   });
 
   // Get settings by category (for frontend grouping)
-  app.get("/api/settings/grouped", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+  app.get("/api/settings/grouped", isAuthenticated, requireRole("admin"), async (req: AuthRequest, res: Response) => {
     try {
       const settings = await storage.getSettings();
       const grouped: Record<string, Record<string, unknown>> = {};
@@ -3368,7 +3390,7 @@ export async function registerRoutes(
   });
 
   // Update multiple settings at once
-  app.post("/api/settings/bulk", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+  app.post("/api/settings/bulk", isAuthenticated, requireRole("admin"), async (req: AuthRequest, res: Response) => {
     try {
       const { settings } = req.body;
       if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
@@ -3382,7 +3404,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: `Invalid categories: ${invalidCategories.join(", ")}` });
       }
       
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const updated: any[] = [];
       
       for (const [category, values] of Object.entries(settings)) {
@@ -3414,7 +3436,7 @@ export async function registerRoutes(
   // ========== Content Safety Check Endpoints ==========
 
   // Check for broken internal links
-  app.get("/api/content/broken-links", isAuthenticated, requireRole(["admin", "editor"]), async (req: any, res) => {
+  app.get("/api/content/broken-links", isAuthenticated, requireRole(["admin", "editor"]), async (req: AuthRequest, res: Response) => {
     try {
       const links = await storage.getInternalLinks();
       const brokenLinks: { linkId: string; sourceId: string | null; targetId: string | null; reason: string }[] = [];
@@ -3442,7 +3464,7 @@ export async function registerRoutes(
   });
 
   // Check content status before bulk delete
-  app.post("/api/content/bulk-delete-check", isAuthenticated, requireRole(["admin", "editor"]), async (req: any, res) => {
+  app.post("/api/content/bulk-delete-check", isAuthenticated, requireRole(["admin", "editor"]), async (req: AuthRequest, res: Response) => {
     try {
       const { ids } = req.body;
       if (!Array.isArray(ids)) {
@@ -4249,7 +4271,7 @@ export async function registerRoutes(
   });
 
   // Check if media is in use before delete
-  app.get("/api/media/:id/usage", isAuthenticated, async (req: any, res) => {
+  app.get("/api/media/:id/usage", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       const mediaFile = await storage.getMediaFile(id);
@@ -8850,6 +8872,59 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // DOC/DOCX UPLOAD (Import content directly from Word documents)
   // ============================================================================
   registerDocUploadRoutes(app);
+
+  // ============================================================================
+  // DATABASE BACKUP ROUTES (admin only)
+  // ============================================================================
+  app.get("/api/admin/backups", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { listBackups } = await import("./scripts/backup-db");
+      const backupDir = process.env.BACKUP_DIR || path.join(process.cwd(), "backups");
+      if (!fs.existsSync(backupDir)) {
+        return res.json({ backups: [], directory: backupDir });
+      }
+      const files = fs.readdirSync(backupDir)
+        .filter(f => f.startsWith("backup-") && f.endsWith(".sql.gz"))
+        .map(f => {
+          const stats = fs.statSync(path.join(backupDir, f));
+          return {
+            name: f,
+            size: stats.size,
+            createdAt: stats.mtime.toISOString(),
+          };
+        })
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      res.json({ backups: files, directory: backupDir });
+    } catch (error) {
+      console.error("Error listing backups:", error);
+      res.status(500).json({ error: "Failed to list backups" });
+    }
+  });
+
+  app.post("/api/admin/backups", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { triggerBackup } = await import("./lib/backup-scheduler");
+      const result = await triggerBackup();
+      if (result.success) {
+        res.json({ success: true, backup: result });
+      } else {
+        res.status(500).json({ error: result.error || "Backup failed" });
+      }
+    } catch (error) {
+      console.error("Error creating backup:", error);
+      res.status(500).json({ error: "Failed to create backup" });
+    }
+  });
+
+  app.get("/api/admin/backups/status", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { getSchedulerStatus } = await import("./lib/backup-scheduler");
+      res.json(getSchedulerStatus());
+    } catch (error) {
+      console.error("Error getting backup status:", error);
+      res.status(500).json({ error: "Failed to get backup status" });
+    }
+  });
 
   // ============================================================================
   // SECURE ERROR HANDLER (no stack traces to client)
