@@ -1770,6 +1770,154 @@ export async function registerRoutes(
     res.json(status);
   });
 
+  // ============================================================================
+  // ADMIN LOGS API - System logging for debugging
+  // ============================================================================
+
+  type LogLevel = "error" | "warning" | "info" | "debug";
+  type LogCategory = "system" | "ai" | "images" | "storage" | "rss" | "content" | "auth" | "api" | "seo" | "publishing";
+
+  interface LogEntry {
+    id: string;
+    timestamp: string;
+    level: LogLevel;
+    category: LogCategory;
+    message: string;
+    details?: Record<string, unknown>;
+  }
+
+  // In-memory log storage (last 1000 entries)
+  const systemLogs: LogEntry[] = [];
+  const MAX_LOGS = 1000;
+
+  // Helper to add a log entry
+  function addSystemLog(level: LogLevel, category: LogCategory, message: string, details?: Record<string, unknown>) {
+    const entry: LogEntry = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      level,
+      category,
+      message,
+      details,
+    };
+    systemLogs.unshift(entry);
+    if (systemLogs.length > MAX_LOGS) {
+      systemLogs.pop();
+    }
+    // Also log to console
+    const emoji = level === "error" ? "❌" : level === "warning" ? "⚠️" : level === "info" ? "ℹ️" : "🔍";
+    console.log(`${emoji} [${category.toUpperCase()}] ${message}`);
+  }
+
+  // Expose for use in other parts of the app
+  (global as any).addSystemLog = addSystemLog;
+
+  // Get logs
+  app.get("/api/admin/logs", requirePermission("canManageSettings"), async (req: Request, res: Response) => {
+    try {
+      const { category, level, search, limit = "200" } = req.query;
+
+      let filtered = [...systemLogs];
+
+      if (category && category !== "all") {
+        filtered = filtered.filter(log => log.category === category);
+      }
+      if (level && level !== "all") {
+        filtered = filtered.filter(log => log.level === level);
+      }
+      if (search && typeof search === "string") {
+        const searchLower = search.toLowerCase();
+        filtered = filtered.filter(log =>
+          log.message.toLowerCase().includes(searchLower) ||
+          JSON.stringify(log.details || {}).toLowerCase().includes(searchLower)
+        );
+      }
+
+      res.json({
+        logs: filtered.slice(0, parseInt(limit as string, 10)),
+        total: filtered.length,
+      });
+    } catch (error) {
+      console.error("Error fetching logs:", error);
+      res.status(500).json({ error: "Failed to fetch logs" });
+    }
+  });
+
+  // Get log stats
+  app.get("/api/admin/logs/stats", requirePermission("canManageSettings"), async (_req: Request, res: Response) => {
+    try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+      const stats = {
+        total: systemLogs.length,
+        byLevel: {
+          error: systemLogs.filter(l => l.level === "error").length,
+          warning: systemLogs.filter(l => l.level === "warning").length,
+          info: systemLogs.filter(l => l.level === "info").length,
+          debug: systemLogs.filter(l => l.level === "debug").length,
+        },
+        byCategory: {
+          system: systemLogs.filter(l => l.category === "system").length,
+          ai: systemLogs.filter(l => l.category === "ai").length,
+          images: systemLogs.filter(l => l.category === "images").length,
+          storage: systemLogs.filter(l => l.category === "storage").length,
+          rss: systemLogs.filter(l => l.category === "rss").length,
+          content: systemLogs.filter(l => l.category === "content").length,
+          auth: systemLogs.filter(l => l.category === "auth").length,
+          api: systemLogs.filter(l => l.category === "api").length,
+          seo: systemLogs.filter(l => l.category === "seo").length,
+          publishing: systemLogs.filter(l => l.category === "publishing").length,
+        },
+        recentErrors: systemLogs.filter(l => l.level === "error" && l.timestamp >= oneHourAgo).length,
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching log stats:", error);
+      res.status(500).json({ error: "Failed to fetch log stats" });
+    }
+  });
+
+  // Clear logs
+  app.delete("/api/admin/logs", requirePermission("canManageSettings"), async (_req: Request, res: Response) => {
+    try {
+      systemLogs.length = 0;
+      addSystemLog("info", "system", "Logs cleared by admin");
+      res.json({ success: true, message: "Logs cleared" });
+    } catch (error) {
+      console.error("Error clearing logs:", error);
+      res.status(500).json({ error: "Failed to clear logs" });
+    }
+  });
+
+  // Export logs
+  app.get("/api/admin/logs/export", requirePermission("canManageSettings"), async (req: Request, res: Response) => {
+    try {
+      const { category, level } = req.query;
+
+      let filtered = [...systemLogs];
+      if (category && category !== "all") {
+        filtered = filtered.filter(log => log.category === category);
+      }
+      if (level && level !== "all") {
+        filtered = filtered.filter(log => log.level === level);
+      }
+
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Disposition", `attachment; filename="logs-${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(filtered);
+    } catch (error) {
+      console.error("Error exporting logs:", error);
+      res.status(500).json({ error: "Failed to export logs" });
+    }
+  });
+
+  // Add initial system log
+  addSystemLog("info", "system", "Server started", {
+    nodeVersion: process.version,
+    platform: process.platform,
+  });
+
   // Serve AI-generated images from storage
   app.get("/api/ai-images/:filename", async (req: Request, res: Response) => {
     const filename = req.params.filename;
@@ -4142,11 +4290,13 @@ Format the response as JSON with the following structure:
   // Comprehensive AI Article Generator - Full Spec Implementation
   app.post("/api/ai/generate-article", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
+      addSystemLog("warning", "ai", "AI article generation blocked - safe mode enabled");
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
       const openai = getOpenAIClient();
       if (!openai) {
+        addSystemLog("error", "ai", "AI article generation failed - OPENAI_API_KEY not configured");
         return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
       }
 
@@ -4154,10 +4304,13 @@ Format the response as JSON with the following structure:
 
       // Accept either 'title' or 'topic' for flexibility
       const articleTitle = title || topic;
-      
+
       if (!articleTitle) {
+        addSystemLog("warning", "ai", "AI article generation failed - no title provided");
         return res.status(400).json({ error: "Title is required" });
       }
+
+      addSystemLog("info", "ai", `Starting AI article generation: "${articleTitle}"`, { inputType });
 
       // Build context based on input type
       let contextInfo = `Title: "${articleTitle}"`;
@@ -4677,17 +4830,20 @@ Output format:
   // AI Image Generation endpoint
   app.post("/api/ai/generate-images", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
+      addSystemLog("warning", "images", "AI image generation blocked - safe mode enabled");
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
       const { contentType, title, description, location, generateHero, generateContentImages: genContentImages, contentImageCount } = req.body;
 
       if (!contentType || !title) {
+        addSystemLog("warning", "images", "AI image generation failed - missing content type or title");
         return res.status(400).json({ error: "Content type and title are required" });
       }
 
       const validContentTypes = ['hotel', 'attraction', 'article', 'dining', 'district', 'transport', 'event', 'itinerary'];
       if (!validContentTypes.includes(contentType)) {
+        addSystemLog("warning", "images", `AI image generation failed - invalid content type: ${contentType}`);
         return res.status(400).json({ error: "Invalid content type" });
       }
 
@@ -4696,12 +4852,14 @@ Output format:
       const hasReplicate = !!process.env.REPLICATE_API_KEY;
 
       if (!hasOpenAI && !hasReplicate) {
-        console.error("[AI Images] No image generation API configured. Set OPENAI_API_KEY or REPLICATE_API_KEY.");
+        addSystemLog("error", "images", "AI image generation failed - no API key configured (need OPENAI_API_KEY or REPLICATE_API_KEY)");
         return res.status(503).json({
           error: "Image generation not configured. Please set OPENAI_API_KEY or REPLICATE_API_KEY in environment variables.",
           code: "API_NOT_CONFIGURED"
         });
       }
+
+      addSystemLog("info", "images", `Starting AI image generation for: "${title}"`, { contentType, generateHero, hasOpenAI, hasReplicate });
 
       const options: ImageGenerationOptions = {
         contentType,
