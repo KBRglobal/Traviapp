@@ -316,7 +316,11 @@ export function requireOwnContentOrPermission(permission: PermissionKey) {
 // ============================================================================
 const ALLOWED_ORIGINS = [
   process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : null,
+  process.env.FRONTEND_URL,
+  process.env.SITE_URL,
+  "http://localhost:5173",
   "http://localhost:5000",
+  "http://localhost:3000",
   "http://127.0.0.1:5000",
   "https://travi.world",
   "https://www.travi.world",
@@ -658,16 +662,8 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
 }
 
 // ============================================================================
-// CORS CONFIGURATION
+// CORS CONFIGURATION (uses ALLOWED_ORIGINS from CSRF section above)
 // ============================================================================
-const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'http://localhost:5000',
-  'http://localhost:3000',
-  process.env.FRONTEND_URL,
-  process.env.SITE_URL,
-].filter(Boolean) as string[];
-
 // In development, allow all Replit preview URLs
 const isReplitOrigin = (origin: string) => {
   return origin.includes('.replit.dev') ||
