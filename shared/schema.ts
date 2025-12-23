@@ -717,7 +717,7 @@ export const subscriberStatusEnum = pgEnum("subscriber_status", [
 
 // Consent log entry type
 export interface ConsentLogEntry {
-  action: "subscribe" | "confirm" | "unsubscribe" | "resubscribe";
+  action: "subscribe" | "confirm" | "unsubscribe" | "resubscribe" | "bounce" | "complaint";
   timestamp: string;
   ipAddress?: string;
   userAgent?: string;

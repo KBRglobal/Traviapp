@@ -288,7 +288,7 @@ export interface IStorage {
   getCampaigns(): Promise<NewsletterCampaign[]>;
   getCampaign(id: string): Promise<NewsletterCampaign | undefined>;
   createCampaign(campaign: InsertCampaign): Promise<NewsletterCampaign>;
-  updateCampaign(id: string, data: Partial<InsertCampaign>): Promise<NewsletterCampaign | undefined>;
+  updateCampaign(id: string, data: Partial<NewsletterCampaign>): Promise<NewsletterCampaign | undefined>;
   deleteCampaign(id: string): Promise<boolean>;
 
   // Campaign Events

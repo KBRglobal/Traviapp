@@ -6880,13 +6880,13 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         const subscriber = await storage.getNewsletterSubscriberByEmail(recipientEmail);
         if (subscriber && subscriber.status !== "bounced") {
           const consentEntry = {
-            action: "unsubscribe" as const,
+            action: "bounce" as const,
             timestamp: new Date().toISOString(),
             source: "resend_bounce",
             ipAddress: "webhook",
           };
           const consentLog = [...(subscriber.consentLog || []), consentEntry];
-          
+
           await storage.updateNewsletterSubscriber(subscriber.id, {
             status: "bounced",
             consentLog,
@@ -6895,19 +6895,19 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
           console.log(`[Resend Webhook] Subscriber marked as bounced: ${recipientEmail}`);
         }
       }
-      
+
       // Handle complaint events (spam reports) - mark subscriber as complained
       if (eventType === "email.complained") {
         const subscriber = await storage.getNewsletterSubscriberByEmail(recipientEmail);
         if (subscriber && subscriber.status !== "complained") {
           const consentEntry = {
-            action: "unsubscribe" as const,
+            action: "complaint" as const,
             timestamp: new Date().toISOString(),
             source: "resend_complaint",
             ipAddress: "webhook",
           };
           const consentLog = [...(subscriber.consentLog || []), consentEntry];
-          
+
           await storage.updateNewsletterSubscriber(subscriber.id, {
             status: "complained",
             consentLog,
@@ -7053,8 +7053,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       // Update campaign status to sending
       await storage.updateCampaign(id, {
         status: "sending",
-        // sentAt: new Date(), // Can't update via InsertCampaign - omitted from schema
-        // totalRecipients: subscribers.length, // Can't update via InsertCampaign - omitted from schema
+        sentAt: new Date(),
+        totalRecipients: subscribers.length,
       });
       
       console.log(`[Campaigns] Starting send for campaign ${campaign.name} to ${subscribers.length} subscribers`);
@@ -7154,7 +7154,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       // Update campaign with final stats
       await storage.updateCampaign(id, {
         status: failedCount === subscribers.length ? "failed" : "sent",
-        // totalSent: sentCount, // Can't update via InsertCampaign - omitted from schema
+        totalSent: sentCount,
       });
       
       console.log(`[Campaigns] Campaign ${campaign.name} completed: ${sentCount} sent, ${failedCount} failed`);
