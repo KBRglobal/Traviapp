@@ -722,6 +722,121 @@ export const rateLimits = pgTable("rate_limits", {
 export type RateLimit = typeof rateLimits.$inferSelect;
 export type InsertRateLimit = typeof rateLimits.$inferInsert;
 
+// Analytics event type enum
+export const analyticsEventTypeEnum = pgEnum("analytics_event_type", [
+  "page_view", "click", "scroll", "form_start", "form_submit", "form_abandon",
+  "cta_click", "outbound_link", "search", "filter", "share", "video_play",
+  "video_complete", "download", "copy", "print", "add_to_favorites",
+  "exit_intent", "conversion", "engagement"
+]);
+
+// Analytics Events table - for customer journey tracking
+export const analyticsEvents = pgTable("analytics_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  visitorId: varchar("visitor_id").notNull(),
+  eventType: analyticsEventTypeEnum("event_type").notNull(),
+  eventName: varchar("event_name"),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  pageUrl: text("page_url"),
+  pagePath: varchar("page_path"),
+  pageTitle: varchar("page_title"),
+  referrer: text("referrer"),
+  // Element details
+  elementId: varchar("element_id"),
+  elementClass: varchar("element_class"),
+  elementText: text("element_text"),
+  elementHref: text("element_href"),
+  // Position data
+  scrollDepth: integer("scroll_depth"),
+  viewportWidth: integer("viewport_width"),
+  viewportHeight: integer("viewport_height"),
+  clickX: integer("click_x"),
+  clickY: integer("click_y"),
+  // Session data
+  timeOnPage: integer("time_on_page"),
+  pageLoadTime: integer("page_load_time"),
+  isNewSession: boolean("is_new_session"),
+  isNewVisitor: boolean("is_new_visitor"),
+  // User context
+  userAgent: text("user_agent"),
+  deviceType: varchar("device_type"),
+  browser: varchar("browser"),
+  os: varchar("os"),
+  language: varchar("language"),
+  country: varchar("country"),
+  city: varchar("city"),
+  // Content context
+  contentId: varchar("content_id"),
+  contentType: varchar("content_type"),
+  contentTitle: varchar("content_title"),
+  // UTM parameters
+  utmSource: varchar("utm_source"),
+  utmMedium: varchar("utm_medium"),
+  utmCampaign: varchar("utm_campaign"),
+  utmTerm: varchar("utm_term"),
+  utmContent: varchar("utm_content"),
+  // Custom data
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+}, (table) => [
+  index("IDX_analytics_session").on(table.sessionId),
+  index("IDX_analytics_visitor").on(table.visitorId),
+  index("IDX_analytics_timestamp").on(table.timestamp),
+  index("IDX_analytics_event_type").on(table.eventType),
+  index("IDX_analytics_page_path").on(table.pagePath),
+]);
+
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type InsertAnalyticsEvent = typeof analyticsEvents.$inferInsert;
+
+// Two-Factor Authentication Secrets table
+export const twoFactorSecrets = pgTable("two_factor_secrets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  secret: varchar("secret").notNull(),
+  backupCodes: jsonb("backup_codes").$type<string[]>().notNull().default([]),
+  verified: boolean("verified").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_2fa_user").on(table.userId),
+]);
+
+export type TwoFactorSecret = typeof twoFactorSecrets.$inferSelect;
+export type InsertTwoFactorSecret = typeof twoFactorSecrets.$inferInsert;
+
+// A/B Test status enum
+export const abTestStatusEnum = pgEnum("ab_test_status", ["running", "completed", "paused"]);
+
+// A/B Test type enum
+export const abTestTypeEnum = pgEnum("ab_test_type", ["title", "heroImage", "metaDescription"]);
+
+// A/B Tests table for content testing
+export const abTests = pgTable("ab_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull(),
+  testType: abTestTypeEnum("test_type").notNull(),
+  variants: jsonb("variants").$type<Array<{
+    id: string;
+    value: string;
+    impressions: number;
+    clicks: number;
+    ctr: number;
+  }>>().notNull().default([]),
+  status: abTestStatusEnum("status").notNull().default("running"),
+  winner: varchar("winner"),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  endsAt: timestamp("ends_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_ab_tests_content").on(table.contentId),
+  index("IDX_ab_tests_status").on(table.status),
+]);
+
+export type ABTest = typeof abTests.$inferSelect;
+export type InsertABTest = typeof abTests.$inferInsert;
+
 // Subscriber status enum for newsletter
 export const subscriberStatusEnum = pgEnum("subscriber_status", [
   "pending_confirmation",

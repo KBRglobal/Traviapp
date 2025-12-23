@@ -8,10 +8,11 @@
  */
 
 import { db } from "./db";
-import { users, auditLogs } from "@shared/schema";
+import { users, auditLogs, twoFactorSecrets } from "@shared/schema";
 import { eq, desc, and, gte, lte, sql, like } from "drizzle-orm";
 import { cache } from "./cache";
 import * as crypto from "crypto";
+import { authenticator } from "otplib";
 
 // ============================================================================
 // RATE LIMITING
@@ -172,43 +173,51 @@ export const rateLimiter = {
 // TWO-FACTOR AUTHENTICATION
 // ============================================================================
 
-interface TwoFactorSecret {
-  secret: string;
-  backupCodes: string[];
-  verified: boolean;
-  createdAt: Date;
-}
-
-// In-memory 2FA store (use database in production)
-const twoFactorStore: Map<string, TwoFactorSecret> = new Map();
+// In-memory cache for fast lookups (synced with DB)
+const twoFactorCache: Map<string, { secret: string; backupCodes: string[]; verified: boolean }> = new Map();
 
 export const twoFactorAuth = {
   /**
-   * Generate TOTP secret for user
+   * Generate TOTP secret for user (RFC 6238 compliant)
+   * Persists to database for durability
    */
   async generateSecret(userId: string): Promise<{
     secret: string;
     qrCodeUrl: string;
     backupCodes: string[];
   }> {
-    // Generate random secret (would use speakeasy or otplib in production)
-    const secret = crypto.randomBytes(20).toString("hex").substring(0, 16).toUpperCase();
+    // Generate RFC 6238 compliant base32 secret using otplib
+    const secret = authenticator.generateSecret();
 
     // Generate backup codes
     const backupCodes = Array.from({ length: 10 }, () =>
       crypto.randomBytes(4).toString("hex").toUpperCase()
     );
 
-    // Store secret (not verified yet)
-    twoFactorStore.set(userId, {
-      secret,
-      backupCodes,
-      verified: false,
-      createdAt: new Date(),
-    });
+    // Store secret in database (upsert in case user regenerates)
+    await db
+      .insert(twoFactorSecrets)
+      .values({
+        userId,
+        secret,
+        backupCodes,
+        verified: false,
+      })
+      .onConflictDoUpdate({
+        target: twoFactorSecrets.userId,
+        set: {
+          secret,
+          backupCodes,
+          verified: false,
+          updatedAt: new Date(),
+        },
+      });
 
-    // Generate QR code URL (for apps like Google Authenticator)
-    const qrCodeUrl = `otpauth://totp/Travi:${userId}?secret=${secret}&issuer=Travi`;
+    // Update cache
+    twoFactorCache.set(userId, { secret, backupCodes, verified: false });
+
+    // Generate QR code URL using otplib (RFC 6238 compliant)
+    const qrCodeUrl = authenticator.keyuri(userId, "Travi CMS", secret);
 
     return { secret, qrCodeUrl, backupCodes };
   },
@@ -217,15 +226,20 @@ export const twoFactorAuth = {
    * Verify TOTP code and enable 2FA
    */
   async verifyAndEnable(userId: string, code: string): Promise<boolean> {
-    const stored = twoFactorStore.get(userId);
+    const stored = await this.getStoredSecret(userId);
     if (!stored) return false;
 
-    // Verify code (simplified - use speakeasy.totp.verify in production)
     const isValid = this.verifyCode(stored.secret, code);
 
     if (isValid) {
-      stored.verified = true;
-      twoFactorStore.set(userId, stored);
+      // Update database
+      await db
+        .update(twoFactorSecrets)
+        .set({ verified: true, updatedAt: new Date() })
+        .where(eq(twoFactorSecrets.userId, userId));
+
+      // Update cache
+      twoFactorCache.set(userId, { ...stored, verified: true });
 
       // Log 2FA enabled
       await auditLogger.log({
@@ -240,34 +254,52 @@ export const twoFactorAuth = {
   },
 
   /**
-   * Verify TOTP code
+   * Get stored 2FA secret (from cache or DB)
    */
-  verifyCode(secret: string, code: string): boolean {
-    // Simplified TOTP verification
-    // In production, use: speakeasy.totp.verify({ secret, encoding: 'base32', token: code })
-    const timeStep = Math.floor(Date.now() / 30000);
-    const expectedCode = this.generateCode(secret, timeStep);
-    const previousCode = this.generateCode(secret, timeStep - 1);
+  async getStoredSecret(userId: string): Promise<{ secret: string; backupCodes: string[]; verified: boolean } | null> {
+    // Check cache first
+    const cached = twoFactorCache.get(userId);
+    if (cached) return cached;
 
-    return code === expectedCode || code === previousCode;
+    // Fallback to database
+    const [stored] = await db
+      .select()
+      .from(twoFactorSecrets)
+      .where(eq(twoFactorSecrets.userId, userId));
+
+    if (!stored) return null;
+
+    // Update cache
+    const data = { secret: stored.secret, backupCodes: stored.backupCodes || [], verified: stored.verified };
+    twoFactorCache.set(userId, data);
+    return data;
   },
 
   /**
-   * Generate TOTP code (simplified)
+   * Verify TOTP code (RFC 6238 compliant)
    */
-  generateCode(secret: string, counter: number): string {
-    // Simplified - use proper HOTP/TOTP library in production
-    const hash = crypto.createHmac("sha1", secret)
-      .update(counter.toString())
-      .digest("hex");
-    return (parseInt(hash.substring(0, 8), 16) % 1000000).toString().padStart(6, "0");
+  verifyCode(secret: string, code: string): boolean {
+    try {
+      // Use otplib's authenticator for RFC 6238 compliant verification
+      // Includes time window tolerance for clock drift
+      return authenticator.verify({ token: code, secret });
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Generate current TOTP code (RFC 6238 compliant)
+   */
+  generateCode(secret: string): string {
+    return authenticator.generate(secret);
   },
 
   /**
    * Check if user has 2FA enabled
    */
   async isEnabled(userId: string): Promise<boolean> {
-    const stored = twoFactorStore.get(userId);
+    const stored = await this.getStoredSecret(userId);
     return stored?.verified === true;
   },
 
@@ -278,7 +310,7 @@ export const twoFactorAuth = {
     success: boolean;
     usedBackupCode?: boolean;
   }> {
-    const stored = twoFactorStore.get(userId);
+    const stored = await this.getStoredSecret(userId);
     if (!stored || !stored.verified) {
       return { success: false };
     }
@@ -292,13 +324,22 @@ export const twoFactorAuth = {
     const backupIndex = stored.backupCodes.indexOf(code.toUpperCase());
     if (backupIndex !== -1) {
       // Remove used backup code
-      stored.backupCodes.splice(backupIndex, 1);
-      twoFactorStore.set(userId, stored);
+      const newBackupCodes = [...stored.backupCodes];
+      newBackupCodes.splice(backupIndex, 1);
+
+      // Update database
+      await db
+        .update(twoFactorSecrets)
+        .set({ backupCodes: newBackupCodes, updatedAt: new Date() })
+        .where(eq(twoFactorSecrets.userId, userId));
+
+      // Update cache
+      twoFactorCache.set(userId, { ...stored, backupCodes: newBackupCodes });
 
       await auditLogger.log({
         action: "security:2fa_backup_code_used",
         userId,
-        details: { remainingBackupCodes: stored.backupCodes.length },
+        details: { remainingBackupCodes: newBackupCodes.length },
         severity: "warning",
       });
 
@@ -312,8 +353,16 @@ export const twoFactorAuth = {
    * Disable 2FA for user
    */
   async disable(userId: string, adminId?: string): Promise<boolean> {
-    const existed = twoFactorStore.has(userId);
-    twoFactorStore.delete(userId);
+    const stored = await this.getStoredSecret(userId);
+    const existed = !!stored;
+
+    // Delete from database
+    await db
+      .delete(twoFactorSecrets)
+      .where(eq(twoFactorSecrets.userId, userId));
+
+    // Remove from cache
+    twoFactorCache.delete(userId);
 
     if (existed) {
       await auditLogger.log({
@@ -331,15 +380,21 @@ export const twoFactorAuth = {
    * Regenerate backup codes
    */
   async regenerateBackupCodes(userId: string): Promise<string[] | null> {
-    const stored = twoFactorStore.get(userId);
+    const stored = await this.getStoredSecret(userId);
     if (!stored || !stored.verified) return null;
 
     const newCodes = Array.from({ length: 10 }, () =>
       crypto.randomBytes(4).toString("hex").toUpperCase()
     );
 
-    stored.backupCodes = newCodes;
-    twoFactorStore.set(userId, stored);
+    // Update database
+    await db
+      .update(twoFactorSecrets)
+      .set({ backupCodes: newCodes, updatedAt: new Date() })
+      .where(eq(twoFactorSecrets.userId, userId));
+
+    // Update cache
+    twoFactorCache.set(userId, { ...stored, backupCodes: newCodes });
 
     await auditLogger.log({
       action: "security:2fa_backup_codes_regenerated",

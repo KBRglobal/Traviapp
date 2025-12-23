@@ -5,6 +5,7 @@
 
 import { db } from "./db";
 import { sql, eq, desc, and, gte, lte, count, avg } from "drizzle-orm";
+import { analyticsEvents, type InsertAnalyticsEvent } from "@shared/schema";
 
 // ============================================================================
 // ANALYTICS EVENT TYPES
@@ -343,12 +344,51 @@ export const customerJourney = {
     eventStore.lastFlushed = new Date();
 
     try {
-      // Store events (in production, insert to database table)
-      // For now, we'll store in a JSON column or dedicated analytics table
-      console.log(`[Analytics] Flushed ${eventsToFlush.length} events`);
+      // Map events to database schema format
+      const dbEvents: InsertAnalyticsEvent[] = eventsToFlush.map(event => ({
+        sessionId: event.sessionId,
+        visitorId: event.visitorId,
+        eventType: event.eventType as InsertAnalyticsEvent['eventType'],
+        eventName: event.eventName,
+        timestamp: event.timestamp,
+        pageUrl: event.pageUrl,
+        pagePath: event.pagePath,
+        pageTitle: event.pageTitle,
+        referrer: event.referrer,
+        elementId: event.elementId,
+        elementClass: event.elementClass,
+        elementText: event.elementText,
+        elementHref: event.elementHref,
+        scrollDepth: event.scrollDepth,
+        viewportWidth: event.viewportWidth,
+        viewportHeight: event.viewportHeight,
+        clickX: event.clickX,
+        clickY: event.clickY,
+        timeOnPage: event.timeOnPage,
+        pageLoadTime: event.pageLoadTime,
+        isNewSession: event.isNewSession,
+        isNewVisitor: event.isNewVisitor,
+        userAgent: event.userAgent,
+        deviceType: event.deviceType,
+        browser: event.browser,
+        os: event.os,
+        language: event.language,
+        country: event.country,
+        city: event.city,
+        contentId: event.contentId,
+        contentType: event.contentType,
+        contentTitle: event.contentTitle,
+        utmSource: event.utmSource,
+        utmMedium: event.utmMedium,
+        utmCampaign: event.utmCampaign,
+        utmTerm: event.utmTerm,
+        utmContent: event.utmContent,
+        metadata: event.metadata as Record<string, unknown>,
+      }));
 
-      // TODO: Insert into analytics_events table when schema is added
-      // await db.insert(analyticsEvents).values(eventsToFlush);
+      // Batch insert events to database
+      await db.insert(analyticsEvents).values(dbEvents);
+      console.log(`[Analytics] Flushed ${eventsToFlush.length} events to database`);
 
       return eventsToFlush.length;
     } catch (error) {
@@ -360,7 +400,7 @@ export const customerJourney = {
   },
 
   /**
-   * Get page analytics summary
+   * Get page analytics summary from database
    */
   async getPageAnalytics(options: {
     startDate?: Date;
@@ -368,51 +408,118 @@ export const customerJourney = {
     pagePath?: string;
     limit?: number;
   }): Promise<PageViewSummary[]> {
-    // Aggregate from in-memory events
-    const pageViews = eventStore.events.filter(e => e.eventType === "page_view");
+    const conditions = [eq(analyticsEvents.eventType, "page_view")];
 
-    const grouped = new Map<string, AnalyticsEvent[]>();
-    for (const event of pageViews) {
-      const key = event.pagePath;
-      if (!grouped.has(key)) {
-        grouped.set(key, []);
-      }
-      grouped.get(key)!.push(event);
+    if (options.startDate) {
+      conditions.push(gte(analyticsEvents.timestamp, options.startDate));
+    }
+    if (options.endDate) {
+      conditions.push(lte(analyticsEvents.timestamp, options.endDate));
+    }
+    if (options.pagePath) {
+      conditions.push(eq(analyticsEvents.pagePath, options.pagePath));
     }
 
-    const summaries: PageViewSummary[] = [];
-    for (const [pagePath, events] of grouped) {
-      const uniqueVisitors = new Set(events.map(e => e.visitorId)).size;
-      const avgTimeOnPage = events.reduce((sum, e) => sum + (e.timeOnPage || 0), 0) / events.length;
-      const avgScrollDepth = events.reduce((sum, e) => sum + (e.scrollDepth || 0), 0) / events.length;
+    // Query database for aggregated stats
+    const results = await db
+      .select({
+        pagePath: analyticsEvents.pagePath,
+        pageTitle: analyticsEvents.pageTitle,
+        views: count(),
+        avgTimeOnPage: avg(analyticsEvents.timeOnPage),
+        avgScrollDepth: avg(analyticsEvents.scrollDepth),
+      })
+      .from(analyticsEvents)
+      .where(and(...conditions))
+      .groupBy(analyticsEvents.pagePath, analyticsEvents.pageTitle)
+      .orderBy(desc(count()))
+      .limit(options.limit || 50);
 
-      summaries.push({
-        pagePath,
-        pageTitle: events[0]?.pageTitle || pagePath,
-        views: events.length,
-        uniqueVisitors,
-        avgTimeOnPage: Math.round(avgTimeOnPage),
-        avgScrollDepth: Math.round(avgScrollDepth),
-        bounceRate: 0, // Calculate from sessions
-        exitRate: 0, // Calculate from sessions
-      });
-    }
+    // Also get unique visitors count for each page
+    const summaries: PageViewSummary[] = await Promise.all(
+      results.map(async (row) => {
+        const uniqueResult = await db
+          .select({ uniqueVisitors: sql<number>`COUNT(DISTINCT ${analyticsEvents.visitorId})::int` })
+          .from(analyticsEvents)
+          .where(and(
+            eq(analyticsEvents.eventType, "page_view"),
+            eq(analyticsEvents.pagePath, row.pagePath || "")
+          ));
 
-    return summaries.sort((a, b) => b.views - a.views).slice(0, options.limit || 50);
+        return {
+          pagePath: row.pagePath || "",
+          pageTitle: row.pageTitle || row.pagePath || "",
+          views: Number(row.views) || 0,
+          uniqueVisitors: uniqueResult[0]?.uniqueVisitors || 0,
+          avgTimeOnPage: Math.round(Number(row.avgTimeOnPage) || 0),
+          avgScrollDepth: Math.round(Number(row.avgScrollDepth) || 0),
+          bounceRate: 0, // TODO: Calculate from sessions
+          exitRate: 0, // TODO: Calculate from sessions
+        };
+      })
+    );
+
+    return summaries;
   },
 
   /**
-   * Get user journey for a specific visitor
+   * Get user journey for a specific visitor from database
    */
   async getUserJourney(visitorId: string, sessionId?: string): Promise<UserJourney | null> {
-    const events = eventStore.events.filter(e =>
-      e.visitorId === visitorId &&
-      (!sessionId || e.sessionId === sessionId)
-    );
+    const conditions = [eq(analyticsEvents.visitorId, visitorId)];
+    if (sessionId) {
+      conditions.push(eq(analyticsEvents.sessionId, sessionId));
+    }
 
-    if (events.length === 0) return null;
+    const dbEvents = await db
+      .select()
+      .from(analyticsEvents)
+      .where(and(...conditions))
+      .orderBy(analyticsEvents.timestamp);
 
-    events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    if (dbEvents.length === 0) return null;
+
+    // Map DB events to AnalyticsEvent type
+    const events: AnalyticsEvent[] = dbEvents.map(e => ({
+      sessionId: e.sessionId,
+      visitorId: e.visitorId,
+      eventType: e.eventType as EventType,
+      eventName: e.eventName || "",
+      timestamp: e.timestamp,
+      pageUrl: e.pageUrl || "",
+      pagePath: e.pagePath || "",
+      pageTitle: e.pageTitle || undefined,
+      referrer: e.referrer || undefined,
+      elementId: e.elementId || undefined,
+      elementClass: e.elementClass || undefined,
+      elementText: e.elementText || undefined,
+      elementHref: e.elementHref || undefined,
+      scrollDepth: e.scrollDepth || undefined,
+      viewportWidth: e.viewportWidth || undefined,
+      viewportHeight: e.viewportHeight || undefined,
+      clickX: e.clickX || undefined,
+      clickY: e.clickY || undefined,
+      timeOnPage: e.timeOnPage || undefined,
+      pageLoadTime: e.pageLoadTime || undefined,
+      isNewSession: e.isNewSession || undefined,
+      isNewVisitor: e.isNewVisitor || undefined,
+      userAgent: e.userAgent || undefined,
+      deviceType: e.deviceType as AnalyticsEvent['deviceType'],
+      browser: e.browser || undefined,
+      os: e.os || undefined,
+      language: e.language || undefined,
+      country: e.country || undefined,
+      city: e.city || undefined,
+      contentId: e.contentId || undefined,
+      contentType: e.contentType || undefined,
+      contentTitle: e.contentTitle || undefined,
+      utmSource: e.utmSource || undefined,
+      utmMedium: e.utmMedium || undefined,
+      utmCampaign: e.utmCampaign || undefined,
+      utmTerm: e.utmTerm || undefined,
+      utmContent: e.utmContent || undefined,
+      metadata: e.metadata as Record<string, any>,
+    }));
 
     const pageViews = events.filter(e => e.eventType === "page_view");
     const conversions = events.filter(e => e.eventType === "conversion");

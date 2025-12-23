@@ -470,59 +470,94 @@ export const webhooksService = {
     const targetWebhooks = await this.getByEvent(event);
 
     for (const webhook of targetWebhooks) {
-      const startTime = Date.now();
-      try {
-        // SSRF Protection: Validate webhook URL before sending
-        const ssrfCheck = validateUrlForSSRF(webhook.url);
-        if (!ssrfCheck.valid) {
-          console.warn(`[Webhook] SSRF blocked for webhook ${webhook.id}: ${ssrfCheck.error}`);
-          await db.insert(webhookLogs).values({
-            webhookId: webhook.id,
-            event,
-            payload,
-            responseStatus: 0,
-            error: `SSRF blocked: ${ssrfCheck.error}`,
-            duration: Date.now() - startTime,
-          });
-          continue;
-        }
+      // Fire and forget with retries (non-blocking)
+      this.sendWithRetry(webhook, event, payload);
+    }
+  },
 
-        const signature = crypto
-          .createHmac("sha256", webhook.secret || "")
-          .update(JSON.stringify(payload))
-          .digest("hex");
+  /**
+   * Send webhook with exponential backoff retry
+   * Retries up to 3 times with delays: 2s, 4s, 8s
+   */
+  async sendWithRetry(
+    webhook: Webhook,
+    event: string,
+    payload: Record<string, unknown>,
+    attempt: number = 1
+  ): Promise<void> {
+    const MAX_RETRIES = 3;
+    const startTime = Date.now();
 
-        const response = await fetch(ssrfCheck.sanitizedUrl!, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Webhook-Signature": signature,
-            "X-Webhook-Event": event,
-            ...(webhook.headers as Record<string, string> || {}),
-          },
-          body: JSON.stringify({ event, payload, timestamp: new Date().toISOString() }),
-        });
-
-        const responseBody = await response.text();
-        const duration = Date.now() - startTime;
-
+    try {
+      // SSRF Protection: Validate webhook URL before sending
+      const ssrfCheck = validateUrlForSSRF(webhook.url);
+      if (!ssrfCheck.valid) {
+        console.warn(`[Webhook] SSRF blocked for webhook ${webhook.id}: ${ssrfCheck.error}`);
         await db.insert(webhookLogs).values({
           webhookId: webhook.id,
           event,
           payload,
-          responseStatus: response.status,
-          responseBody: responseBody.substring(0, 1000),
-          duration,
+          responseStatus: 0,
+          error: `SSRF blocked: ${ssrfCheck.error}`,
+          duration: Date.now() - startTime,
         });
-      } catch (error) {
-        const duration = Date.now() - startTime;
-        await db.insert(webhookLogs).values({
-          webhookId: webhook.id,
-          event,
-          payload,
-          error: error instanceof Error ? error.message : String(error),
-          duration,
-        });
+        return;
+      }
+
+      const signature = crypto
+        .createHmac("sha256", webhook.secret || "")
+        .update(JSON.stringify(payload))
+        .digest("hex");
+
+      const response = await fetch(ssrfCheck.sanitizedUrl!, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Webhook-Signature": signature,
+          "X-Webhook-Event": event,
+          "X-Webhook-Attempt": String(attempt),
+          ...(webhook.headers as Record<string, string> || {}),
+        },
+        body: JSON.stringify({ event, payload, timestamp: new Date().toISOString() }),
+      });
+
+      const responseBody = await response.text();
+      const duration = Date.now() - startTime;
+
+      await db.insert(webhookLogs).values({
+        webhookId: webhook.id,
+        event,
+        payload,
+        responseStatus: response.status,
+        responseBody: responseBody.substring(0, 1000),
+        duration,
+      });
+
+      // Retry on 5xx errors (server errors)
+      if (response.status >= 500 && attempt < MAX_RETRIES) {
+        const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+        console.log(`[Webhook] Retry ${attempt} for ${webhook.id} after ${delay}ms (status: ${response.status})`);
+        setTimeout(() => this.sendWithRetry(webhook, event, payload, attempt + 1), delay);
+      }
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      await db.insert(webhookLogs).values({
+        webhookId: webhook.id,
+        event,
+        payload,
+        error: `Attempt ${attempt}: ${errorMsg}`,
+        duration,
+      });
+
+      // Retry on network errors
+      if (attempt < MAX_RETRIES) {
+        const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+        console.log(`[Webhook] Retry ${attempt} for ${webhook.id} after ${delay}ms (error: ${errorMsg})`);
+        setTimeout(() => this.sendWithRetry(webhook, event, payload, attempt + 1), delay);
+      } else {
+        console.error(`[Webhook] Max retries exceeded for ${webhook.id}: ${errorMsg}`);
       }
     }
   },

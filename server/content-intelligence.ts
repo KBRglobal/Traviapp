@@ -4,7 +4,7 @@
  */
 
 import { db } from "./db";
-import { contents, translations, tags, contentTags, siteSettings } from "@shared/schema";
+import { contents, translations, tags, contentTags, siteSettings, abTests as abTestsTable } from "@shared/schema";
 import { eq, desc, and, sql, like, or, ne, gt, lt, inArray } from "drizzle-orm";
 import { DUBAI_AREAS } from "./services/image-seo-service";
 
@@ -986,7 +986,8 @@ export const editorialToneGuard = {
 // A/B TESTING SYSTEM
 // ============================================================================
 
-interface ABTest {
+// Local interface matching DB schema
+interface ABTestLocal {
   id: string;
   contentId: string;
   testType: "title" | "heroImage" | "metaDescription";
@@ -998,49 +999,88 @@ interface ABTest {
     ctr: number;
   }>;
   status: "running" | "completed" | "paused";
-  winner?: string;
+  winner?: string | null;
   startedAt: Date;
-  endsAt?: Date;
+  endsAt?: Date | null;
 }
 
-// In-memory store for A/B tests (would be in DB in production)
-const abTests: Map<string, ABTest> = new Map();
+// In-memory cache for fast reads (synced with DB)
+const abTestsCache: Map<string, ABTestLocal> = new Map();
 
 export const abTesting = {
   /**
-   * Create a new A/B test
+   * Create a new A/B test (persisted to DB)
    */
   async createTest(
     contentId: string,
-    testType: ABTest["testType"],
+    testType: ABTestLocal["testType"],
     variants: string[]
-  ): Promise<ABTest> {
-    const testId = `ab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  ): Promise<ABTestLocal> {
+    const variantData = variants.map((value, i) => ({
+      id: `var-${i}`,
+      value,
+      impressions: 0,
+      clicks: 0,
+      ctr: 0,
+    }));
 
-    const test: ABTest = {
-      id: testId,
+    // Insert into database
+    const [dbTest] = await db.insert(abTestsTable).values({
       contentId,
       testType,
-      variants: variants.map((value, i) => ({
-        id: `var-${i}`,
-        value,
-        impressions: 0,
-        clicks: 0,
-        ctr: 0,
-      })),
+      variants: variantData,
       status: "running",
       startedAt: new Date(),
+    }).returning();
+
+    const test: ABTestLocal = {
+      id: dbTest.id,
+      contentId: dbTest.contentId,
+      testType: dbTest.testType,
+      variants: dbTest.variants || [],
+      status: dbTest.status,
+      winner: dbTest.winner,
+      startedAt: dbTest.startedAt,
+      endsAt: dbTest.endsAt,
     };
 
-    abTests.set(testId, test);
+    // Update cache
+    abTestsCache.set(test.id, test);
+    return test;
+  },
+
+  /**
+   * Get test by ID (from cache or DB)
+   */
+  async getTest(testId: string): Promise<ABTestLocal | null> {
+    // Check cache first
+    const cached = abTestsCache.get(testId);
+    if (cached) return cached;
+
+    // Fallback to database
+    const [dbTest] = await db.select().from(abTestsTable).where(eq(abTestsTable.id, testId));
+    if (!dbTest) return null;
+
+    const test: ABTestLocal = {
+      id: dbTest.id,
+      contentId: dbTest.contentId,
+      testType: dbTest.testType,
+      variants: dbTest.variants || [],
+      status: dbTest.status,
+      winner: dbTest.winner,
+      startedAt: dbTest.startedAt,
+      endsAt: dbTest.endsAt,
+    };
+
+    abTestsCache.set(testId, test);
     return test;
   },
 
   /**
    * Get variant for a visitor (random assignment)
    */
-  getVariant(testId: string, visitorId?: string): { variantId: string; value: string } | null {
-    const test = abTests.get(testId);
+  async getVariant(testId: string, visitorId?: string): Promise<{ variantId: string; value: string } | null> {
+    const test = await this.getTest(testId);
     if (!test || test.status !== "running") return null;
 
     // Simple random assignment (in production, would use consistent hashing based on visitorId)
@@ -1051,45 +1091,61 @@ export const abTesting = {
   },
 
   /**
-   * Record an impression
+   * Record an impression (persisted to DB)
    */
-  recordImpression(testId: string, variantId: string): void {
-    const test = abTests.get(testId);
+  async recordImpression(testId: string, variantId: string): Promise<void> {
+    const test = await this.getTest(testId);
     if (!test) return;
 
     const variant = test.variants.find(v => v.id === variantId);
     if (variant) {
       variant.impressions++;
-      variant.ctr = variant.clicks / variant.impressions;
+      variant.ctr = variant.impressions > 0 ? variant.clicks / variant.impressions : 0;
+
+      // Update database
+      await db.update(abTestsTable)
+        .set({ variants: test.variants, updatedAt: new Date() })
+        .where(eq(abTestsTable.id, testId));
+
+      // Update cache
+      abTestsCache.set(testId, test);
     }
   },
 
   /**
-   * Record a click
+   * Record a click (persisted to DB)
    */
-  recordClick(testId: string, variantId: string): void {
-    const test = abTests.get(testId);
+  async recordClick(testId: string, variantId: string): Promise<void> {
+    const test = await this.getTest(testId);
     if (!test) return;
 
     const variant = test.variants.find(v => v.id === variantId);
     if (variant) {
       variant.clicks++;
-      variant.ctr = variant.clicks / variant.impressions;
+      variant.ctr = variant.impressions > 0 ? variant.clicks / variant.impressions : 0;
+
+      // Update database
+      await db.update(abTestsTable)
+        .set({ variants: test.variants, updatedAt: new Date() })
+        .where(eq(abTestsTable.id, testId));
+
+      // Update cache
+      abTestsCache.set(testId, test);
     }
   },
 
   /**
    * Get test results
    */
-  getResults(testId: string): ABTest | null {
-    return abTests.get(testId) || null;
+  async getResults(testId: string): Promise<ABTestLocal | null> {
+    return this.getTest(testId);
   },
 
   /**
    * Determine winner (requires statistical significance)
    */
-  determineWinner(testId: string): { winner: string; confidence: number } | null {
-    const test = abTests.get(testId);
+  async determineWinner(testId: string): Promise<{ winner: string; confidence: number } | null> {
+    const test = await this.getTest(testId);
     if (!test) return null;
 
     // Simple winner determination (in production, would use proper statistics)
@@ -1112,6 +1168,15 @@ export const abTesting = {
     if (confidence >= 90) {
       test.winner = winner.id;
       test.status = "completed";
+
+      // Update database
+      await db.update(abTestsTable)
+        .set({ winner: winner.id, status: "completed", updatedAt: new Date() })
+        .where(eq(abTestsTable.id, testId));
+
+      // Update cache
+      abTestsCache.set(testId, test);
+
       return { winner: winner.value, confidence };
     }
 
@@ -1119,17 +1184,37 @@ export const abTesting = {
   },
 
   /**
-   * Get all running tests
+   * Get all running tests from database
    */
-  getRunningTests(): ABTest[] {
-    return Array.from(abTests.values()).filter(t => t.status === "running");
+  async getRunningTests(): Promise<ABTestLocal[]> {
+    const dbTests = await db.select().from(abTestsTable).where(eq(abTestsTable.status, "running"));
+    return dbTests.map(t => ({
+      id: t.id,
+      contentId: t.contentId,
+      testType: t.testType,
+      variants: t.variants || [],
+      status: t.status,
+      winner: t.winner,
+      startedAt: t.startedAt,
+      endsAt: t.endsAt,
+    }));
   },
 
   /**
-   * Get all tests for a content
+   * Get all tests for a content from database
    */
-  getTestsForContent(contentId: string): ABTest[] {
-    return Array.from(abTests.values()).filter(t => t.contentId === contentId);
+  async getTestsForContent(contentId: string): Promise<ABTestLocal[]> {
+    const dbTests = await db.select().from(abTestsTable).where(eq(abTestsTable.contentId, contentId));
+    return dbTests.map(t => ({
+      id: t.id,
+      contentId: t.contentId,
+      testType: t.testType,
+      variants: t.variants || [],
+      status: t.status,
+      winner: t.winner,
+      startedAt: t.startedAt,
+      endsAt: t.endsAt,
+    }));
   },
 };
 
