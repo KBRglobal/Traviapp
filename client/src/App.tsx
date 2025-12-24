@@ -9,7 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { useAnalytics } from "@/hooks/use-analytics";
-import { initGA } from "@/lib/analytics";
+import { initGA, initErrorTracking } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
 import { LocaleProvider } from "@/lib/i18n/LocaleRouter";
 import { FavoritesProvider } from "@/hooks/use-favorites";
@@ -440,9 +440,10 @@ function App() {
   const [location] = useLocation();
   const isAdminRoute = location.startsWith("/admin");
 
-  // Initialize Google Analytics on app load
+  // Initialize Google Analytics, Web Vitals, and error tracking on app load
   useEffect(() => {
     initGA();
+    initErrorTracking();
   }, []);
 
   // Track page views on route changes

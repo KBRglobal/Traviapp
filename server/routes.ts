@@ -3792,6 +3792,97 @@ export async function registerRoutes(
     }
   });
 
+  // Track affiliate link clicks (public endpoint)
+  app.post("/api/affiliate/track-click", async (req, res) => {
+    try {
+      const { linkId, provider, destination, contentId, referrer, userAgent } = req.body;
+
+      // Get visitor info
+      const visitorIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+      // Store the click in database
+      await db.execute(sql`
+        INSERT INTO affiliate_clicks (
+          link_id, provider, destination, content_id,
+          referrer, user_agent, ip_address, clicked_at
+        ) VALUES (
+          ${linkId || null}, ${provider || 'unknown'}, ${destination || ''}, ${contentId || null},
+          ${referrer || null}, ${userAgent || null}, ${String(visitorIp) || null}, ${new Date()}
+        )
+        ON CONFLICT DO NOTHING
+      `).catch(() => {
+        // Table might not exist yet, log to analytics instead
+        console.log(`[Affiliate Click] ${provider}: ${destination} from content ${contentId}`);
+      });
+
+      // Update click count on the affiliate link if linkId provided
+      if (linkId) {
+        await storage.updateAffiliateLink(linkId, {
+          clickCount: sql`click_count + 1` as any,
+          lastClickedAt: new Date(),
+        }).catch(() => {
+          // Ignore if link doesn't exist
+        });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking affiliate click:", error);
+      // Don't fail the request - just log the error
+      res.json({ success: true });
+    }
+  });
+
+  // Get affiliate analytics (admin only)
+  app.get("/api/affiliate/analytics", requirePermission("canAccessAffiliates"), async (req, res) => {
+    try {
+      const { days = 30 } = req.query;
+      const cutoff = new Date(Date.now() - parseInt(days as string) * 24 * 60 * 60 * 1000);
+
+      // Get all affiliate links with their stats
+      const links = await storage.getAffiliateLinks();
+
+      // Calculate totals
+      const totalClicks = links.reduce((sum, link) => sum + (link.clickCount || 0), 0);
+      const totalLinks = links.length;
+
+      // Group by provider
+      const byProvider: Record<string, { clicks: number; links: number }> = {};
+      for (const link of links) {
+        const provider = link.provider || 'other';
+        if (!byProvider[provider]) {
+          byProvider[provider] = { clicks: 0, links: 0 };
+        }
+        byProvider[provider].clicks += link.clickCount || 0;
+        byProvider[provider].links += 1;
+      }
+
+      // Top performing links
+      const topLinks = [...links]
+        .sort((a, b) => (b.clickCount || 0) - (a.clickCount || 0))
+        .slice(0, 10)
+        .map(link => ({
+          id: link.id,
+          anchor: link.anchor,
+          url: link.url,
+          provider: link.provider,
+          clicks: link.clickCount || 0,
+          lastClicked: link.lastClickedAt,
+        }));
+
+      res.json({
+        totalClicks,
+        totalLinks,
+        byProvider,
+        topLinks,
+        period: `${days} days`,
+      });
+    } catch (error) {
+      console.error("Error fetching affiliate analytics:", error);
+      res.status(500).json({ error: "Failed to fetch affiliate analytics" });
+    }
+  });
+
   app.get("/api/media", async (req, res) => {
     try {
       const files = await storage.getMediaFiles();
