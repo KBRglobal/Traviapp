@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense, useState } from "react";
 import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import { LocaleProvider } from "@/lib/i18n/LocaleRouter";
 import { FavoritesProvider } from "@/hooks/use-favorites";
 import { LiveEditProvider } from "@/components/live-edit";
+import { SearchModal } from "@/components/search/SearchModal";
 
 // Lazy load all pages for better performance
 const ComingSoon = lazy(() => import("@/pages/coming-soon"));
@@ -449,6 +450,7 @@ function PublicRouter() {
 function App() {
   const [location] = useLocation();
   const isAdminRoute = location.startsWith("/admin");
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // Initialize Google Analytics on app load
   useEffect(() => {
@@ -457,6 +459,19 @@ function App() {
 
   // Track page views on route changes
   useAnalytics();
+
+  // Global keyboard shortcut for search (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -473,6 +488,8 @@ function App() {
               )}
             </Suspense>
             <Toaster />
+            {/* Global Search Modal */}
+            <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
           </TooltipProvider>
         </FavoritesProvider>
       </LocaleProvider>
