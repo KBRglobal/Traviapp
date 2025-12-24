@@ -1296,6 +1296,30 @@ export const searchQueries = pgTable("search_queries", {
 export type SearchQuery = typeof searchQueries.$inferSelect;
 export type InsertSearchQuery = typeof searchQueries.$inferInsert;
 
+// Search Index table for full-text and semantic search
+export const searchIndex = pgTable("search_index", {
+  contentId: varchar("content_id").primaryKey(),
+  title: varchar("title").notNull(),
+  contentType: varchar("content_type").notNull(),
+  metaDescription: text("meta_description"),
+  searchableText: text("searchable_text"),
+  url: varchar("url").notNull(),
+  image: varchar("image"),
+  locale: varchar("locale").notNull().default("en"),
+  tags: text("tags"),
+  // Vector embedding for semantic search (1536 dimensions for text-embedding-3-small)
+  embedding: text("embedding"), // Will be stored as vector type in PostgreSQL
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_search_content_type").on(table.contentType),
+  index("IDX_search_locale").on(table.locale),
+  index("IDX_search_updated").on(table.updatedAt),
+]);
+
+export type SearchIndex = typeof searchIndex.$inferSelect;
+export type InsertSearchIndex = typeof searchIndex.$inferInsert;
+
 // Translation batch jobs table
 export const translationBatchJobs = pgTable("translation_batch_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
