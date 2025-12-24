@@ -2706,14 +2706,7 @@ export default function ContentEditor() {
             </Button>
             <Button 
               onClick={() => {
-                if (!selectedWriterId) {
-                  toast({ 
-                    title: "Writer Required", 
-                    description: "Please select an AI writer first", 
-                    variant: "destructive" 
-                  });
-                  return;
-                }
+                // Writer is optional - backend will auto-assign if not provided
                 aiGenerateMutation.mutate(aiGenerateInput);
               }} 
               disabled={aiGenerateMutation.isPending || !aiGenerateInput.trim()} 

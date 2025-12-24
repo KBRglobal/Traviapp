@@ -133,7 +133,7 @@ export function WriterSelector({
       )}
       
       <p className="text-xs text-muted-foreground mt-2">
-        Choose an AI writer whose expertise matches your content type
+        Choose an AI writer whose expertise matches your content (optional - auto-assigns if not selected)
       </p>
     </div>
   );

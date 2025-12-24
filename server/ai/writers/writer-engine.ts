@@ -20,7 +20,7 @@ export const writerEngine = {
     const { client: openai, provider } = aiClient;
     
     // Get writer details from database
-    const writer = await this.getWriterById(request.writerId);
+    const writer = await writerEngine.getWriterById(request.writerId);
     if (!writer) {
       throw new Error(`Writer not found: ${request.writerId}`);
     }
@@ -71,17 +71,22 @@ Format the response as JSON with the following structure:
    */
   async getWriterById(writerId: string): Promise<Writer | null> {
     // TODO: Query database for writer
-    // For now, return a default writer for testing
-    return {
-      id: writerId,
-      name: 'Default Writer',
-      expertise: 'general',
-      personality: 'Professional and informative',
-      writingStyle: 'Clear, engaging, SEO-optimized',
-      voicePrompt: 'You are a professional Dubai travel writer. Write engaging, SEO-optimized content that helps travelers plan their visit.',
-      isActive: true,
-      totalArticles: 0,
-      avgVoiceScore: 0
-    };
+    // For now, only return a writer if it matches our default
+    if (writerId === 'default-writer') {
+      return {
+        id: writerId,
+        name: 'Default Writer',
+        expertise: 'general',
+        personality: 'Professional and informative',
+        writingStyle: 'Clear, engaging, SEO-optimized',
+        voicePrompt: 'You are a professional Dubai travel writer. Write engaging, SEO-optimized content that helps travelers plan their visit.',
+        isActive: true,
+        totalArticles: 0,
+        avgVoiceScore: 0
+      };
+    }
+    
+    // Return null for non-existent writers
+    return null;
   }
 };

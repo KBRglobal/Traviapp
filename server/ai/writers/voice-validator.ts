@@ -26,9 +26,6 @@ export const voiceValidator = {
 
       const { client: openai, provider } = aiClient;
       
-      // Get writer details to compare against
-      // const writer = await getWriterById(writerId);
-      
       // Use AI to analyze voice consistency
       const response = await openai.chat.completions.create({
         model: provider === 'openai' ? 'gpt-4o-mini' : getModelForProvider(provider),
@@ -55,7 +52,13 @@ Respond with just a number between 0 and 100.`
       });
 
       const scoreText = response.choices[0].message.content?.trim() || '75';
-      const score = parseInt(scoreText) || 75;
+      const score = parseInt(scoreText, 10);
+      
+      // Validate the parsed result
+      if (isNaN(score)) {
+        console.warn('Voice validation returned non-numeric score:', scoreText);
+        return 75;
+      }
       
       return Math.max(0, Math.min(100, score));
     } catch (error) {
