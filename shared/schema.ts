@@ -382,6 +382,44 @@ export const mediaFiles = pgTable("media_files", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Page Layouts - Live Edit System
+export const pageLayoutStatusEnum = pgEnum("page_layout_status", ["draft", "published"]);
+
+export const pageLayouts = pgTable("page_layouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug").notNull().unique(), // e.g., "public-attractions", "district-downtown"
+  title: text("title"),
+  // Published components (what visitors see)
+  components: jsonb("components").$type<Array<{
+    id: string;
+    type: string;
+    order: number;
+    parentId?: string;
+    props: Record<string, any>;
+  }>>().default([]),
+  // Draft components (what editors are working on)
+  draftComponents: jsonb("draft_components").$type<Array<{
+    id: string;
+    type: string;
+    order: number;
+    parentId?: string;
+    props: Record<string, any>;
+  }>>(),
+  status: pageLayoutStatusEnum("status").default("draft"),
+  publishedAt: timestamp("published_at"),
+  draftUpdatedAt: timestamp("draft_updated_at"),
+  createdBy: integer("created_by").references(() => users.id),
+  updatedBy: integer("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPageLayoutSchema = createInsertSchema(pageLayouts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Image Engine - AI Generated Images Library
 export const imageSourceEnum = pgEnum("image_source", ["gemini", "openai", "freepik", "stock", "upload"]);
 export const imageRatingEnum = pgEnum("image_rating", ["like", "dislike", "skip"]);

@@ -29,6 +29,7 @@ import {
   insertTagSchema,
   newsletterSubscribers,
   contentRules,
+  pageLayouts,
   ROLE_PERMISSIONS,
   SUPPORTED_LOCALES,
   type UserRole,
@@ -8717,6 +8718,155 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     } catch (error) {
       console.error("Error fetching translation status:", error);
       res.status(500).json({ error: "Failed to fetch translation status" });
+    }
+  });
+
+  // ============================================================================
+  // PAGE LAYOUTS - Live Edit System
+  // ============================================================================
+
+  // Get layout for a page
+  app.get("/api/layouts/:slug", requireAuth, async (req, res) => {
+    try {
+      const { slug } = req.params;
+
+      const layout = await db
+        .select()
+        .from(pageLayouts)
+        .where(eq(pageLayouts.slug, slug))
+        .limit(1);
+
+      if (layout.length === 0) {
+        return res.status(404).json({ error: "Layout not found" });
+      }
+
+      res.json(layout[0]);
+    } catch (error) {
+      console.error("Error fetching layout:", error);
+      res.status(500).json({ error: "Failed to fetch layout" });
+    }
+  });
+
+  // Save draft layout
+  app.put("/api/layouts/:slug/draft", requireAuth, async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { components } = req.body;
+      const userId = req.session?.user?.id;
+
+      // Check if layout exists
+      const existing = await db
+        .select()
+        .from(pageLayouts)
+        .where(eq(pageLayouts.slug, slug))
+        .limit(1);
+
+      if (existing.length === 0) {
+        // Create new layout
+        const [newLayout] = await db
+          .insert(pageLayouts)
+          .values({
+            slug,
+            draftComponents: components,
+            status: "draft",
+            draftUpdatedAt: new Date(),
+            createdBy: userId,
+            updatedBy: userId,
+          })
+          .returning();
+
+        return res.json(newLayout);
+      }
+
+      // Update existing layout
+      const [updated] = await db
+        .update(pageLayouts)
+        .set({
+          draftComponents: components,
+          draftUpdatedAt: new Date(),
+          updatedBy: userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(pageLayouts.slug, slug))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      res.status(500).json({ error: "Failed to save draft" });
+    }
+  });
+
+  // Publish layout (copy draft to published)
+  app.post("/api/layouts/:slug/publish", requireAuth, async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const userId = req.session?.user?.id;
+
+      // Check user role - only admin/editor can publish
+      if (!req.session?.user || !["admin", "editor"].includes(req.session.user.role)) {
+        return res.status(403).json({ error: "Insufficient permissions to publish" });
+      }
+
+      const existing = await db
+        .select()
+        .from(pageLayouts)
+        .where(eq(pageLayouts.slug, slug))
+        .limit(1);
+
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "Layout not found" });
+      }
+
+      const layout = existing[0];
+
+      // Copy draft to published
+      const [published] = await db
+        .update(pageLayouts)
+        .set({
+          components: layout.draftComponents || [],
+          status: "published",
+          publishedAt: new Date(),
+          updatedBy: userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(pageLayouts.slug, slug))
+        .returning();
+
+      res.json(published);
+    } catch (error) {
+      console.error("Error publishing layout:", error);
+      res.status(500).json({ error: "Failed to publish layout" });
+    }
+  });
+
+  // Get published layout (for public viewing)
+  app.get("/api/public/layouts/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+
+      const layout = await db
+        .select({
+          slug: pageLayouts.slug,
+          title: pageLayouts.title,
+          components: pageLayouts.components,
+          publishedAt: pageLayouts.publishedAt,
+        })
+        .from(pageLayouts)
+        .where(and(
+          eq(pageLayouts.slug, slug),
+          eq(pageLayouts.status, "published")
+        ))
+        .limit(1);
+
+      if (layout.length === 0) {
+        return res.status(404).json({ error: "Layout not found" });
+      }
+
+      res.json(layout[0]);
+    } catch (error) {
+      console.error("Error fetching public layout:", error);
+      res.status(500).json({ error: "Failed to fetch layout" });
     }
   });
 
