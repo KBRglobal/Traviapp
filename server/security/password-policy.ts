@@ -123,13 +123,14 @@ export async function checkPasswordHistory(
 ): Promise<{ allowed: boolean; message?: string }> {
   try {
     // Check if storage has password history methods
-    if (typeof storage.getPasswordHistory !== 'function') {
+    const storageAny = storage as any;
+    if (typeof storageAny.getPasswordHistory !== 'function') {
       // Password history not yet implemented in storage, allow the change
       return { allowed: true };
     }
 
     // Get user's password history from storage
-    const history = await storage.getPasswordHistory(userId, PASSWORD_POLICY.historyCount);
+    const history = await storageAny.getPasswordHistory(userId, PASSWORD_POLICY.historyCount);
 
     // Check if new password matches any recent password
     for (const historyEntry of history) {
@@ -287,8 +288,9 @@ export async function addToPasswordHistory(
 ): Promise<void> {
   try {
     // Check if storage has password history methods
-    if (typeof storage.addPasswordHistory === 'function') {
-      await storage.addPasswordHistory(userId, passwordHash);
+    const storageAny = storage as any;
+    if (typeof storageAny.addPasswordHistory === 'function') {
+      await storageAny.addPasswordHistory(userId, passwordHash);
     }
     // If method doesn't exist, silently skip (backward compatibility)
   } catch (error) {
