@@ -217,7 +217,7 @@ export async function indexContent(contentId: string): Promise<void> {
         searchTerms,
       })
       .onConflictDoUpdate({
-        target: searchIndex.contentId,
+        target: [searchIndex.contentId],
         set: {
           title: content.title,
           content: plainText.substring(0, 5000),

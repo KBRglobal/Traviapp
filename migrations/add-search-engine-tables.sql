@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS "search_sessions" (
 );
 
 -- Create GIN indexes for full-text search on search_index
+-- Note: These indexes use the pre-computed tsvector columns for performance
+-- The tsvector columns should be populated by the application during indexing
 CREATE INDEX IF NOT EXISTS "IDX_search_index_title_vector" 
   ON "search_index" USING GIN (to_tsvector('english', "title"));
 

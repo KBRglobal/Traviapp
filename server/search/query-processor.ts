@@ -114,8 +114,8 @@ export function extractEntities(tokens: string[]): ProcessedQuery['entities'] {
   // Extract price range patterns (e.g., "under 500", "200-500", "AED 1000")
   const queryText = tokens.join(' ');
   
-  // Price patterns
-  const priceMatch = queryText.match(/(?:aed|usd|eur)?\s*(\d+)(?:\s*-\s*(\d+))?/i);
+  // Price patterns with word boundaries
+  const priceMatch = queryText.match(/\b(?:aed|usd|eur)?\s*(\d+)(?:\s*-\s*(\d+))?\b/i);
   if (priceMatch) {
     entities.priceRange = {};
     if (priceMatch[1]) {

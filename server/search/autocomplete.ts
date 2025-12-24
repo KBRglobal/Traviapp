@@ -206,7 +206,7 @@ export async function addTerm(
         locale: 'en',
       })
       .onConflictDoUpdate({
-        target: searchSuggestions.term,
+        target: [searchSuggestions.term],
         set: {
           displayText: metadata.displayText || term,
           type: metadata.type || 'content',
