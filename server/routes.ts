@@ -78,6 +78,13 @@ import {
   type ImageGenerationOptions
 } from "./ai-generator";
 import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-queue";
+import {
+  deviceFingerprint,
+  contextualAuth,
+  exponentialBackoff,
+  sessionSecurity,
+  threatIntelligence,
+} from "./enterprise-security";
 import { registerEnterpriseRoutes } from "./enterprise-routes";
 import { registerImageRoutes } from "./routes/image-routes";
 import { registerLogRoutes } from "./routes/log-routes";
@@ -2151,16 +2158,100 @@ export async function registerRoutes(
   const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
   const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
   
-  // Username/password login endpoint (with rate limiting)
-  app.post('/api/auth/login', rateLimiters.auth, async (req: Request, res: Response) => {
+  // Username/password login endpoint with enterprise security
+  // Includes: rate limiting, exponential backoff, device fingerprinting, contextual auth, threat intelligence
+  app.post('/api/auth/login', rateLimiters.auth, exponentialBackoff.middleware('auth:login'), async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
-      
+
       if (!username || !password) {
         return res.status(400).json({ error: "Username and password are required" });
       }
-      
+
       const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
+      // Enterprise Security: Threat Intelligence Check
+      const threatAnalysis = threatIntelligence.analyzeRequest(req);
+      if (threatAnalysis.isThreat && threatAnalysis.riskScore >= 70) {
+        return res.status(403).json({ error: "Request blocked for security reasons" });
+      }
+
+      // Enterprise Security: Extract device fingerprint
+      const fingerprint = deviceFingerprint.extractFromRequest(req);
+
+      // Helper function to complete login with enterprise security
+      const completeLogin = async (user: any) => {
+        // Enterprise Security: Evaluate contextual authentication
+        const geo = await contextualAuth.getGeoLocation(ip);
+        const contextResult = await contextualAuth.evaluateContext(user.id, ip, fingerprint, geo || undefined);
+
+        if (!contextResult.allowed) {
+          return res.status(403).json({
+            error: "Access denied based on security policy",
+            riskFactors: contextResult.riskFactors,
+            riskScore: contextResult.riskScore,
+          });
+        }
+
+        // Enterprise Security: Register device
+        const deviceInfo = await deviceFingerprint.registerDevice(user.id, fingerprint, ip);
+        const isNewDevice = deviceInfo.loginCount === 1;
+
+        // Check if MFA is required (new device, high risk, or user has 2FA enabled)
+        const requiresMfa = contextResult.requiresMfa || user.totpEnabled;
+
+        // Set up session
+        const sessionUser = {
+          claims: { sub: user.id },
+          id: user.id,
+        };
+
+        req.login(sessionUser, (err: any) => {
+          if (err) {
+            console.error("Login session error:", err);
+            return res.status(500).json({ error: "Failed to create session" });
+          }
+          req.session.save((saveErr: any) => {
+            if (saveErr) {
+              console.error("Session save error:", saveErr);
+              return res.status(500).json({ error: "Failed to save session" });
+            }
+
+            // Enterprise Security: Reset backoff on successful login
+            (res as any).resetBackoff?.();
+
+            // Log successful login with enterprise security details
+            logSecurityEvent({
+              action: 'login',
+              resourceType: 'auth',
+              userId: user.id,
+              userEmail: user.username || undefined,
+              ip,
+              userAgent: req.get('User-Agent'),
+              details: {
+                method: 'password',
+                role: user.role,
+                isNewDevice,
+                riskScore: contextResult.riskScore,
+                deviceTrusted: deviceInfo.isTrusted,
+                geo: geo ? { country: geo.country, city: geo.city } : null,
+              },
+            });
+
+            res.json({
+              success: true,
+              user,
+              requiresMfa,
+              isNewDevice,
+              riskScore: contextResult.riskScore,
+              securityContext: {
+                deviceTrusted: deviceInfo.isTrusted,
+                country: geo?.country,
+              },
+            });
+          });
+        });
+      };
 
       // Check for admin from environment first
       if (ADMIN_PASSWORD_HASH && username === ADMIN_USERNAME) {
@@ -2179,45 +2270,16 @@ export async function registerRoutes(
             });
           }
 
-          // Set up session
-          const sessionUser = {
-            claims: { sub: adminUser.id },
-            id: adminUser.id,
-          };
-
-          req.login(sessionUser, (err: any) => {
-            if (err) {
-              console.error("Login session error:", err);
-              return res.status(500).json({ error: "Failed to create session" });
-            }
-            req.session.save((saveErr: any) => {
-              if (saveErr) {
-                console.error("Session save error:", saveErr);
-                return res.status(500).json({ error: "Failed to save session" });
-              }
-
-              // Log successful login
-              logSecurityEvent({
-                action: 'login',
-                resourceType: 'auth',
-                userId: adminUser!.id,
-                userEmail: adminUser!.username || undefined,
-                ip,
-                userAgent: req.get('User-Agent'),
-                details: { method: 'password', role: adminUser!.role },
-              });
-
-              res.json({ success: true, user: adminUser });
-            });
-          });
+          await completeLogin(adminUser);
           return;
         }
       }
-      
+
       // Check database for user
       const user = await storage.getUserByUsername(username);
       if (!user || !user.passwordHash) {
         recordFailedAttempt(ip);
+        (res as any).recordFailure?.(); // Enterprise Security: Exponential backoff
         return res.status(401).json({ error: "Invalid username or password" });
       }
 
@@ -2229,40 +2291,11 @@ export async function registerRoutes(
       const passwordMatch = await bcrypt.compare(password, user.passwordHash);
       if (!passwordMatch) {
         recordFailedAttempt(ip);
+        (res as any).recordFailure?.(); // Enterprise Security: Exponential backoff
         return res.status(401).json({ error: "Invalid username or password" });
       }
-      
-      // Set up session
-      const sessionUser = {
-        claims: { sub: user.id },
-        id: user.id,
-      };
-      
-      req.login(sessionUser, (err: any) => {
-        if (err) {
-          console.error("Login session error:", err);
-          return res.status(500).json({ error: "Failed to create session" });
-        }
-        req.session.save((saveErr: any) => {
-          if (saveErr) {
-            console.error("Session save error:", saveErr);
-            return res.status(500).json({ error: "Failed to save session" });
-          }
 
-          // Log successful login
-          logSecurityEvent({
-            action: 'login',
-            resourceType: 'auth',
-            userId: user.id,
-            userEmail: user.username || undefined,
-            ip,
-            userAgent: req.get('User-Agent'),
-            details: { method: 'password', role: user.role },
-          });
-
-          res.json({ success: true, user });
-        });
-      });
+      await completeLogin(user);
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ error: "Login failed" });
@@ -2331,6 +2364,157 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching permissions:", error);
       res.status(500).json({ error: "Failed to fetch permissions" });
+    }
+  });
+
+  // ============================================================================
+  // ENTERPRISE SECURITY ENDPOINTS
+  // ============================================================================
+
+  // Get user's registered devices
+  app.get("/api/security/devices", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const devices = deviceFingerprint.getUserDevices(userId);
+      res.json({ devices });
+    } catch (error) {
+      console.error("Error fetching devices:", error);
+      res.status(500).json({ error: "Failed to fetch devices" });
+    }
+  });
+
+  // Trust a device
+  app.post("/api/security/devices/:fingerprintHash/trust", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const { fingerprintHash } = req.params;
+      const fingerprint = deviceFingerprint.extractFromRequest(req);
+
+      // Create a mock fingerprint with the hash to match
+      await deviceFingerprint.trustDevice(userId, fingerprint);
+      res.json({ success: true, message: "Device trusted" });
+    } catch (error) {
+      console.error("Error trusting device:", error);
+      res.status(500).json({ error: "Failed to trust device" });
+    }
+  });
+
+  // Revoke a device
+  app.delete("/api/security/devices/:fingerprintHash", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const { fingerprintHash } = req.params;
+
+      const revoked = await deviceFingerprint.revokeDevice(userId, fingerprintHash);
+      if (revoked) {
+        res.json({ success: true, message: "Device revoked" });
+      } else {
+        res.status(404).json({ error: "Device not found" });
+      }
+    } catch (error) {
+      console.error("Error revoking device:", error);
+      res.status(500).json({ error: "Failed to revoke device" });
+    }
+  });
+
+  // Get user's active sessions
+  app.get("/api/security/sessions", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const sessions = sessionSecurity.getUserSessions(userId);
+
+      // Return sessions without sensitive data
+      const safeSessions = sessions.map(s => ({
+        id: s.id.substring(0, 8) + "...",
+        createdAt: s.createdAt,
+        lastActivityAt: s.lastActivityAt,
+        expiresAt: s.expiresAt,
+        ipAddress: s.ipAddress,
+        isActive: s.isActive,
+        riskScore: s.riskScore,
+      }));
+
+      res.json({ sessions: safeSessions });
+    } catch (error) {
+      console.error("Error fetching sessions:", error);
+      res.status(500).json({ error: "Failed to fetch sessions" });
+    }
+  });
+
+  // Revoke all other sessions
+  app.post("/api/security/sessions/revoke-all", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const currentSessionId = (req.session as any)?.id;
+
+      const count = await sessionSecurity.revokeAllUserSessions(userId, currentSessionId);
+      res.json({ success: true, message: `${count} sessions revoked` });
+    } catch (error) {
+      console.error("Error revoking sessions:", error);
+      res.status(500).json({ error: "Failed to revoke sessions" });
+    }
+  });
+
+  // Get current security context
+  app.get("/api/security/context", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const fingerprint = deviceFingerprint.extractFromRequest(req);
+
+      // Get geo location
+      const geo = await contextualAuth.getGeoLocation(ip);
+
+      // Evaluate current context
+      const contextResult = await contextualAuth.evaluateContext(userId, ip, fingerprint, geo || undefined);
+
+      // Check device status
+      const isKnown = deviceFingerprint.isKnownDevice(userId, fingerprint);
+      const isTrusted = deviceFingerprint.isDeviceTrusted(userId, fingerprint);
+
+      // Get threat analysis
+      const threatAnalysis = threatIntelligence.analyzeRequest(req);
+
+      res.json({
+        ip: ip.substring(0, ip.lastIndexOf('.')) + '.xxx', // Mask last octet
+        geo: geo ? {
+          country: geo.country,
+          countryCode: geo.countryCode,
+          region: geo.region,
+          city: geo.city,
+          timezone: geo.timezone,
+        } : null,
+        device: {
+          isKnown,
+          isTrusted,
+          fingerprintHash: deviceFingerprint.generateHash(fingerprint).substring(0, 8) + '...',
+        },
+        riskAssessment: {
+          score: contextResult.riskScore,
+          factors: contextResult.riskFactors,
+          requiresMfa: contextResult.requiresMfa,
+        },
+        threatIndicators: threatAnalysis.indicators.length > 0 ? threatAnalysis.indicators.map(i => i.description) : [],
+      });
+    } catch (error) {
+      console.error("Error getting security context:", error);
+      res.status(500).json({ error: "Failed to get security context" });
+    }
+  });
+
+  // Admin: Get security dashboard summary (requires admin role)
+  app.get("/api/security/dashboard", isAuthenticated, requireRole("admin"), async (req: AuthRequest, res: Response) => {
+    try {
+      const blockedIps = getBlockedIps();
+
+      res.json({
+        blockedIps: blockedIps.length,
+        blockedIpList: blockedIps.slice(0, 10), // Top 10
+        recentSecurityEvents: await getAuditLogs({ resourceType: 'auth', limit: 20 }),
+      });
+    } catch (error) {
+      console.error("Error getting security dashboard:", error);
+      res.status(500).json({ error: "Failed to get security dashboard" });
     }
   });
 
