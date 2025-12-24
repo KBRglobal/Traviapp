@@ -257,8 +257,8 @@ export function findSimilarPhrases(
   const similarPhrases: string[] = [];
 
   // Split into sentences
-  const sentences1 = text1.match(/[^.!?]+[.!?]+/g) || [];
-  const sentences2 = text2.match(/[^.!?]+[.!?]+/g) || [];
+  const sentences1 = text1.match(/[^.!?\r\n]{1,1000}[.!?]+/g) || [];
+  const sentences2 = text2.match(/[^.!?\r\n]{1,1000}[.!?]+/g) || [];
 
   for (const sent1 of sentences1) {
     for (const sent2 of sentences2) {
