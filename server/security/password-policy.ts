@@ -178,15 +178,38 @@ interface LockoutEntry {
 // In-memory store for lockout tracking (use Redis for production)
 const lockoutStore = new Map<string, LockoutEntry>();
 
+// Store timer reference for cleanup
+let cleanupTimerId: NodeJS.Timeout | null = null;
+
 // Clean up expired entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  lockoutStore.forEach((entry, key) => {
-    if (entry.lockedUntil && entry.lockedUntil < now) {
-      lockoutStore.delete(key);
-    }
-  });
-}, 5 * 60 * 1000);
+function startCleanupTimer() {
+  if (cleanupTimerId) return; // Already started
+  
+  cleanupTimerId = setInterval(() => {
+    const now = Date.now();
+    lockoutStore.forEach((entry, key) => {
+      if (entry.lockedUntil && entry.lockedUntil < now) {
+        lockoutStore.delete(key);
+      }
+    });
+  }, 5 * 60 * 1000);
+
+  // Allow Node.js to exit even if timer is running
+  cleanupTimerId.unref();
+}
+
+// Start the cleanup timer
+startCleanupTimer();
+
+/**
+ * Cleanup function for graceful shutdown
+ */
+export function cleanupLockoutTimer(): void {
+  if (cleanupTimerId) {
+    clearInterval(cleanupTimerId);
+    cleanupTimerId = null;
+  }
+}
 
 /**
  * Record a failed login attempt

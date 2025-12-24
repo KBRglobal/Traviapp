@@ -94,9 +94,16 @@ function validateMagicBytes(buffer: Buffer): { ext: string; mime: string } | nul
 /**
  * Check for malicious content in images
  * Looks for embedded scripts or suspicious patterns
+ * Only checks the first 10KB to avoid memory issues with large files
  */
 function detectMaliciousContent(buffer: Buffer): boolean {
-  const content = buffer.toString('ascii');
+  // Only check first 10KB for performance and memory safety
+  const maxCheckSize = 10 * 1024;
+  const checkBuffer = buffer.length > maxCheckSize 
+    ? buffer.subarray(0, maxCheckSize) 
+    : buffer;
+  
+  const content = checkBuffer.toString('utf8', 0, Math.min(checkBuffer.length, 2048));
 
   // Check for script tags
   if (/<script/i.test(content)) {

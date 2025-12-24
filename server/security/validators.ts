@@ -79,17 +79,31 @@ export function sanitizeUrl(url: string): string | null {
     return null;
   }
 
-  // Additional checks for dangerous patterns
-  if (
-    trimmed.toLowerCase().includes('javascript:') ||
-    trimmed.toLowerCase().includes('data:') ||
-    trimmed.toLowerCase().includes('vbscript:') ||
-    trimmed.toLowerCase().includes('file:')
-  ) {
+  try {
+    // Parse the URL to check protocol directly
+    const parsedUrl = new URL(trimmed);
+    
+    // Only allow http and https protocols
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return null;
+    }
+
+    // Check for dangerous patterns in the URL string
+    const urlLower = trimmed.toLowerCase();
+    if (
+      urlLower.includes('javascript:') ||
+      urlLower.includes('data:') ||
+      urlLower.includes('vbscript:') ||
+      urlLower.includes('file:')
+    ) {
+      return null;
+    }
+
+    return trimmed;
+  } catch (error) {
+    // URL parsing failed
     return null;
   }
-
-  return trimmed;
 }
 
 /**
