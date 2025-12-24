@@ -141,6 +141,108 @@ const BATCH_SIZE = 100;
 const FLUSH_INTERVAL_MS = 30000; // 30 seconds
 
 // ============================================================================
+// SESSION ANALYTICS HELPERS
+// ============================================================================
+
+interface SessionMetrics {
+  sessionId: string;
+  visitorId: string;
+  startTime: Date;
+  endTime: Date;
+  duration: number; // in milliseconds
+  pageCount: number;
+  isBounce: boolean;
+  exitPage: string;
+  entryPage: string;
+}
+
+/**
+ * Calculate session metrics from events
+ */
+function calculateSessionMetrics(events: AnalyticsEvent[]): SessionMetrics[] {
+  const sessionMap = new Map<string, AnalyticsEvent[]>();
+
+  // Group events by sessionId
+  for (const event of events) {
+    if (!sessionMap.has(event.sessionId)) {
+      sessionMap.set(event.sessionId, []);
+    }
+    sessionMap.get(event.sessionId)!.push(event);
+  }
+
+  const sessions: SessionMetrics[] = [];
+
+  for (const [sessionId, sessionEvents] of sessionMap) {
+    // Sort events by timestamp
+    sessionEvents.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+    const pageViews = sessionEvents.filter(e => e.eventType === "page_view");
+    if (pageViews.length === 0) continue;
+
+    const startTime = sessionEvents[0].timestamp;
+    const endTime = sessionEvents[sessionEvents.length - 1].timestamp;
+    const duration = endTime.getTime() - startTime.getTime();
+
+    sessions.push({
+      sessionId,
+      visitorId: sessionEvents[0].visitorId,
+      startTime,
+      endTime,
+      duration,
+      pageCount: pageViews.length,
+      isBounce: pageViews.length === 1 && duration < 10000, // Single page view with < 10s duration
+      exitPage: pageViews[pageViews.length - 1].pagePath,
+      entryPage: pageViews[0].pagePath,
+    });
+  }
+
+  return sessions;
+}
+
+/**
+ * Calculate overall bounce rate from sessions
+ * Bounce = session with only 1 page view and duration < 10 seconds
+ */
+function calculateBounceRate(sessions: SessionMetrics[]): number {
+  if (sessions.length === 0) return 0;
+  const bounces = sessions.filter(s => s.isBounce).length;
+  return Math.round((bounces / sessions.length) * 100);
+}
+
+/**
+ * Calculate average session duration in seconds
+ */
+function calculateAvgSessionDuration(sessions: SessionMetrics[]): number {
+  if (sessions.length === 0) return 0;
+  const totalDuration = sessions.reduce((sum, s) => sum + s.duration, 0);
+  return Math.round(totalDuration / sessions.length / 1000); // Convert to seconds
+}
+
+/**
+ * Calculate exit rate for a specific page
+ * Exit Rate = number of exits from this page / total views of this page * 100
+ */
+function calculatePageExitRate(pagePath: string, sessions: SessionMetrics[], pageViews: AnalyticsEvent[]): number {
+  const totalViewsOfPage = pageViews.filter(pv => pv.pagePath === pagePath).length;
+  if (totalViewsOfPage === 0) return 0;
+
+  const exitsFromPage = sessions.filter(s => s.exitPage === pagePath).length;
+  return Math.round((exitsFromPage / totalViewsOfPage) * 100);
+}
+
+/**
+ * Calculate bounce rate for a specific page
+ * Page Bounce Rate = bounces that started on this page / entries to this page * 100
+ */
+function calculatePageBounceRate(pagePath: string, sessions: SessionMetrics[]): number {
+  const sessionsStartingOnPage = sessions.filter(s => s.entryPage === pagePath);
+  if (sessionsStartingOnPage.length === 0) return 0;
+
+  const bouncesFromPage = sessionsStartingOnPage.filter(s => s.isBounce).length;
+  return Math.round((bouncesFromPage / sessionsStartingOnPage.length) * 100);
+}
+
+// ============================================================================
 // CUSTOMER JOURNEY ANALYTICS SERVICE
 // ============================================================================
 
@@ -369,7 +471,11 @@ export const customerJourney = {
     limit?: number;
   }): Promise<PageViewSummary[]> {
     // Aggregate from in-memory events
-    const pageViews = eventStore.events.filter(e => e.eventType === "page_view");
+    const allEvents = eventStore.events;
+    const pageViews = allEvents.filter(e => e.eventType === "page_view");
+
+    // Calculate session metrics for bounce/exit rate
+    const sessions = calculateSessionMetrics(allEvents);
 
     const grouped = new Map<string, AnalyticsEvent[]>();
     for (const event of pageViews) {
@@ -386,6 +492,10 @@ export const customerJourney = {
       const avgTimeOnPage = events.reduce((sum, e) => sum + (e.timeOnPage || 0), 0) / events.length;
       const avgScrollDepth = events.reduce((sum, e) => sum + (e.scrollDepth || 0), 0) / events.length;
 
+      // Calculate page-specific bounce and exit rates
+      const bounceRate = calculatePageBounceRate(pagePath, sessions);
+      const exitRate = calculatePageExitRate(pagePath, sessions, pageViews);
+
       summaries.push({
         pagePath,
         pageTitle: events[0]?.pageTitle || pagePath,
@@ -393,8 +503,8 @@ export const customerJourney = {
         uniqueVisitors,
         avgTimeOnPage: Math.round(avgTimeOnPage),
         avgScrollDepth: Math.round(avgScrollDepth),
-        bounceRate: 0, // Calculate from sessions
-        exitRate: 0, // Calculate from sessions
+        bounceRate,
+        exitRate,
       });
     }
 
@@ -485,6 +595,86 @@ export const customerJourney = {
   },
 
   /**
+   * Get detailed real-time analytics
+   */
+  getRealTimeAnalytics(minutes: number = 5): {
+    activeUsers: number;
+    activeSessions: number;
+    pageViewsPerMinute: number;
+    activePages: Array<{ pagePath: string; pageTitle: string; visitors: number }>;
+    recentEvents: Array<{ type: string; page: string; timestamp: Date }>;
+    deviceBreakdown: Record<string, number>;
+    countryBreakdown: Record<string, number>;
+  } {
+    const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+    const recentEvents = eventStore.events.filter(e => e.timestamp >= cutoff);
+
+    // Active users (unique visitors)
+    const activeUsers = new Set(recentEvents.map(e => e.visitorId)).size;
+
+    // Active sessions
+    const activeSessions = new Set(recentEvents.map(e => e.sessionId)).size;
+
+    // Page views per minute
+    const pageViews = recentEvents.filter(e => e.eventType === "page_view").length;
+    const pageViewsPerMinute = Math.round((pageViews / minutes) * 10) / 10;
+
+    // Active pages with visitor count
+    const pageMap = new Map<string, { title: string; visitors: Set<string> }>();
+    for (const event of recentEvents.filter(e => e.eventType === "page_view")) {
+      if (!pageMap.has(event.pagePath)) {
+        pageMap.set(event.pagePath, {
+          title: event.pageTitle || event.pagePath,
+          visitors: new Set()
+        });
+      }
+      pageMap.get(event.pagePath)!.visitors.add(event.visitorId);
+    }
+    const activePages = Array.from(pageMap.entries())
+      .map(([pagePath, data]) => ({
+        pagePath,
+        pageTitle: data.title,
+        visitors: data.visitors.size,
+      }))
+      .sort((a, b) => b.visitors - a.visitors)
+      .slice(0, 10);
+
+    // Recent events (last 20)
+    const recentEventsList = recentEvents
+      .slice(-20)
+      .reverse()
+      .map(e => ({
+        type: e.eventType,
+        page: e.pageTitle || e.pagePath,
+        timestamp: e.timestamp,
+      }));
+
+    // Device breakdown
+    const deviceBreakdown: Record<string, number> = { desktop: 0, mobile: 0, tablet: 0 };
+    for (const event of recentEvents.filter(e => e.eventType === "page_view")) {
+      if (event.deviceType) {
+        deviceBreakdown[event.deviceType] = (deviceBreakdown[event.deviceType] || 0) + 1;
+      }
+    }
+
+    // Country breakdown (if available)
+    const countryBreakdown: Record<string, number> = {};
+    for (const event of recentEvents.filter(e => e.eventType === "page_view" && e.country)) {
+      countryBreakdown[event.country!] = (countryBreakdown[event.country!] || 0) + 1;
+    }
+
+    return {
+      activeUsers,
+      activeSessions,
+      pageViewsPerMinute,
+      activePages,
+      recentEvents: recentEventsList,
+      deviceBreakdown,
+      countryBreakdown,
+    };
+  },
+
+  /**
    * Get click heatmap data
    */
   async getClickHeatmap(pagePath: string): Promise<Array<{ x: number; y: number; count: number }>> {
@@ -515,6 +705,7 @@ export const customerJourney = {
     uniqueVisitors: number;
     avgSessionDuration: number;
     bounceRate: number;
+    totalSessions: number;
     topPages: PageViewSummary[];
     topReferrers: Array<{ referrer: string; visits: number }>;
     deviceBreakdown: Record<string, number>;
@@ -526,6 +717,11 @@ export const customerJourney = {
 
     const pageViews = recentEvents.filter(e => e.eventType === "page_view");
     const uniqueVisitors = new Set(recentEvents.map(e => e.visitorId)).size;
+
+    // Calculate session metrics for bounce rate and session duration
+    const sessions = calculateSessionMetrics(recentEvents);
+    const bounceRate = calculateBounceRate(sessions);
+    const avgSessionDuration = calculateAvgSessionDuration(sessions);
 
     // Device breakdown
     const deviceBreakdown: Record<string, number> = { desktop: 0, mobile: 0, tablet: 0 };
@@ -581,8 +777,9 @@ export const customerJourney = {
     return {
       totalPageViews: pageViews.length,
       uniqueVisitors,
-      avgSessionDuration: 0, // Calculate from sessions
-      bounceRate: 0, // Calculate from sessions
+      avgSessionDuration,
+      bounceRate,
+      totalSessions: sessions.length,
       topPages: await this.getPageAnalytics({ limit: 10 }),
       topReferrers,
       deviceBreakdown,

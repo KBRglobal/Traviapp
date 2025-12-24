@@ -265,7 +265,7 @@ export function registerCustomerJourneyRoutes(app: Express) {
 
   // -------------------------------------------------------------------------
   // GET /api/analytics/realtime
-  // Get real-time active users
+  // Get real-time active users (basic)
   // -------------------------------------------------------------------------
   app.get("/api/analytics/realtime", async (req: Request, res: Response) => {
     try {
@@ -274,6 +274,21 @@ export function registerCustomerJourneyRoutes(app: Express) {
       res.json({ activeUsers, minutes });
     } catch (error) {
       console.error("[Analytics] Realtime error:", error);
+      res.status(500).json({ error: "Failed to get realtime data" });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /api/analytics/realtime/detailed
+  // Get detailed real-time analytics
+  // -------------------------------------------------------------------------
+  app.get("/api/analytics/realtime/detailed", async (req: Request, res: Response) => {
+    try {
+      const minutes = parseInt(req.query.minutes as string) || 5;
+      const realtime = customerJourney.getRealTimeAnalytics(minutes);
+      res.json(realtime);
+    } catch (error) {
+      console.error("[Analytics] Realtime detailed error:", error);
       res.status(500).json({ error: "Failed to get realtime data" });
     }
   });
