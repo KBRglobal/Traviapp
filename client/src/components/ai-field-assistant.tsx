@@ -27,7 +27,7 @@ interface AIFieldAssistantProps {
     readonly contentType: string;
     readonly primaryKeyword?: string;
   };
-  readonly onApply: (value: string) => void;
+  onApply: (value: string) => void;
   readonly maxLength?: number;
   readonly disabled?: boolean;
 }
@@ -173,7 +173,7 @@ export function AIFieldAssistant({
               <div className="space-y-3">
                 {suggestions.map((suggestion, index) => (
                   <div
-                    key={`suggestion-${index}-${suggestion.substring(0, 20)}`}
+                    key={`suggestion-${fieldType}-${index}-${suggestion.length}-${suggestion.substring(0, 15).replace(/\s/g, '-')}`}
                     className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
