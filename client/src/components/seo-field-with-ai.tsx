@@ -169,7 +169,6 @@ interface HighlightItem {
   title: string;
   description: string;
   image?: string;
-  icon?: string;
 }
 
 interface SeoHighlightsFieldWithAIProps {
@@ -205,8 +204,7 @@ export function SeoHighlightsFieldWithAI({
     const newItem: HighlightItem = { 
       image: "", 
       title: "", 
-      description: "",
-      icon: "" 
+      description: ""
     };
     onHighlightsChange([...highlights, newItem]);
   };
@@ -242,8 +240,7 @@ export function SeoHighlightsFieldWithAI({
               return {
                 image: "",
                 title: title.trim(),
-                description: descParts.join(':').trim(),
-                icon: ""
+                description: descParts.join(':').trim()
               };
             });
             onHighlightsChange(newHighlights);
