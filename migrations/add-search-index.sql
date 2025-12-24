@@ -41,8 +41,12 @@ USING GIN (to_tsvector('english', searchable_text));
 
 -- Vector similarity search index using IVFFlat
 -- This significantly speeds up similarity searches
--- lists parameter: sqrt(total_rows) is a good starting point
--- Adjust lists based on your data size (100 for <100k rows, 1000 for ~1M rows)
+-- lists parameter: Number of centroids for IVFFlat clustering
+--   Recommended values based on data size:
+--   - 100 for <100,000 rows (good for most use cases)
+--   - 1,000 for ~1,000,000 rows
+--   - sqrt(total_rows) is a good rule of thumb
+--   - Adjust after deployment based on query performance
 CREATE INDEX IF NOT EXISTS idx_search_embedding 
 ON search_index 
 USING ivfflat (embedding vector_cosine_ops)

@@ -11,6 +11,28 @@ import { embeddings } from "./embeddings";
 
 export const searchIndexer = {
   /**
+   * Generate proper URL for content type
+   */
+  getContentUrl(type: string, contentId: string): string {
+    // Map content types to their URL paths
+    const urlMap: Record<string, string> = {
+      'attraction': '/attractions/',
+      'hotel': '/hotels/',
+      'article': '/articles/',
+      'dining': '/dining/',
+      'district': '/districts/',
+      'transport': '/transport/',
+      'event': '/events/',
+      'itinerary': '/itineraries/',
+      'landing_page': '/landing-pages/',
+      'case_study': '/case-studies/',
+      'off_plan': '/off-plan/',
+    };
+    
+    return (urlMap[type] || `/${type}s/`) + contentId;
+  },
+
+  /**
    * Index a single content item with embedding generation
    */
   async indexContent(contentId: string): Promise<void> {
@@ -60,7 +82,7 @@ export const searchIndexer = {
         ${content.type},
         ${content.metaDescription || null},
         ${searchableText},
-        ${'/' + content.type + 's/' + contentId},
+        ${this.getContentUrl(content.type, contentId)},
         ${content.heroImage || null},
         ${'en'},
         ${null},

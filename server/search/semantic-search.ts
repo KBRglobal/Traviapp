@@ -29,6 +29,27 @@ export interface SemanticResult {
 
 export const semanticSearch = {
   /**
+   * Generate proper URL for content type
+   */
+  getContentUrl(type: string, contentId: string): string {
+    const urlMap: Record<string, string> = {
+      'attraction': '/attractions/',
+      'hotel': '/hotels/',
+      'article': '/articles/',
+      'dining': '/dining/',
+      'district': '/districts/',
+      'transport': '/transport/',
+      'event': '/events/',
+      'itinerary': '/itineraries/',
+      'landing_page': '/landing-pages/',
+      'case_study': '/case-studies/',
+      'off_plan': '/off-plan/',
+    };
+    
+    return (urlMap[type] || `/${type}s/`) + contentId;
+  },
+
+  /**
    * Search by semantic similarity
    */
   async search(options: SemanticSearchOptions): Promise<SemanticResult[]> {
@@ -84,7 +105,7 @@ export const semanticSearch = {
       type: r.content_type,
       similarity: parseFloat(r.similarity),
       snippet: r.meta_description || "",
-      url: `/${r.content_type}s/${r.content_id}`,
+      url: this.getContentUrl(r.content_type, r.content_id),
       image: r.image,
     }));
 
@@ -127,7 +148,7 @@ export const semanticSearch = {
       type: r.content_type,
       similarity: parseFloat(r.similarity),
       snippet: r.meta_description || "",
-      url: `/${r.content_type}s/${r.content_id}`,
+      url: this.getContentUrl(r.content_type, r.content_id),
       image: r.image,
     }));
 
