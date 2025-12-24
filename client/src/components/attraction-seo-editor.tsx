@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { AIFieldAssistant } from "@/components/ai-field-assistant";
 import {
   Plus,
   Trash2,
@@ -45,9 +46,12 @@ interface AttractionSeoEditorProps {
     duration?: string;
   };
   onChange: (data: any) => void;
+  title?: string;
+  contentType?: string;
+  primaryKeyword?: string;
 }
 
-export function AttractionSeoEditor({ data, onChange }: AttractionSeoEditorProps) {
+export function AttractionSeoEditor({ data, onChange, title = "", contentType = "attraction", primaryKeyword = "" }: AttractionSeoEditorProps) {
   const updateField = (field: string, value: any) => {
     onChange({ ...data, [field]: value });
   };
@@ -161,7 +165,20 @@ export function AttractionSeoEditor({ data, onChange }: AttractionSeoEditorProps
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="introText">Brief Intro (3 sentences, ~60 words)</Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="introText">Brief Intro (3 sentences, ~60 words)</Label>
+              <AIFieldAssistant
+                fieldName="Brief Intro"
+                fieldType="intro"
+                currentValue={data.introText || ""}
+                contentContext={{
+                  title,
+                  contentType,
+                  primaryKeyword,
+                }}
+                onApply={(value) => updateField("introText", value)}
+              />
+            </div>
             <Textarea
               id="introText"
               value={data.introText || ""}
@@ -176,7 +193,20 @@ export function AttractionSeoEditor({ data, onChange }: AttractionSeoEditorProps
           </div>
 
           <div>
-            <Label htmlFor="expandedIntroText">Expanded Intro (~150 words)</Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="expandedIntroText">Expanded Intro (~150 words)</Label>
+              <AIFieldAssistant
+                fieldName="Expanded Intro"
+                fieldType="expandedIntro"
+                currentValue={data.expandedIntroText || ""}
+                contentContext={{
+                  title,
+                  contentType,
+                  primaryKeyword,
+                }}
+                onApply={(value) => updateField("expandedIntroText", value)}
+              />
+            </div>
             <Textarea
               id="expandedIntroText"
               value={data.expandedIntroText || ""}
@@ -259,8 +289,34 @@ export function AttractionSeoEditor({ data, onChange }: AttractionSeoEditorProps
       {/* Highlights */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">✨ Highlights (3-4)</CardTitle>
-          <CardDescription>What to expect - key experiences with images</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">✨ Highlights (3-4)</CardTitle>
+              <CardDescription>What to expect - key experiences with images</CardDescription>
+            </div>
+            <AIFieldAssistant
+              fieldName="Highlights"
+              fieldType="highlights"
+              currentValue={(data.highlights || []).map(h => `${h.title}: ${h.description}`).join('\n')}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={(value) => {
+                const lines = value.split('\n').filter(l => l.trim());
+                const newHighlights = lines.map(line => {
+                  const [title, ...descParts] = line.split(':');
+                  return {
+                    image: "",
+                    title: title.trim(),
+                    description: descParts.join(':').trim()
+                  };
+                });
+                updateField("highlights", newHighlights);
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {(data.highlights || []).map((item, index) => (
@@ -420,8 +476,26 @@ export function AttractionSeoEditor({ data, onChange }: AttractionSeoEditorProps
       {/* Visitor Tips */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">💡 Visitor Tips (5 bullets)</CardTitle>
-          <CardDescription>Essential tips for visitors</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">💡 Visitor Tips (5 bullets)</CardTitle>
+              <CardDescription>Essential tips for visitors</CardDescription>
+            </div>
+            <AIFieldAssistant
+              fieldName="Visitor Tips"
+              fieldType="tips"
+              currentValue={(data.visitorTips || []).join('\n')}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={(value) => {
+                const tips = value.split('\n').filter(t => t.trim());
+                updateField("visitorTips", tips);
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {(data.visitorTips || []).map((tip, index) => (

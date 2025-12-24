@@ -121,6 +121,7 @@ import { DiningSeoEditor } from "@/components/dining-seo-editor";
 import { DistrictSeoEditor } from "@/components/district-seo-editor";
 import { TranslationManager } from "@/components/translation-manager";
 import { AITitleSuggestions } from "@/components/ai-title-suggestions";
+import { AIFieldAssistant } from "@/components/ai-field-assistant";
 import { RelatedContentFinder } from "@/components/related-content-finder";
 import { BrokenLinkChecker } from "@/components/broken-link-checker";
 import { ReadingTimeCalculator } from "@/components/reading-time-calculator";
@@ -2530,24 +2531,36 @@ export default function ContentEditor() {
                       <AttractionSeoEditor
                         data={attractionSeoData}
                         onChange={setAttractionSeoData}
+                        title={title}
+                        contentType={contentType}
+                        primaryKeyword={primaryKeyword}
                       />
                     )}
                     {contentType === "hotel" && (
                       <HotelSeoEditor
                         data={hotelSeoData}
                         onChange={setHotelSeoData}
+                        title={title}
+                        contentType={contentType}
+                        primaryKeyword={primaryKeyword}
                       />
                     )}
                     {contentType === "dining" && (
                       <DiningSeoEditor
                         data={diningSeoData}
                         onChange={setDiningSeoData}
+                        title={title}
+                        contentType={contentType}
+                        primaryKeyword={primaryKeyword}
                       />
                     )}
                     {contentType === "district" && (
                       <DistrictSeoEditor
                         data={districtSeoData}
                         onChange={setDistrictSeoData}
+                        title={title}
+                        contentType={contentType}
+                        primaryKeyword={primaryKeyword}
                       />
                     )}
                   </TabsContent>
@@ -4845,9 +4858,23 @@ function PageSettingsPanel({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label>Meta Title</Label>
-            <span className={`text-xs ${metaTitle.length > 60 ? "text-destructive" : "text-muted-foreground"}`}>
-              {metaTitle.length}/60
-            </span>
+            <div className="flex items-center gap-2">
+              <AIFieldAssistant
+                fieldName="Meta Title"
+                fieldType="metaTitle"
+                currentValue={metaTitle}
+                contentContext={{
+                  title,
+                  contentType,
+                  primaryKeyword,
+                }}
+                onApply={onMetaTitleChange}
+                maxLength={60}
+              />
+              <span className={`text-xs ${metaTitle.length > 60 ? "text-destructive" : "text-muted-foreground"}`}>
+                {metaTitle.length}/60
+              </span>
+            </div>
           </div>
           <Input
             value={metaTitle}
@@ -4859,9 +4886,23 @@ function PageSettingsPanel({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label>Meta Description</Label>
-            <span className={`text-xs ${metaDescription.length > 155 ? "text-destructive" : "text-muted-foreground"}`}>
-              {metaDescription.length}/155
-            </span>
+            <div className="flex items-center gap-2">
+              <AIFieldAssistant
+                fieldName="Meta Description"
+                fieldType="metaDescription"
+                currentValue={metaDescription}
+                contentContext={{
+                  title,
+                  contentType,
+                  primaryKeyword,
+                }}
+                onApply={onMetaDescriptionChange}
+                maxLength={155}
+              />
+              <span className={`text-xs ${metaDescription.length > 155 ? "text-destructive" : "text-muted-foreground"}`}>
+                {metaDescription.length}/155
+              </span>
+            </div>
           </div>
           <Textarea
             value={metaDescription}
@@ -4872,7 +4913,20 @@ function PageSettingsPanel({
           />
         </div>
         <div className="space-y-2">
-          <Label>Primary Keyword</Label>
+          <div className="flex items-center justify-between">
+            <Label>Primary Keyword</Label>
+            <AIFieldAssistant
+              fieldName="Primary Keyword"
+              fieldType="keyword"
+              currentValue={primaryKeyword}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={onPrimaryKeywordChange}
+            />
+          </div>
           <Input
             value={primaryKeyword}
             onChange={(e) => onPrimaryKeywordChange(e.target.value)}

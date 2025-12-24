@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { AIFieldAssistant } from "@/components/ai-field-assistant";
 import { Plus, Trash2, Star, Building, Users, MapPin } from "lucide-react";
 import type {
   QuickInfoItem,
@@ -39,9 +40,12 @@ interface HotelSeoEditorProps {
     trustSignals?: string[];
   };
   onChange: (data: any) => void;
+  title?: string;
+  contentType?: string;
+  primaryKeyword?: string;
 }
 
-export function HotelSeoEditor({ data, onChange }: HotelSeoEditorProps) {
+export function HotelSeoEditor({ data, onChange, title = "", contentType = "hotel", primaryKeyword = "" }: HotelSeoEditorProps) {
   const updateField = (field: string, value: any) => {
     onChange({ ...data, [field]: value });
   };
@@ -163,7 +167,32 @@ export function HotelSeoEditor({ data, onChange }: HotelSeoEditorProps) {
       {/* Highlights */}
       <Card>
         <CardHeader>
-          <CardTitle>Hotel Highlights</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Hotel Highlights</CardTitle>
+            <AIFieldAssistant
+              fieldName="Highlights"
+              fieldType="highlights"
+              currentValue={(data.highlights || []).map(h => `${h.title}: ${h.description}`).join('\n')}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={(value) => {
+                const lines = value.split('\n').filter(l => l.trim());
+                const newHighlights = lines.map(line => {
+                  const [title, ...descParts] = line.split(':');
+                  return {
+                    image: "",
+                    title: title.trim(),
+                    description: descParts.join(':').trim(),
+                    icon: ""
+                  };
+                });
+                updateField("highlights", newHighlights);
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {(data.highlights || []).map((item, index) => (
@@ -311,7 +340,23 @@ export function HotelSeoEditor({ data, onChange }: HotelSeoEditorProps) {
       {/* Traveler Tips */}
       <Card>
         <CardHeader>
-          <CardTitle>Traveler Tips</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Traveler Tips</CardTitle>
+            <AIFieldAssistant
+              fieldName="Traveler Tips"
+              fieldType="tips"
+              currentValue={(data.travelerTips || []).join('\n')}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={(value) => {
+                const tips = value.split('\n').filter(t => t.trim());
+                updateField("travelerTips", tips);
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {(data.travelerTips || []).map((tip, index) => (
