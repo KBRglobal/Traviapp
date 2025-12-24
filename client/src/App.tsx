@@ -105,6 +105,7 @@ const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
 const PublicContentViewer = lazy(() => import("@/pages/public-content-viewer"));
+const PublicDocs = lazy(() => import("@/pages/public-docs"));
 
 const RssFeeds = lazy(() => import("@/pages/rss-feeds"));
 const AffiliateLinks = lazy(() => import("@/pages/affiliate-links"));
@@ -387,6 +388,9 @@ const publicRoutes = [
   { path: "/shopping", component: PublicShopping },
   // News portal
   { path: "/news", component: PublicNews },
+  // Documentation
+  { path: "/docs", component: PublicDocs },
+  { path: "/docs/:path*", component: PublicDocs },
   // District pages
   { path: "/districts", component: DistrictsGateway },
   { path: "/districts/downtown-dubai", component: DistrictDowntownDubai },
