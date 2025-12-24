@@ -12,7 +12,7 @@ import type { Express, Request, Response } from "express";
 import { searchEngine } from "./search/index";
 import { autocomplete } from "./search/autocomplete";
 import { searchIndexer } from "./search/indexer";
-import { requirePermission } from "./security";
+import { requirePermission, rateLimiters } from "./security";
 
 export function registerSearchRoutes(app: Express) {
   /**
@@ -131,6 +131,7 @@ export function registerSearchRoutes(app: Express) {
    */
   app.post(
     "/api/search/reindex",
+    rateLimiters.contentWrite,
     requirePermission("canManageSettings"),
     async (req: Request, res: Response) => {
       try {
@@ -165,6 +166,7 @@ export function registerSearchRoutes(app: Express) {
    */
   app.post(
     "/api/search/rebuild-autocomplete",
+    rateLimiters.contentWrite,
     requirePermission("canManageSettings"),
     async (req: Request, res: Response) => {
       try {
@@ -199,6 +201,7 @@ export function registerSearchRoutes(app: Express) {
    */
   app.get(
     "/api/search/analytics",
+    rateLimiters.analytics,
     requirePermission("canViewAnalytics"),
     async (req: Request, res: Response) => {
       try {
