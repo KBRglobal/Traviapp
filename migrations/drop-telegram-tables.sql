@@ -1,5 +1,5 @@
 -- Migration: Remove unused Telegram tables
--- These tables are archived and no longer used (see ARCHIVED_CODE_v1.0.md)
+-- These tables were part of archived Telegram bot functionality that is no longer used
 -- Using CASCADE to handle any foreign key constraints
 
 DROP TABLE IF EXISTS telegram_conversations CASCADE;
