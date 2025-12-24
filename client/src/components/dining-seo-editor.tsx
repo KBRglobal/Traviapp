@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AIFieldAssistant } from "@/components/ai-field-assistant";
 import { Plus, Trash2, Utensils, DollarSign, MapPin } from "lucide-react";
 import type {
   QuickInfoItem,
@@ -32,9 +33,12 @@ interface DiningSeoEditorProps {
     trustSignals?: string[];
   };
   onChange: (data: any) => void;
+  title?: string;
+  contentType?: string;
+  primaryKeyword?: string;
 }
 
-export function DiningSeoEditor({ data, onChange }: DiningSeoEditorProps) {
+export function DiningSeoEditor({ data, onChange, title = "", contentType = "dining", primaryKeyword = "" }: DiningSeoEditorProps) {
   const updateField = (field: string, value: any) => {
     onChange({ ...data, [field]: value });
   };
@@ -152,7 +156,31 @@ export function DiningSeoEditor({ data, onChange }: DiningSeoEditorProps) {
       {/* Highlights */}
       <Card>
         <CardHeader>
-          <CardTitle>Restaurant Highlights</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Restaurant Highlights</CardTitle>
+            <AIFieldAssistant
+              fieldName="Highlights"
+              fieldType="highlights"
+              currentValue={(data.highlights || []).map(h => `${h.title}: ${h.description}`).join('\n')}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={(value) => {
+                const lines = value.split('\n').filter(l => l.trim());
+                const newHighlights = lines.map(line => {
+                  const [title, ...descParts] = line.split(':');
+                  return {
+                    image: "",
+                    title: title.trim(),
+                    description: descParts.join(':').trim()
+                  };
+                });
+                updateField("highlights", newHighlights);
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {(data.highlights || []).map((item, index) => (
@@ -262,7 +290,23 @@ export function DiningSeoEditor({ data, onChange }: DiningSeoEditorProps) {
       {/* Dining Tips */}
       <Card>
         <CardHeader>
-          <CardTitle>Dining Tips</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Dining Tips</CardTitle>
+            <AIFieldAssistant
+              fieldName="Dining Tips"
+              fieldType="tips"
+              currentValue={(data.diningTips || []).join('\n')}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={(value) => {
+                const tips = value.split('\n').filter(t => t.trim());
+                updateField("diningTips", tips);
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {(data.diningTips || []).map((tip, index) => (

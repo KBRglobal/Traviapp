@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AIFieldAssistant } from "@/components/ai-field-assistant";
 import { Plus, Trash2, MapPin, Building } from "lucide-react";
 import type {
   QuickInfoItem,
@@ -38,9 +39,12 @@ interface DistrictSeoEditorProps {
     trustSignals?: string[];
   };
   onChange: (data: any) => void;
+  title?: string;
+  contentType?: string;
+  primaryKeyword?: string;
 }
 
-export function DistrictSeoEditor({ data, onChange }: DistrictSeoEditorProps) {
+export function DistrictSeoEditor({ data, onChange, title = "", contentType = "district", primaryKeyword = "" }: DistrictSeoEditorProps) {
   const updateField = (field: string, value: any) => {
     onChange({ ...data, [field]: value });
   };
@@ -111,7 +115,20 @@ export function DistrictSeoEditor({ data, onChange }: DistrictSeoEditorProps) {
           </div>
 
           <div>
-            <Label>Intro Text (Visible)</Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Intro Text (Visible)</Label>
+              <AIFieldAssistant
+                fieldName="Intro Text"
+                fieldType="intro"
+                currentValue={data.introText || ""}
+                contentContext={{
+                  title,
+                  contentType,
+                  primaryKeyword,
+                }}
+                onApply={(value) => updateField("introText", value)}
+              />
+            </div>
             <Textarea
               value={data.introText || ""}
               onChange={(e) => updateField("introText", e.target.value)}
@@ -121,7 +138,20 @@ export function DistrictSeoEditor({ data, onChange }: DistrictSeoEditorProps) {
           </div>
 
           <div>
-            <Label>Expanded Intro Text (Hidden/Expandable)</Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Expanded Intro Text (Hidden/Expandable)</Label>
+              <AIFieldAssistant
+                fieldName="Expanded Intro"
+                fieldType="expandedIntro"
+                currentValue={data.expandedIntroText || ""}
+                contentContext={{
+                  title,
+                  contentType,
+                  primaryKeyword,
+                }}
+                onApply={(value) => updateField("expandedIntroText", value)}
+              />
+            </div>
             <Textarea
               value={data.expandedIntroText || ""}
               onChange={(e) => updateField("expandedIntroText", e.target.value)}
@@ -178,7 +208,31 @@ export function DistrictSeoEditor({ data, onChange }: DistrictSeoEditorProps) {
       {/* Highlights */}
       <Card>
         <CardHeader>
-          <CardTitle>District Highlights</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>District Highlights</CardTitle>
+            <AIFieldAssistant
+              fieldName="Highlights"
+              fieldType="highlights"
+              currentValue={(data.highlights || []).map(h => `${h.title}: ${h.description}`).join('\n')}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={(value) => {
+                const lines = value.split('\n').filter(l => l.trim());
+                const newHighlights = lines.map(line => {
+                  const [title, ...descParts] = line.split(':');
+                  return {
+                    image: "",
+                    title: title.trim(),
+                    description: descParts.join(':').trim()
+                  };
+                });
+                updateField("highlights", newHighlights);
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {(data.highlights || []).map((item, index) => (
@@ -354,7 +408,23 @@ export function DistrictSeoEditor({ data, onChange }: DistrictSeoEditorProps) {
       {/* Local Tips */}
       <Card>
         <CardHeader>
-          <CardTitle>Local Tips</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Local Tips</CardTitle>
+            <AIFieldAssistant
+              fieldName="Local Tips"
+              fieldType="tips"
+              currentValue={(data.localTips || []).join('\n')}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={(value) => {
+                const tips = value.split('\n').filter(t => t.trim());
+                updateField("localTips", tips);
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {(data.localTips || []).map((tip, index) => (
