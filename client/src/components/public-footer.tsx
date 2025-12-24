@@ -3,7 +3,7 @@ import { Logo } from "@/components/logo";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { MapPin, Camera, Building2, Utensils, Compass, Calculator, BookOpen, Globe, Mail, Phone, Clock, Sun, Gift, Scale, Crown, Coffee } from "lucide-react";
 import { SiInstagram, SiFacebook, SiX, SiYoutube, SiTiktok } from "react-icons/si";
-import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
+import mascotImg from "@assets/Mascot_for_Light_Background_1765497703861.png";
 import { BackToTop } from "@/components/ui/back-to-top";
 
 export function PublicFooter() {

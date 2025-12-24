@@ -18,8 +18,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import mascotImg from "@assets/Mascot_for_Light_Background_1765570034687.png";
-import logoImg from "@assets/Full_Logo_for_Light_Background_1765570034686.png";
+import mascotImg from "@assets/Mascot_for_Light_Background_1765497703861.png";
+import logoImg from "@assets/Full_Logo_for_Light_Background_1765497703861.png";
 
 const CloudSVG = ({ className = "", size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) => {
   const sizes = { sm: "w-16 h-10", md: "w-24 h-14", lg: "w-32 h-20" };
