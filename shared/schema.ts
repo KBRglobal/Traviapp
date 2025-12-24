@@ -2312,3 +2312,212 @@ export const DEFAULT_CONTENT_RULES = {
   maxRetries: 3,
 };
 
+// ============================================================================
+// AGENT A: MAGIC LINK AUTHENTICATION
+// ============================================================================
+
+export const magicLinkTokens = pgTable("magic_link_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_magic_link_tokens_email").on(table.email),
+  index("IDX_magic_link_tokens_token").on(table.token),
+]);
+
+export const insertMagicLinkTokenSchema = createInsertSchema(magicLinkTokens).omit({ id: true, createdAt: true });
+export type InsertMagicLinkToken = z.infer<typeof insertMagicLinkTokenSchema>;
+export type MagicLinkToken = typeof magicLinkTokens.$inferSelect;
+
+// ============================================================================
+// AGENT A: AI CONTENT SCORING
+// ============================================================================
+
+export const contentScores = pgTable("content_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => contents.id, { onDelete: "cascade" }),
+  overallScore: integer("overall_score").notNull(), // 0-100
+  readabilityScore: integer("readability_score").notNull(), // 0-100
+  seoScore: integer("seo_score").notNull(), // 0-100
+  engagementScore: integer("engagement_score").notNull(), // 0-100
+  originalityScore: integer("originality_score").notNull(), // 0-100
+  structureScore: integer("structure_score").notNull(), // 0-100
+  suggestions: jsonb("suggestions").$type<string[]>().default([]),
+  analysis: jsonb("analysis").$type<Record<string, unknown>>(),
+  scoredBy: varchar("scored_by"), // user_id or "ai"
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_content_scores_content").on(table.contentId),
+  index("IDX_content_scores_overall").on(table.overallScore),
+]);
+
+export const insertContentScoreSchema = createInsertSchema(contentScores).omit({ id: true, createdAt: true });
+export type InsertContentScore = z.infer<typeof insertContentScoreSchema>;
+export type ContentScore = typeof contentScores.$inferSelect;
+
+// ============================================================================
+// AGENT A: WORKFLOW AUTOMATION
+// ============================================================================
+
+export const workflowTriggerEnum = pgEnum("workflow_trigger", ["status_change", "schedule", "manual", "webhook"]);
+export const workflowActionEnum = pgEnum("workflow_action", ["notify", "update_field", "publish", "unpublish", "send_email", "call_webhook"]);
+
+export const workflows = pgTable("workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  trigger: workflowTriggerEnum("trigger").notNull(),
+  triggerConfig: jsonb("trigger_config").$type<Record<string, unknown>>(), // e.g., { "status": "published", "contentType": "article" }
+  actions: jsonb("actions").$type<Array<{ action: string; config: Record<string, unknown> }>>().default([]),
+  conditions: jsonb("conditions").$type<Record<string, unknown>>(), // branching logic
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_workflows_active").on(table.isActive),
+  index("IDX_workflows_trigger").on(table.trigger),
+]);
+
+export const workflowExecutions = pgTable("workflow_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
+  triggerData: jsonb("trigger_data").$type<Record<string, unknown>>(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, running, completed, failed
+  result: jsonb("result").$type<Record<string, unknown>>(),
+  error: text("error"),
+  executedAt: timestamp("executed_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_workflow_executions_workflow").on(table.workflowId),
+  index("IDX_workflow_executions_status").on(table.status),
+  index("IDX_workflow_executions_created").on(table.createdAt),
+]);
+
+export const insertWorkflowSchema = createInsertSchema(workflows).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutions).omit({ id: true, createdAt: true });
+export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
+export type Workflow = typeof workflows.$inferSelect;
+export type InsertWorkflowExecution = z.infer<typeof insertWorkflowExecutionSchema>;
+export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
+
+// ============================================================================
+// AGENT A: MONETIZATION PRO - PARTNERS & PAYOUTS
+// ============================================================================
+
+export const partners = pgTable("partners", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  email: varchar("email").unique(),
+  website: text("website"),
+  logo: text("logo"),
+  commissionType: varchar("commission_type", { length: 20 }).notNull().default("percentage"), // percentage, fixed
+  commissionRate: integer("commission_rate").notNull(), // percentage * 100 or cents
+  tieredRates: jsonb("tiered_rates").$type<Array<{ minClicks: number; rate: number }>>(), // for tiered commission
+  status: varchar("status", { length: 20 }).notNull().default("active"), // active, inactive, suspended
+  totalClicks: integer("total_clicks").default(0),
+  totalConversions: integer("total_conversions").default(0),
+  totalEarnings: integer("total_earnings").default(0), // in cents
+  pendingPayout: integer("pending_payout").default(0), // in cents
+  lastPayoutAt: timestamp("last_payout_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_partners_status").on(table.status),
+  index("IDX_partners_email").on(table.email),
+]);
+
+export const payouts = pgTable("payouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  amount: integer("amount").notNull(), // in cents
+  currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, processing, completed, failed
+  paymentMethod: varchar("payment_method", { length: 50 }),
+  transactionId: text("transaction_id"),
+  notes: text("notes"),
+  processedBy: varchar("processed_by").references(() => users.id),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_payouts_partner").on(table.partnerId),
+  index("IDX_payouts_status").on(table.status),
+  index("IDX_payouts_created").on(table.createdAt),
+]);
+
+export const insertPartnerSchema = createInsertSchema(partners).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPayoutSchema = createInsertSchema(payouts).omit({ id: true, createdAt: true });
+export type InsertPartner = z.infer<typeof insertPartnerSchema>;
+export type Partner = typeof partners.$inferSelect;
+export type InsertPayout = z.infer<typeof insertPayoutSchema>;
+export type Payout = typeof payouts.$inferSelect;
+
+// ============================================================================
+// AGENT A: A/B TESTING FOR CTAs
+// ============================================================================
+
+export const abTests = pgTable("ab_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  targetType: varchar("target_type", { length: 50 }).notNull(), // content, cta, banner
+  targetId: varchar("target_id"),
+  status: varchar("status", { length: 20 }).notNull().default("draft"), // draft, running, paused, completed
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  winnerVariantId: varchar("winner_variant_id"),
+  confidenceLevel: integer("confidence_level"), // percentage
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_ab_tests_status").on(table.status),
+  index("IDX_ab_tests_target").on(table.targetType, table.targetId),
+]);
+
+export const abTestVariants = pgTable("ab_test_variants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  testId: varchar("test_id").notNull().references(() => abTests.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // A, B, C
+  config: jsonb("config").$type<Record<string, unknown>>().notNull(), // variant-specific data
+  weight: integer("weight").default(50), // traffic allocation percentage
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  conversions: integer("conversions").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_ab_test_variants_test").on(table.testId),
+]);
+
+export const abTestEvents = pgTable("ab_test_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  testId: varchar("test_id").notNull().references(() => abTests.id, { onDelete: "cascade" }),
+  variantId: varchar("variant_id").notNull().references(() => abTestVariants.id, { onDelete: "cascade" }),
+  eventType: varchar("event_type", { length: 20 }).notNull(), // impression, click, conversion
+  userId: varchar("user_id"),
+  sessionId: varchar("session_id"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_ab_test_events_test").on(table.testId),
+  index("IDX_ab_test_events_variant").on(table.variantId),
+  index("IDX_ab_test_events_type").on(table.eventType),
+  index("IDX_ab_test_events_created").on(table.createdAt),
+]);
+
+export const insertAbTestSchema = createInsertSchema(abTests).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertAbTestVariantSchema = createInsertSchema(abTestVariants).omit({ id: true, createdAt: true });
+export const insertAbTestEventSchema = createInsertSchema(abTestEvents).omit({ id: true, createdAt: true });
+export type InsertAbTest = z.infer<typeof insertAbTestSchema>;
+export type AbTest = typeof abTests.$inferSelect;
+export type InsertAbTestVariant = z.infer<typeof insertAbTestVariantSchema>;
+export type AbTestVariant = typeof abTestVariants.$inferSelect;
+export type InsertAbTestEvent = z.infer<typeof insertAbTestEventSchema>;
+export type AbTestEvent = typeof abTestEvents.$inferSelect;
+
