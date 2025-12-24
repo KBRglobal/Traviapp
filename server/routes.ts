@@ -30,6 +30,15 @@ import {
   newsletterSubscribers,
   contentRules,
   pageLayouts,
+  webhooks,
+  webhookLogs,
+  workflows,
+  workflowExecutions,
+  partners,
+  payouts,
+  abTests,
+  abTestVariants,
+  abTestEvents,
   ROLE_PERMISSIONS,
   SUPPORTED_LOCALES,
   type UserRole,
@@ -9429,6 +9438,426 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     } catch (error) {
       console.error("Error getting backup status:", error);
       res.status(500).json({ error: "Failed to get backup status" });
+    }
+  });
+
+  // ============================================================================
+  // MAGIC LINK AUTH
+  // ============================================================================
+  app.post("/api/auth/magic-link", async (req, res) => {
+    try {
+      const { magicLinkAuth } = await import("./auth/magic-link");
+      const { email } = req.body;
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const result = await magicLinkAuth.sendMagicLink(email, baseUrl);
+      res.json(result);
+    } catch (error) {
+      console.error("Error sending magic link:", error);
+      res.status(500).json({ success: false, message: "Failed to send magic link" });
+    }
+  });
+
+  app.get("/api/auth/magic-link/verify", async (req, res) => {
+    try {
+      const { magicLinkAuth } = await import("./auth/magic-link");
+      const { token } = req.query;
+      const result = await magicLinkAuth.verifyMagicLink(token as string);
+      if (result.success) {
+        // Set up session here if needed
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error("Error verifying magic link:", error);
+      res.status(500).json({ success: false, error: "Failed to verify magic link" });
+    }
+  });
+
+  // ============================================================================
+  // AI CONTENT SCORING
+  // ============================================================================
+  app.post("/api/ai/score-content/:contentId", requireAuth, async (req, res) => {
+    try {
+      const { contentScorer } = await import("./ai/content-scorer");
+      const { contentId } = req.params;
+      const result = await contentScorer.scoreContent(contentId);
+      if (result) {
+        res.json(result);
+      } else {
+        res.status(500).json({ error: "Failed to score content" });
+      }
+    } catch (error) {
+      console.error("Error scoring content:", error);
+      res.status(500).json({ error: "Failed to score content" });
+    }
+  });
+
+  app.get("/api/ai/content-score/:contentId", requireAuth, async (req, res) => {
+    try {
+      const { contentScorer } = await import("./ai/content-scorer");
+      const { contentId } = req.params;
+      const result = await contentScorer.getContentScore(contentId);
+      if (result) {
+        res.json(result);
+      } else {
+        res.status(404).json({ error: "No score found" });
+      }
+    } catch (error) {
+      console.error("Error getting content score:", error);
+      res.status(500).json({ error: "Failed to get content score" });
+    }
+  });
+
+  // ============================================================================
+  // AI PLAGIARISM DETECTION
+  // ============================================================================
+  app.post("/api/ai/check-plagiarism/:contentId", requireAuth, async (req, res) => {
+    try {
+      const { plagiarismDetector } = await import("./ai/plagiarism-detector");
+      const { contentId } = req.params;
+      const { threshold } = req.body;
+      const result = await plagiarismDetector.checkPlagiarism(contentId, threshold);
+      res.json(result);
+    } catch (error) {
+      console.error("Error checking plagiarism:", error);
+      res.status(500).json({ error: "Failed to check plagiarism" });
+    }
+  });
+
+  app.post("/api/ai/compare-texts", requireAuth, async (req, res) => {
+    try {
+      const { plagiarismDetector } = await import("./ai/plagiarism-detector");
+      const { text1, text2 } = req.body;
+      const similarity = await plagiarismDetector.compareTexts(text1, text2);
+      res.json({ similarity });
+    } catch (error) {
+      console.error("Error comparing texts:", error);
+      res.status(500).json({ error: "Failed to compare texts" });
+    }
+  });
+
+  // ============================================================================
+  // AI VISUAL SEARCH
+  // ============================================================================
+  app.post("/api/ai/visual-search", async (req, res) => {
+    try {
+      const { visualSearch } = await import("./ai/visual-search");
+      const { imageUrl, limit } = req.body;
+      const results = await visualSearch.searchByImage(imageUrl, limit);
+      res.json({ results });
+    } catch (error) {
+      console.error("Error in visual search:", error);
+      res.status(500).json({ error: "Failed to perform visual search" });
+    }
+  });
+
+  app.post("/api/ai/analyze-image", async (req, res) => {
+    try {
+      const { visualSearch } = await import("./ai/visual-search");
+      const { imageUrl } = req.body;
+      const analysis = await visualSearch.analyzeImage(imageUrl);
+      if (analysis) {
+        res.json(analysis);
+      } else {
+        res.status(500).json({ error: "Failed to analyze image" });
+      }
+    } catch (error) {
+      console.error("Error analyzing image:", error);
+      res.status(500).json({ error: "Failed to analyze image" });
+    }
+  });
+
+  // ============================================================================
+  // WEBHOOKS
+  // ============================================================================
+  app.post("/api/webhooks", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const webhook = await db.insert(webhooks).values({
+        ...req.body,
+        createdBy: getUserId(req as AuthRequest),
+      }).returning();
+      res.json(webhook[0]);
+    } catch (error) {
+      console.error("Error creating webhook:", error);
+      res.status(500).json({ error: "Failed to create webhook" });
+    }
+  });
+
+  app.get("/api/webhooks", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const allWebhooks = await db.select().from(webhooks);
+      res.json(allWebhooks);
+    } catch (error) {
+      console.error("Error fetching webhooks:", error);
+      res.status(500).json({ error: "Failed to fetch webhooks" });
+    }
+  });
+
+  app.post("/api/webhooks/:id/test", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { webhookManager } = await import("./webhooks/webhook-manager");
+      const { id } = req.params;
+      const result = await webhookManager.testWebhook(id);
+      res.json(result);
+    } catch (error) {
+      console.error("Error testing webhook:", error);
+      res.status(500).json({ error: "Failed to test webhook" });
+    }
+  });
+
+  app.get("/api/webhooks/:id/logs", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const logs = await db.select().from(webhookLogs).where(eq(webhookLogs.webhookId, id)).orderBy(desc(webhookLogs.createdAt)).limit(50);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching webhook logs:", error);
+      res.status(500).json({ error: "Failed to fetch webhook logs" });
+    }
+  });
+
+  // ============================================================================
+  // WORKFLOWS
+  // ============================================================================
+  app.post("/api/workflows", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const workflow = await db.insert(workflows).values({
+        ...req.body,
+        createdBy: getUserId(req as AuthRequest),
+      }).returning();
+      res.json(workflow[0]);
+    } catch (error) {
+      console.error("Error creating workflow:", error);
+      res.status(500).json({ error: "Failed to create workflow" });
+    }
+  });
+
+  app.get("/api/workflows", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const allWorkflows = await db.select().from(workflows);
+      res.json(allWorkflows);
+    } catch (error) {
+      console.error("Error fetching workflows:", error);
+      res.status(500).json({ error: "Failed to fetch workflows" });
+    }
+  });
+
+  app.post("/api/workflows/:id/execute", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { workflowEngine } = await import("./workflows/workflow-engine");
+      const { id } = req.params;
+      const result = await workflowEngine.executeWorkflow(id, req.body);
+      res.json(result);
+    } catch (error) {
+      console.error("Error executing workflow:", error);
+      res.status(500).json({ error: "Failed to execute workflow" });
+    }
+  });
+
+  app.get("/api/workflows/:id/executions", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const executions = await db.select().from(workflowExecutions).where(eq(workflowExecutions.workflowId, id)).orderBy(desc(workflowExecutions.startedAt)).limit(50);
+      res.json(executions);
+    } catch (error) {
+      console.error("Error fetching workflow executions:", error);
+      res.status(500).json({ error: "Failed to fetch workflow executions" });
+    }
+  });
+
+  // ============================================================================
+  // AFFILIATE & PARTNER MANAGEMENT
+  // ============================================================================
+  app.post("/api/partners", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const partner = await db.insert(partners).values(req.body).returning();
+      res.json(partner[0]);
+    } catch (error) {
+      console.error("Error creating partner:", error);
+      res.status(500).json({ error: "Failed to create partner" });
+    }
+  });
+
+  app.get("/api/partners", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const allPartners = await db.select().from(partners);
+      res.json(allPartners);
+    } catch (error) {
+      console.error("Error fetching partners:", error);
+      res.status(500).json({ error: "Failed to fetch partners" });
+    }
+  });
+
+  app.get("/api/partners/:id/dashboard", requireAuth, async (req, res) => {
+    try {
+      const { partnerDashboard } = await import("./monetization/partner-dashboard");
+      const { id } = req.params;
+      const metrics = await partnerDashboard.getPartnerMetrics(id);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching partner dashboard:", error);
+      res.status(500).json({ error: "Failed to fetch partner dashboard" });
+    }
+  });
+
+  app.post("/api/partners/:id/inject-links", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { affiliateInjector } = await import("./monetization/affiliate-injector");
+      const { contentId, dryRun } = req.body;
+      const result = await affiliateInjector.injectAffiliateLinks(contentId, dryRun);
+      res.json(result);
+    } catch (error) {
+      console.error("Error injecting affiliate links:", error);
+      res.status(500).json({ error: "Failed to inject affiliate links" });
+    }
+  });
+
+  app.post("/api/partners/:id/track-click", async (req, res) => {
+    try {
+      const { affiliateInjector } = await import("./monetization/affiliate-injector");
+      const { trackingCode } = req.body;
+      await affiliateInjector.trackClick(trackingCode);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking click:", error);
+      res.status(500).json({ error: "Failed to track click" });
+    }
+  });
+
+  // ============================================================================
+  // PAYOUTS
+  // ============================================================================
+  app.post("/api/payouts", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { payoutManager } = await import("./monetization/payouts");
+      const result = await payoutManager.schedulePayout(req.body);
+      if (result) {
+        res.json({ success: true, payoutId: result });
+      } else {
+        res.status(500).json({ error: "Failed to schedule payout" });
+      }
+    } catch (error) {
+      console.error("Error scheduling payout:", error);
+      res.status(500).json({ error: "Failed to schedule payout" });
+    }
+  });
+
+  app.post("/api/payouts/:id/process", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { payoutManager } = await import("./monetization/payouts");
+      const { id } = req.params;
+      const result = await payoutManager.processPayout(id);
+      res.json({ success: result });
+    } catch (error) {
+      console.error("Error processing payout:", error);
+      res.status(500).json({ error: "Failed to process payout" });
+    }
+  });
+
+  app.get("/api/payouts/partner/:partnerId", requireAuth, async (req, res) => {
+    try {
+      const { partnerId } = req.params;
+      const payoutHistory = await db.select().from(payouts).where(eq(payouts.partnerId, partnerId)).orderBy(desc(payouts.createdAt)).limit(20);
+      res.json(payoutHistory);
+    } catch (error) {
+      console.error("Error fetching payout history:", error);
+      res.status(500).json({ error: "Failed to fetch payout history" });
+    }
+  });
+
+  // ============================================================================
+  // A/B TESTING
+  // ============================================================================
+  app.post("/api/ab-tests", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { ctaAbTesting } = await import("./monetization/cta-ab-testing");
+      const userId = getUserId(req as AuthRequest);
+      const testId = await ctaAbTesting.createTest(req.body, userId);
+      if (testId) {
+        res.json({ success: true, testId });
+      } else {
+        res.status(500).json({ error: "Failed to create test" });
+      }
+    } catch (error) {
+      console.error("Error creating A/B test:", error);
+      res.status(500).json({ error: "Failed to create A/B test" });
+    }
+  });
+
+  app.get("/api/ab-tests", requireAuth, async (req, res) => {
+    try {
+      const { ctaAbTesting } = await import("./monetization/cta-ab-testing");
+      const tests = await ctaAbTesting.listTests();
+      res.json(tests);
+    } catch (error) {
+      console.error("Error fetching A/B tests:", error);
+      res.status(500).json({ error: "Failed to fetch A/B tests" });
+    }
+  });
+
+  app.post("/api/ab-tests/:id/start", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { ctaAbTesting } = await import("./monetization/cta-ab-testing");
+      const { id } = req.params;
+      const result = await ctaAbTesting.startTest(id);
+      res.json({ success: result });
+    } catch (error) {
+      console.error("Error starting A/B test:", error);
+      res.status(500).json({ error: "Failed to start A/B test" });
+    }
+  });
+
+  app.post("/api/ab-tests/:id/stop", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { ctaAbTesting } = await import("./monetization/cta-ab-testing");
+      const { id } = req.params;
+      const result = await ctaAbTesting.stopTest(id);
+      res.json({ success: result });
+    } catch (error) {
+      console.error("Error stopping A/B test:", error);
+      res.status(500).json({ error: "Failed to stop A/B test" });
+    }
+  });
+
+  app.get("/api/ab-tests/:id/results", requireAuth, async (req, res) => {
+    try {
+      const { ctaAbTesting } = await import("./monetization/cta-ab-testing");
+      const { id } = req.params;
+      const results = await ctaAbTesting.getTestResults(id);
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching A/B test results:", error);
+      res.status(500).json({ error: "Failed to fetch A/B test results" });
+    }
+  });
+
+  app.get("/api/ab-tests/:id/variant", async (req, res) => {
+    try {
+      const { ctaAbTesting } = await import("./monetization/cta-ab-testing");
+      const { id } = req.params;
+      const userId = (req as any).user?.id || "";
+      const sessionId = (req as any).sessionID || req.ip;
+      const variant = await ctaAbTesting.getVariant(id, userId, sessionId);
+      res.json(variant);
+    } catch (error) {
+      console.error("Error getting variant:", error);
+      res.status(500).json({ error: "Failed to get variant" });
+    }
+  });
+
+  app.post("/api/ab-tests/:id/track", async (req, res) => {
+    try {
+      const { ctaAbTesting } = await import("./monetization/cta-ab-testing");
+      const { id } = req.params;
+      const { variantId, eventType, metadata } = req.body;
+      const userId = (req as any).user?.id;
+      const sessionId = (req as any).sessionID || req.ip;
+      await ctaAbTesting.trackEvent(id, variantId, eventType, userId, sessionId, metadata);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking event:", error);
+      res.status(500).json({ error: "Failed to track event" });
     }
   });
 
