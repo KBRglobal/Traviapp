@@ -3,7 +3,7 @@ import { Pencil, X, Eye, EyeOff, Save, Undo, Redo, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLiveEditStore } from "@/stores/liveEditStore";
-import { useUser } from "@/hooks/use-user";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 interface LiveEditToggleProps {
@@ -12,7 +12,7 @@ interface LiveEditToggleProps {
 }
 
 export function LiveEditToggle({ pageSlug, className }: LiveEditToggleProps) {
-  const { user } = useUser();
+  const { user } = useAuth();
   const {
     isEditMode,
     isPreviewMode,

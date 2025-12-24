@@ -1,6 +1,6 @@
 import { useEffect, ReactNode } from "react";
 import { useLiveEditStore } from "@/stores/liveEditStore";
-import { useUser } from "@/hooks/use-user";
+import { useAuth } from "@/hooks/use-auth";
 
 interface LiveEditProviderProps {
   children: ReactNode;
@@ -13,7 +13,7 @@ export function LiveEditProvider({
   enabled = true,
   autoSaveInterval = 30000,
 }: LiveEditProviderProps) {
-  const { user } = useUser();
+  const { user } = useAuth();
   const {
     isEditMode,
     hasUnsavedChanges,
@@ -27,11 +27,12 @@ export function LiveEditProvider({
   // Set current user from auth context
   useEffect(() => {
     if (user) {
+      const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
       setCurrentUser({
         id: String(user.id),
         email: user.email,
         role: user.role as "admin" | "editor" | "author" | "viewer",
-        name: user.name || user.email,
+        name: displayName,
       });
     } else {
       setCurrentUser(null);

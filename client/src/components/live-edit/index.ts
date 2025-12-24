@@ -2,13 +2,36 @@
 
 // Providers
 export { LiveEditProvider } from "./providers/LiveEditProvider";
+export { DragDropProvider } from "./providers/DragDropProvider";
 
 // Core Components
 export { LiveEditToggle } from "./core/LiveEditToggle";
 export { EditableWrapper } from "./core/EditableWrapper";
 
+// Sidebar Components
+export { LiveEditSidebar } from "./sidebar/LiveEditSidebar";
+export { ComponentLibrary } from "./sidebar/ComponentLibrary";
+export { ComponentSettings } from "./sidebar/ComponentSettings";
+
+// Dialog Components
+export { LiveEditDialogs } from "./dialogs/LiveEditDialogs";
+export { PublishDialog } from "./dialogs/PublishDialog";
+export { DiscardDialog } from "./dialogs/DiscardDialog";
+export { RecoveryDialog } from "./dialogs/RecoveryDialog";
+
 // Editors
 export { InlineTextEditor } from "./editors/InlineTextEditor";
+
+// Component Registry
+export {
+  componentRegistry,
+  getComponentConfig,
+  getComponentsByCategory,
+  getAllComponents,
+  getComponentCategories,
+  getCategoryLabel,
+  getCategoryLabelHebrew,
+} from "@/lib/live-edit/componentRegistry";
 
 // Store and Hooks
 export {
@@ -37,3 +60,5 @@ export type {
   EditableField,
   ComponentCategory,
 } from "@/types/liveEdit";
+
+export type { EditableComponentConfig } from "@/lib/live-edit/componentRegistry";
