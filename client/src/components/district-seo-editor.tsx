@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AIFieldAssistant } from "@/components/ai-field-assistant";
+import { SeoTextFieldWithAI, SeoHighlightsFieldWithAI, SeoArrayFieldWithAI } from "@/components/seo-field-with-ai";
 import { Plus, Trash2, MapPin, Building } from "lucide-react";
 import type {
   QuickInfoItem,
@@ -114,51 +114,35 @@ export function DistrictSeoEditor({ data, onChange, title = "", contentType = "d
             />
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>Intro Text (Visible)</Label>
-              <AIFieldAssistant
-                fieldName="Intro Text"
-                fieldType="intro"
-                currentValue={data.introText || ""}
-                contentContext={{
-                  title,
-                  contentType,
-                  primaryKeyword,
-                }}
-                onApply={(value) => updateField("introText", value)}
-              />
-            </div>
-            <Textarea
-              value={data.introText || ""}
-              onChange={(e) => updateField("introText", e.target.value)}
-              placeholder="3 compelling sentences (60-80 words)"
-              rows={3}
-            />
-          </div>
+          <SeoTextFieldWithAI
+            label="Intro Text (Visible)"
+            fieldName="Intro Text"
+            fieldType="intro"
+            value={data.introText || ""}
+            onChange={(value) => updateField("introText", value)}
+            placeholder="3 compelling sentences (60-80 words)"
+            rows={3}
+            contentContext={{
+              title,
+              contentType,
+              primaryKeyword,
+            }}
+          />
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>Expanded Intro Text (Hidden/Expandable)</Label>
-              <AIFieldAssistant
-                fieldName="Expanded Intro"
-                fieldType="expandedIntro"
-                currentValue={data.expandedIntroText || ""}
-                contentContext={{
-                  title,
-                  contentType,
-                  primaryKeyword,
-                }}
-                onApply={(value) => updateField("expandedIntroText", value)}
-              />
-            </div>
-            <Textarea
-              value={data.expandedIntroText || ""}
-              onChange={(e) => updateField("expandedIntroText", e.target.value)}
-              placeholder="150-200 words detailed description"
-              rows={6}
-            />
-          </div>
+          <SeoTextFieldWithAI
+            label="Expanded Intro Text (Hidden/Expandable)"
+            fieldName="Expanded Intro"
+            fieldType="expandedIntro"
+            value={data.expandedIntroText || ""}
+            onChange={(value) => updateField("expandedIntroText", value)}
+            placeholder="150-200 words detailed description"
+            rows={6}
+            contentContext={{
+              title,
+              contentType,
+              primaryKeyword,
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -208,77 +192,20 @@ export function DistrictSeoEditor({ data, onChange, title = "", contentType = "d
       {/* Highlights */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>District Highlights</CardTitle>
-            <AIFieldAssistant
-              fieldName="Highlights"
-              fieldType="highlights"
-              currentValue={(data.highlights || []).map(h => `${h.title}: ${h.description}`).join('\n')}
-              contentContext={{
-                title,
-                contentType,
-                primaryKeyword,
-              }}
-              onApply={(value) => {
-                const lines = value.split('\n').filter(l => l.trim());
-                const newHighlights = lines.map(line => {
-                  const [title, ...descParts] = line.split(':');
-                  return {
-                    image: "",
-                    title: title.trim(),
-                    description: descParts.join(':').trim()
-                  };
-                });
-                updateField("highlights", newHighlights);
-              }}
-            />
-          </div>
+          <CardTitle>District Highlights</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {(data.highlights || []).map((item, index) => (
-            <div key={index} className="p-3 border rounded-lg space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Title"
-                  value={item.title || ""}
-                  onChange={(e) =>
-                    updateArrayItem("highlights", index, { title: e.target.value })
-                  }
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeFromArray("highlights", index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <Textarea
-                placeholder="Description"
-                value={item.description || ""}
-                onChange={(e) =>
-                  updateArrayItem("highlights", index, { description: e.target.value })
-                }
-                rows={2}
-              />
-              <Input
-                placeholder="Image URL"
-                value={item.image || ""}
-                onChange={(e) =>
-                  updateArrayItem("highlights", index, { image: e.target.value })
-                }
-              />
-            </div>
-          ))}
-          <Button
-            onClick={() =>
-              addToArray("highlights", { title: "", description: "", image: "", icon: "" })
-            }
-            variant="outline"
-            className="w-full"
-          >
-            <Plus className="h-4 w-4 mr-2" /> Add Highlight
-          </Button>
+        <CardContent>
+          <SeoHighlightsFieldWithAI
+            label=""
+            fieldName="Highlight"
+            highlights={data.highlights || []}
+            onHighlightsChange={(highlights) => updateField("highlights", highlights)}
+            contentContext={{
+              title,
+              contentType,
+              primaryKeyword,
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -408,53 +335,24 @@ export function DistrictSeoEditor({ data, onChange, title = "", contentType = "d
       {/* Local Tips */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Local Tips</CardTitle>
-            <AIFieldAssistant
-              fieldName="Local Tips"
-              fieldType="tips"
-              currentValue={(data.localTips || []).join('\n')}
-              contentContext={{
-                title,
-                contentType,
-                primaryKeyword,
-              }}
-              onApply={(value) => {
-                const tips = value.split('\n').filter(t => t.trim());
-                updateField("localTips", tips);
-              }}
-            />
-          </div>
+          <CardTitle>Local Tips</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {(data.localTips || []).map((tip, index) => (
-            <div key={index} className="flex gap-2">
-              <Textarea
-                value={tip}
-                onChange={(e) => {
-                  const updated = [...(data.localTips || [])];
-                  updated[index] = e.target.value;
-                  updateField("localTips", updated);
-                }}
-                placeholder="Local tip"
-                rows={2}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => removeFromArray("localTips", index)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            onClick={() => addToArray("localTips", "")}
-            variant="outline"
-            className="w-full"
-          >
-            <Plus className="h-4 w-4 mr-2" /> Add Local Tip
-          </Button>
+        <CardContent>
+          <SeoArrayFieldWithAI
+            label=""
+            fieldName="Local Tips"
+            fieldType="tips"
+            items={data.localTips || []}
+            onItemsChange={(items) => updateField("localTips", items)}
+            itemPlaceholder="Local tip"
+            addButtonText="Add Local Tip"
+            useTextarea={true}
+            contentContext={{
+              title,
+              contentType,
+              primaryKeyword,
+            }}
+          />
         </CardContent>
       </Card>
 

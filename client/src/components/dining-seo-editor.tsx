@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AIFieldAssistant } from "@/components/ai-field-assistant";
+import { SeoHighlightsFieldWithAI, SeoArrayFieldWithAI } from "@/components/seo-field-with-ai";
 import { Plus, Trash2, Utensils, DollarSign, MapPin } from "lucide-react";
 import type {
   QuickInfoItem,
@@ -156,77 +156,20 @@ export function DiningSeoEditor({ data, onChange, title = "", contentType = "din
       {/* Highlights */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Restaurant Highlights</CardTitle>
-            <AIFieldAssistant
-              fieldName="Highlights"
-              fieldType="highlights"
-              currentValue={(data.highlights || []).map(h => `${h.title}: ${h.description}`).join('\n')}
-              contentContext={{
-                title,
-                contentType,
-                primaryKeyword,
-              }}
-              onApply={(value) => {
-                const lines = value.split('\n').filter(l => l.trim());
-                const newHighlights = lines.map(line => {
-                  const [title, ...descParts] = line.split(':');
-                  return {
-                    image: "",
-                    title: title.trim(),
-                    description: descParts.join(':').trim()
-                  };
-                });
-                updateField("highlights", newHighlights);
-              }}
-            />
-          </div>
+          <CardTitle>Restaurant Highlights</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {(data.highlights || []).map((item, index) => (
-            <div key={index} className="p-3 border rounded-lg space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Title"
-                  value={item.title || ""}
-                  onChange={(e) =>
-                    updateArrayItem("highlights", index, { title: e.target.value })
-                  }
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeFromArray("highlights", index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <Textarea
-                placeholder="Description"
-                value={item.description || ""}
-                onChange={(e) =>
-                  updateArrayItem("highlights", index, { description: e.target.value })
-                }
-                rows={2}
-              />
-              <Input
-                placeholder="Image URL"
-                value={item.image || ""}
-                onChange={(e) =>
-                  updateArrayItem("highlights", index, { image: e.target.value })
-                }
-              />
-            </div>
-          ))}
-          <Button
-            onClick={() =>
-              addToArray("highlights", { title: "", description: "", image: "", icon: "" })
-            }
-            variant="outline"
-            className="w-full"
-          >
-            <Plus className="h-4 w-4 mr-2" /> Add Highlight
-          </Button>
+        <CardContent>
+          <SeoHighlightsFieldWithAI
+            label=""
+            fieldName="Highlight"
+            highlights={data.highlights || []}
+            onHighlightsChange={(highlights) => updateField("highlights", highlights)}
+            contentContext={{
+              title,
+              contentType,
+              primaryKeyword,
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -290,53 +233,24 @@ export function DiningSeoEditor({ data, onChange, title = "", contentType = "din
       {/* Dining Tips */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Dining Tips</CardTitle>
-            <AIFieldAssistant
-              fieldName="Dining Tips"
-              fieldType="tips"
-              currentValue={(data.diningTips || []).join('\n')}
-              contentContext={{
-                title,
-                contentType,
-                primaryKeyword,
-              }}
-              onApply={(value) => {
-                const tips = value.split('\n').filter(t => t.trim());
-                updateField("diningTips", tips);
-              }}
-            />
-          </div>
+          <CardTitle>Dining Tips</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {(data.diningTips || []).map((tip, index) => (
-            <div key={index} className="flex gap-2">
-              <Textarea
-                value={tip}
-                onChange={(e) => {
-                  const updated = [...(data.diningTips || [])];
-                  updated[index] = e.target.value;
-                  updateField("diningTips", updated);
-                }}
-                placeholder="Tip"
-                rows={2}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => removeFromArray("diningTips", index)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            onClick={() => addToArray("diningTips", "")}
-            variant="outline"
-            className="w-full"
-          >
-            <Plus className="h-4 w-4 mr-2" /> Add Dining Tip
-          </Button>
+        <CardContent>
+          <SeoArrayFieldWithAI
+            label=""
+            fieldName="Dining Tips"
+            fieldType="tips"
+            items={data.diningTips || []}
+            onItemsChange={(items) => updateField("diningTips", items)}
+            itemPlaceholder="Tip"
+            addButtonText="Add Dining Tip"
+            useTextarea={true}
+            contentContext={{
+              title,
+              contentType,
+              primaryKeyword,
+            }}
+          />
         </CardContent>
       </Card>
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { AIFieldAssistant } from "@/components/ai-field-assistant";
+import { SeoTextFieldWithAI, SeoArrayFieldWithAI, SeoHighlightsFieldWithAI } from "@/components/seo-field-with-ai";
 import {
   Plus,
   Trash2,
@@ -71,21 +71,6 @@ export function AttractionSeoEditor({ data, onChange, title = "", contentType = 
     updateField("quickInfoBar", (data.quickInfoBar || []).filter((_, i) => i !== index));
   };
 
-  const addHighlight = () => {
-    const newItem: HighlightItem = { image: "", title: "", description: "" };
-    updateField("highlights", [...(data.highlights || []), newItem]);
-  };
-
-  const updateHighlight = (index: number, field: keyof HighlightItem, value: string) => {
-    const updated = [...(data.highlights || [])];
-    updated[index] = { ...updated[index], [field]: value };
-    updateField("highlights", updated);
-  };
-
-  const removeHighlight = (index: number) => {
-    updateField("highlights", (data.highlights || []).filter((_, i) => i !== index));
-  };
-
   const addTicketInfo = () => {
     const newItem: TicketInfoItem = { type: "Standard", description: "", price: "" };
     updateField("ticketInfo", [...(data.ticketInfo || []), newItem]);
@@ -114,20 +99,6 @@ export function AttractionSeoEditor({ data, onChange, title = "", contentType = 
 
   const removeEssentialInfo = (index: number) => {
     updateField("essentialInfo", (data.essentialInfo || []).filter((_, i) => i !== index));
-  };
-
-  const addVisitorTip = () => {
-    updateField("visitorTips", [...(data.visitorTips || []), ""]);
-  };
-
-  const updateVisitorTip = (index: number, value: string) => {
-    const updated = [...(data.visitorTips || [])];
-    updated[index] = value;
-    updateField("visitorTips", updated);
-  };
-
-  const removeVisitorTip = (index: number) => {
-    updateField("visitorTips", (data.visitorTips || []).filter((_, i) => i !== index));
   };
 
   const addTrustSignal = () => {
@@ -164,61 +135,37 @@ export function AttractionSeoEditor({ data, onChange, title = "", contentType = 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label htmlFor="introText">Brief Intro (3 sentences, ~60 words)</Label>
-              <AIFieldAssistant
-                fieldName="Brief Intro"
-                fieldType="intro"
-                currentValue={data.introText || ""}
-                contentContext={{
-                  title,
-                  contentType,
-                  primaryKeyword,
-                }}
-                onApply={(value) => updateField("introText", value)}
-              />
-            </div>
-            <Textarea
-              id="introText"
-              value={data.introText || ""}
-              onChange={(e) => updateField("introText", e.target.value)}
-              placeholder="Short, compelling intro that appears immediately visible..."
-              rows={3}
-              className="mt-2"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {(data.introText || "").split(" ").filter(Boolean).length} words
-            </p>
-          </div>
+          <SeoTextFieldWithAI
+            label="Brief Intro (3 sentences, ~60 words)"
+            fieldName="Brief Intro"
+            fieldType="intro"
+            value={data.introText || ""}
+            onChange={(value) => updateField("introText", value)}
+            placeholder="Short, compelling intro that appears immediately visible..."
+            rows={3}
+            wordCount={true}
+            contentContext={{
+              title,
+              contentType,
+              primaryKeyword,
+            }}
+          />
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label htmlFor="expandedIntroText">Expanded Intro (~150 words)</Label>
-              <AIFieldAssistant
-                fieldName="Expanded Intro"
-                fieldType="expandedIntro"
-                currentValue={data.expandedIntroText || ""}
-                contentContext={{
-                  title,
-                  contentType,
-                  primaryKeyword,
-                }}
-                onApply={(value) => updateField("expandedIntroText", value)}
-              />
-            </div>
-            <Textarea
-              id="expandedIntroText"
-              value={data.expandedIntroText || ""}
-              onChange={(e) => updateField("expandedIntroText", e.target.value)}
-              placeholder="Detailed description that expands when user clicks 'Read More'..."
-              rows={6}
-              className="mt-2"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {(data.expandedIntroText || "").split(" ").filter(Boolean).length} words
-            </p>
-          </div>
+          <SeoTextFieldWithAI
+            label="Expanded Intro (~150 words)"
+            fieldName="Expanded Intro"
+            fieldType="expandedIntro"
+            value={data.expandedIntroText || ""}
+            onChange={(value) => updateField("expandedIntroText", value)}
+            placeholder="Detailed description that expands when user clicks 'Read More'..."
+            rows={6}
+            wordCount={true}
+            contentContext={{
+              title,
+              contentType,
+              primaryKeyword,
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -289,81 +236,23 @@ export function AttractionSeoEditor({ data, onChange, title = "", contentType = 
       {/* Highlights */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">✨ Highlights (3-4)</CardTitle>
-              <CardDescription>What to expect - key experiences with images</CardDescription>
-            </div>
-            <AIFieldAssistant
-              fieldName="Highlights"
-              fieldType="highlights"
-              currentValue={(data.highlights || []).map(h => `${h.title}: ${h.description}`).join('\n')}
-              contentContext={{
-                title,
-                contentType,
-                primaryKeyword,
-              }}
-              onApply={(value) => {
-                const lines = value.split('\n').filter(l => l.trim());
-                const newHighlights = lines.map(line => {
-                  const [title, ...descParts] = line.split(':');
-                  return {
-                    image: "",
-                    title: title.trim(),
-                    description: descParts.join(':').trim()
-                  };
-                });
-                updateField("highlights", newHighlights);
-              }}
-            />
-          </div>
+          <CardTitle className="text-lg">✨ Highlights (3-4)</CardTitle>
+          <CardDescription>What to expect - key experiences with images</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {(data.highlights || []).map((item, index) => (
-            <div key={index} className="p-4 border rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">Highlight {index + 1}</Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeHighlight(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <div>
-                <Label>Image URL</Label>
-                <Input
-                  value={item.image}
-                  onChange={(e) => updateHighlight(index, "image", e.target.value)}
-                  placeholder="/images/highlight-1.jpg"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Title</Label>
-                <Input
-                  value={item.title}
-                  onChange={(e) => updateHighlight(index, "title", e.target.value)}
-                  placeholder="OSS Hope Space Station 2071"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Description (1-2 sentences)</Label>
-                <Textarea
-                  value={item.description}
-                  onChange={(e) => updateHighlight(index, "description", e.target.value)}
-                  placeholder="Experience life aboard a future orbital station..."
-                  rows={2}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          ))}
-          <Button onClick={addHighlight} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" /> Add Highlight
-          </Button>
+        <CardContent>
+          <SeoHighlightsFieldWithAI
+            label=""
+            fieldName="Highlight"
+            highlights={data.highlights || []}
+            onHighlightsChange={(highlights) => updateField("highlights", highlights)}
+            contentContext={{
+              title,
+              contentType,
+              primaryKeyword,
+            }}
+            titlePlaceholder="OSS Hope Space Station 2071"
+            descriptionPlaceholder="Experience life aboard a future orbital station..."
+          />
         </CardContent>
       </Card>
 
@@ -476,49 +365,24 @@ export function AttractionSeoEditor({ data, onChange, title = "", contentType = 
       {/* Visitor Tips */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">💡 Visitor Tips (5 bullets)</CardTitle>
-              <CardDescription>Essential tips for visitors</CardDescription>
-            </div>
-            <AIFieldAssistant
-              fieldName="Visitor Tips"
-              fieldType="tips"
-              currentValue={(data.visitorTips || []).join('\n')}
-              contentContext={{
-                title,
-                contentType,
-                primaryKeyword,
-              }}
-              onApply={(value) => {
-                const tips = value.split('\n').filter(t => t.trim());
-                updateField("visitorTips", tips);
-              }}
-            />
-          </div>
+          <CardTitle className="text-lg">💡 Visitor Tips (5 bullets)</CardTitle>
+          <CardDescription>Essential tips for visitors</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {(data.visitorTips || []).map((tip, index) => (
-            <div key={index} className="flex gap-2 items-center">
-              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-              <Input
-                value={tip}
-                onChange={(e) => updateVisitorTip(index, e.target.value)}
-                placeholder="Book tickets 2-3 days in advance..."
-                className="flex-1"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => removeVisitorTip(index)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-          <Button onClick={addVisitorTip} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" /> Add Visitor Tip
-          </Button>
+        <CardContent>
+          <SeoArrayFieldWithAI
+            label=""
+            fieldName="Visitor Tips"
+            fieldType="tips"
+            items={data.visitorTips || []}
+            onItemsChange={(items) => updateField("visitorTips", items)}
+            itemPlaceholder="Book tickets 2-3 days in advance..."
+            addButtonText="Add Visitor Tip"
+            contentContext={{
+              title,
+              contentType,
+              primaryKeyword,
+            }}
+          />
         </CardContent>
       </Card>
 
