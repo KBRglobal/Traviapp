@@ -30,6 +30,8 @@ import {
   newsletterSubscribers,
   contentRules,
   pageLayouts,
+  partners,
+  abTests,
   ROLE_PERMISSIONS,
   SUPPORTED_LOCALES,
   type UserRole,
@@ -9417,6 +9419,323 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     } catch (error) {
       console.error("Error getting backup status:", error);
       res.status(500).json({ error: "Failed to get backup status" });
+    }
+  });
+
+  // ============================================================================
+  // AGENT A: MAGIC LINK AUTHENTICATION
+  // ============================================================================
+  app.post("/api/auth/magic-link/send", rateLimiters.auth, async (req, res) => {
+    try {
+      const { requestMagicLink } = await import("./auth/magic-link");
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const result = await requestMagicLink(email);
+      res.json(result);
+    } catch (error) {
+      console.error("Error sending magic link:", error);
+      res.status(500).json({ error: "Failed to send magic link" });
+    }
+  });
+
+  app.get("/api/auth/magic-link/verify/:token", async (req, res) => {
+    try {
+      const { verifyMagicLinkToken } = await import("./auth/magic-link");
+      const { token } = req.params;
+
+      const result = await verifyMagicLinkToken(token);
+
+      if (result.success && result.userId) {
+        // Create session
+        req.session.userId = result.userId;
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
+        // Redirect to dashboard
+        res.redirect("/dashboard");
+      } else {
+        res.status(400).send(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Invalid Link</title></head>
+          <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+            <h1>Invalid or Expired Link</h1>
+            <p>${result.message}</p>
+            <a href="/">Return to Home</a>
+          </body>
+          </html>
+        `);
+      }
+    } catch (error) {
+      console.error("Error verifying magic link:", error);
+      res.status(500).send("Failed to verify magic link");
+    }
+  });
+
+  // ============================================================================
+  // AGENT A: AI CONTENT SCORING
+  // ============================================================================
+  app.post("/api/ai/score-content", requireAuth, checkAiUsageLimit, rateLimiters.ai, async (req, res) => {
+    try {
+      const { scoreAndSaveContent } = await import("./ai/content-scorer");
+      const { contentId } = req.body;
+      const userId = getUserId(req as AuthRequest);
+
+      if (!contentId) {
+        return res.status(400).json({ error: "contentId is required" });
+      }
+
+      const score = await scoreAndSaveContent(contentId, userId);
+
+      if (!score) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      res.json(score);
+    } catch (error) {
+      console.error("Error scoring content:", error);
+      res.status(500).json({ error: "Failed to score content" });
+    }
+  });
+
+  // ============================================================================
+  // AGENT A: PLAGIARISM DETECTION
+  // ============================================================================
+  app.post("/api/ai/check-plagiarism", requireAuth, checkAiUsageLimit, rateLimiters.ai, async (req, res) => {
+    try {
+      const { checkContentPlagiarism } = await import("./ai/plagiarism-detector");
+      const { contentId } = req.body;
+
+      if (!contentId) {
+        return res.status(400).json({ error: "contentId is required" });
+      }
+
+      const result = await checkContentPlagiarism(contentId);
+
+      if (!result) {
+        return res.status(404).json({ error: "Content not found" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error checking plagiarism:", error);
+      res.status(500).json({ error: "Failed to check plagiarism" });
+    }
+  });
+
+  // ============================================================================
+  // AGENT A: VISUAL SEARCH
+  // ============================================================================
+  app.post("/api/search/visual", requireAuth, checkAiUsageLimit, rateLimiters.ai, async (req, res) => {
+    try {
+      const { searchByImageBase64 } = await import("./ai/visual-search");
+      const { imageData } = req.body;
+
+      if (!imageData) {
+        return res.status(400).json({ error: "imageData is required" });
+      }
+
+      const result = await searchByImageBase64(imageData);
+      res.json(result);
+    } catch (error) {
+      console.error("Error performing visual search:", error);
+      res.status(500).json({ error: "Failed to perform visual search" });
+    }
+  });
+
+  // ============================================================================
+  // AGENT A: WEBHOOKS
+  // ============================================================================
+  const { registerWebhookRoutes } = await import("./webhooks/webhook-routes");
+  registerWebhookRoutes(app);
+
+  // ============================================================================
+  // AGENT A: WORKFLOWS
+  // ============================================================================
+  const { registerWorkflowRoutes } = await import("./workflows/workflow-routes");
+  registerWorkflowRoutes(app);
+
+  // ============================================================================
+  // AGENT A: MONETIZATION - AFFILIATE INJECTION
+  // ============================================================================
+  app.post("/api/monetization/inject-affiliates", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { injectAffiliateLinks } = await import("./monetization/affiliate-injector");
+      const { contentId, config } = req.body;
+
+      if (!contentId) {
+        return res.status(400).json({ error: "contentId is required" });
+      }
+
+      const result = await injectAffiliateLinks(contentId, config);
+      res.json(result);
+    } catch (error) {
+      console.error("Error injecting affiliate links:", error);
+      res.status(500).json({ error: "Failed to inject affiliate links" });
+    }
+  });
+
+  // ============================================================================
+  // AGENT A: MONETIZATION - COMMISSION CALCULATOR
+  // ============================================================================
+  app.get("/api/monetization/commissions", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const { calculateAllCommissions } = await import("./monetization/commission-calculator");
+      
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
+
+      const result = await calculateAllCommissions(startDate, endDate);
+      res.json(result);
+    } catch (error) {
+      console.error("Error calculating commissions:", error);
+      res.status(500).json({ error: "Failed to calculate commissions" });
+    }
+  });
+
+  // ============================================================================
+  // AGENT A: MONETIZATION - PARTNER DASHBOARD
+  // ============================================================================
+  app.get("/api/partners", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const allPartners = await db.select().from(partners);
+      res.json(allPartners);
+    } catch (error) {
+      console.error("Error fetching partners:", error);
+      res.status(500).json({ error: "Failed to fetch partners" });
+    }
+  });
+
+  app.post("/api/partners", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { createPartner } = await import("./monetization/partner-dashboard");
+      const partner = await createPartner(req.body);
+      res.status(201).json(partner);
+    } catch (error) {
+      console.error("Error creating partner:", error);
+      res.status(500).json({ error: "Failed to create partner" });
+    }
+  });
+
+  app.get("/api/partners/:id", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const { getPartner } = await import("./monetization/partner-dashboard");
+      const partner = await getPartner(req.params.id);
+      
+      if (!partner) {
+        return res.status(404).json({ error: "Partner not found" });
+      }
+      
+      res.json(partner);
+    } catch (error) {
+      console.error("Error fetching partner:", error);
+      res.status(500).json({ error: "Failed to fetch partner" });
+    }
+  });
+
+  app.get("/api/partners/:id/performance", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const { getPartnerPerformance } = await import("./monetization/partner-dashboard");
+      const performance = await getPartnerPerformance(req.params.id);
+      res.json(performance);
+    } catch (error) {
+      console.error("Error fetching partner performance:", error);
+      res.status(500).json({ error: "Failed to fetch partner performance" });
+    }
+  });
+
+  // ============================================================================
+  // AGENT A: MONETIZATION - PAYOUTS
+  // ============================================================================
+  app.get("/api/payouts", requirePermission("canViewAnalytics"), async (req, res) => {
+    try {
+      const { getPayouts } = await import("./monetization/payouts");
+      const partnerId = req.query.partnerId as string | undefined;
+      const payouts = await getPayouts(partnerId);
+      res.json(payouts);
+    } catch (error) {
+      console.error("Error fetching payouts:", error);
+      res.status(500).json({ error: "Failed to fetch payouts" });
+    }
+  });
+
+  app.post("/api/payouts", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { createPayout } = await import("./monetization/payouts");
+      const userId = getUserId(req as AuthRequest);
+      const payout = await createPayout({ ...req.body, processedBy: userId });
+      res.status(201).json(payout);
+    } catch (error) {
+      console.error("Error creating payout:", error);
+      res.status(500).json({ error: "Failed to create payout" });
+    }
+  });
+
+  // ============================================================================
+  // AGENT A: MONETIZATION - A/B TESTING
+  // ============================================================================
+  app.get("/api/ab-tests", requireAuth, async (req, res) => {
+    try {
+      const tests = await db.select().from(abTests);
+      res.json(tests);
+    } catch (error) {
+      console.error("Error fetching A/B tests:", error);
+      res.status(500).json({ error: "Failed to fetch A/B tests" });
+    }
+  });
+
+  app.post("/api/ab-tests", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { createABTest } = await import("./monetization/cta-ab-testing");
+      const userId = getUserId(req as AuthRequest);
+      const test = await createABTest({ ...req.body, createdBy: userId });
+      res.status(201).json(test);
+    } catch (error) {
+      console.error("Error creating A/B test:", error);
+      res.status(500).json({ error: "Failed to create A/B test" });
+    }
+  });
+
+  app.post("/api/ab-tests/:id/variants", requirePermission("canEdit"), async (req, res) => {
+    try {
+      const { createVariant } = await import("./monetization/cta-ab-testing");
+      const variant = await createVariant(req.params.id, req.body);
+      res.status(201).json(variant);
+    } catch (error) {
+      console.error("Error creating variant:", error);
+      res.status(500).json({ error: "Failed to create variant" });
+    }
+  });
+
+  app.post("/api/ab-tests/:id/events", async (req, res) => {
+    try {
+      const { recordEvent } = await import("./monetization/cta-ab-testing");
+      const { variantId, eventType, metadata } = req.body;
+      
+      await recordEvent(req.params.id, variantId, eventType, metadata);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error recording event:", error);
+      res.status(500).json({ error: "Failed to record event" });
+    }
+  });
+
+  app.get("/api/ab-tests/:id/results", requireAuth, async (req, res) => {
+    try {
+      const { getTestResults } = await import("./monetization/cta-ab-testing");
+      const results = await getTestResults(req.params.id);
+      res.json(results);
+    } catch (error) {
+      console.error("Error getting test results:", error);
+      res.status(500).json({ error: "Failed to get test results" });
     }
   });
 
