@@ -167,7 +167,7 @@ export const contents = pgTable("contents", {
   wordCount: integer("word_count").default(0),
   viewCount: integer("view_count").default(0),
   authorId: varchar("author_id").references(() => users.id),
-  writerId: varchar("writer_id"),
+  writerId: varchar("writer_id").references(() => aiWriters.id),
   generatedByAI: boolean("generated_by_ai").default(false),
   writerVoiceScore: integer("writer_voice_score"),
   scheduledAt: timestamp("scheduled_at"),
@@ -3182,4 +3182,7 @@ export type AbTestVariant = typeof abTestVariants.$inferSelect;
 export type InsertAbTestVariant = z.infer<typeof insertAbTestVariantSchema>;
 export type AbTestEvent = typeof abTestEvents.$inferSelect;
 export type InsertAbTestEvent = z.infer<typeof insertAbTestEventSchema>;
+
+// Export ContentType for use in AI Writers system
+export type ContentType = typeof contents.$inferSelect.type;
 

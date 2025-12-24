@@ -11,6 +11,9 @@ import type { AIWriter } from "@shared/schema";
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
+// Configuration constants
+const VOICE_VALIDATION_MAX_CONTENT_LENGTH = 2000; // Maximum characters to analyze
+
 export interface VoiceConsistencyResult {
   score: number; // 0-100
   matches: string[]; // Aspects that match the writer's voice
@@ -112,7 +115,7 @@ Sample Phrases (Writer's Typical Style):
 ${writer.samplePhrases?.slice(0, 3).map(p => `- "${p}"`).join('\n') || 'N/A'}
 
 CONTENT TO ANALYZE:
-${content.slice(0, 2000)} ${content.length > 2000 ? '...(truncated)' : ''}
+${content.slice(0, VOICE_VALIDATION_MAX_CONTENT_LENGTH)} ${content.length > VOICE_VALIDATION_MAX_CONTENT_LENGTH ? '...(truncated)' : ''}
 
 Analyze and return a JSON object with:
 {

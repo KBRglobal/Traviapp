@@ -4681,15 +4681,15 @@ export async function registerRoutes(
       
       if (useWriters) {
         // 🆕 Use new AI Writers system (PREFERRED)
-        const { aiWritersContentGenerator } = await import("./ai/writers/content-generator");
-        
-        const { type, topic, keywords, writerId, locale, length, tone } = req.body;
-
-        if (!type || !topic) {
-          return res.status(400).json({ error: "Type and topic are required" });
-        }
-
         try {
+          const { aiWritersContentGenerator } = await import("./ai/writers/content-generator");
+          
+          const { type, topic, keywords, writerId, locale, length, tone } = req.body;
+
+          if (!type || !topic) {
+            return res.status(400).json({ error: "Type and topic are required" });
+          }
+
           const result = await aiWritersContentGenerator.generate({
             writerId, // Optional - auto-assigns if not provided
             contentType: type,
@@ -4700,14 +4700,14 @@ export async function registerRoutes(
             tone,
           });
 
-          res.json({
+          return res.json({
             ...result,
             _system: 'ai-writers', // Indicator that new system was used
           });
         } catch (writerError: any) {
           console.error("AI Writers generation failed:", writerError);
-          // Fall back to legacy system on error
-          console.warn("Falling back to legacy content generator");
+          // Fall through to legacy system on error
+          console.warn("Falling back to legacy content generator due to error:", writerError.message);
         }
       }
       
