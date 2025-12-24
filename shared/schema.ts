@@ -2312,3 +2312,465 @@ export const DEFAULT_CONTENT_RULES = {
   maxRetries: 3,
 };
 
+// ============================================================================
+// AGENT B - NEWSLETTER, ANALYTICS & INTEGRATIONS TABLES
+// ============================================================================
+
+// ============================================================================
+// NEWSLETTER PRO TABLES
+// ============================================================================
+
+// Email Templates - for newsletter template builder
+export const emailTemplates = pgTable("email_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: varchar("category").default("general"), // welcome, promotional, digest, announcement
+  thumbnailUrl: text("thumbnail_url"),
+  isPrebuilt: boolean("is_prebuilt").default(false),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_email_templates_category").on(table.category),
+]);
+
+// Email Template Blocks - building blocks for templates
+export const emailTemplateBlocks = pgTable("email_template_blocks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull().references(() => emailTemplates.id, { onDelete: "cascade" }),
+  type: varchar("type").notNull(), // header, text, image, button, divider, footer
+  order: integer("order").notNull().default(0),
+  content: jsonb("content").$type<Record<string, any>>().default({}),
+  styles: jsonb("styles").$type<Record<string, any>>().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_email_template_blocks_template").on(table.templateId),
+  index("IDX_email_template_blocks_order").on(table.templateId, table.order),
+]);
+
+// Subscriber Segments - for segmentation
+export const subscriberSegments = pgTable("subscriber_segments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  isDynamic: boolean("is_dynamic").default(true), // auto-update vs static
+  subscriberCount: integer("subscriber_count").default(0),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Segment Conditions - rules for segments
+export const segmentConditions = pgTable("segment_conditions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  segmentId: varchar("segment_id").notNull().references(() => subscriberSegments.id, { onDelete: "cascade" }),
+  field: varchar("field").notNull(), // subscription_date, engagement, location, preferences
+  operator: varchar("operator").notNull(), // equals, contains, greater_than, less_than
+  value: jsonb("value").$type<any>().notNull(),
+  logicOperator: varchar("logic_operator").default("AND"), // AND, OR
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_segment_conditions_segment").on(table.segmentId),
+]);
+
+// Newsletter A/B Tests - for testing subject lines, content, send times
+export const newsletterAbTests = pgTable("newsletter_ab_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  testType: varchar("test_type").notNull(), // subject_line, content, send_time
+  variantA: jsonb("variant_a").$type<{ subject?: string; content?: string; sendTime?: string }>().notNull(),
+  variantB: jsonb("variant_b").$type<{ subject?: string; content?: string; sendTime?: string }>().notNull(),
+  splitPercentage: integer("split_percentage").default(50), // % for variant A
+  winnerMetric: varchar("winner_metric").default("open_rate"), // open_rate, click_rate
+  status: varchar("status").default("running"), // running, completed, paused
+  winnerId: varchar("winner_id"), // "a" or "b"
+  statsA: jsonb("stats_a").$type<{ sent: number; opened: number; clicked: number }>().default({ sent: 0, opened: 0, clicked: 0 }),
+  statsB: jsonb("stats_b").$type<{ sent: number; opened: number; clicked: number }>().default({ sent: 0, opened: 0, clicked: 0 }),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_newsletter_ab_tests_status").on(table.status),
+]);
+
+// Drip Campaigns - multi-step email sequences
+export const dripCampaigns = pgTable("drip_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  triggerType: varchar("trigger_type").notNull(), // signup, action, date
+  triggerValue: varchar("trigger_value"), // specific action or date
+  isActive: boolean("is_active").default(true),
+  enrollmentCount: integer("enrollment_count").default(0),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Drip Campaign Steps - individual emails in a sequence
+export const dripCampaignSteps = pgTable("drip_campaign_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => dripCampaigns.id, { onDelete: "cascade" }),
+  stepNumber: integer("step_number").notNull(),
+  delayAmount: integer("delay_amount").notNull(), // number of hours/days/weeks
+  delayUnit: varchar("delay_unit").notNull().default("days"), // hours, days, weeks
+  subject: varchar("subject").notNull(),
+  htmlContent: text("html_content").notNull(),
+  plainTextContent: text("plain_text_content"),
+  skipConditions: jsonb("skip_conditions").$type<any[]>().default([]),
+  exitConditions: jsonb("exit_conditions").$type<any[]>().default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_drip_campaign_steps_campaign").on(table.campaignId),
+  index("IDX_drip_campaign_steps_order").on(table.campaignId, table.stepNumber),
+]);
+
+// Drip Campaign Enrollments - track user progress through campaigns
+export const dripCampaignEnrollments = pgTable("drip_campaign_enrollments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => dripCampaigns.id, { onDelete: "cascade" }),
+  subscriberId: varchar("subscriber_id").notNull().references(() => newsletterSubscribers.id, { onDelete: "cascade" }),
+  currentStep: integer("current_step").default(0),
+  status: varchar("status").default("active"), // active, completed, exited, paused
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  nextEmailAt: timestamp("next_email_at"),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default({}),
+}, (table) => [
+  index("IDX_drip_enrollments_campaign").on(table.campaignId),
+  index("IDX_drip_enrollments_subscriber").on(table.subscriberId),
+  index("IDX_drip_enrollments_next_email").on(table.nextEmailAt),
+  uniqueIndex("IDX_drip_enrollments_unique").on(table.campaignId, table.subscriberId),
+]);
+
+// Behavioral Triggers - event-based email automation
+export const behavioralTriggers = pgTable("behavioral_triggers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  eventType: varchar("event_type").notNull(), // page_view, content_read, search, cart_abandon, inactivity
+  eventConditions: jsonb("event_conditions").$type<Record<string, any>>().default({}),
+  emailTemplateId: varchar("email_template_id").references(() => emailTemplates.id),
+  emailSubject: varchar("email_subject").notNull(),
+  emailContent: text("email_content").notNull(),
+  cooldownHours: integer("cooldown_hours").default(24), // prevent spam
+  isActive: boolean("is_active").default(true),
+  triggerCount: integer("trigger_count").default(0),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_behavioral_triggers_event_type").on(table.eventType),
+  index("IDX_behavioral_triggers_active").on(table.isActive),
+]);
+
+// Integration Connections - for external service integrations
+export const integrationConnections = pgTable("integration_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: varchar("provider").notNull(), // mailchimp, klaviyo, zapier, ga4, mixpanel, bigquery, snowflake
+  name: varchar("name").notNull(),
+  config: jsonb("config").$type<Record<string, any>>().notNull().default({}), // API keys, credentials
+  status: varchar("status").default("active"), // active, inactive, error
+  lastSyncAt: timestamp("last_sync_at"),
+  syncFrequency: varchar("sync_frequency").default("manual"), // manual, hourly, daily, weekly
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default({}),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_integration_connections_provider").on(table.provider),
+  index("IDX_integration_connections_status").on(table.status),
+]);
+
+// ============================================================================
+// AUTOMATION & INTEGRATIONS TABLES
+// ============================================================================
+
+// Scheduled Reports - automated report generation
+export const scheduledReports = pgTable("scheduled_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  reportType: varchar("report_type").notNull(), // content_performance, newsletter_stats, revenue
+  schedule: varchar("schedule").notNull(), // daily, weekly, monthly
+  scheduleConfig: jsonb("schedule_config").$type<{ dayOfWeek?: number; dayOfMonth?: number; hour: number }>().notNull(),
+  recipients: jsonb("recipients").$type<string[]>().notNull().default([]),
+  format: varchar("format").default("pdf"), // pdf, csv, html
+  filters: jsonb("filters").$type<Record<string, any>>().default({}),
+  isActive: boolean("is_active").default(true),
+  lastRunAt: timestamp("last_run_at"),
+  nextRunAt: timestamp("next_run_at").notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_scheduled_reports_next_run").on(table.nextRunAt),
+  index("IDX_scheduled_reports_active").on(table.isActive),
+]);
+
+// Content Calendar Items - AI-powered content scheduling
+export const contentCalendarItems = pgTable("content_calendar_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").references(() => contents.id, { onDelete: "set null" }),
+  title: varchar("title").notNull(),
+  contentType: varchar("content_type").notNull(),
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  status: varchar("status").default("scheduled"), // scheduled, published, cancelled
+  aiSuggestion: boolean("ai_suggestion").default(false),
+  aiReason: text("ai_reason"), // why AI suggested this date/time
+  priority: integer("priority").default(5), // 1-10
+  tags: jsonb("tags").$type<string[]>().default([]),
+  notes: text("notes"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_content_calendar_date").on(table.scheduledDate),
+  index("IDX_content_calendar_status").on(table.status),
+]);
+
+// ============================================================================
+// ANALYTICS PRO TABLES
+// ============================================================================
+
+// Realtime Sessions - active visitor tracking
+export const realtimeSessions = pgTable("realtime_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().unique(),
+  visitorId: varchar("visitor_id").notNull(),
+  currentPage: varchar("current_page"),
+  currentPageTitle: varchar("current_page_title"),
+  referrer: text("referrer"),
+  deviceType: varchar("device_type"),
+  browser: varchar("browser"),
+  os: varchar("os"),
+  country: varchar("country"),
+  city: varchar("city"),
+  isActive: boolean("is_active").default(true),
+  lastActivityAt: timestamp("last_activity_at").defaultNow(),
+  startedAt: timestamp("started_at").defaultNow(),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default({}),
+}, (table) => [
+  index("IDX_realtime_sessions_active").on(table.isActive),
+  index("IDX_realtime_sessions_visitor").on(table.visitorId),
+  index("IDX_realtime_sessions_last_activity").on(table.lastActivityAt),
+]);
+
+// User Journeys - session-based path tracking
+export const userJourneys = pgTable("user_journeys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().unique(),
+  visitorId: varchar("visitor_id").notNull(),
+  startPage: varchar("start_page").notNull(),
+  endPage: varchar("end_page"),
+  touchpointCount: integer("touchpoint_count").default(0),
+  durationSeconds: integer("duration_seconds").default(0),
+  converted: boolean("converted").default(false),
+  conversionType: varchar("conversion_type"),
+  conversionValue: integer("conversion_value"),
+  utmSource: varchar("utm_source"),
+  utmMedium: varchar("utm_medium"),
+  utmCampaign: varchar("utm_campaign"),
+  deviceType: varchar("device_type"),
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+}, (table) => [
+  index("IDX_user_journeys_visitor").on(table.visitorId),
+  index("IDX_user_journeys_started_at").on(table.startedAt),
+  index("IDX_user_journeys_converted").on(table.converted),
+]);
+
+// Journey Touchpoints - individual steps in a journey
+export const journeyTouchpoints = pgTable("journey_touchpoints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  journeyId: varchar("journey_id").notNull().references(() => userJourneys.id, { onDelete: "cascade" }),
+  stepNumber: integer("step_number").notNull(),
+  pageUrl: varchar("page_url").notNull(),
+  pageTitle: varchar("page_title"),
+  eventType: varchar("event_type"), // page_view, click, scroll, form_submit
+  timeOnPage: integer("time_on_page"), // seconds
+  scrollDepth: integer("scroll_depth"), // percentage
+  interactionData: jsonb("interaction_data").$type<Record<string, any>>().default({}),
+  timestamp: timestamp("timestamp").defaultNow(),
+}, (table) => [
+  index("IDX_journey_touchpoints_journey").on(table.journeyId),
+  index("IDX_journey_touchpoints_step").on(table.journeyId, table.stepNumber),
+]);
+
+// Conversion Funnels - define and track conversion funnels
+export const conversionFunnels = pgTable("conversion_funnels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  totalEntries: integer("total_entries").default(0),
+  totalConversions: integer("total_conversions").default(0),
+  conversionRate: integer("conversion_rate").default(0), // percentage * 100
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Funnel Steps - steps in a conversion funnel
+export const funnelSteps = pgTable("funnel_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  funnelId: varchar("funnel_id").notNull().references(() => conversionFunnels.id, { onDelete: "cascade" }),
+  stepNumber: integer("step_number").notNull(),
+  name: varchar("name").notNull(),
+  matchType: varchar("match_type").default("url"), // url, event, custom
+  matchValue: varchar("match_value").notNull(),
+  entryCount: integer("entry_count").default(0),
+  exitCount: integer("exit_count").default(0),
+  conversionCount: integer("conversion_count").default(0),
+  dropoffRate: integer("dropoff_rate").default(0), // percentage * 100
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_funnel_steps_funnel").on(table.funnelId),
+  index("IDX_funnel_steps_order").on(table.funnelId, table.stepNumber),
+]);
+
+// Funnel Events - track individual funnel progression events
+export const funnelEvents = pgTable("funnel_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  funnelId: varchar("funnel_id").notNull().references(() => conversionFunnels.id, { onDelete: "cascade" }),
+  sessionId: varchar("session_id").notNull(),
+  visitorId: varchar("visitor_id").notNull(),
+  currentStep: integer("current_step").notNull(),
+  completed: boolean("completed").default(false),
+  droppedAtStep: integer("dropped_at_step"),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default({}),
+}, (table) => [
+  index("IDX_funnel_events_funnel").on(table.funnelId),
+  index("IDX_funnel_events_session").on(table.sessionId),
+  index("IDX_funnel_events_visitor").on(table.visitorId),
+]);
+
+// Cohorts - user grouping for cohort analysis
+export const cohorts = pgTable("cohorts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  cohortType: varchar("cohort_type").notNull(), // signup_date, first_purchase, behavior
+  dateRange: jsonb("date_range").$type<{ start: string; end: string }>().notNull(),
+  criteria: jsonb("criteria").$type<Record<string, any>>().default({}),
+  userCount: integer("user_count").default(0),
+  retentionData: jsonb("retention_data").$type<Record<string, any>>().default({}),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Custom Reports - saved report configurations
+export const customReports = pgTable("custom_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  reportType: varchar("report_type").notNull(), // table, chart, metric
+  metrics: jsonb("metrics").$type<string[]>().notNull().default([]),
+  dimensions: jsonb("dimensions").$type<string[]>().notNull().default([]),
+  filters: jsonb("filters").$type<Record<string, any>>().default({}),
+  dateRange: jsonb("date_range").$type<{ type: string; start?: string; end?: string }>().notNull(),
+  visualization: jsonb("visualization").$type<{ type: string; config: Record<string, any> }>().notNull(),
+  isPublic: boolean("is_public").default(false),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Data Exports - export configurations for data warehouses
+export const dataExports = pgTable("data_exports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  destination: varchar("destination").notNull(), // bigquery, snowflake
+  connectionId: varchar("connection_id").references(() => integrationConnections.id),
+  dataSource: varchar("data_source").notNull(), // analytics_events, content, subscribers
+  schedule: varchar("schedule").notNull(), // hourly, daily, weekly
+  scheduleConfig: jsonb("schedule_config").$type<Record<string, any>>().default({}),
+  schemaMapping: jsonb("schema_mapping").$type<Record<string, string>>().notNull().default({}),
+  isIncremental: boolean("is_incremental").default(true),
+  lastExportAt: timestamp("last_export_at"),
+  nextExportAt: timestamp("next_export_at").notNull(),
+  lastExportStatus: varchar("last_export_status"), // success, failed, partial
+  lastExportError: text("last_export_error"),
+  exportCount: integer("export_count").default(0),
+  recordsExported: integer("records_exported").default(0),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_data_exports_next_export").on(table.nextExportAt),
+  index("IDX_data_exports_active").on(table.isActive),
+]);
+
+// Insert schemas and types for new tables
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmailTemplateBlockSchema = createInsertSchema(emailTemplateBlocks).omit({ id: true, createdAt: true });
+export const insertSubscriberSegmentSchema = createInsertSchema(subscriberSegments).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSegmentConditionSchema = createInsertSchema(segmentConditions).omit({ id: true, createdAt: true });
+export const insertNewsletterAbTestSchema = createInsertSchema(newsletterAbTests).omit({ id: true, createdAt: true });
+export const insertDripCampaignSchema = createInsertSchema(dripCampaigns).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDripCampaignStepSchema = createInsertSchema(dripCampaignSteps).omit({ id: true, createdAt: true });
+export const insertDripCampaignEnrollmentSchema = createInsertSchema(dripCampaignEnrollments).omit({ id: true });
+export const insertBehavioralTriggerSchema = createInsertSchema(behavioralTriggers).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertIntegrationConnectionSchema = createInsertSchema(integrationConnections).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertScheduledReportSchema = createInsertSchema(scheduledReports).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertContentCalendarItemSchema = createInsertSchema(contentCalendarItems).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertRealtimeSessionSchema = createInsertSchema(realtimeSessions).omit({ id: true });
+export const insertUserJourneySchema = createInsertSchema(userJourneys).omit({ id: true });
+export const insertJourneyTouchpointSchema = createInsertSchema(journeyTouchpoints).omit({ id: true });
+export const insertConversionFunnelSchema = createInsertSchema(conversionFunnels).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFunnelStepSchema = createInsertSchema(funnelSteps).omit({ id: true, createdAt: true });
+export const insertFunnelEventSchema = createInsertSchema(funnelEvents).omit({ id: true });
+export const insertCohortSchema = createInsertSchema(cohorts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCustomReportSchema = createInsertSchema(customReports).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDataExportSchema = createInsertSchema(dataExports).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+export type EmailTemplateBlock = typeof emailTemplateBlocks.$inferSelect;
+export type InsertEmailTemplateBlock = z.infer<typeof insertEmailTemplateBlockSchema>;
+export type SubscriberSegment = typeof subscriberSegments.$inferSelect;
+export type InsertSubscriberSegment = z.infer<typeof insertSubscriberSegmentSchema>;
+export type SegmentCondition = typeof segmentConditions.$inferSelect;
+export type InsertSegmentCondition = z.infer<typeof insertSegmentConditionSchema>;
+export type NewsletterAbTest = typeof newsletterAbTests.$inferSelect;
+export type InsertNewsletterAbTest = z.infer<typeof insertNewsletterAbTestSchema>;
+export type DripCampaign = typeof dripCampaigns.$inferSelect;
+export type InsertDripCampaign = z.infer<typeof insertDripCampaignSchema>;
+export type DripCampaignStep = typeof dripCampaignSteps.$inferSelect;
+export type InsertDripCampaignStep = z.infer<typeof insertDripCampaignStepSchema>;
+export type DripCampaignEnrollment = typeof dripCampaignEnrollments.$inferSelect;
+export type InsertDripCampaignEnrollment = z.infer<typeof insertDripCampaignEnrollmentSchema>;
+export type BehavioralTrigger = typeof behavioralTriggers.$inferSelect;
+export type InsertBehavioralTrigger = z.infer<typeof insertBehavioralTriggerSchema>;
+export type IntegrationConnection = typeof integrationConnections.$inferSelect;
+export type InsertIntegrationConnection = z.infer<typeof insertIntegrationConnectionSchema>;
+export type ScheduledReport = typeof scheduledReports.$inferSelect;
+export type InsertScheduledReport = z.infer<typeof insertScheduledReportSchema>;
+export type ContentCalendarItem = typeof contentCalendarItems.$inferSelect;
+export type InsertContentCalendarItem = z.infer<typeof insertContentCalendarItemSchema>;
+export type RealtimeSession = typeof realtimeSessions.$inferSelect;
+export type InsertRealtimeSession = z.infer<typeof insertRealtimeSessionSchema>;
+export type UserJourney = typeof userJourneys.$inferSelect;
+export type InsertUserJourney = z.infer<typeof insertUserJourneySchema>;
+export type JourneyTouchpoint = typeof journeyTouchpoints.$inferSelect;
+export type InsertJourneyTouchpoint = z.infer<typeof insertJourneyTouchpointSchema>;
+export type ConversionFunnel = typeof conversionFunnels.$inferSelect;
+export type InsertConversionFunnel = z.infer<typeof insertConversionFunnelSchema>;
+export type FunnelStep = typeof funnelSteps.$inferSelect;
+export type InsertFunnelStep = z.infer<typeof insertFunnelStepSchema>;
+export type FunnelEvent = typeof funnelEvents.$inferSelect;
+export type InsertFunnelEvent = z.infer<typeof insertFunnelEventSchema>;
+export type Cohort = typeof cohorts.$inferSelect;
+export type InsertCohort = z.infer<typeof insertCohortSchema>;
+export type CustomReport = typeof customReports.$inferSelect;
+export type InsertCustomReport = z.infer<typeof insertCustomReportSchema>;
+export type DataExport = typeof dataExports.$inferSelect;
+export type InsertDataExport = z.infer<typeof insertDataExportSchema>;
+
