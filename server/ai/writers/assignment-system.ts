@@ -238,7 +238,7 @@ function calculateDueDate(priority: 'low' | 'normal' | 'high' | 'urgent'): Date 
  * Generate unique assignment ID
  */
 function generateAssignmentId(): string {
-  return `assgn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `assgn_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
 /**
