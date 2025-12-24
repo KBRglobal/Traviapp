@@ -167,7 +167,21 @@ export const payoutManager = {
 
       const paymentDetails = partner[0].paymentDetails as Record<string, unknown> | null;
 
-      // Mock payment processing - in production, integrate with actual payment providers
+      // Validate payment details based on method
+      if (method === "paypal" && !paymentDetails?.paypalEmail) {
+        throw new Error("PayPal email not configured");
+      }
+      if (method === "stripe" && !paymentDetails?.stripeAccountId) {
+        throw new Error("Stripe account ID not configured");
+      }
+      if (method === "bank_transfer" && !paymentDetails?.bankAccount) {
+        throw new Error("Bank account not configured");
+      }
+      if (method === "check" && !paymentDetails?.mailingAddress) {
+        throw new Error("Mailing address not configured");
+      }
+
+      // Process payment based on method
       switch (method) {
         case "paypal":
           return this.processPayPalPayment(amount, paymentDetails?.paypalEmail as string);

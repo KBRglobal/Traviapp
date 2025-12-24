@@ -91,6 +91,11 @@ export const affiliateInjector = {
       let modifiedText = originalText;
       const matches: InjectionResult['matches'] = [];
 
+      // Helper function to escape regex special characters
+      const escapeRegex = (str: string): string => {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      };
+
       // Process each partner
       for (const partner of activePartners) {
         // Find matching patterns
@@ -98,7 +103,9 @@ export const affiliateInjector = {
         if (!partnerConfig) continue;
 
         for (const keyword of partnerConfig.keywords) {
-          const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+          // Escape special characters in keyword
+          const escapedKeyword = escapeRegex(keyword);
+          const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'gi');
           const match = modifiedText.match(regex);
 
           if (match) {

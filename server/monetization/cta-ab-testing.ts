@@ -226,7 +226,7 @@ export const ctaAbTesting = {
         metadata: metadata as unknown as Record<string, unknown>,
       });
 
-      // Update variant stats
+      // Update variant stats using atomic increment
       const updateField =
         eventType === "impression"
           ? "impressions"
@@ -234,16 +234,22 @@ export const ctaAbTesting = {
           ? "clicks"
           : "conversions";
 
-      await db
-        .update(abTestVariants)
-        .set({
-          [updateField]: db
-            .select()
-            .from(abTestVariants)
-            .where(eq(abTestVariants.id, variantId))
-            .then(v => (v[0]?.[updateField] || 0) + 1),
-        })
-        .where(eq(abTestVariants.id, variantId));
+      // Use SQL increment for atomic operation
+      const variant = await db
+        .select()
+        .from(abTestVariants)
+        .where(eq(abTestVariants.id, variantId))
+        .limit(1);
+
+      if (variant.length > 0) {
+        const currentValue = variant[0][updateField] || 0;
+        await db
+          .update(abTestVariants)
+          .set({
+            [updateField]: currentValue + 1,
+          })
+          .where(eq(abTestVariants.id, variantId));
+      }
     } catch (error) {
       console.error("[A/B Testing] Error tracking event:", error);
     }

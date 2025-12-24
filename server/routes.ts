@@ -9836,8 +9836,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     try {
       const { ctaAbTesting } = await import("./monetization/cta-ab-testing");
       const { id } = req.params;
-      const userId = (req as any).user?.id || "";
-      const sessionId = (req as any).sessionID || req.ip;
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?.claims?.sub || "";
+      const sessionId = authReq.session?.id || req.ip || "";
       const variant = await ctaAbTesting.getVariant(id, userId, sessionId);
       res.json(variant);
     } catch (error) {
@@ -9851,8 +9852,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       const { ctaAbTesting } = await import("./monetization/cta-ab-testing");
       const { id } = req.params;
       const { variantId, eventType, metadata } = req.body;
-      const userId = (req as any).user?.id;
-      const sessionId = (req as any).sessionID || req.ip;
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?.claims?.sub;
+      const sessionId = authReq.session?.id || req.ip || "";
       await ctaAbTesting.trackEvent(id, variantId, eventType, userId, sessionId, metadata);
       res.json({ success: true });
     } catch (error) {

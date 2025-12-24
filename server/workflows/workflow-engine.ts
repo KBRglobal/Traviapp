@@ -70,7 +70,7 @@ export const workflowEngine = {
         .values({
           workflowId,
           status: "running",
-          triggerData: triggerData as unknown as Record<string, unknown>,
+          triggerData: triggerData,
         })
         .returning();
 

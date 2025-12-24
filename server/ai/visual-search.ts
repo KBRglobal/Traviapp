@@ -43,7 +43,7 @@ export const visualSearch = {
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o-mini", // OpenAI's GPT-4o mini model
         messages: [
           {
             role: "system",
