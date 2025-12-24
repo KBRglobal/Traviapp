@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { DEFAULT_CONTENT_RULES } from "@shared/schema";
 import {
   Settings,
   FileText,
@@ -65,42 +66,7 @@ interface ContentRules {
   contentType: string | null;
 }
 
-const DEFAULT_RULES: Omit<ContentRules, 'id'> = {
-  name: "dubai-seo-standard",
-  description: "Standard SEO rules for Dubai tourism content - STRICT enforcement",
-  isActive: true,
-  minWords: 1800,
-  maxWords: 3500,
-  optimalMinWords: 2000,
-  optimalMaxWords: 2500,
-  introMinWords: 150,
-  introMaxWords: 200,
-  quickFactsMin: 5,
-  quickFactsMax: 8,
-  quickFactsWordsMin: 80,
-  quickFactsWordsMax: 120,
-  mainSectionsMin: 4,
-  mainSectionsMax: 6,
-  mainSectionWordsMin: 200,
-  mainSectionWordsMax: 300,
-  faqsMin: 6,
-  faqsMax: 10,
-  faqAnswerWordsMin: 50,
-  faqAnswerWordsMax: 100,
-  proTipsMin: 5,
-  proTipsMax: 8,
-  proTipWordsMin: 20,
-  proTipWordsMax: 35,
-  conclusionMinWords: 100,
-  conclusionMaxWords: 150,
-  internalLinksMin: 5,
-  internalLinksMax: 10,
-  keywordDensityMin: 10,
-  keywordDensityMax: 30,
-  dubaiMentionsMin: 5,
-  maxRetries: 3,
-  contentType: null,
-};
+const DEFAULT_RULES: Omit<ContentRules, 'id'> = DEFAULT_CONTENT_RULES;
 
 function RuleInput({
   label,

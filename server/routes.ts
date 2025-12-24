@@ -5188,6 +5188,110 @@ Output format:
     }
   });
 
+  // AI Field Generation endpoint - for individual field assistance
+  app.post("/api/ai/generate-field", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+    try {
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured" });
+      }
+      const { client: openai, provider } = aiClient;
+
+      const { fieldType, currentValue, title, contentType, primaryKeyword, maxLength } = req.body;
+      
+      if (!fieldType || !title || !contentType) {
+        return res.status(400).json({ error: "fieldType, title, and contentType are required" });
+      }
+
+      // Field-specific prompts
+      const fieldPrompts: Record<string, string> = {
+        metaTitle: `Generate 3 SEO-optimized meta titles (50-60 chars each) for a ${contentType} page about "${title}". 
+Include the primary keyword "${primaryKeyword || title}" naturally. Make them compelling and click-worthy.
+Format: Return ONLY a JSON array of 3 strings, like: ["Title 1", "Title 2", "Title 3"]`,
+
+        metaDescription: `Generate 3 meta descriptions (150-160 chars each) for "${title}" (${contentType}). 
+Include keyword "${primaryKeyword || title}" and a clear call-to-action. Make them engaging for search results.
+Format: Return ONLY a JSON array of 3 strings.`,
+
+        keyword: `Suggest 3 primary keywords for a ${contentType} page about "${title}". 
+Consider Dubai context, search intent, and SEO best practices. Format them as exact keywords (2-4 words each).
+Format: Return ONLY a JSON array of 3 strings.`,
+
+        intro: `Write 3 different intro paragraphs (60 words, 3 sentences each) for "${title}" (${contentType}). 
+Make them compelling, conversational, and engaging. Include keyword "${primaryKeyword || title}" naturally.
+Format: Return ONLY a JSON array of 3 strings.`,
+
+        expandedIntro: `Write 3 expanded introduction texts (150-200 words each) for "${title}" (${contentType}). 
+Provide rich context, highlight key aspects, and engage readers. Use natural keyword "${primaryKeyword || title}" integration.
+Format: Return ONLY a JSON array of 3 strings.`,
+
+        tips: `Generate 3 sets of visitor/traveler tips for "${title}" (${contentType}). 
+Each set should have 5-7 practical, actionable tips. Focus on insider knowledge and value.
+Format: Return ONLY a JSON array where each element is a string with tips separated by newlines.`,
+
+        highlights: `Generate 3 sets of key highlights for "${title}" (${contentType}). 
+Each set should have 5-6 highlights that showcase the best features or experiences. Be specific and compelling.
+Format: Return ONLY a JSON array where each element is a string with highlights separated by newlines.`,
+
+        quickInfo: `Generate 3 sets of quick info items for "${title}" (${contentType}). 
+Each set should include 6-8 key facts (location, hours, price, duration, etc.) in "Label: Value" format.
+Format: Return ONLY a JSON array where each element is a string with info items separated by newlines.`,
+
+        altText: `Generate 3 SEO-friendly alt text options for the hero image of "${title}" (${contentType}). 
+Each should be 125-150 chars, descriptive, include keyword "${primaryKeyword || title}", and describe visual elements.
+Format: Return ONLY a JSON array of 3 strings.`,
+      };
+
+      const prompt = fieldPrompts[fieldType as keyof typeof fieldPrompts];
+      if (!prompt) {
+        return res.status(400).json({ error: `Invalid fieldType: ${fieldType}` });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: getModelForProvider(provider),
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert SEO content writer specializing in Dubai travel content. Generate high-quality, optimized suggestions. Always return valid JSON arrays of strings."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.8,
+      });
+
+      const content = response.choices[0].message.content || "[]";
+      
+      // Try to parse as JSON array
+      let suggestions: string[];
+      try {
+        suggestions = JSON.parse(content);
+        if (!Array.isArray(suggestions)) {
+          throw new Error("Response is not an array");
+        }
+      } catch (parseError) {
+        // Fallback: split by newlines and filter
+        suggestions = content.split('\n').filter(s => s.trim().length > 0).slice(0, 3);
+      }
+
+      // Apply max length filter if specified
+      if (maxLength) {
+        suggestions = suggestions.map(s => s.length > maxLength ? s.substring(0, maxLength - 3) + '...' : s);
+      }
+
+      res.json({ suggestions });
+    } catch (error) {
+      console.error("Error generating field suggestions:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate field suggestions";
+      res.status(500).json({ error: message });
+    }
+  });
+
   // TEMPORARILY DISABLED - Will be enabled later
   // app.post("/api/ai/generate-transport", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
   //   if (safeMode.aiDisabled) {
