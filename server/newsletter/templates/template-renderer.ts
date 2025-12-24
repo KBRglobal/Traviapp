@@ -346,7 +346,7 @@ export function validateVariables(
   variables: TemplateVariables
 ): { valid: boolean; missingVariables: string[] } {
   const requiredVars = new Set<string>();
-  const variablePattern = /\{\{([^}]+)\}\}/g;
+  const variablePattern = /\{\{([^{}]+)\}\}/g;
   
   // Extract all variables from blocks
   for (const block of blocks) {
