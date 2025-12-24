@@ -1,5 +1,6 @@
 import { eq, desc, sql, and, ilike, inArray, or } from "drizzle-orm";
 import { db } from "./db";
+import { searchIndexer } from "./search/indexer";
 import {
   users,
   contents,
@@ -631,6 +632,14 @@ export class DatabaseStorage implements IStorage {
 
   async createContent(insertContent: InsertContent): Promise<Content> {
     const [content] = await db.insert(contents).values(insertContent as any).returning();
+    
+    // Auto-index if published
+    if (content.status === 'published') {
+      searchIndexer.indexContent(content.id).catch(err => 
+        console.error('[Storage] Failed to index new content:', err)
+      );
+    }
+    
     return content;
   }
 
@@ -640,6 +649,14 @@ export class DatabaseStorage implements IStorage {
       .set({ ...updateData, updatedAt: new Date() } as any)
       .where(eq(contents.id, id))
       .returning();
+    
+    // Re-index if published
+    if (content && content.status === 'published') {
+      searchIndexer.indexContent(content.id).catch(err => 
+        console.error('[Storage] Failed to reindex updated content:', err)
+      );
+    }
+    
     return content;
   }
 
@@ -650,6 +667,14 @@ export class DatabaseStorage implements IStorage {
       .set({ deletedAt: new Date() })
       .where(eq(contents.id, id))
       .returning();
+    
+    // Remove from search index
+    if (result) {
+      searchIndexer.removeFromIndex(id).catch(err => 
+        console.error('[Storage] Failed to remove deleted content from index:', err)
+      );
+    }
+    
     return !!result;
   }
 

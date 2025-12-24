@@ -2288,3 +2288,23 @@ export const DEFAULT_CONTENT_RULES = {
   maxRetries: 3,
 };
 
+// ============================================================================
+// SEARCH ENGINE TABLES
+// ============================================================================
+
+// Import search-related tables from search-schema.ts
+export {
+  searchIndex,
+  searchSuggestions,
+  searchSessions,
+  insertSearchIndexSchema,
+  insertSearchSuggestionSchema,
+  insertSearchSessionSchema,
+  type SearchIndex,
+  type InsertSearchIndex,
+  type SearchSuggestion,
+  type InsertSearchSuggestion,
+  type SearchSession,
+  type InsertSearchSession,
+} from "./search-schema";
+
