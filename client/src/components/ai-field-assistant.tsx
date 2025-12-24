@@ -27,7 +27,7 @@ interface AIFieldAssistantProps {
     readonly contentType: string;
     readonly primaryKeyword?: string;
   };
-  onApply: (value: string) => void;
+  readonly onApply: (value: string) => void;
   readonly maxLength?: number;
   readonly disabled?: boolean;
 }
