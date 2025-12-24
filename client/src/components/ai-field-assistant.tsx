@@ -173,7 +173,7 @@ export function AIFieldAssistant({
               <div className="space-y-3">
                 {suggestions.map((suggestion, index) => (
                   <div
-                    key={`suggestion-${fieldType}-${index}-${suggestion.length}-${suggestion.substring(0, Math.min(15, suggestion.length)).replace(/\s/g, '-')}`}
+                    key={`${fieldType}-suggestion-${index}`}
                     className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
