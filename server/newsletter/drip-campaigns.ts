@@ -164,8 +164,10 @@ export async function processDueEmails(): Promise<number> {
     const step = campaign.steps[currentStepIndex];
     if (!step) continue;
     
-    // TODO: Send email using step.subject, step.htmlContent
-    console.log(`Sending drip email: Campaign ${campaign.name}, Step ${currentStepIndex + 1}`);
+    // TODO: Implement actual email sending
+    // This should integrate with your email service (Resend, SendGrid, etc.)
+    // Example: await sendEmail({ to: subscriber.email, subject: step.subject, html: step.htmlContent });
+    console.log(`[Drip Campaign] Sending email: Campaign ${campaign.name}, Step ${currentStepIndex + 1} to subscriber`);
     
     // Move to next step
     const nextStepIndex = currentStepIndex + 1;
@@ -287,8 +289,10 @@ export async function processEventForTriggers(event: {
     
     if (!subscriber) continue;
     
-    // TODO: Send trigger email using trigger.emailSubject and trigger.emailContent
-    console.log(`Triggering behavioral email: ${trigger.name} for subscriber ${subscriber.email}`);
+    // TODO: Implement actual email sending for behavioral triggers
+    // This should integrate with your email service (Resend, SendGrid, etc.)
+    // Example: await sendEmail({ to: subscriber.email, subject: trigger.emailSubject, html: trigger.emailContent });
+    console.log(`[Behavioral Trigger] Sending email: ${trigger.name} to subscriber ${subscriber.email}`);
     
     // Increment trigger count
     await db.update(behavioralTriggers).set({

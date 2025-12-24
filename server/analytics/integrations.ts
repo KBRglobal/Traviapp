@@ -217,13 +217,14 @@ export async function executeDataExport(exportId: string): Promise<{ success: bo
 
 /**
  * Export to BigQuery
+ * TODO: Complete implementation before production use
+ * Requires @google-cloud/bigquery npm package
  */
 async function exportToBigQuery(connection: IntegrationConnection, exportConfig: DataExport, data: any[]): Promise<void> {
   const config = connection.config as { projectId?: string; datasetId?: string; tableId?: string; credentials?: any };
   
-  // Implement BigQuery export
-  // Use @google-cloud/bigquery library
-  console.log(`Exporting ${data.length} records to BigQuery: ${config.projectId}.${config.datasetId}.${config.tableId}`);
+  // Placeholder implementation - requires full BigQuery SDK integration
+  console.log(`[BigQuery Export] Would export ${data.length} records to BigQuery: ${config.projectId}.${config.datasetId}.${config.tableId}`);
   
   // TODO: Implement actual BigQuery insert
   // const {BigQuery} = require('@google-cloud/bigquery');
@@ -233,13 +234,14 @@ async function exportToBigQuery(connection: IntegrationConnection, exportConfig:
 
 /**
  * Export to Snowflake
+ * TODO: Complete implementation before production use
+ * Requires snowflake-sdk npm package
  */
 async function exportToSnowflake(connection: IntegrationConnection, exportConfig: DataExport, data: any[]): Promise<void> {
   const config = connection.config as { account?: string; username?: string; password?: string; database?: string; schema?: string; warehouse?: string };
   
-  // Implement Snowflake export
-  // Use snowflake-sdk library
-  console.log(`Exporting ${data.length} records to Snowflake: ${config.account}/${config.database}/${config.schema}`);
+  // Placeholder implementation - requires full Snowflake SDK integration
+  console.log(`[Snowflake Export] Would export ${data.length} records to Snowflake: ${config.account}/${config.database}/${config.schema}`);
   
   // TODO: Implement actual Snowflake insert
   // const snowflake = require('snowflake-sdk');

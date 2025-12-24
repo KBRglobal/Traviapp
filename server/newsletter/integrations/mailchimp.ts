@@ -4,6 +4,7 @@
  */
 
 import { db } from "../../db";
+import crypto from "crypto";
 import {
   integrationConnections,
   newsletterSubscribers,
@@ -92,7 +93,7 @@ export async function syncSubscriberToMailchimp(
   if (!subscriber) throw new Error("Subscriber not found");
   
   // Hash email for Mailchimp
-  const crypto = require("crypto");
+  import crypto from "crypto";
   const emailHash = crypto
     .createHash("md5")
     .update(subscriber.email.toLowerCase())
@@ -306,6 +307,8 @@ export async function importCampaignStatsFromMailchimp(
           "GET"
         );
         
+        // Match campaigns by both name AND external ID for accuracy
+        // Note: In production, consider storing Mailchimp campaign ID in local database
         await db.update(newsletterCampaigns).set({
           totalSent: report.emails_sent || 0,
           totalOpened: report.opens?.unique_opens || 0,
