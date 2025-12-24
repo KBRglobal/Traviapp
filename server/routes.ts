@@ -74,6 +74,7 @@ import {
   generateContentImages,
   generateImagePrompt,
   generateImage,
+  aiWritersContentGenerator,
   type GeneratedImage,
   type ImageGenerationOptions
 } from "./ai-generator";
@@ -4666,22 +4667,39 @@ export async function registerRoutes(
 
   app.post("/api/ai/generate", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     try {
+      // Check safe mode
+      if (safeMode.aiDisabled) {
+        return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+      }
+
+      const { type, topic, keywords, writerId, useWriters = true } = req.body;
+
+      if (!type || !topic) {
+        return res.status(400).json({ error: "Type and topic are required" });
+      }
+
+      // 🆕 Use new AI Writers system (default)
+      if (useWriters !== false) {
+        const result = await aiWritersContentGenerator.generate({
+          writerId: writerId, // Optional - auto-assigns if not provided
+          contentType: type,
+          topic: topic,
+          keywords: keywords,
+          locale: req.body.locale || 'en',
+        });
+        return res.json(result);
+      }
+
+      // ⚠️ DEPRECATED: Legacy fallback (only if explicitly requested with useWriters=false)
+      console.warn('Using deprecated legacy content generator. Please migrate to AI Writers system.');
+      
       const aiClient = getAIClient();
       if (!aiClient) {
         return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
       const { client: openai, provider } = aiClient;
 
-      // Check safe mode
-      if (safeMode.aiDisabled) {
-        return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
-      }
-
-      const { type, topic, keywords, tone = "informative" } = req.body;
-
-      if (!type || !topic) {
-        return res.status(400).json({ error: "Type and topic are required" });
-      }
+      const tone = req.body.tone || "informative";
 
       let systemPrompt = "";
       if (type === "attraction") {
@@ -4731,6 +4749,36 @@ Format the response as JSON with the following structure:
     } catch (error) {
       console.error("Error generating AI content:", error);
       res.status(500).json({ error: "Failed to generate content" });
+    }
+  });
+
+  // New endpoint for writer-specific generation
+  app.post("/api/writers/:writerId/generate", requireAuth, rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    try {
+      // Check safe mode
+      if (safeMode.aiDisabled) {
+        return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+      }
+
+      const { writerId } = req.params;
+      const { contentType, topic, keywords } = req.body;
+
+      if (!contentType || !topic) {
+        return res.status(400).json({ error: "contentType and topic are required" });
+      }
+
+      const result = await aiWritersContentGenerator.generate({
+        writerId,
+        contentType,
+        topic,
+        keywords,
+        locale: req.body.locale || 'en',
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating content with writer:", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to generate content" });
     }
   });
 

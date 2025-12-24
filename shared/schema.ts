@@ -147,6 +147,33 @@ export const users = pgTable("users", {
 // UpsertUser type for Replit Auth
 export type UpsertUser = typeof users.$inferInsert;
 
+// AI Writers table - Virtual newsroom with writer personalities
+export const aiWriters = pgTable("ai_writers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  expertise: varchar("expertise").notNull(), // e.g., "luxury_travel", "budget_tips", "adventure"
+  personality: text("personality").notNull(), // Detailed personality description
+  writingStyle: text("writing_style").notNull(), // Style guidelines
+  voicePrompt: text("voice_prompt").notNull(), // System prompt for this writer
+  isActive: boolean("is_active").notNull().default(true),
+  totalArticles: integer("total_articles").default(0),
+  avgVoiceScore: integer("avg_voice_score").default(0), // 0-100
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_ai_writers_expertise").on(table.expertise),
+  index("IDX_ai_writers_active").on(table.isActive),
+]);
+
+export const insertAiWriterSchema = createInsertSchema(aiWriters).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiWriter = z.infer<typeof insertAiWriterSchema>;
+export type AiWriter = typeof aiWriters.$inferSelect;
+
 // Content table - base table for all content types
 export const contents = pgTable("contents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -167,6 +194,9 @@ export const contents = pgTable("contents", {
   wordCount: integer("word_count").default(0),
   viewCount: integer("view_count").default(0),
   authorId: varchar("author_id").references(() => users.id),
+  writerId: varchar("writer_id").references(() => aiWriters.id),
+  generatedByAI: boolean("generated_by_ai").default(false),
+  writerVoiceScore: integer("writer_voice_score"), // 0-100 voice consistency
   scheduledAt: timestamp("scheduled_at"),
   publishedAt: timestamp("published_at"),
   deletedAt: timestamp("deleted_at"),
@@ -177,6 +207,7 @@ export const contents = pgTable("contents", {
   index("IDX_contents_type").on(table.type),
   index("IDX_contents_type_status").on(table.type, table.status),
   index("IDX_contents_author").on(table.authorId),
+  index("IDX_contents_writer").on(table.writerId),
   index("IDX_contents_published_at").on(table.publishedAt),
 ]);
 
@@ -2276,6 +2307,13 @@ export type InsertContentRules = z.infer<typeof insertContentRulesSchema>;
 export type ContentRules = typeof contentRules.$inferSelect;
 
 // Default rules that will be seeded
+/**
+ * @deprecated These rules are no longer used for AI content generation.
+ * The AI Writers system uses writer-specific prompts instead.
+ * Kept for backward compatibility with validation features only.
+ * 
+ * @see server/ai/writers/prompts.ts for new writer-based prompts
+ */
 export const DEFAULT_CONTENT_RULES = {
   name: "dubai-seo-standard",
   description: "Standard SEO rules for Dubai tourism content - STRICT enforcement",

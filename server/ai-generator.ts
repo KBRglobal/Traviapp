@@ -1,6 +1,10 @@
 /**
  * AI Content Generator - Legacy Entry Point
  *
+ * @deprecated Use aiWritersContentGenerator from './ai/writers/content-generator' instead
+ * This file is maintained for backward compatibility only.
+ * All new content generation should use the AI Writers system.
+ *
  * This file now imports from the modular AI structure in ./ai/
  * and re-exports for backward compatibility. New code should
  * import directly from './ai' instead.
@@ -11,6 +15,7 @@
  * - ./ai/image-generation.ts - Image generation (Flux, DALL-E)
  * - ./ai/seo-tools.ts - SEO analysis and optimization
  * - ./ai/utils.ts - Utility functions
+ * - ./ai/writers/content-generator.ts - NEW AI Writers system (USE THIS!)
  */
 
 import type { ContentBlock } from "@shared/schema";
@@ -34,6 +39,9 @@ export {
   analyzeSeoScore,
   improveContentForSeo,
 } from "./ai";
+
+// Export new AI Writers system
+export { aiWritersContentGenerator } from "./ai/writers/content-generator";
 
 // Re-export types
 export type {
