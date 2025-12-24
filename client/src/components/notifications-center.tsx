@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
   Sheet,
@@ -25,8 +25,26 @@ import {
   Eye,
   Languages,
   X,
+  Info,
 } from "lucide-react";
 import type { ContentWithRelations } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+
+// API notification from server
+interface ApiNotification {
+  id: string;
+  type: "info" | "warning" | "success" | "error";
+  title: string;
+  message: string;
+  link?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+interface NotificationsResponse {
+  notifications: ApiNotification[];
+  unreadCount: number;
+}
 
 interface Notification {
   id: string;
@@ -37,14 +55,22 @@ interface Notification {
   time: Date;
   link?: string;
   read?: boolean;
+  isApiNotification?: boolean;
 }
 
 export function NotificationsCenter() {
   const [, navigate] = useLocation();
   const [open, setOpen] = useState(false);
-  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [localReadIds, setLocalReadIds] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
 
-  // Fetch data needed for notifications
+  // Fetch user notifications from API
+  const { data: apiNotifications } = useQuery<NotificationsResponse>({
+    queryKey: ["/api/notifications"],
+    refetchInterval: 60000, // Refetch every minute
+  });
+
+  // Fetch data needed for system-generated notifications
   const { data: contents = [] } = useQuery<ContentWithRelations[]>({
     queryKey: ["/api/contents"],
   });
@@ -61,10 +87,57 @@ export function NotificationsCenter() {
     queryKey: ["/api/contents/attention"],
   });
 
-  // Generate notifications based on system state
+  // Mutation to mark a notification as read
+  const markAsReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest(`/api/notifications/${id}/read`, { method: "PATCH" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+  });
+
+  // Mutation to mark all notifications as read
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("/api/notifications/mark-all-read", { method: "POST" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+  });
+
+  // Get icon for API notification type
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case "warning": return AlertTriangle;
+      case "success": return CheckCircle;
+      case "error": return AlertTriangle;
+      default: return Info;
+    }
+  };
+
+  // Generate notifications based on system state + API notifications
   const notifications = useMemo<Notification[]>(() => {
     const items: Notification[] = [];
     const now = new Date();
+
+    // Add API notifications first (from database)
+    if (apiNotifications?.notifications) {
+      apiNotifications.notifications.forEach((apiNotif) => {
+        items.push({
+          id: apiNotif.id,
+          type: apiNotif.type === "error" ? "warning" : apiNotif.type as "info" | "warning" | "success",
+          icon: getNotificationIcon(apiNotif.type),
+          title: apiNotif.title,
+          description: apiNotif.message,
+          time: new Date(apiNotif.createdAt),
+          link: apiNotif.link || undefined,
+          read: apiNotif.isRead,
+          isApiNotification: true,
+        });
+      });
+    }
 
     // Scheduled content notifications
     if (attentionItems?.scheduledToday?.length) {
@@ -160,24 +233,36 @@ export function NotificationsCenter() {
 
     // Sort by time, most recent first
     return items.sort((a, b) => b.time.getTime() - a.time.getTime());
-  }, [contents, rssStats, attentionItems]);
+  }, [contents, rssStats, attentionItems, apiNotifications]);
 
-  // Unread count
-  const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
+  // Unread count - check both local state and API read status
+  const unreadCount = notifications.filter((n) => {
+    if (n.isApiNotification) {
+      return !n.read;
+    }
+    return !localReadIds.has(n.id);
+  }).length;
 
-  // Mark as read
-  const markAsRead = (id: string) => {
-    setReadIds((prev) => new Set([...prev, id]));
+  // Mark as read - use API for API notifications, local state for system notifications
+  const markAsRead = (id: string, isApiNotification?: boolean) => {
+    if (isApiNotification) {
+      markAsReadMutation.mutate(id);
+    } else {
+      setLocalReadIds((prev) => new Set([...prev, id]));
+    }
   };
 
   // Mark all as read
   const markAllAsRead = () => {
-    setReadIds(new Set(notifications.map((n) => n.id)));
+    // Mark API notifications via API
+    markAllAsReadMutation.mutate();
+    // Mark local notifications
+    setLocalReadIds(new Set(notifications.filter(n => !n.isApiNotification).map((n) => n.id)));
   };
 
   // Handle notification click
   const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id);
+    markAsRead(notification.id, notification.isApiNotification);
     if (notification.link) {
       setOpen(false);
       navigate(notification.link);
@@ -264,7 +349,9 @@ export function NotificationsCenter() {
                 <div className="space-y-2">
                   {notifications.map((notification) => {
                     const Icon = notification.icon;
-                    const isUnread = !readIds.has(notification.id);
+                    const isUnread = notification.isApiNotification
+                      ? !notification.read
+                      : !localReadIds.has(notification.id);
 
                     return (
                       <button
@@ -324,7 +411,9 @@ export function NotificationsCenter() {
                     .filter((n) => n.type === "action")
                     .map((notification) => {
                       const Icon = notification.icon;
-                      const isUnread = !readIds.has(notification.id);
+                      const isUnread = notification.isApiNotification
+                        ? !notification.read
+                        : !localReadIds.has(notification.id);
 
                       return (
                         <button

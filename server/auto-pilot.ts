@@ -25,6 +25,7 @@ import { contentIntelligence } from "./content-intelligence";
 import { DUBAI_AREAS } from "./services/image-seo-service";
 import { jobQueue } from "./job-queue";
 import { cache } from "./cache";
+import { enterprise } from "./enterprise";
 
 // ============================================================================
 // AUTO-PILOT CONFIGURATION
@@ -933,15 +934,22 @@ export const autoPilot = {
    */
   async runHourlyTasks(): Promise<{
     scheduled: { published: number };
+    locksCleanedUp: number;
   }> {
     console.log("[AutoPilot] Running hourly tasks...");
 
     // 1. Process scheduled content
     const scheduled = await autoPublisher.processScheduledContent();
 
+    // 2. Clean up expired content locks
+    const locksCleanedUp = await enterprise.locks.cleanupExpired();
+    if (locksCleanedUp > 0) {
+      console.log(`[AutoPilot] Cleaned up ${locksCleanedUp} expired content locks`);
+    }
+
     console.log("[AutoPilot] Hourly tasks completed");
 
-    return { scheduled };
+    return { scheduled, locksCleanedUp };
   },
 
   /**
@@ -1085,3 +1093,123 @@ export const autoPilotSystem = {
   reports: autoReports,
   runner: autoPilot,
 };
+
+// ============================================================================
+// AUTO-PILOT SCHEDULER
+// Automatically runs hourly, daily, and weekly tasks
+// ============================================================================
+
+class AutoPilotScheduler {
+  private isRunning = false;
+  private checkIntervalId: NodeJS.Timeout | null = null;
+  private lastRuns: { hourly?: Date; daily?: Date; weekly?: Date } = {};
+
+  /**
+   * Start the automatic scheduler
+   */
+  start(): void {
+    if (this.isRunning) {
+      console.log("[AutoPilot Scheduler] Already running");
+      return;
+    }
+
+    this.isRunning = true;
+
+    // Check every minute if any tasks need to run
+    this.checkIntervalId = setInterval(() => this.checkAndRunTasks(), 60 * 1000);
+
+    // Also run initial check after short delay
+    setTimeout(() => this.checkAndRunTasks(), 5000);
+
+    console.log("[AutoPilot Scheduler] Started - will run hourly/daily/weekly tasks automatically");
+  }
+
+  /**
+   * Stop the scheduler
+   */
+  stop(): void {
+    if (this.checkIntervalId) {
+      clearInterval(this.checkIntervalId);
+      this.checkIntervalId = null;
+    }
+    this.isRunning = false;
+    console.log("[AutoPilot Scheduler] Stopped");
+  }
+
+  /**
+   * Check if any scheduled tasks need to run
+   */
+  private async checkAndRunTasks(): Promise<void> {
+    const now = new Date();
+
+    try {
+      // Hourly tasks - run every hour
+      if (this.shouldRunHourly(now)) {
+        console.log("[AutoPilot Scheduler] Running hourly tasks...");
+        await autoPilot.runHourlyTasks();
+        this.lastRuns.hourly = now;
+        console.log("[AutoPilot Scheduler] Hourly tasks completed");
+      }
+
+      // Daily tasks - run once per day at 2:00 AM
+      if (this.shouldRunDaily(now)) {
+        console.log("[AutoPilot Scheduler] Running daily tasks...");
+        await autoPilot.runDailyTasks();
+        this.lastRuns.daily = now;
+        console.log("[AutoPilot Scheduler] Daily tasks completed");
+      }
+
+      // Weekly tasks - run once per week on Sunday at 3:00 AM
+      if (this.shouldRunWeekly(now)) {
+        console.log("[AutoPilot Scheduler] Running weekly tasks...");
+        await autoPilot.runWeeklyTasks();
+        this.lastRuns.weekly = now;
+        console.log("[AutoPilot Scheduler] Weekly tasks completed");
+      }
+    } catch (error) {
+      console.error("[AutoPilot Scheduler] Error running scheduled tasks:", error);
+    }
+  }
+
+  private shouldRunHourly(now: Date): boolean {
+    if (!this.lastRuns.hourly) return true;
+    const hoursSinceLastRun = (now.getTime() - this.lastRuns.hourly.getTime()) / (1000 * 60 * 60);
+    return hoursSinceLastRun >= 1;
+  }
+
+  private shouldRunDaily(now: Date): boolean {
+    // Run at 2:00 AM
+    if (now.getHours() !== 2) return false;
+    if (now.getMinutes() > 5) return false; // Within first 5 minutes of 2 AM
+
+    if (!this.lastRuns.daily) return true;
+    const hoursSinceLastRun = (now.getTime() - this.lastRuns.daily.getTime()) / (1000 * 60 * 60);
+    return hoursSinceLastRun >= 20; // At least 20 hours since last run
+  }
+
+  private shouldRunWeekly(now: Date): boolean {
+    // Run on Sunday at 3:00 AM
+    if (now.getDay() !== 0) return false; // Sunday = 0
+    if (now.getHours() !== 3) return false;
+    if (now.getMinutes() > 5) return false; // Within first 5 minutes of 3 AM
+
+    if (!this.lastRuns.weekly) return true;
+    const daysSinceLastRun = (now.getTime() - this.lastRuns.weekly.getTime()) / (1000 * 60 * 60 * 24);
+    return daysSinceLastRun >= 6; // At least 6 days since last run
+  }
+
+  /**
+   * Get scheduler status
+   */
+  getStatus(): { isRunning: boolean; lastRuns: typeof this.lastRuns } {
+    return {
+      isRunning: this.isRunning,
+      lastRuns: this.lastRuns,
+    };
+  }
+}
+
+export const autoPilotScheduler = new AutoPilotScheduler();
+
+// Auto-start the scheduler when the module loads
+autoPilotScheduler.start();

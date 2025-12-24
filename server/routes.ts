@@ -86,6 +86,7 @@ import {
   threatIntelligence,
 } from "./enterprise-security";
 import { registerEnterpriseRoutes } from "./enterprise-routes";
+import { enterprise } from "./enterprise";
 import { registerImageRoutes } from "./routes/image-routes";
 import { registerLogRoutes } from "./routes/log-routes";
 import { registerSEORoutes } from "./routes/seo-routes";
@@ -3113,10 +3114,20 @@ export async function registerRoutes(
       }
 
       const fullContent = await storage.getContent(content.id);
-      
+
       // Audit log content creation
       await logAuditEvent(req, "create", "content", content.id, `Created ${parsed.type}: ${parsed.title}`, undefined, { title: parsed.title, type: parsed.type, status: parsed.status || "draft" });
-      
+
+      // Trigger webhook for content creation
+      enterprise.webhooks.trigger("content.created", {
+        contentId: content.id,
+        type: parsed.type,
+        title: parsed.title,
+        slug: parsed.slug,
+        status: parsed.status || "draft",
+        createdAt: new Date().toISOString(),
+      }).catch(err => console.error("[Webhook] content.created trigger failed:", err));
+
       res.status(201).json(fullContent);
     } catch (error) {
       console.error("Error creating content:", error);
@@ -3209,15 +3220,27 @@ export async function registerRoutes(
       }
 
       const fullContent = await storage.getContent(req.params.id);
-      
+
       // Audit log content update
       const actionType = req.body.status === "published" && existingContent.status !== "published" ? "publish" : "update";
-      await logAuditEvent(req, actionType, "content", req.params.id, 
+      await logAuditEvent(req, actionType, "content", req.params.id,
         actionType === "publish" ? `Published: ${existingContent.title}` : `Updated: ${existingContent.title}`,
         { title: existingContent.title, status: existingContent.status },
         { title: fullContent?.title, status: fullContent?.status }
       );
-      
+
+      // Trigger webhook for content update or publish
+      const webhookEvent = actionType === "publish" ? "content.published" : "content.updated";
+      enterprise.webhooks.trigger(webhookEvent, {
+        contentId: req.params.id,
+        type: existingContent.type,
+        title: fullContent?.title,
+        slug: fullContent?.slug,
+        status: fullContent?.status,
+        previousStatus: existingContent.status,
+        updatedAt: new Date().toISOString(),
+      }).catch(err => console.error(`[Webhook] ${webhookEvent} trigger failed:`, err));
+
       res.json(fullContent);
     } catch (error) {
       console.error("Error updating content:", error);
@@ -3550,6 +3573,15 @@ export async function registerRoutes(
       // Audit log content deletion
       if (existingContent) {
         await logAuditEvent(req, "delete", "content", req.params.id, `Deleted: ${existingContent.title}`, { title: existingContent.title, type: existingContent.type });
+
+        // Trigger webhook for content deletion
+        enterprise.webhooks.trigger("content.deleted", {
+          contentId: req.params.id,
+          type: existingContent.type,
+          title: existingContent.title,
+          slug: existingContent.slug,
+          deletedAt: new Date().toISOString(),
+        }).catch(err => console.error("[Webhook] content.deleted trigger failed:", err));
       }
 
       res.status(204).send();

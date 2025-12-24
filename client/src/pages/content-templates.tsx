@@ -166,19 +166,59 @@ export default function ContentTemplatesPage() {
     structure: { sections: [""], blocks: [{ type: "text", placeholder: "" }] },
   });
 
-  // For now, we'll use localStorage to store custom templates
-  // In production, this would be an API
-  const [customTemplates, setCustomTemplates] = useState<Template[]>(() => {
-    const saved = localStorage.getItem("content-templates");
-    return saved ? JSON.parse(saved) : [];
+  // Fetch templates from API
+  const { data: apiTemplates = [], isLoading } = useQuery<Template[]>({
+    queryKey: ["/api/content-templates"],
   });
 
-  const saveTemplates = (templates: Template[]) => {
-    setCustomTemplates(templates);
-    localStorage.setItem("content-templates", JSON.stringify(templates));
-  };
+  // Create template mutation
+  const createTemplateMutation = useMutation({
+    mutationFn: async (template: Omit<Template, "id">) => {
+      return apiRequest("/api/content-templates", {
+        method: "POST",
+        body: JSON.stringify({
+          name: template.name,
+          description: template.description,
+          contentType: template.type,
+          blocks: template.structure.blocks || [],
+          seoDefaults: {},
+          isPublic: true,
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/content-templates"] });
+    },
+  });
 
-  // All templates (default + custom)
+  // Delete template mutation
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest(`/api/content-templates/${id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/content-templates"] });
+    },
+  });
+
+  // Transform API templates to match our interface
+  const customTemplates: Template[] = apiTemplates.map((t: any) => ({
+    id: t.id,
+    name: t.name,
+    description: t.description || "",
+    type: t.contentType,
+    structure: {
+      blocks: t.blocks || [],
+      sections: t.blocks?.map((b: any) => b.type) || [],
+    },
+    createdAt: t.createdAt,
+    usageCount: t.usageCount || 0,
+    isDefault: false,
+  }));
+
+  // All templates (default + custom from API)
   const allTemplates = [...defaultTemplates, ...customTemplates];
 
   // Filter templates
@@ -191,58 +231,74 @@ export default function ContentTemplatesPage() {
   });
 
   // Create new template
-  const handleCreateTemplate = () => {
-    const template: Template = {
-      id: `custom-${Date.now()}`,
-      name: newTemplate.name,
-      description: newTemplate.description,
-      type: newTemplate.type,
-      structure: newTemplate.structure,
-      createdAt: new Date().toISOString(),
-      usageCount: 0,
-    };
+  const handleCreateTemplate = async () => {
+    try {
+      await createTemplateMutation.mutateAsync({
+        name: newTemplate.name,
+        description: newTemplate.description,
+        type: newTemplate.type,
+        structure: newTemplate.structure,
+      });
 
-    saveTemplates([...customTemplates, template]);
-    setShowCreateDialog(false);
-    setNewTemplate({
-      name: "",
-      description: "",
-      type: "attraction",
-      structure: { sections: [""], blocks: [{ type: "text", placeholder: "" }] },
-    });
+      setShowCreateDialog(false);
+      setNewTemplate({
+        name: "",
+        description: "",
+        type: "attraction",
+        structure: { sections: [""], blocks: [{ type: "text", placeholder: "" }] },
+      });
 
-    toast({
-      title: "Template created",
-      description: `"${template.name}" has been saved.`,
-    });
+      toast({
+        title: "Template created",
+        description: `"${newTemplate.name}" has been saved to the database.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create template. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Delete template
-  const handleDeleteTemplate = (id: string) => {
-    const updated = customTemplates.filter((t) => t.id !== id);
-    saveTemplates(updated);
-    toast({
-      title: "Template deleted",
-      description: "The template has been removed.",
-    });
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      await deleteTemplateMutation.mutateAsync(id);
+      toast({
+        title: "Template deleted",
+        description: "The template has been removed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete template. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Duplicate template
-  const handleDuplicateTemplate = (template: Template) => {
-    const duplicate: Template = {
-      ...template,
-      id: `custom-${Date.now()}`,
-      name: `${template.name} (Copy)`,
-      isDefault: false,
-      createdAt: new Date().toISOString(),
-      usageCount: 0,
-    };
+  const handleDuplicateTemplate = async (template: Template) => {
+    try {
+      await createTemplateMutation.mutateAsync({
+        name: `${template.name} (Copy)`,
+        description: template.description,
+        type: template.type,
+        structure: template.structure,
+      });
 
-    saveTemplates([...customTemplates, duplicate]);
-    toast({
-      title: "Template duplicated",
-      description: `"${duplicate.name}" has been created.`,
-    });
+      toast({
+        title: "Template duplicated",
+        description: `"${template.name} (Copy)" has been created.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to duplicate template. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Use template (navigate to editor with template)
@@ -358,7 +414,11 @@ export default function ContentTemplatesPage() {
               <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateTemplate} disabled={!newTemplate.name}>
+              <Button
+                onClick={handleCreateTemplate}
+                disabled={!newTemplate.name || createTemplateMutation.isPending}
+              >
+                {createTemplateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Create Template
               </Button>
             </DialogFooter>

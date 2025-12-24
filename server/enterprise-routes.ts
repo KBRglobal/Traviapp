@@ -318,6 +318,39 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
+  // Get all active locks (admin only)
+  app.get("/api/admin/locks", requirePermission("canManageUsers"), async (req, res) => {
+    try {
+      const locks = await enterprise.locks.getAllActiveLocks();
+      res.json({ locks, total: locks.length });
+    } catch (error) {
+      console.error("Error fetching all locks:", error);
+      res.status(500).json({ error: "Failed to fetch active locks" });
+    }
+  });
+
+  // Force unlock (admin only)
+  app.delete("/api/admin/locks/:contentId/force", requirePermission("canManageUsers"), async (req, res) => {
+    try {
+      await enterprise.locks.forceUnlock(req.params.contentId);
+      res.json({ success: true, message: "Lock released successfully" });
+    } catch (error) {
+      console.error("Error force unlocking:", error);
+      res.status(500).json({ error: "Failed to force unlock" });
+    }
+  });
+
+  // Cleanup expired locks (admin only)
+  app.post("/api/admin/locks/cleanup", requirePermission("canManageUsers"), async (req, res) => {
+    try {
+      const count = await enterprise.locks.cleanupExpired();
+      res.json({ success: true, cleaned: count });
+    } catch (error) {
+      console.error("Error cleaning up locks:", error);
+      res.status(500).json({ error: "Failed to cleanup expired locks" });
+    }
+  });
+
   // ============================================================================
   // NOTIFICATIONS ROUTES
   // ============================================================================
