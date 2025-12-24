@@ -14,6 +14,12 @@ import { queryProcessor } from "./query-processor";
 import { cache } from "../cache";
 import searchAnalytics from "../search-analytics";
 
+// Export new modules for spell check and query expansion
+export { spellChecker } from "./spell-checker";
+export { synonymExpander } from "./synonyms";
+export { queryRewriter } from "./query-rewriter";
+export { queryProcessor } from "./query-processor";
+
 export interface SearchQuery {
   q: string;
   limit?: number;
