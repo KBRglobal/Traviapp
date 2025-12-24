@@ -19,17 +19,17 @@ export type FieldType =
   | "altText";
 
 interface AIFieldAssistantProps {
-  fieldName: string;
-  fieldType: FieldType;
-  currentValue: string;
-  contentContext: {
-    title: string;
-    contentType: string;
-    primaryKeyword?: string;
+  readonly fieldName: string;
+  readonly fieldType: FieldType;
+  readonly currentValue: string;
+  readonly contentContext: {
+    readonly title: string;
+    readonly contentType: string;
+    readonly primaryKeyword?: string;
   };
-  onApply: (value: string) => void;
-  maxLength?: number;
-  disabled?: boolean;
+  readonly onApply: (value: string) => void;
+  readonly maxLength?: number;
+  readonly disabled?: boolean;
 }
 
 export function AIFieldAssistant({
@@ -173,7 +173,7 @@ export function AIFieldAssistant({
               <div className="space-y-3">
                 {suggestions.map((suggestion, index) => (
                   <div
-                    key={index}
+                    key={`${fieldType}-suggestion-${index}`}
                     className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
