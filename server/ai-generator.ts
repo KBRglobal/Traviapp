@@ -10,6 +10,7 @@ import type {
   DiningItem,
   NearbyItem,
 } from "@shared/schema";
+import { SEO_RULES, SEO_SELF_VALIDATION_CHECKLIST } from "@shared/seo-rules";
 
 function getOpenAIClient(): OpenAI | null {
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
@@ -1155,7 +1156,7 @@ OUTPUT STRUCTURE:
     "title": "Attraction Name Dubai | Complete Guide & Tickets 2025",
     "slug": "attraction-name-dubai",
     "metaTitle": "Attraction Name Dubai - Tickets, Hours & Tips 2025",
-    "metaDescription": "150-160 char description with primary keyword, key info (price, hours), and compelling call to action",
+    "metaDescription": "120-160 char description with primary keyword, key info (price, hours), and compelling call to action",
     "primaryKeyword": "attraction name dubai",
     "secondaryKeywords": ["attraction name tickets", "dubai attractions", "things to do dubai", "visit attraction name"],
     "lsiKeywords": ["experience", "tour", "visit", "explore", "entry fee", "opening hours"],
@@ -1717,8 +1718,8 @@ STEP 6: SEO OPTIMIZATION RULES
   ✗ "Getting Started"
 
 **META OPTIMIZATION:**
-- Title: 50-60 characters, keyword-first if possible
-- Meta description: 150-160 characters, include primary keyword + CTA
+- Title: 30-60 characters, keyword-first if possible
+- Meta description: 120-160 characters, include primary keyword + CTA
 - Slug: lowercase, hyphens, primary keyword included
 
 **INTERNAL LINKING:**
@@ -1771,8 +1772,8 @@ OUTPUT JSON STRUCTURE:
   "content": {
     "title": "[Compelling Title with Primary Keyword] | Dubai 2025",
     "slug": "primary-keyword-slug",
-    "metaTitle": "Primary Keyword - Value Prop | Dubai (under 60 chars)",
-    "metaDescription": "150-160 char description with primary keyword, benefit, and soft CTA",
+    "metaTitle": "Primary Keyword - Value Prop | Dubai (30-60 chars)",
+    "metaDescription": "120-160 char description with primary keyword, benefit, and soft CTA",
     "primaryKeyword": "main target phrase",
     "secondaryKeywords": ["related phrase 1", "related phrase 2", "related phrase 3", "related phrase 4"],
     "lsiKeywords": ["semantic term 1", "semantic term 2", "semantic term 3", "semantic term 4", "semantic term 5"],
@@ -2133,7 +2134,7 @@ OUTPUT STRUCTURE:
     "title": "Restaurant Name Dubai | [Cuisine Type] Restaurant Guide 2025",
     "slug": "restaurant-name-dubai",
     "metaTitle": "Restaurant Name Dubai - Menu, Reservations & Reviews 2025",
-    "metaDescription": "150-160 char description with restaurant name, cuisine type, signature dishes, and reservation call to action",
+    "metaDescription": "120-160 char description with restaurant name, cuisine type, signature dishes, and reservation call to action",
     "primaryKeyword": "restaurant name dubai",
     "secondaryKeywords": ["restaurant name menu", "dubai restaurants", "best [cuisine] dubai", "fine dining dubai"],
     "lsiKeywords": ["dining", "cuisine", "menu", "reservations", "chef", "ambiance", "food"],
@@ -2513,7 +2514,7 @@ OUTPUT STRUCTURE:
     "title": "[District Name] Dubai | Complete Neighborhood Guide 2025",
     "slug": "district-name-dubai-guide",
     "metaTitle": "[District Name] Dubai - Things to Do, Eat & Explore 2025",
-    "metaDescription": "150-160 char description with district name, key attractions, dining, and exploration call to action",
+    "metaDescription": "120-160 char description with district name, key attractions, dining, and exploration call to action",
     "primaryKeyword": "[district name] dubai",
     "secondaryKeywords": ["[district] things to do", "explore [district] dubai", "[district] attractions", "[district] restaurants"],
     "lsiKeywords": ["neighborhood", "area", "district", "explore", "discover", "visit", "attractions"],
@@ -3053,7 +3054,7 @@ OUTPUT STRUCTURE:
     "title": "[Transport Type] Dubai | Complete Guide & Tips 2025",
     "slug": "transport-type-dubai-guide",
     "metaTitle": "[Transport Type] Dubai - Fares, Routes & How to Use 2025",
-    "metaDescription": "150-160 char description with transport type, key routes, fare info, and practical use call to action",
+    "metaDescription": "120-160 char description with transport type, key routes, fare info, and practical use call to action",
     "primaryKeyword": "[transport type] dubai",
     "secondaryKeywords": ["dubai [transport] guide", "how to use [transport] dubai", "[transport] routes dubai", "[transport] fare dubai"],
     "lsiKeywords": ["transportation", "getting around", "public transport", "routes", "fares", "tickets"],
@@ -3646,7 +3647,7 @@ OUTPUT STRUCTURE:
     "title": "[Duration] Dubai Itinerary | [Theme] Trip Guide 2025",
     "slug": "duration-days-dubai-itinerary-theme",
     "metaTitle": "[Duration] Dubai Itinerary - [Theme] Trip Planner 2025",
-    "metaDescription": "150-160 char description with duration, key experiences, and planning call to action",
+    "metaDescription": "120-160 char description with duration, key experiences, and planning call to action",
     "primaryKeyword": "[duration] dubai itinerary",
     "secondaryKeywords": ["dubai [duration] trip", "[theme] dubai itinerary", "dubai travel plan", "what to do in dubai [duration]"],
     "lsiKeywords": ["itinerary", "travel plan", "trip", "schedule", "activities", "attractions", "experiences"],
@@ -4533,11 +4534,11 @@ export async function analyzeSeoScore(
         {
           role: "system",
           content: `You are an SEO expert analyzing travel content for optimization. Score content 0-100 based on:
-          
-1. Title Optimization (15 pts): Primary keyword in title, compelling, 50-60 chars
-2. Meta Description (15 pts): Keyword included, compelling CTA, 150-160 chars
-3. Keyword Usage (20 pts): Primary keyword density 1-2%, LSI keywords present, natural usage
-4. Content Structure (20 pts): H2/H3 headings, FAQs present, clear sections, 1200+ words
+
+1. Title Optimization (15 pts): Primary keyword in title, compelling, ${SEO_RULES.TITLE_MIN_LENGTH}-${SEO_RULES.TITLE_MAX_LENGTH} chars
+2. Meta Description (15 pts): Keyword included, compelling CTA, ${SEO_RULES.META_DESC_MIN_LENGTH}-${SEO_RULES.META_DESC_MAX_LENGTH} chars
+3. Keyword Usage (20 pts): Primary keyword density ${SEO_RULES.KEYWORD_DENSITY_MIN}-${SEO_RULES.KEYWORD_DENSITY_MAX}%, LSI keywords present, natural usage
+4. Content Structure (20 pts): H2/H3 headings, FAQs present, clear sections, ${SEO_RULES.MIN_WORD_COUNT}+ words
 5. Readability (15 pts): Short paragraphs, simple language, scannable
 6. Internal Linking Potential (5 pts): Mentions related topics that could be linked
 7. Image Optimization (10 pts): Alt text present and descriptive
@@ -4626,10 +4627,10 @@ export async function improveContentForSeo(
       messages: [
         {
           role: "system",
-          content: `You are an SEO content optimizer. Improve the provided content based on the suggestions to achieve a 90+ SEO score. Focus on:
-- Optimizing meta title (50-60 chars, include primary keyword)
-- Optimizing meta description (150-160 chars, include keyword and CTA)
-- Improving keyword density in text blocks
+          content: `You are an SEO content optimizer. Improve the provided content based on the suggestions to achieve a ${SEO_RULES.SEO_PASS_THRESHOLD}+ SEO score. Focus on:
+- Optimizing meta title (${SEO_RULES.META_TITLE_MIN_LENGTH}-${SEO_RULES.META_TITLE_MAX_LENGTH} chars, include primary keyword)
+- Optimizing meta description (${SEO_RULES.META_DESC_MIN_LENGTH}-${SEO_RULES.META_DESC_MAX_LENGTH} chars, include keyword and CTA)
+- Improving keyword density to ${SEO_RULES.KEYWORD_DENSITY_MIN}-${SEO_RULES.KEYWORD_DENSITY_MAX}% in text blocks
 - Enhancing readability
 
 Output valid JSON with: metaTitle, metaDescription, improvedBlocks (only text/tips blocks that need changes)`

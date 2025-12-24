@@ -1,3 +1,5 @@
+import { SEO_RULES } from "@shared/seo-rules";
+
 export interface SeoIssue {
   type: "error" | "warning" | "success" | "info";
   category: string;
@@ -24,13 +26,14 @@ export interface SeoInput {
   externalLinks: number;
 }
 
-const META_TITLE_MIN = 30;
-const META_TITLE_MAX = 60;
-const META_DESC_MIN = 120;
-const META_DESC_MAX = 160;
-const MIN_WORD_COUNT = 300;
-const IDEAL_KEYWORD_DENSITY_MIN = 1;
-const IDEAL_KEYWORD_DENSITY_MAX = 3;
+// Using shared SEO rules for consistency
+const META_TITLE_MIN = SEO_RULES.META_TITLE_MIN_LENGTH;
+const META_TITLE_MAX = SEO_RULES.META_TITLE_MAX_LENGTH;
+const META_DESC_MIN = SEO_RULES.META_DESC_MIN_LENGTH;
+const META_DESC_MAX = SEO_RULES.META_DESC_MAX_LENGTH;
+const MIN_WORD_COUNT = SEO_RULES.MIN_WORD_COUNT;
+const IDEAL_KEYWORD_DENSITY_MIN = SEO_RULES.KEYWORD_DENSITY_MIN;
+const IDEAL_KEYWORD_DENSITY_MAX = SEO_RULES.KEYWORD_DENSITY_MAX;
 
 function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(w => w.length > 0).length;

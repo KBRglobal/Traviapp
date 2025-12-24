@@ -2427,17 +2427,25 @@ export async function registerRoutes(
   app.get("/api/public/contents", async (req, res) => {
     try {
       const { type, search, limit } = req.query;
-      const filters = {
-        type: type as string | undefined,
-        status: "published", // Only published content
-        search: search as string | undefined,
-      };
-      
-      const contents = await storage.getContentsWithRelations(filters);
-      // Limit and sanitize for public consumption
-      const maxLimit = Math.min(parseInt(limit as string) || 50, 100);
-      const sanitizedContents = contents.slice(0, maxLimit).map(sanitizeContentForPublic);
-      res.json(sanitizedContents);
+      const cacheKey = `public:contents:${type || 'all'}:${search || 'none'}:${limit || '50'}`;
+
+      const result = await cache.getOrSet(cacheKey, async () => {
+        const filters = {
+          type: type as string | undefined,
+          status: "published", // Only published content
+          search: search as string | undefined,
+        };
+
+        const contents = await storage.getContentsWithRelations(filters);
+        // Limit and sanitize for public consumption
+        const maxLimit = Math.min(parseInt(limit as string) || 50, 100);
+        return contents.slice(0, maxLimit).map(sanitizeContentForPublic);
+      }, 'medium'); // Cache for 5 minutes
+
+      // Set HTTP cache headers for CDN/browser caching
+      res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+      res.set('Vary', 'Accept-Language, Accept-Encoding');
+      res.json(result);
     } catch (error) {
       console.error("Error fetching public contents:", error);
       res.status(500).json({ error: "Failed to fetch contents" });
@@ -7695,7 +7703,13 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // Get translations for a content item
   app.get("/api/translations/:contentId", async (req, res) => {
     try {
-      const translations = await storage.getTranslationsByContentId(req.params.contentId);
+      const { contentId } = req.params;
+      const cacheKey = cacheKeys.translation(contentId, 'all');
+
+      const translations = await cache.getOrSet(cacheKey, async () => {
+        return await storage.getTranslationsByContentId(contentId);
+      }, 'medium');
+
       res.json(translations);
     } catch (error) {
       console.error("Error fetching translations:", error);
@@ -7907,34 +7921,66 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // Get available translations for a content item (for hreflang)
+  app.get("/api/public/translations/available/:contentId", async (req, res) => {
+    try {
+      const { contentId } = req.params;
+      const cacheKey = `public:translations:available:${contentId}`;
+
+      const result = await cache.getOrSet(cacheKey, async () => {
+        const translations = await storage.getTranslationsByContentId(contentId);
+        return translations
+          .filter(t => t.status === "completed")
+          .map(t => ({ locale: t.locale, status: t.status }));
+      }, 'long'); // Cache for 1 hour
+
+      res.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=7200');
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching available translations:", error);
+      res.status(500).json({ error: "Failed to fetch translations" });
+    }
+  });
+
   // Get public translated content
   app.get("/api/public/content/:slug/:locale", async (req, res) => {
     try {
       const { slug, locale } = req.params;
-      
-      const content = await storage.getContentBySlug(slug);
-      if (!content || content.status !== "published") {
+      const cacheKey = `public:content:${slug}:${locale}`;
+
+      const result = await cache.getOrSet(cacheKey, async () => {
+        const content = await storage.getContentBySlug(slug);
+        if (!content || content.status !== "published") {
+          return null;
+        }
+
+        if (locale === "en") {
+          return content;
+        }
+
+        const translation = await storage.getTranslation(content.id, locale as any);
+        if (!translation || translation.status !== "completed") {
+          return content;
+        }
+
+        return {
+          ...content,
+          title: translation.title || content.title,
+          metaTitle: translation.metaTitle || content.metaTitle,
+          metaDescription: translation.metaDescription || content.metaDescription,
+          blocks: translation.blocks || content.blocks,
+          locale,
+          isTranslated: true,
+        };
+      }, 'medium'); // Cache for 5 minutes
+
+      if (!result) {
         return res.status(404).json({ error: "Content not found" });
       }
 
-      if (locale === "en") {
-        return res.json(content);
-      }
-
-      const translation = await storage.getTranslation(content.id, locale as any);
-      if (!translation || translation.status !== "completed") {
-        return res.json(content);
-      }
-
-      res.json({
-        ...content,
-        title: translation.title || content.title,
-        metaTitle: translation.metaTitle || content.metaTitle,
-        metaDescription: translation.metaDescription || content.metaDescription,
-        blocks: translation.blocks || content.blocks,
-        locale,
-        isTranslated: true,
-      });
+      res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+      res.set('Vary', 'Accept-Language, Accept-Encoding');
+      res.json(result);
     } catch (error) {
       console.error("Error fetching translated content:", error);
       res.status(500).json({ error: "Failed to fetch content" });

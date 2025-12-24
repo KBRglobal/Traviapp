@@ -3,6 +3,8 @@
  * Intelligent image selection based on content analysis, Freepik search, and AI fallback
  */
 
+import { SEO_RULES, extractTextFromBlocks, getFirstParagraph, calculateKeywordDensity } from "@shared/seo-rules";
+
 // ============================================================================
 // DUBAI AREA DEFINITIONS
 // ============================================================================
@@ -679,7 +681,7 @@ export interface SeoScoreResult {
   warnings: string[];
 }
 
-const SEO_THRESHOLD = 92;
+const SEO_THRESHOLD = SEO_RULES.SEO_PASS_THRESHOLD;
 
 export function calculateSeoScore(content: {
   title: string;
@@ -866,13 +868,36 @@ export function calculateSeoScore(content: {
     const maxScore = 15;
 
     if (content.primaryKeyword) {
-      score += 5;
+      score += 5; // Has primary keyword defined
 
-      // Check keyword density would need actual content text
-      score += 5; // Assume present in content
+      // Actual validation: Check if keyword exists in content
+      const contentText = extractTextFromBlocks(content.blocks || []);
+      const keywordLower = content.primaryKeyword.toLowerCase();
+      const contentLower = contentText.toLowerCase();
 
-      // Keyword in first paragraph - would need block analysis
-      score += 5; // Assume good placement
+      if (contentLower.includes(keywordLower)) {
+        score += 5; // Keyword exists in content
+
+        // Check keyword density
+        const density = calculateKeywordDensity(contentText, content.primaryKeyword);
+        if (density >= SEO_RULES.KEYWORD_DENSITY_MIN && density <= SEO_RULES.KEYWORD_DENSITY_MAX) {
+          // Good density - no additional points but no penalty
+        } else if (density < SEO_RULES.KEYWORD_DENSITY_MIN) {
+          issues.push(`Keyword density too low: ${density.toFixed(1)}% (optimal: ${SEO_RULES.KEYWORD_DENSITY_MIN}-${SEO_RULES.KEYWORD_DENSITY_MAX}%)`);
+        } else {
+          issues.push(`Keyword density too high: ${density.toFixed(1)}% (optimal: ${SEO_RULES.KEYWORD_DENSITY_MIN}-${SEO_RULES.KEYWORD_DENSITY_MAX}%)`);
+        }
+      } else {
+        issues.push("Primary keyword not found in content");
+      }
+
+      // Check if keyword is in first paragraph
+      const firstParagraph = getFirstParagraph(content.blocks || []);
+      if (firstParagraph.toLowerCase().includes(keywordLower)) {
+        score += 5; // Keyword in first paragraph
+      } else {
+        issues.push("Primary keyword not in first paragraph");
+      }
     } else {
       issues.push("No primary keyword defined");
       warnings.push("Define a primary keyword for better SEO");
