@@ -27,14 +27,16 @@ export function extractPlainText(blocks: ContentBlock[]): string {
   const textParts: string[] = [];
   
   for (const block of blocks) {
+    const data = block.data || {};
+    
     if (block.type === 'paragraph' || block.type === 'heading') {
-      if (block.content) {
-        textParts.push(block.content);
+      if (typeof data.content === 'string') {
+        textParts.push(data.content);
       }
-    } else if (block.type === 'list' && Array.isArray(block.items)) {
-      textParts.push(...block.items);
-    } else if (block.type === 'quote' && block.text) {
-      textParts.push(block.text);
+    } else if (block.type === 'list' && Array.isArray(data.items)) {
+      textParts.push(...data.items.filter((item): item is string => typeof item === 'string'));
+    } else if (block.type === 'quote' && typeof data.text === 'string') {
+      textParts.push(data.text);
     }
   }
   

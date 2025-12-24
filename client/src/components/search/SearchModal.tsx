@@ -129,8 +129,22 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   };
   
   const displayItems = suggestions?.suggestions || 
-    (trending?.trending.map(t => ({ text: t, displayText: t, type: 'trending' as const, score: 0 })) || []) ||
-    recentSearches.map(r => ({ text: r, displayText: r, type: 'recent' as const, score: 0 }));
+    (trending?.trending.map(t => ({ 
+      text: t, 
+      displayText: t, 
+      type: 'trending' as const, 
+      score: 0,
+      icon: undefined,
+      url: undefined 
+    })) || []) ||
+    recentSearches.map(r => ({ 
+      text: r, 
+      displayText: r, 
+      type: 'recent' as const, 
+      score: 0,
+      icon: undefined,
+      url: undefined 
+    }));
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

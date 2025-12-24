@@ -120,10 +120,9 @@ export async function rebuildIndex(): Promise<void> {
       await addTerm(entry.title.toLowerCase(), {
         displayText: entry.title,
         type: 'content',
-        targetUrl: getContentUrl(entry.contentType, entry.contentId),
-        targetId: entry.contentId,
+        url: getContentUrl(entry.contentType, entry.contentId),
         icon: getTypeIcon(entry.contentType),
-        weight: entry.popularity || 0,
+        score: entry.popularity || 0,
       });
       
       // Add search terms
@@ -133,9 +132,8 @@ export async function rebuildIndex(): Promise<void> {
             await addTerm(term, {
               displayText: term,
               type: 'content',
-              targetUrl: getContentUrl(entry.contentType, entry.contentId),
-              targetId: entry.contentId,
-              weight: Math.floor((entry.popularity || 0) * 0.5),
+              url: getContentUrl(entry.contentType, entry.contentId),
+              score: Math.floor((entry.popularity || 0) * 0.5),
             });
           }
         }
@@ -144,15 +142,15 @@ export async function rebuildIndex(): Promise<void> {
     
     // Add category suggestions
     const categories = [
-      { term: 'hotels', displayText: 'Hotels', type: 'category', url: '/hotels', icon: '🏨', weight: 100 },
-      { term: 'attractions', displayText: 'Attractions', type: 'category', url: '/attractions', icon: '🎢', weight: 100 },
-      { term: 'dining', displayText: 'Dining', type: 'category', url: '/dining', icon: '🍽️', weight: 100 },
-      { term: 'districts', displayText: 'Districts', type: 'category', url: '/districts', icon: '🏙️', weight: 100 },
-      { term: 'articles', displayText: 'Articles', type: 'category', url: '/articles', icon: '📰', weight: 100 },
+      { term: 'hotels', displayText: 'Hotels', type: 'category', url: '/hotels', icon: '🏨', score: 100 },
+      { term: 'attractions', displayText: 'Attractions', type: 'category', url: '/attractions', icon: '🎢', score: 100 },
+      { term: 'dining', displayText: 'Dining', type: 'category', url: '/dining', icon: '🍽️', score: 100 },
+      { term: 'districts', displayText: 'Districts', type: 'category', url: '/districts', icon: '🏙️', score: 100 },
+      { term: 'articles', displayText: 'Articles', type: 'category', url: '/articles', icon: '📰', score: 100 },
     ];
     
     for (const cat of categories) {
-      await addTerm(cat.term, cat as Partial<Suggestion>);
+      await addTerm(cat.term, cat);
     }
     
     // Add popular location suggestions
@@ -166,7 +164,7 @@ export async function rebuildIndex(): Promise<void> {
         displayText: loc,
         type: 'location',
         icon: '📍',
-        weight: 50,
+        score: 50,
       });
     }
     
@@ -182,7 +180,13 @@ export async function rebuildIndex(): Promise<void> {
  */
 export async function addTerm(
   term: string,
-  metadata: Partial<Suggestion>
+  metadata: {
+    displayText?: string;
+    type?: string;
+    url?: string;
+    icon?: string;
+    score?: number;
+  }
 ): Promise<void> {
   try {
     const normalizedTerm = term.toLowerCase().trim();
@@ -196,7 +200,6 @@ export async function addTerm(
         displayText: metadata.displayText || term,
         type: metadata.type || 'content',
         targetUrl: metadata.url,
-        targetId: (metadata as any).targetId,
         icon: metadata.icon,
         weight: metadata.score || 0,
         searchCount: 0,
