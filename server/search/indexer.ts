@@ -62,8 +62,8 @@ export const searchIndexer = {
         ${searchableText},
         ${'/' + content.type + 's/' + contentId},
         ${content.heroImage || null},
-        ${content.locale || 'en'},
-        ${content.tags ? content.tags.join(', ') : null},
+        ${'en'},
+        ${null},
         ${embeddingVector ? sql`${embeddingVector}::vector` : null},
         NOW()
       )
