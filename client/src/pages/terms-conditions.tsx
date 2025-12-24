@@ -52,7 +52,7 @@ export default function TermsConditions() {
 
           <article className="prose prose-lg dark:prose-invert max-w-none">
             <h1 className="font-heading" data-testid="text-page-title">Terms & Conditions</h1>
-            <p className="text-muted-foreground">Last updated: October 28, 2026</p>
+            <p className="text-muted-foreground">Last updated: December 2024</p>
 
             <div className="bg-muted/50 p-4 rounded-lg mb-8">
               <p className="font-medium mb-2">Important Notice</p>

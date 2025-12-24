@@ -106,6 +106,8 @@ const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
 const PublicContentViewer = lazy(() => import("@/pages/public-content-viewer"));
 const PublicDocs = lazy(() => import("@/pages/public-docs"));
+const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
+const TermsConditions = lazy(() => import("@/pages/terms-conditions"));
 
 const RssFeeds = lazy(() => import("@/pages/rss-feeds"));
 const AffiliateLinks = lazy(() => import("@/pages/affiliate-links"));
@@ -391,6 +393,9 @@ const publicRoutes = [
   // Documentation
   { path: "/docs", component: PublicDocs },
   { path: "/docs/:path*", component: PublicDocs },
+  // Legal pages
+  { path: "/privacy", component: PrivacyPolicy },
+  { path: "/terms", component: TermsConditions },
   // District pages
   { path: "/districts", component: DistrictsGateway },
   { path: "/districts/downtown-dubai", component: DistrictDowntownDubai },
