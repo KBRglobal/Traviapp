@@ -80,14 +80,25 @@ export async function generate(
   });
 
   // 3. Validate voice consistency
+  const fullContent = [
+    generatedContent.content.title,
+    generatedContent.content.intro,
+    generatedContent.content.body,
+    generatedContent.content.conclusion
+  ].filter(Boolean).join('\n\n');
+  
   const voiceScore = await voiceValidator.getScore(
     writer.id,
-    generatedContent.body || generatedContent.content || ''
+    fullContent
   );
 
-  // 4. Return with writer metadata
+  // 4. Return with writer metadata in expected format
   return {
-    ...generatedContent,
+    title: generatedContent.content.title,
+    body: generatedContent.content.body,
+    intro: generatedContent.content.intro,
+    metaDescription: generatedContent.content.metaDescription,
+    keywords: request.keywords,
     writerId: writer.id,
     writerName: writer.name,
     generatedByAI: true,
@@ -109,11 +120,8 @@ export async function generateTitles(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  return writerEngine.generateTitles({
-    writerId: writer.id,
-    topic,
-    count
-  });
+  const titles = await writerEngine.generateTitles(writer.id, topic);
+  return titles.slice(0, count);
 }
 
 /**
@@ -122,18 +130,14 @@ export async function generateTitles(
 export async function generateIntro(
   writerId: string,
   topic: string,
-  context?: string
+  title?: string
 ): Promise<string> {
   const writer = getWriterById(writerId);
   if (!writer) {
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  return writerEngine.generateIntro({
-    writerId: writer.id,
-    topic,
-    context
-  });
+  return writerEngine.generateIntro(writer.id, topic, title || topic);
 }
 
 /**
@@ -141,17 +145,15 @@ export async function generateIntro(
  */
 export async function rewriteInVoice(
   writerId: string,
-  content: string
+  content: string,
+  context?: string
 ): Promise<string> {
   const writer = getWriterById(writerId);
   if (!writer) {
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  return writerEngine.rewriteInVoice({
-    writerId: writer.id,
-    content
-  });
+  return writerEngine.rewriteInVoice(writer.id, content, context);
 }
 
 /**

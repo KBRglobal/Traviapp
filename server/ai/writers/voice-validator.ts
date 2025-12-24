@@ -5,9 +5,11 @@
  * Returns a score (0-100) indicating how well the content aligns with the writer's voice.
  */
 
-import { openai } from "../providers";
+import OpenAI from "openai";
 import { getWriterById } from "./writer-registry";
 import type { AIWriter } from "@shared/schema";
+
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 export interface VoiceConsistencyResult {
   score: number; // 0-100
@@ -28,6 +30,17 @@ export async function validateVoiceConsistency(
   
   if (!writer) {
     throw new Error(`Writer not found: ${writerId}`);
+  }
+
+  if (!openai) {
+    // Return a default result if OpenAI is not configured
+    return {
+      score: 50,
+      matches: [],
+      mismatches: ["OpenAI API not configured"],
+      suggestions: ["Configure OPENAI_API_KEY to enable voice validation"],
+      confidence: 0.5
+    };
   }
 
   const prompt = createVoiceValidationPrompt(writer, content);
