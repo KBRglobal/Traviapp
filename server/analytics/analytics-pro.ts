@@ -129,6 +129,13 @@ export async function addFunnelStep(funnelId: string, data: Omit<InsertFunnelSte
 }
 
 /**
+ * Get all funnels
+ */
+export async function getFunnels(): Promise<ConversionFunnel[]> {
+  return db.select().from(conversionFunnels).orderBy(desc(conversionFunnels.createdAt));
+}
+
+/**
  * Get funnel with steps
  */
 export async function getFunnelWithSteps(funnelId: string): Promise<(ConversionFunnel & { steps: FunnelStep[] }) | null> {
