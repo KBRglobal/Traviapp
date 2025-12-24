@@ -176,7 +176,7 @@ const blockCategories = [
 ];
 
 // Environment-based configuration
-const GOOGLE_MAPS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8";
+const GOOGLE_MAPS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || "";
 
 // Safe deep clone function to handle potential JSON errors
 function safeDeepClone<T>(obj: T): T | null {
