@@ -125,6 +125,7 @@ import { AIFieldAssistant } from "@/components/ai-field-assistant";
 import { RelatedContentFinder } from "@/components/related-content-finder";
 import { BrokenLinkChecker } from "@/components/broken-link-checker";
 import { ReadingTimeCalculator } from "@/components/reading-time-calculator";
+import { WriterSelector } from "@/components/writers/WriterSelector";
 import { useRegisterTab } from "@/components/multi-tab-editor";
 
 type ContentType = "attraction" | "hotel" | "article" | "dining" | "district";
@@ -511,6 +512,7 @@ export default function ContentEditor() {
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [status, setStatus] = useState<string>("draft");
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
+  const [selectedWriterId, setSelectedWriterId] = useState<string | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | null>(null);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
@@ -2497,6 +2499,8 @@ export default function ContentEditor() {
                       onPrimaryKeywordChange={setPrimaryKeyword}
                       contentId={contentId}
                       contentType={contentType}
+                      selectedWriterId={selectedWriterId}
+                      onWriterSelect={setSelectedWriterId}
                     />
                     <Separator />
                     <SeoScore
@@ -4742,6 +4746,8 @@ function PageSettingsPanel({
   onPrimaryKeywordChange,
   contentId,
   contentType = "article",
+  selectedWriterId,
+  onWriterSelect,
 }: {
   title: string;
   onTitleChange: (v: string) => void;
@@ -4759,6 +4765,8 @@ function PageSettingsPanel({
   onPrimaryKeywordChange: (v: string) => void;
   contentId?: string;
   contentType?: string;
+  selectedWriterId?: string;
+  onWriterSelect?: (writerId: string) => void;
 }) {
   return (
     <div className="space-y-6">
@@ -4857,6 +4865,25 @@ function PageSettingsPanel({
                 </div>
               </PopoverContent>
             </Popover>
+          </div>
+        )}
+        {onWriterSelect && (
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              AI Writer
+            </Label>
+            <WriterSelector
+              contentType={contentType}
+              topic={title}
+              onSelect={(writer) => onWriterSelect(writer.id)}
+              selectedWriterId={selectedWriterId}
+            />
+            {selectedWriterId && (
+              <p className="text-xs text-muted-foreground">
+                Content will be written in this writer's unique voice and style
+              </p>
+            )}
           </div>
         )}
       </div>
