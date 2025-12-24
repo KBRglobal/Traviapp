@@ -10,6 +10,9 @@ import { semanticSearch } from "./semantic-search";
 import { intentClassifier } from "./intent-classifier";
 import { queryProcessor } from "./query-processor";
 import { searchIndexer } from "./indexer";
+import { spellChecker } from "./spell-checker";
+import { synonymExpander } from "./synonyms";
+import { queryRewriter } from "./query-rewriter";
 
 export function registerSearchRoutes(app: Express) {
   // ============================================================================
@@ -49,6 +52,84 @@ export function registerSearchRoutes(app: Express) {
       console.error("[Search] Search error:", error);
       res.status(500).json({ 
         error: "Search failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // ============================================================================
+  // SPELL CHECK & QUERY EXPANSION
+  // ============================================================================
+
+  /**
+   * Spell check endpoint
+   * GET /api/search/spell-check?q=burk khalifa
+   * Returns: { corrected: "burj khalifa", wasChanged: true, confidence: 0.8 }
+   */
+  app.get("/api/search/spell-check", async (req, res) => {
+    try {
+      const q = req.query.q as string;
+      if (!q || q.trim().length === 0) {
+        return res.status(400).json({ error: "Query parameter 'q' is required" });
+      }
+
+      const result = await spellChecker.check(q);
+      res.json(result);
+    } catch (error) {
+      console.error("[Search] Spell check error:", error);
+      res.status(500).json({ 
+        error: "Spell check failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Synonym expansion endpoint
+   * GET /api/search/synonyms?term=cheap hotel
+   * Returns: { expanded: ["cheap", "hotel", "budget", "affordable", ...] }
+   */
+  app.get("/api/search/synonyms", async (req, res) => {
+    try {
+      const term = req.query.term as string;
+      if (!term || term.trim().length === 0) {
+        return res.status(400).json({ error: "Query parameter 'term' is required" });
+      }
+
+      const locale = req.query.locale as string || 'en';
+      const terms = term.split(/\s+/);
+      const result = synonymExpander.expand(terms, locale);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("[Search] Synonym expansion error:", error);
+      res.status(500).json({ 
+        error: "Synonym expansion failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Query rewrite endpoint
+   * GET /api/search/rewrite?q=best hotell near marina&locale=en
+   * Returns: { rewritten: "hotel marina", expanded: [...], transformations: [...] }
+   */
+  app.get("/api/search/rewrite", async (req, res) => {
+    try {
+      const q = req.query.q as string;
+      if (!q || q.trim().length === 0) {
+        return res.status(400).json({ error: "Query parameter 'q' is required" });
+      }
+
+      const locale = req.query.locale as string || 'en';
+      const result = await queryRewriter.rewrite(q, locale);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("[Search] Query rewrite error:", error);
+      res.status(500).json({ 
+        error: "Query rewrite failed",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }
