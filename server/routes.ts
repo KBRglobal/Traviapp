@@ -95,6 +95,7 @@ import { registerAutoPilotRoutes } from "./auto-pilot-routes";
 import { registerEnhancementRoutes } from "./enhancement-routes";
 import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
 import { registerDocUploadRoutes } from "./doc-upload-routes";
+import { registerSearchRoutes } from "./search-routes";
 import translateRouter from "./routes/translate";
 import { getStorageManager } from "./services/storage-adapter";
 import { uploadImage, uploadImageFromUrl } from "./services/image-service";
@@ -9121,6 +9122,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // LOG ROUTES (Admin Panel log viewer)
   // ============================================================================
   registerLogRoutes(app);
+
+  // ============================================================================
+  // SEARCH ROUTES (Spell check, synonyms, query rewriting)
+  // ============================================================================
+  registerSearchRoutes(app);
 
   // ============================================================================
   // SEO ROUTES (Validation, Auto-fix, Publishing gates)
