@@ -1,12 +1,38 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearch } from "wouter";
-import { Search, ArrowLeft, Star, MapPin, Building2, Mountain, BookOpen, UtensilsCrossed, Map, Train } from "lucide-react";
+import { Search, ArrowLeft, Star, MapPin, Building2, Mountain, BookOpen, UtensilsCrossed, Map, Train, Sparkles } from "lucide-react";
 import type { Content } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { useDebounce } from "@/hooks/use-debounce";
+
+// Search API response types
+interface SearchResult {
+  contentId: string;
+  title: string;
+  contentType: string;
+  metaDescription: string | null;
+  url: string;
+  image: string | null;
+  score: number;
+  highlights?: string[];
+}
+
+interface SearchResponse {
+  results: SearchResult[];
+  total: number;
+  page: number;
+  limit: number;
+  query: string;
+  intent?: {
+    type: string;
+    confidence: number;
+  };
+  searchTime: number;
+}
 
 const defaultPlaceholderImages = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop",
@@ -36,38 +62,40 @@ function getContentPath(type: string, slug: string) {
   }
 }
 
-function SearchResultCard({ content, index }: { content: Content; index: number }) {
+function SearchResultCard({ result, index }: { result: SearchResult; index: number }) {
   const { localePath } = useLocale();
-  const imageUrl = content.heroImage || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
-  const TypeIcon = getTypeIcon(content.type);
-  const contentPath = getContentPath(content.type, content.slug);
+  const imageUrl = result.image || defaultPlaceholderImages[index % defaultPlaceholderImages.length];
+  const TypeIcon = getTypeIcon(result.contentType);
+  const contentPath = result.url || getContentPath(result.contentType, result.contentId);
 
   return (
     <Link href={localePath(contentPath)}>
       <Card className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col sm:flex-row">
         <div className="sm:w-64 aspect-[16/10] sm:aspect-auto overflow-hidden shrink-0">
-          <img 
-            src={imageUrl} 
-            alt={content.heroImageAlt || content.title} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+          <img
+            src={imageUrl}
+            alt={result.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         </div>
         <div className="p-5 flex-1">
           <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
             <span className="px-2 py-1 bg-primary/10 text-primary rounded-full font-medium capitalize flex items-center gap-1">
               <TypeIcon className="w-3 h-3" />
-              {content.type}
+              {result.contentType}
             </span>
-            <span className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 fill-[#fdcd0a] text-[#fdcd0a]" />
-              4.8
-            </span>
+            {result.score > 0.8 && (
+              <span className="flex items-center gap-1 text-primary">
+                <Sparkles className="w-3.5 h-3.5" />
+                Best Match
+              </span>
+            )}
           </div>
           <h3 className="font-heading font-semibold text-lg text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-            {content.title}
+            {result.title}
           </h3>
           <p className="text-sm text-muted-foreground line-clamp-2">
-            {content.metaDescription || "Explore this amazing destination in Dubai."}
+            {result.metaDescription || "Explore this amazing destination in Dubai."}
           </p>
         </div>
       </Card>
@@ -99,16 +127,32 @@ export default function PublicSearch() {
   const initialQuery = urlParams.get('q') || '';
   const [searchQuery, setSearchQuery] = useState(initialQuery);
 
-  const { data: allContent, isLoading } = useQuery<Content[]>({
-    queryKey: ["/api/contents?status=published"],
+  // Debounce search query for better UX
+  const debouncedQuery = useDebounce(searchQuery, 300);
+
+  // Use the hybrid search API (full-text + semantic search)
+  const { data: searchResponse, isLoading, isFetching } = useQuery<SearchResponse>({
+    queryKey: ["/api/search", debouncedQuery, locale],
+    queryFn: async () => {
+      if (!debouncedQuery.trim()) {
+        return { results: [], total: 0, page: 1, limit: 20, query: "", searchTime: 0 };
+      }
+      const params = new URLSearchParams({
+        q: debouncedQuery,
+        limit: "20",
+        ...(locale && { locale }),
+      });
+      const response = await fetch(`/api/search?${params}`);
+      if (!response.ok) {
+        throw new Error("Search failed");
+      }
+      return response.json();
+    },
+    enabled: debouncedQuery.trim().length > 0,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
-  const filteredContent = searchQuery.trim()
-    ? allContent?.filter(c => 
-        c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.metaDescription?.toLowerCase().includes(searchQuery.toLowerCase()))
-      ) || []
-    : [];
+  const searchResults = searchResponse?.results || [];
 
   return (
     <div className="bg-background min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -162,10 +206,27 @@ export default function PublicSearch() {
             </div>
           ) : (
             <>
-              <div className="mb-6">
+              <div className="mb-6 flex items-center justify-between">
                 <p className="text-muted-foreground">
-                  {isLoading ? t('common.loading') : `${filteredContent.length} ${t('search.results')} "${searchQuery}"`}
+                  {isLoading || isFetching ? (
+                    <span className="flex items-center gap-2">
+                      <span className="animate-pulse">{t('common.loading')}</span>
+                    </span>
+                  ) : (
+                    <>
+                      {searchResponse?.total || 0} {t('search.results')} "{debouncedQuery}"
+                      {searchResponse?.searchTime && (
+                        <span className="text-xs ml-2">({searchResponse.searchTime}ms)</span>
+                      )}
+                    </>
+                  )}
                 </p>
+                {searchResponse?.intent && searchResponse.intent.confidence > 0.7 && (
+                  <span className="text-xs text-primary flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    AI-powered search
+                  </span>
+                )}
               </div>
 
               {isLoading ? (
@@ -174,10 +235,10 @@ export default function PublicSearch() {
                     <SearchResultSkeleton key={index} />
                   ))}
                 </div>
-              ) : filteredContent.length > 0 ? (
+              ) : searchResults.length > 0 ? (
                 <div className="space-y-6">
-                  {filteredContent.map((content, index) => (
-                    <SearchResultCard key={content.id} content={content} index={index} />
+                  {searchResults.map((result, index) => (
+                    <SearchResultCard key={result.contentId} result={result} index={index} />
                   ))}
                 </div>
               ) : (

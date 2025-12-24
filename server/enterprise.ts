@@ -359,8 +359,54 @@ export const lockService = {
       .where(and(
         eq(contentLocks.isActive, true),
         lt(contentLocks.expiresAt, new Date())
+      ))
+      .returning();
+    return result.length;
+  },
+
+  /**
+   * Force unlock - admin only
+   * Releases a lock regardless of who owns it
+   */
+  async forceUnlock(contentId: string): Promise<void> {
+    await db.update(contentLocks)
+      .set({ isActive: false })
+      .where(and(
+        eq(contentLocks.contentId, contentId),
+        eq(contentLocks.isActive, true)
       ));
-    return 0; // drizzle doesn't return count easily
+  },
+
+  /**
+   * Get all active locks for admin monitoring
+   */
+  async getAllActiveLocks(): Promise<Array<ContentLock & { user: { firstName: string | null; lastName: string | null; email: string }; content: { title: string; type: string } }>> {
+    const locks = await db.select({
+      id: contentLocks.id,
+      contentId: contentLocks.contentId,
+      userId: contentLocks.userId,
+      lockedAt: contentLocks.lockedAt,
+      expiresAt: contentLocks.expiresAt,
+      isActive: contentLocks.isActive,
+      user: {
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+      },
+      content: {
+        title: contents.title,
+        type: contents.type,
+      }
+    })
+      .from(contentLocks)
+      .leftJoin(users, eq(contentLocks.userId, users.id))
+      .leftJoin(contents, eq(contentLocks.contentId, contents.id))
+      .where(and(
+        eq(contentLocks.isActive, true),
+        gt(contentLocks.expiresAt, new Date())
+      ))
+      .orderBy(desc(contentLocks.lockedAt));
+    return locks as any;
   },
 };
 
