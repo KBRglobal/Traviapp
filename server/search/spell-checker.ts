@@ -149,6 +149,9 @@ export const spellChecker = {
     }
 
     // Also check against indexed content titles (using trigram similarity)
+    // Note: This query creates a Cartesian product for every word in every title.
+    // For production at scale, consider pre-computing word indexes or using 
+    // materialized views. The try-catch ensures graceful fallback if pg_trgm is not enabled.
     try {
       const dbMatches = await db.execute(sql`
         SELECT DISTINCT word, similarity(word, ${word}) as sim

@@ -11,6 +11,9 @@ export interface SynonymExpansion {
   language: string;
 }
 
+// Configuration
+const MAX_SYNONYM_EXPANSION = 10; // Maximum additional synonym terms to include
+
 // Synonym groups - words that mean the same thing
 const SYNONYM_GROUPS: string[][] = [
   // Accommodation
@@ -159,7 +162,7 @@ export const synonyms = {
     // Weight original terms higher with :A, synonyms with :B
     const weightedTerms = [
       ...originalTerms.map(t => `${t}:A`),
-      ...additionalTerms.slice(0, 10).map(t => `${t}:B`), // Limit expansion
+      ...additionalTerms.slice(0, MAX_SYNONYM_EXPANSION).map(t => `${t}:B`), // Limit expansion
     ];
 
     return weightedTerms.join(" | ");

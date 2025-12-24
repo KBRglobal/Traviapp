@@ -78,7 +78,9 @@ export const queryRewriter = {
     // "top 10 X" → just X
     result = result.replace(/top\s+\d+\s+/i, "");
     
-    // Remove common filler words
+    // Remove common filler words during pattern matching
+    // Note: This is intentionally separate from query-processor stop word removal
+    // as it handles pattern-specific simplification
     result = result.replace(/\b(the|a|an|in|at|on|for|to|of)\b/gi, " ");
     
     // Normalize whitespace
