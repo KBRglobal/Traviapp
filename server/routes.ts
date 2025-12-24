@@ -99,6 +99,7 @@ import { registerDocUploadRoutes } from "./doc-upload-routes";
 import { registerSearchRoutes } from "./search/routes";
 import translateRouter from "./routes/translate";
 import { registerAgentBRoutes } from "./agent-b-routes";
+import { registerWriterRoutes } from "./ai/writers/routes";
 import { getStorageManager } from "./services/storage-adapter";
 import { uploadImage, uploadImageFromUrl } from "./services/image-service";
 import { cache, cacheKeys } from "./cache";
@@ -9299,6 +9300,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // AGENT B ROUTES - Newsletter, Analytics & Integrations
   // ============================================================================
   registerAgentBRoutes(app);
+
+  // ============================================================================
+  // AI WRITERS ROUTES - Virtual Newsroom with 10 AI writers
+  // ============================================================================
+  registerWriterRoutes(app);
 
   // ============================================================================
   // TRANSLATION ROUTES (Multi-provider translation: Claude, GPT, DeepL)
