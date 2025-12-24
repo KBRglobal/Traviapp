@@ -1,18 +1,16 @@
-import { useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { 
-  MapPin, Building2, Star, ArrowRight, Clock, Users, Camera, 
+  MapPin, Building2, Star, ArrowRight, Clock, Users,
   Utensils, Bed, ShoppingBag, Train, Car, Snowflake, Sparkles,
-  ChevronDown, Check, X, Sun, Sunset, Thermometer, TreePine,
-  Phone, Shield, CreditCard, Baby, GraduationCap, Dumbbell,
-  Calendar, Heart, Map, Home, Building
+  ChevronDown, Check, X, TreePine,
+  Shield, CreditCard, Baby, GraduationCap,
+  Heart, Map, Home, Building
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";

@@ -5,7 +5,7 @@ import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher, LanguageSelectorMobile } from "./language-switcher";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
-import mascotImage from "@assets/Mascot_for_Dark_Background_1766314766064.png";
+import mascotImage from "@assets/Mascot_for_Dark_Background_1765497703861.png";
 
 interface PublicNavProps {
   className?: string;

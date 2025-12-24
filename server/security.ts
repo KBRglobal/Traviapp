@@ -635,6 +635,10 @@ export function auditLogMiddleware(action: AuditLogEntry['action'], resourceType
 // ============================================================================
 export function securityHeaders(req: Request, res: Response, next: NextFunction) {
   // Content Security Policy
+  // TODO: Remove 'unsafe-inline' and 'unsafe-eval' by implementing CSP nonces
+  // Currently required for:
+  // - 'unsafe-inline': Inline styles from Tailwind, Radix UI components
+  // - 'unsafe-eval': Development hot reload, some third-party analytics
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com https://www.googletagmanager.com https://www.google-analytics.com",
@@ -653,6 +657,11 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  
+  // Additional security headers for improved protection
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
 
   // Remove server fingerprinting headers
   res.removeHeader('X-Powered-By');

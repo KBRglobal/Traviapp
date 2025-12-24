@@ -177,7 +177,7 @@ const blockCategories = [
 ];
 
 // Environment-based configuration
-const GOOGLE_MAPS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8";
+const GOOGLE_MAPS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || "";
 
 // Safe deep clone function to handle potential JSON errors
 function safeDeepClone<T>(obj: T): T | null {
@@ -4051,9 +4051,20 @@ function MapBlockCanvas({
     ? `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(address)}`
     : `https://www.google.com/maps/embed/v1/view?key=${GOOGLE_MAPS_API_KEY}&center=${lat},${lng}&zoom=14`;
 
+  // Check if API key is configured
+  const hasApiKey = GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.length > 0;
+
   return (
     <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
-      {address ? (
+      {!hasApiKey ? (
+        <div className="aspect-video rounded-lg bg-yellow-50 dark:bg-yellow-900/10 border-2 border-yellow-200 dark:border-yellow-800 flex flex-col items-center justify-center p-6">
+          <Map className="h-12 w-12 text-yellow-600 dark:text-yellow-400 mb-3" />
+          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">Google Maps API Key Required</p>
+          <p className="text-xs text-yellow-700 dark:text-yellow-300 text-center">
+            Set VITE_GOOGLE_MAPS_API_KEY environment variable to enable map embeds
+          </p>
+        </div>
+      ) : address ? (
         <div className="space-y-3">
           <div className="aspect-video rounded-lg overflow-hidden bg-muted">
             <iframe
