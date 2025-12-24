@@ -2531,24 +2531,36 @@ export default function ContentEditor() {
                       <AttractionSeoEditor
                         data={attractionSeoData}
                         onChange={setAttractionSeoData}
+                        title={title}
+                        contentType={contentType}
+                        primaryKeyword={primaryKeyword}
                       />
                     )}
                     {contentType === "hotel" && (
                       <HotelSeoEditor
                         data={hotelSeoData}
                         onChange={setHotelSeoData}
+                        title={title}
+                        contentType={contentType}
+                        primaryKeyword={primaryKeyword}
                       />
                     )}
                     {contentType === "dining" && (
                       <DiningSeoEditor
                         data={diningSeoData}
                         onChange={setDiningSeoData}
+                        title={title}
+                        contentType={contentType}
+                        primaryKeyword={primaryKeyword}
                       />
                     )}
                     {contentType === "district" && (
                       <DistrictSeoEditor
                         data={districtSeoData}
                         onChange={setDistrictSeoData}
+                        title={title}
+                        contentType={contentType}
+                        primaryKeyword={primaryKeyword}
                       />
                     )}
                   </TabsContent>
