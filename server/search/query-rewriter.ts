@@ -27,51 +27,53 @@ export interface Transformation {
 }
 
 // Common query patterns to handle
+// NOTE: Patterns use (\S(?:.*\S)?) instead of (.+) or (.+?) to prevent ReDoS attacks
+// This ensures capture groups start and end with non-whitespace, preventing catastrophic backtracking
 const QUERY_PATTERNS = [
   {
-    pattern: /^best\s+(.+?)\s+in\s+dubai$/i,
+    pattern: /^best\s+(\S(?:.*\S)?)\s+in\s+dubai$/i,
     transform: (match: RegExpMatchArray) => match[1],
     type: 'pattern' as const,
     description: 'Remove "best X in dubai" wrapper'
   },
   {
-    pattern: /^top\s+(.+?)\s+in\s+dubai$/i,
+    pattern: /^top\s+(\S(?:.*\S)?)\s+in\s+dubai$/i,
     transform: (match: RegExpMatchArray) => match[1],
     type: 'pattern' as const,
     description: 'Remove "top X in dubai" wrapper'
   },
   {
-    pattern: /^(.+?)\s+near\s+(.+)$/i,
+    pattern: /^(\S(?:.*\S)?)\s+near\s+(\S(?:.*\S)?)$/i,
     transform: (match: RegExpMatchArray) => `${match[1]} ${match[2]}`,
     type: 'pattern' as const,
     description: 'Simplify "X near Y" to "X Y"'
   },
   {
-    pattern: /^find\s+(.+)$/i,
+    pattern: /^find\s+(\S(?:.*\S)?)$/i,
     transform: (match: RegExpMatchArray) => match[1],
     type: 'pattern' as const,
     description: 'Remove "find" prefix'
   },
   {
-    pattern: /^search\s+for\s+(.+)$/i,
+    pattern: /^search\s+for\s+(\S(?:.*\S)?)$/i,
     transform: (match: RegExpMatchArray) => match[1],
     type: 'pattern' as const,
     description: 'Remove "search for" prefix'
   },
   {
-    pattern: /^where\s+(?:can\s+i\s+find|is|are)\s+(.+)$/i,
+    pattern: /^where\s+(?:can\s+i\s+find|is|are)\s+(\S(?:.*\S)?)$/i,
     transform: (match: RegExpMatchArray) => match[1],
     type: 'pattern' as const,
     description: 'Remove question words'
   },
   {
-    pattern: /^what\s+is\s+the\s+(.+)$/i,
+    pattern: /^what\s+is\s+the\s+(\S(?:.*\S)?)$/i,
     transform: (match: RegExpMatchArray) => match[1],
     type: 'pattern' as const,
     description: 'Remove "what is the" prefix'
   },
   {
-    pattern: /^how\s+to\s+(?:find|get\s+to)\s+(.+)$/i,
+    pattern: /^how\s+to\s+(?:find|get\s+to)\s+(\S(?:.*\S)?)$/i,
     transform: (match: RegExpMatchArray) => match[1],
     type: 'pattern' as const,
     description: 'Remove "how to" prefix'
