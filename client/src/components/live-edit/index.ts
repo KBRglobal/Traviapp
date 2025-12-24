@@ -8,6 +8,9 @@ export { DragDropProvider } from "./providers/DragDropProvider";
 export { LiveEditToggle } from "./core/LiveEditToggle";
 export { EditableWrapper } from "./core/EditableWrapper";
 
+// Renderers
+export { PageRenderer, ComponentRenderer } from "./renderers";
+
 // Sidebar Components
 export { LiveEditSidebar } from "./sidebar/LiveEditSidebar";
 export { ComponentLibrary } from "./sidebar/ComponentLibrary";

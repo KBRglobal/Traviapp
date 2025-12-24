@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLiveEditStore } from "@/stores/liveEditStore";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface LiveEditToggleProps {
@@ -13,6 +14,7 @@ interface LiveEditToggleProps {
 
 export function LiveEditToggle({ pageSlug, className }: LiveEditToggleProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const {
     isEditMode,
     isPreviewMode,
@@ -37,18 +39,36 @@ export function LiveEditToggle({ pageSlug, className }: LiveEditToggleProps) {
   const handleEnterEdit = useCallback(async () => {
     try {
       await enterEditMode(pageSlug);
+      toast({
+        title: "מצב עריכה",
+        description: "כעת אפשר לערוך את העמוד",
+      });
     } catch (error) {
       console.error("Failed to enter edit mode:", error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן להיכנס למצב עריכה",
+        variant: "destructive",
+      });
     }
-  }, [enterEditMode, pageSlug]);
+  }, [enterEditMode, pageSlug, toast]);
 
   const handleSave = useCallback(async () => {
     try {
       await saveDraft();
+      toast({
+        title: "נשמר",
+        description: "הטיוטה נשמרה בהצלחה",
+      });
     } catch (error) {
       console.error("Failed to save:", error);
+      toast({
+        title: "שגיאה בשמירה",
+        description: "לא ניתן לשמור את השינויים",
+        variant: "destructive",
+      });
     }
-  }, [saveDraft]);
+  }, [saveDraft, toast]);
 
   const handlePublish = useCallback(() => {
     openDialog("publish");

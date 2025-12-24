@@ -13,6 +13,7 @@ import { initGA } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
 import { LocaleProvider } from "@/lib/i18n/LocaleRouter";
 import { FavoritesProvider } from "@/hooks/use-favorites";
+import { LiveEditProvider } from "@/components/live-edit";
 
 // Lazy load all pages for better performance
 const ComingSoon = lazy(() => import("@/pages/coming-soon"));
@@ -462,7 +463,9 @@ function App() {
               {isAdminRoute ? (
                 <AdminLayout />
               ) : (
-                <PublicRouter />
+                <LiveEditProvider>
+                  <PublicRouter />
+                </LiveEditProvider>
               )}
             </Suspense>
             <Toaster />
