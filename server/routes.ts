@@ -95,6 +95,7 @@ import { registerAutoPilotRoutes } from "./auto-pilot-routes";
 import { registerEnhancementRoutes } from "./enhancement-routes";
 import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
 import { registerDocUploadRoutes } from "./doc-upload-routes";
+import { registerSearchRoutes } from "./search/routes";
 import translateRouter from "./routes/translate";
 import { getStorageManager } from "./services/storage-adapter";
 import { uploadImage, uploadImageFromUrl } from "./services/image-service";
@@ -9146,6 +9147,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // ENHANCEMENTS (Readability, CTAs, Search, Popups, Newsletter, Monetization, PWA)
   // ============================================================================
   registerEnhancementRoutes(app);
+
+  // ============================================================================
+  // SEMANTIC SEARCH ENGINE (Full-text + Vector + Intent + Hybrid Ranking)
+  // ============================================================================
+  registerSearchRoutes(app);
 
   // ============================================================================
   // CUSTOMER JOURNEY ANALYTICS (Page views, clicks, scroll, conversions, heatmaps)
