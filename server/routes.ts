@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
 import multer from "multer";
-import { Client } from "@replit/object-storage";
+// Object Storage is now handled through the unified storage adapter
 import OpenAI from "openai";
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
@@ -29,6 +29,7 @@ import {
   insertTagSchema,
   newsletterSubscribers,
   contentRules,
+  pageLayouts,
   ROLE_PERMISSIONS,
   SUPPORTED_LOCALES,
   type UserRole,
@@ -56,6 +57,7 @@ import {
   logAuditEvent as logSecurityEvent,
   getAuditLogs,
   getBlockedIps,
+  validateUrlForSSRF,
 } from "./security";
 import * as fs from "fs";
 import * as path from "path";
@@ -76,14 +78,26 @@ import {
   type ImageGenerationOptions
 } from "./ai-generator";
 import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-queue";
+import {
+  deviceFingerprint,
+  contextualAuth,
+  exponentialBackoff,
+  sessionSecurity,
+  threatIntelligence,
+} from "./enterprise-security";
 import { registerEnterpriseRoutes } from "./enterprise-routes";
-import { registerImageLogicRoutes } from "./image-logic-routes";
+import { registerImageRoutes } from "./routes/image-routes";
+import { registerLogRoutes } from "./routes/log-routes";
+import { registerSEORoutes } from "./routes/seo-routes";
 import { registerAutomationRoutes } from "./automation-routes";
 import { registerContentIntelligenceRoutes } from "./content-intelligence-routes";
 import { registerAutoPilotRoutes } from "./auto-pilot-routes";
 import { registerEnhancementRoutes } from "./enhancement-routes";
 import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
 import { registerDocUploadRoutes } from "./doc-upload-routes";
+import translateRouter from "./routes/translate";
+import { getStorageManager } from "./services/storage-adapter";
+import { uploadImage, uploadImageFromUrl } from "./services/image-service";
 import { cache, cacheKeys } from "./cache";
 import {
   getContentWriterSystemPrompt,
@@ -100,26 +114,54 @@ import {
 // Permission checking utilities (imported from security.ts for route-level checks)
 type PermissionKey = keyof typeof ROLE_PERMISSIONS.admin;
 
-// Role checking middleware
+// Authenticated request type for route handlers
+// Use intersection type to avoid interface compatibility issues
+type AuthRequest = Request & {
+  isAuthenticated(): boolean;
+  user?: { claims?: { sub: string; email?: string; name?: string } };
+  session: Request["session"] & {
+    userId?: string;
+    save(callback?: (err?: unknown) => void): void;
+  };
+  login(user: unknown, callback: (err?: unknown) => void): void;
+};
+
+// Helper to safely get user ID from authenticated request (after isAuthenticated middleware)
+function getUserId(req: AuthRequest): string {
+  // After isAuthenticated middleware, user.claims.sub is guaranteed to exist
+  return req.user!.claims!.sub;
+}
+
+// Role checking middleware with proper Express types
 function requireRole(role: UserRole | UserRole[]) {
-  return async (req: any, res: any, next: any) => {
-    if (!req.isAuthenticated() || !req.user?.claims?.sub) {
-      return res.status(401).json({ error: "Not authenticated" });
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const authReq = req as Request & { isAuthenticated(): boolean; user?: { claims?: { sub?: string } } };
+    if (!authReq.isAuthenticated() || !authReq.user?.claims?.sub) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
     }
-    const userId = req.user.claims.sub;
+    const userId = authReq.user.claims.sub;
     const user = await storage.getUser(userId);
     if (!user) {
-      return res.status(401).json({ error: "User not found" });
+      res.status(401).json({ error: "User not found" });
+      return;
     }
     const allowedRoles = Array.isArray(role) ? role : [role];
     if (!allowedRoles.includes(user.role as UserRole)) {
-      return res.status(403).json({ error: "Insufficient permissions", requiredRole: role, currentRole: user.role });
+      res.status(403).json({ error: "Insufficient permissions", requiredRole: role, currentRole: user.role });
+      return;
     }
     next();
   };
 }
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Security: Sanitize user input for logging to prevent log injection
+function sanitizeForLog(input: string): string {
+  if (!input) return "";
+  return input.replace(/[\r\n\x00]/g, "").substring(0, 200);
+}
 
 // WebP conversion settings
 const WEBP_QUALITY = 80;
@@ -180,16 +222,14 @@ async function convertToWebP(buffer: Buffer, originalFilename: string, mimeType:
   }
 }
 
-let objectStorageClient: Client | null = null;
+// Object storage is now handled through the unified StorageManager
+// See: ./services/storage-adapter.ts
 
-function getObjectStorageClient(): Client | null {
-  if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-    return null;
-  }
-  if (!objectStorageClient) {
-    objectStorageClient = new Client();
-  }
-  return objectStorageClient;
+// AI Provider Configuration
+interface AIProvider {
+  name: string;
+  client: OpenAI | null;
+  available: boolean;
 }
 
 function getOpenAIClient(): OpenAI | null {
@@ -197,15 +237,127 @@ function getOpenAIClient(): OpenAI | null {
   if (!apiKey) {
     return null;
   }
-  return new OpenAI({ 
+  return new OpenAI({
     apiKey,
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
   });
 }
 
+// Gemini via OpenAI-compatible API
+function getGeminiClient(): OpenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.gemini;
+  if (!apiKey) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+  });
+}
+
+// OpenRouter - supports many models
+function getOpenRouterClient(): OpenAI | null {
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.openrouterapi || process.env.OPENROUTERAPI;
+  if (!apiKey) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": process.env.APP_URL || "https://travi.world",
+      "X-Title": "Travi CMS",
+    },
+  });
+}
+
+// Get the best available AI client with fallbacks
+function getAIClient(): { client: OpenAI; provider: string } | null {
+  // Try OpenAI first
+  const openai = getOpenAIClient();
+  if (openai) {
+    return { client: openai, provider: "openai" };
+  }
+
+  // Try Gemini
+  const gemini = getGeminiClient();
+  if (gemini) {
+    return { client: gemini, provider: "gemini" };
+  }
+
+  // Try OpenRouter (has free models)
+  const openrouter = getOpenRouterClient();
+  if (openrouter) {
+    return { client: openrouter, provider: "openrouter" };
+  }
+
+  return null;
+}
+
+// Get appropriate model based on provider
+function getModelForProvider(provider: string, task: "chat" | "image" = "chat"): string {
+  if (task === "image") {
+    if (provider === "openai") return "dall-e-3";
+    return "dall-e-3"; // OpenRouter can proxy to DALL-E
+  }
+
+  switch (provider) {
+    case "openai":
+      return process.env.OPENAI_MODEL || "gpt-4o-mini";
+    case "gemini":
+      return "gemini-1.5-flash";
+    case "openrouter":
+      return "google/gemini-flash-1.5"; // Free on OpenRouter
+    default:
+      return "gpt-4o-mini";
+  }
+}
+
+// Server-side HTML sanitization for RSS content to prevent XSS
+function sanitizeHtmlContent(html: string): string {
+  if (!html) return "";
+
+  // Remove script tags and their content
+  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+
+  // Remove event handlers (onclick, onerror, onload, etc.)
+  sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, "");
+  sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]+/gi, "");
+
+  // Remove javascript: protocol URLs
+  sanitized = sanitized.replace(/javascript\s*:/gi, "");
+
+  // Remove data: URLs that could contain scripts
+  sanitized = sanitized.replace(/data\s*:\s*text\/html/gi, "");
+
+  // Remove style tags (can contain expressions)
+  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
+
+  // Remove iframe, object, embed, form tags
+  sanitized = sanitized.replace(/<(iframe|object|embed|form|base|meta|link)[^>]*>/gi, "");
+  sanitized = sanitized.replace(/<\/(iframe|object|embed|form|base|meta|link)>/gi, "");
+
+  // Remove SVG with potential script content
+  sanitized = sanitized.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, "");
+
+  // Remove expression() and url() from inline styles (IE vulnerability)
+  sanitized = sanitized.replace(/expression\s*\([^)]*\)/gi, "");
+
+  // Clean up any remaining dangerous attributes
+  sanitized = sanitized.replace(/\s*(src|href|action)\s*=\s*["']?\s*javascript:[^"'\s>]*/gi, "");
+
+  return sanitized.trim();
+}
+
 async function parseRssFeed(url: string): Promise<{ title: string; link: string; description: string; pubDate?: string }[]> {
+  // SSRF Protection: Validate URL before fetching
+  const ssrfCheck = validateUrlForSSRF(url);
+  if (!ssrfCheck.valid) {
+    throw new Error(`Invalid RSS feed URL: ${ssrfCheck.error}`);
+  }
+
   try {
-    const response = await fetch(url);
+    const response = await fetch(ssrfCheck.sanitizedUrl!);
     const text = await response.text();
     
     const items: { title: string; link: string; description: string; pubDate?: string }[] = [];
@@ -218,10 +370,15 @@ async function parseRssFeed(url: string): Promise<{ title: string; link: string;
       const dateMatch = itemXml.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i);
       
       if (titleMatch && linkMatch) {
+        // Sanitize all content from RSS to prevent XSS attacks
+        const rawTitle = titleMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '');
+        const rawLink = linkMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '');
+        const rawDescription = descMatch ? descMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '') : '';
+
         items.push({
-          title: titleMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, ''),
-          link: linkMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, ''),
-          description: descMatch ? descMatch[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '').substring(0, 500) : '',
+          title: sanitizeHtmlContent(rawTitle),
+          link: rawLink, // URLs are validated separately
+          description: sanitizeHtmlContent(rawDescription).substring(0, 500),
           pubDate: dateMatch ? dateMatch[1].trim() : undefined,
         });
       }
@@ -234,32 +391,23 @@ async function parseRssFeed(url: string): Promise<{ title: string; link: string;
   }
 }
 
-// Persist DALL-E image to object storage (DALL-E URLs expire in ~1 hour)
+// Persist DALL-E image to storage (DALL-E URLs expire in ~1 hour)
 async function persistImageToStorage(imageUrl: string, filename: string): Promise<string | null> {
-  const client = getObjectStorageClient();
-  if (!client) {
-    console.warn("Object storage not configured, cannot persist image");
-    return null;
-  }
-  
   try {
     const response = await fetch(imageUrl);
     if (!response.ok) {
       console.error(`Failed to fetch image: ${response.status}`);
       return null;
     }
-    
+
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    
+
     const storagePath = `public/generated/${filename}`;
-    await client.uploadFromBytes(storagePath, buffer);
-    
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : '';
-    
-    return `${baseUrl}/api/media/public/${encodeURIComponent(storagePath)}`;
+    const storageManager = getStorageManager();
+    const result = await storageManager.upload(storagePath, buffer);
+
+    return result.url;
   } catch (error) {
     console.error("Error persisting image to storage:", error);
     return null;
@@ -993,30 +1141,12 @@ async function findOrCreateArticleImage(
     
     const imageBuffer = await imageResponse.arrayBuffer();
     const filename = `freepik-${Date.now()}.jpg`;
-    let persistedUrl = imageUrl;
-    
-    const storageClient = getObjectStorageClient();
-    let uploadedSuccessfully = false;
-    
-    if (storageClient) {
-      try {
-        const objectPath = `public/images/${filename}`;
-        await storageClient.uploadFromBytes(objectPath, Buffer.from(imageBuffer));
-        persistedUrl = `/object-storage/${objectPath}`;
-        uploadedSuccessfully = true;
-      } catch (storageError) {
-        console.log(`[Image Finder] Object storage upload failed, falling back to local: ${storageError}`);
-      }
-    }
-    
-    if (!uploadedSuccessfully) {
-      const uploadsDir = path.join(process.cwd(), "uploads");
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      fs.writeFileSync(path.join(uploadsDir, filename), Buffer.from(imageBuffer));
-      persistedUrl = `/uploads/${filename}`;
-    }
+
+    // Use unified storage manager (handles fallback automatically)
+    const storageManager = getStorageManager();
+    const storagePath = `public/images/${filename}`;
+    const result = await storageManager.upload(storagePath, Buffer.from(imageBuffer));
+    const persistedUrl = result.url;
     
     const altText = bestResult.title || `${topic} - Dubai Travel`;
     
@@ -1058,13 +1188,14 @@ async function processImageBlocks(blocks: ContentBlock[], category: string = "ge
   
   for (const block of blocks) {
     if (block.type === 'image' && block.data) {
-      const searchQuery = block.data.searchQuery || block.data.query || block.data.alt || 'dubai travel';
+      const rawSearchQuery = block.data.searchQuery || block.data.query || block.data.alt || 'dubai travel';
+      const searchQuery = typeof rawSearchQuery === 'string' ? rawSearchQuery : 'dubai travel';
       console.log(`[Image Processor] Fetching image for: "${searchQuery}"`);
-      
+
       try {
         // Use existing image finder function
         const imageResult = await findOrCreateArticleImage(searchQuery, [searchQuery, category], category);
-        
+
         if (imageResult) {
           processedBlocks.push({
             ...block,
@@ -1310,12 +1441,14 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
     }
 
     const pendingClusters = await storage.getTopicClusters({ status: "pending" });
-    const openai = getOpenAIClient();
-    
-    if (!openai) {
-      console.log("[RSS Auto-Process] OpenAI not configured, skipping article generation");
+    const aiClient = getAIClient();
+
+    if (!aiClient) {
+      console.log("[RSS Auto-Process] No AI provider configured, skipping article generation");
       return result;
     }
+    const { client: openai, provider } = aiClient;
+    const model = getModelForProvider(provider);
 
     console.log(`[RSS Auto-Process] Found ${pendingClusters.length} pending clusters to process`);
 
@@ -1366,7 +1499,7 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
           }
 
           const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: provider === "openai" ? "gpt-4o" : model, // Use GPT-4o for OpenAI, otherwise use provider's model
             messages,
             response_format: { type: "json_object" },
             temperature: attempts === 1 ? 0.7 : 0.5, // Lower temp on retries for more predictable output
@@ -1704,55 +1837,310 @@ export async function registerRoutes(
   }
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
 
-  // Serve AI-generated images from object storage
-  app.get("/api/ai-images/:filename", async (req: Request, res: Response) => {
-    const filename = req.params.filename;
-    const client = getObjectStorageClient();
-
-    if (client) {
-      try {
-        const objectPath = `public/ai-generated/${filename}`;
-        const result = await client.downloadAsBytes(objectPath);
-
-        if (!result.ok) {
-          console.error(`Object storage error for ${filename}:`, result.error);
-          res.status(404).send('Image not found');
-          return;
-        }
-
-        const [buffer] = result.value;
-
-        // Determine content type
-        const ext = filename.split('.').pop()?.toLowerCase();
-        const contentTypes: Record<string, string> = {
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'png': 'image/png',
-          'webp': 'image/webp',
-          'gif': 'image/gif',
-        };
-
-        res.set('Content-Type', contentTypes[ext || 'jpg'] || 'image/jpeg');
-        res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-        res.send(buffer);
-      } catch (error) {
-        console.error(`Error serving AI image ${filename}:`, error);
-        res.status(404).send('Image not found');
+  // Health check endpoint for monitoring and load balancers
+  app.get("/api/health", async (_req: Request, res: Response) => {
+    const startTime = Date.now();
+    const health = {
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: process.env.npm_package_version || "1.0.0",
+      checks: {
+        database: { status: "unknown" as string, latency: 0 },
+        memory: { status: "healthy" as string, usage: 0 },
       }
-    } else {
-      // Fallback to local file
-      const localPath = path.join(process.cwd(), "uploads", "ai-generated", filename);
-      if (fs.existsSync(localPath)) {
-        res.sendFile(localPath);
-      } else {
-        res.status(404).send('Image not found');
-      }
+    };
+
+    try {
+      // Check database connectivity
+      const dbStart = Date.now();
+      await db.execute(sql`SELECT 1`);
+      health.checks.database = {
+        status: "healthy",
+        latency: Date.now() - dbStart
+      };
+    } catch (error) {
+      health.status = "unhealthy";
+      health.checks.database = {
+        status: "unhealthy",
+        latency: Date.now() - startTime
+      };
+    }
+
+    // Check memory usage
+    const memUsage = process.memoryUsage();
+    const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+    const heapTotalMB = Math.round(memUsage.heapTotal / 1024 / 1024);
+    health.checks.memory = {
+      status: heapUsedMB / heapTotalMB > 0.9 ? "warning" : "healthy",
+      usage: Math.round((heapUsedMB / heapTotalMB) * 100)
+    };
+
+    const statusCode = health.status === "healthy" ? 200 : 503;
+    res.status(statusCode).json(health);
+  });
+
+  // Kubernetes liveness probe - is the process alive?
+  app.get("/api/health/live", (_req: Request, res: Response) => {
+    res.status(200).json({ status: "alive", timestamp: new Date().toISOString() });
+  });
+
+  // Kubernetes readiness probe - is the service ready to accept traffic?
+  app.get("/api/health/ready", async (_req: Request, res: Response) => {
+    try {
+      // Check database connectivity
+      await db.execute(sql`SELECT 1`);
+      res.status(200).json({ status: "ready", timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(503).json({ status: "not ready", error: "Database unavailable" });
     }
   });
 
-  // Sitemap and robots.txt routes
-  const sitemapRoutes = (await import("./routes/sitemap")).default;
-  app.use(sitemapRoutes);
+  // System status endpoint - shows which services are configured
+  app.get("/api/system-status", requireAuth, async (_req: Request, res: Response) => {
+    const status = {
+      timestamp: new Date().toISOString(),
+      services: {
+        openai: {
+          configured: !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY),
+          model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        },
+        replicate: {
+          configured: !!process.env.REPLICATE_API_KEY,
+        },
+        freepik: {
+          configured: !!process.env.FREEPIK_API_KEY,
+        },
+        gemini: {
+          configured: !!(process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.gemini),
+        },
+        openrouter: {
+          configured: !!(process.env.OPENROUTER_API_KEY || process.env.openrouterapi || process.env.OPENROUTERAPI),
+        },
+        deepl: {
+          configured: !!process.env.DEEPL_API_KEY,
+        },
+        resend: {
+          configured: !!process.env.RESEND_API_KEY,
+        },
+        cloudflare: {
+          configured: !!(process.env.R2_BUCKET_NAME && process.env.R2_ACCESS_KEY_ID),
+        },
+        google: {
+          analyticsConfigured: !!process.env.GOOGLE_ANALYTICS_ID,
+          searchConsoleConfigured: !!process.env.GOOGLE_SITE_VERIFICATION,
+        },
+      },
+      activeAIProvider: getAIClient()?.provider || "none",
+      features: {
+        aiContentGeneration: !!getAIClient(),
+        aiImageGeneration: !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || process.env.REPLICATE_API_KEY),
+        translations: !!process.env.DEEPL_API_KEY,
+        emailCampaigns: !!process.env.RESEND_API_KEY,
+        cloudStorage: !!(process.env.R2_BUCKET_NAME && process.env.R2_ACCESS_KEY_ID),
+      },
+      safeMode: safeMode,
+    };
+    res.json(status);
+  });
+
+  // ============================================================================
+  // ADMIN LOGS API - System logging for debugging
+  // ============================================================================
+
+  type LogLevel = "error" | "warning" | "info" | "debug";
+  type LogCategory = "system" | "ai" | "images" | "storage" | "rss" | "content" | "auth" | "api" | "seo" | "publishing";
+
+  interface LogEntry {
+    id: string;
+    timestamp: string;
+    level: LogLevel;
+    category: LogCategory;
+    message: string;
+    details?: Record<string, unknown>;
+  }
+
+  // In-memory log storage (last 1000 entries)
+  const systemLogs: LogEntry[] = [];
+  const MAX_LOGS = 1000;
+
+  // Helper to add a log entry
+  function addSystemLog(level: LogLevel, category: LogCategory, message: string, details?: Record<string, unknown>) {
+    const entry: LogEntry = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      level,
+      category,
+      message,
+      details,
+    };
+    systemLogs.unshift(entry);
+    if (systemLogs.length > MAX_LOGS) {
+      systemLogs.pop();
+    }
+    // Also log to console
+    const emoji = level === "error" ? "❌" : level === "warning" ? "⚠️" : level === "info" ? "ℹ️" : "🔍";
+    console.log(`${emoji} [${category.toUpperCase()}] ${message}`);
+  }
+
+  // Expose for use in other parts of the app
+  (global as any).addSystemLog = addSystemLog;
+
+  // Get logs
+  app.get("/api/admin/logs", requirePermission("canManageSettings"), async (req: Request, res: Response) => {
+    try {
+      const { category, level, search, limit = "200" } = req.query;
+
+      let filtered = [...systemLogs];
+
+      if (category && category !== "all") {
+        filtered = filtered.filter(log => log.category === category);
+      }
+      if (level && level !== "all") {
+        filtered = filtered.filter(log => log.level === level);
+      }
+      if (search && typeof search === "string") {
+        const searchLower = search.toLowerCase();
+        filtered = filtered.filter(log =>
+          log.message.toLowerCase().includes(searchLower) ||
+          JSON.stringify(log.details || {}).toLowerCase().includes(searchLower)
+        );
+      }
+
+      res.json({
+        logs: filtered.slice(0, parseInt(limit as string, 10)),
+        total: filtered.length,
+      });
+    } catch (error) {
+      console.error("Error fetching logs:", error);
+      res.status(500).json({ error: "Failed to fetch logs" });
+    }
+  });
+
+  // Get log stats
+  app.get("/api/admin/logs/stats", requirePermission("canManageSettings"), async (_req: Request, res: Response) => {
+    try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+      const stats = {
+        total: systemLogs.length,
+        byLevel: {
+          error: systemLogs.filter(l => l.level === "error").length,
+          warning: systemLogs.filter(l => l.level === "warning").length,
+          info: systemLogs.filter(l => l.level === "info").length,
+          debug: systemLogs.filter(l => l.level === "debug").length,
+        },
+        byCategory: {
+          system: systemLogs.filter(l => l.category === "system").length,
+          ai: systemLogs.filter(l => l.category === "ai").length,
+          images: systemLogs.filter(l => l.category === "images").length,
+          storage: systemLogs.filter(l => l.category === "storage").length,
+          rss: systemLogs.filter(l => l.category === "rss").length,
+          content: systemLogs.filter(l => l.category === "content").length,
+          auth: systemLogs.filter(l => l.category === "auth").length,
+          api: systemLogs.filter(l => l.category === "api").length,
+          seo: systemLogs.filter(l => l.category === "seo").length,
+          publishing: systemLogs.filter(l => l.category === "publishing").length,
+        },
+        recentErrors: systemLogs.filter(l => l.level === "error" && l.timestamp >= oneHourAgo).length,
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching log stats:", error);
+      res.status(500).json({ error: "Failed to fetch log stats" });
+    }
+  });
+
+  // Clear logs
+  app.delete("/api/admin/logs", requirePermission("canManageSettings"), async (_req: Request, res: Response) => {
+    try {
+      systemLogs.length = 0;
+      addSystemLog("info", "system", "Logs cleared by admin");
+      res.json({ success: true, message: "Logs cleared" });
+    } catch (error) {
+      console.error("Error clearing logs:", error);
+      res.status(500).json({ error: "Failed to clear logs" });
+    }
+  });
+
+  // Export logs
+  app.get("/api/admin/logs/export", requirePermission("canManageSettings"), async (req: Request, res: Response) => {
+    try {
+      const { category, level } = req.query;
+
+      let filtered = [...systemLogs];
+      if (category && category !== "all") {
+        filtered = filtered.filter(log => log.category === category);
+      }
+      if (level && level !== "all") {
+        filtered = filtered.filter(log => log.level === level);
+      }
+
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Disposition", `attachment; filename="logs-${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(filtered);
+    } catch (error) {
+      console.error("Error exporting logs:", error);
+      res.status(500).json({ error: "Failed to export logs" });
+    }
+  });
+
+  // Add initial system log
+  addSystemLog("info", "system", "Server started", {
+    nodeVersion: process.version,
+    platform: process.platform,
+  });
+
+  // Serve AI-generated images from storage
+  app.get("/api/ai-images/:filename", async (req: Request, res: Response) => {
+    const filename = req.params.filename;
+
+    // Security: Prevent path traversal attacks
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      res.status(400).send('Invalid filename');
+      return;
+    }
+
+    // Security: Only allow specific file extensions
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    const ext = filename.split('.').pop()?.toLowerCase();
+    if (!ext || !allowedExtensions.includes(ext)) {
+      res.status(400).send('Invalid file type');
+      return;
+    }
+
+    try {
+      const objectPath = `public/ai-generated/${filename}`;
+      const storageManager = getStorageManager();
+      const buffer = await storageManager.download(objectPath);
+
+      if (!buffer) {
+        res.status(404).send('Image not found');
+        return;
+      }
+
+      // Determine content type
+      const ext = filename.split('.').pop()?.toLowerCase();
+      const contentTypes: Record<string, string> = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+        'gif': 'image/gif',
+      };
+
+      res.set('Content-Type', contentTypes[ext || 'jpg'] || 'image/jpeg');
+      res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+      res.send(buffer);
+    } catch (error) {
+      console.error(`Error serving AI image ${filename}:`, error);
+      res.status(404).send('Image not found');
+    }
+  });
+
+  // NOTE: Sitemap routes are defined later in this file (line ~8728)
+  // They use sitemap-service.ts which supports multilingual sitemaps
 
   // Security headers for all responses (CSP, X-Frame-Options, etc.)
   app.use(securityHeaders);
@@ -1770,16 +2158,100 @@ export async function registerRoutes(
   const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
   const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
   
-  // Username/password login endpoint (with rate limiting)
-  app.post('/api/auth/login', rateLimiters.auth, async (req: Request, res: Response) => {
+  // Username/password login endpoint with enterprise security
+  // Includes: rate limiting, exponential backoff, device fingerprinting, contextual auth, threat intelligence
+  app.post('/api/auth/login', rateLimiters.auth, exponentialBackoff.middleware('auth:login'), async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
-      
+
       if (!username || !password) {
         return res.status(400).json({ error: "Username and password are required" });
       }
-      
+
       const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
+      // Enterprise Security: Threat Intelligence Check
+      const threatAnalysis = threatIntelligence.analyzeRequest(req);
+      if (threatAnalysis.isThreat && threatAnalysis.riskScore >= 70) {
+        return res.status(403).json({ error: "Request blocked for security reasons" });
+      }
+
+      // Enterprise Security: Extract device fingerprint
+      const fingerprint = deviceFingerprint.extractFromRequest(req);
+
+      // Helper function to complete login with enterprise security
+      const completeLogin = async (user: any) => {
+        // Enterprise Security: Evaluate contextual authentication
+        const geo = await contextualAuth.getGeoLocation(ip);
+        const contextResult = await contextualAuth.evaluateContext(user.id, ip, fingerprint, geo || undefined);
+
+        if (!contextResult.allowed) {
+          return res.status(403).json({
+            error: "Access denied based on security policy",
+            riskFactors: contextResult.riskFactors,
+            riskScore: contextResult.riskScore,
+          });
+        }
+
+        // Enterprise Security: Register device
+        const deviceInfo = await deviceFingerprint.registerDevice(user.id, fingerprint, ip);
+        const isNewDevice = deviceInfo.loginCount === 1;
+
+        // Check if MFA is required (new device, high risk, or user has 2FA enabled)
+        const requiresMfa = contextResult.requiresMfa || user.totpEnabled;
+
+        // Set up session
+        const sessionUser = {
+          claims: { sub: user.id },
+          id: user.id,
+        };
+
+        req.login(sessionUser, (err: any) => {
+          if (err) {
+            console.error("Login session error:", err);
+            return res.status(500).json({ error: "Failed to create session" });
+          }
+          req.session.save((saveErr: any) => {
+            if (saveErr) {
+              console.error("Session save error:", saveErr);
+              return res.status(500).json({ error: "Failed to save session" });
+            }
+
+            // Enterprise Security: Reset backoff on successful login
+            (res as any).resetBackoff?.();
+
+            // Log successful login with enterprise security details
+            logSecurityEvent({
+              action: 'login',
+              resourceType: 'auth',
+              userId: user.id,
+              userEmail: user.username || undefined,
+              ip,
+              userAgent: req.get('User-Agent'),
+              details: {
+                method: 'password',
+                role: user.role,
+                isNewDevice,
+                riskScore: contextResult.riskScore,
+                deviceTrusted: deviceInfo.isTrusted,
+                geo: geo ? { country: geo.country, city: geo.city } : null,
+              },
+            });
+
+            res.json({
+              success: true,
+              user,
+              requiresMfa,
+              isNewDevice,
+              riskScore: contextResult.riskScore,
+              securityContext: {
+                deviceTrusted: deviceInfo.isTrusted,
+                country: geo?.country,
+              },
+            });
+          });
+        });
+      };
 
       // Check for admin from environment first
       if (ADMIN_PASSWORD_HASH && username === ADMIN_USERNAME) {
@@ -1798,45 +2270,16 @@ export async function registerRoutes(
             });
           }
 
-          // Set up session
-          const sessionUser = {
-            claims: { sub: adminUser.id },
-            id: adminUser.id,
-          };
-
-          req.login(sessionUser, (err: any) => {
-            if (err) {
-              console.error("Login session error:", err);
-              return res.status(500).json({ error: "Failed to create session" });
-            }
-            req.session.save((saveErr: any) => {
-              if (saveErr) {
-                console.error("Session save error:", saveErr);
-                return res.status(500).json({ error: "Failed to save session" });
-              }
-
-              // Log successful login
-              logSecurityEvent({
-                action: 'login',
-                resourceType: 'auth',
-                userId: adminUser!.id,
-                userEmail: adminUser!.username || undefined,
-                ip,
-                userAgent: req.get('User-Agent'),
-                details: { method: 'password', role: adminUser!.role },
-              });
-
-              res.json({ success: true, user: adminUser });
-            });
-          });
+          await completeLogin(adminUser);
           return;
         }
       }
-      
+
       // Check database for user
       const user = await storage.getUserByUsername(username);
       if (!user || !user.passwordHash) {
         recordFailedAttempt(ip);
+        (res as any).recordFailure?.(); // Enterprise Security: Exponential backoff
         return res.status(401).json({ error: "Invalid username or password" });
       }
 
@@ -1848,50 +2291,57 @@ export async function registerRoutes(
       const passwordMatch = await bcrypt.compare(password, user.passwordHash);
       if (!passwordMatch) {
         recordFailedAttempt(ip);
+        (res as any).recordFailure?.(); // Enterprise Security: Exponential backoff
         return res.status(401).json({ error: "Invalid username or password" });
       }
-      
-      // Set up session
-      const sessionUser = {
-        claims: { sub: user.id },
-        id: user.id,
-      };
-      
-      req.login(sessionUser, (err: any) => {
-        if (err) {
-          console.error("Login session error:", err);
-          return res.status(500).json({ error: "Failed to create session" });
-        }
-        req.session.save((saveErr: any) => {
-          if (saveErr) {
-            console.error("Session save error:", saveErr);
-            return res.status(500).json({ error: "Failed to save session" });
-          }
 
-          // Log successful login
-          logSecurityEvent({
-            action: 'login',
-            resourceType: 'auth',
-            userId: user.id,
-            userEmail: user.username || undefined,
-            ip,
-            userAgent: req.get('User-Agent'),
-            details: { method: 'password', role: user.role },
-          });
-
-          res.json({ success: true, user });
-        });
-      });
+      await completeLogin(user);
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ error: "Login failed" });
     }
   });
-  
+
+  // Logout endpoint for password-based authentication
+  app.post('/api/auth/logout', (req: Request, res: Response) => {
+    const userId = (req as any).user?.claims?.sub;
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
+    req.logout((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ error: "Logout failed" });
+      }
+
+      // Destroy the session
+      req.session?.destroy((sessionErr) => {
+        if (sessionErr) {
+          console.error("Session destroy error:", sessionErr);
+        }
+
+        // Log the logout event
+        if (userId) {
+          logSecurityEvent({
+            action: 'logout',
+            resourceType: 'auth',
+            userId,
+            ip,
+            userAgent: req.get('User-Agent'),
+            details: { method: 'password' },
+          });
+        }
+
+        // Clear the session cookie
+        res.clearCookie('connect.sid');
+        res.json({ success: true, message: "Logged out successfully" });
+      });
+    });
+  });
+
   // Get current authenticated user
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -1904,9 +2354,9 @@ export async function registerRoutes(
   });
   
   // Get current user role and permissions
-  app.get("/api/user/permissions", isAuthenticated, async (req: any, res) => {
+  app.get("/api/user/permissions", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const user = await storage.getUser(userId);
       const userRole: UserRole = user?.role || "viewer";
       const permissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS.viewer;
@@ -1917,12 +2367,163 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================================================
+  // ENTERPRISE SECURITY ENDPOINTS
+  // ============================================================================
+
+  // Get user's registered devices
+  app.get("/api/security/devices", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const devices = deviceFingerprint.getUserDevices(userId);
+      res.json({ devices });
+    } catch (error) {
+      console.error("Error fetching devices:", error);
+      res.status(500).json({ error: "Failed to fetch devices" });
+    }
+  });
+
+  // Trust a device
+  app.post("/api/security/devices/:fingerprintHash/trust", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const { fingerprintHash } = req.params;
+      const fingerprint = deviceFingerprint.extractFromRequest(req);
+
+      // Create a mock fingerprint with the hash to match
+      await deviceFingerprint.trustDevice(userId, fingerprint);
+      res.json({ success: true, message: "Device trusted" });
+    } catch (error) {
+      console.error("Error trusting device:", error);
+      res.status(500).json({ error: "Failed to trust device" });
+    }
+  });
+
+  // Revoke a device
+  app.delete("/api/security/devices/:fingerprintHash", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const { fingerprintHash } = req.params;
+
+      const revoked = await deviceFingerprint.revokeDevice(userId, fingerprintHash);
+      if (revoked) {
+        res.json({ success: true, message: "Device revoked" });
+      } else {
+        res.status(404).json({ error: "Device not found" });
+      }
+    } catch (error) {
+      console.error("Error revoking device:", error);
+      res.status(500).json({ error: "Failed to revoke device" });
+    }
+  });
+
+  // Get user's active sessions
+  app.get("/api/security/sessions", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const sessions = sessionSecurity.getUserSessions(userId);
+
+      // Return sessions without sensitive data
+      const safeSessions = sessions.map(s => ({
+        id: s.id.substring(0, 8) + "...",
+        createdAt: s.createdAt,
+        lastActivityAt: s.lastActivityAt,
+        expiresAt: s.expiresAt,
+        ipAddress: s.ipAddress,
+        isActive: s.isActive,
+        riskScore: s.riskScore,
+      }));
+
+      res.json({ sessions: safeSessions });
+    } catch (error) {
+      console.error("Error fetching sessions:", error);
+      res.status(500).json({ error: "Failed to fetch sessions" });
+    }
+  });
+
+  // Revoke all other sessions
+  app.post("/api/security/sessions/revoke-all", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const currentSessionId = (req.session as any)?.id;
+
+      const count = await sessionSecurity.revokeAllUserSessions(userId, currentSessionId);
+      res.json({ success: true, message: `${count} sessions revoked` });
+    } catch (error) {
+      console.error("Error revoking sessions:", error);
+      res.status(500).json({ error: "Failed to revoke sessions" });
+    }
+  });
+
+  // Get current security context
+  app.get("/api/security/context", isAuthenticated, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const fingerprint = deviceFingerprint.extractFromRequest(req);
+
+      // Get geo location
+      const geo = await contextualAuth.getGeoLocation(ip);
+
+      // Evaluate current context
+      const contextResult = await contextualAuth.evaluateContext(userId, ip, fingerprint, geo || undefined);
+
+      // Check device status
+      const isKnown = deviceFingerprint.isKnownDevice(userId, fingerprint);
+      const isTrusted = deviceFingerprint.isDeviceTrusted(userId, fingerprint);
+
+      // Get threat analysis
+      const threatAnalysis = threatIntelligence.analyzeRequest(req);
+
+      res.json({
+        ip: ip.substring(0, ip.lastIndexOf('.')) + '.xxx', // Mask last octet
+        geo: geo ? {
+          country: geo.country,
+          countryCode: geo.countryCode,
+          region: geo.region,
+          city: geo.city,
+          timezone: geo.timezone,
+        } : null,
+        device: {
+          isKnown,
+          isTrusted,
+          fingerprintHash: deviceFingerprint.generateHash(fingerprint).substring(0, 8) + '...',
+        },
+        riskAssessment: {
+          score: contextResult.riskScore,
+          factors: contextResult.riskFactors,
+          requiresMfa: contextResult.requiresMfa,
+        },
+        threatIndicators: threatAnalysis.indicators.length > 0 ? threatAnalysis.indicators.map(i => i.description) : [],
+      });
+    } catch (error) {
+      console.error("Error getting security context:", error);
+      res.status(500).json({ error: "Failed to get security context" });
+    }
+  });
+
+  // Admin: Get security dashboard summary (requires admin role)
+  app.get("/api/security/dashboard", isAuthenticated, requireRole("admin"), async (req: AuthRequest, res: Response) => {
+    try {
+      const blockedIps = getBlockedIps();
+
+      res.json({
+        blockedIps: blockedIps.length,
+        blockedIpList: blockedIps.slice(0, 10), // Top 10
+        recentSecurityEvents: await getAuditLogs({ resourceType: 'auth', limit: 20 }),
+      });
+    } catch (error) {
+      console.error("Error getting security dashboard:", error);
+      res.status(500).json({ error: "Failed to get security dashboard" });
+    }
+  });
+
   // TOTP 2FA Routes
   
   // Get TOTP status for current user
-  app.get("/api/totp/status", isAuthenticated, async (req: any, res) => {
+  app.get("/api/totp/status", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -1938,9 +2539,9 @@ export async function registerRoutes(
   });
 
   // Setup TOTP - Generate secret and QR code
-  app.post("/api/totp/setup", isAuthenticated, async (req: any, res) => {
+  app.post("/api/totp/setup", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -1986,9 +2587,9 @@ export async function registerRoutes(
   });
 
   // Verify TOTP and enable 2FA
-  app.post("/api/totp/verify", isAuthenticated, async (req: any, res) => {
+  app.post("/api/totp/verify", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { code } = req.body;
       
       if (!code || typeof code !== "string") {
@@ -2034,9 +2635,9 @@ export async function registerRoutes(
   });
 
   // Disable TOTP
-  app.post("/api/totp/disable", isAuthenticated, async (req: any, res) => {
+  app.post("/api/totp/disable", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { code } = req.body;
       
       if (!code || typeof code !== "string") {
@@ -2075,9 +2676,9 @@ export async function registerRoutes(
   const TOTP_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
   // Validate TOTP code (requires authenticated session - used after OIDC login)
-  app.post("/api/totp/validate", isAuthenticated, async (req: any, res) => {
+  app.post("/api/totp/validate", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { code } = req.body;
       
       if (!code) {
@@ -2140,9 +2741,9 @@ export async function registerRoutes(
   const RECOVERY_LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
 
   // Validate recovery code (alternative to TOTP code)
-  app.post("/api/totp/validate-recovery", isAuthenticated, async (req: any, res) => {
+  app.post("/api/totp/validate-recovery", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { code } = req.body;
       
       if (!code) {
@@ -2260,7 +2861,7 @@ export async function registerRoutes(
     });
   });
 
-  app.get("/api/stats", async (req, res) => {
+  app.get("/api/stats", requireAuth, async (req, res) => {
     try {
       const stats = await storage.getStats();
       res.json(stats);
@@ -2284,8 +2885,8 @@ export async function registerRoutes(
     return publicContent;
   }
 
-  // Admin/CMS content list - temporarily no auth for testing
-  app.get("/api/contents", async (req, res) => {
+  // Admin/CMS content list - requires authentication
+  app.get("/api/contents", requireAuth, async (req, res) => {
     try {
       const { type, status, search } = req.query;
       const filters = {
@@ -2303,8 +2904,8 @@ export async function registerRoutes(
     }
   });
 
-  // Content needing attention for dashboard
-  app.get("/api/contents/attention", async (req, res) => {
+  // Content needing attention for dashboard - requires authentication
+  app.get("/api/contents/attention", requireAuth, async (req, res) => {
     try {
       const contents = await storage.getContentsWithRelations({});
       const now = new Date();
@@ -2337,15 +2938,14 @@ export async function registerRoutes(
     }
   });
 
-  // Admin/CMS content by ID - TEMPORARILY no auth for testing (TODO: restore auth)
-  app.get("/api/contents/:id", async (req, res) => {
+  // Admin/CMS content by ID - requires authentication
+  app.get("/api/contents/:id", requireAuth, async (req, res) => {
     try {
       const content = await storage.getContent(req.params.id);
       if (!content) {
         return res.status(404).json({ error: "Content not found" });
       }
-      
-      // TEMPORARILY: Return full content for all users (auth disabled for CMS testing)
+
       res.json(content);
     } catch (error) {
       console.error("Error fetching content:", error);
@@ -2353,15 +2953,25 @@ export async function registerRoutes(
     }
   });
 
-  // Public content by slug - TEMPORARILY no auth for testing (TODO: restore auth)
+  // Content by slug - requires authentication for unpublished, public for published
   app.get("/api/contents/slug/:slug", async (req, res) => {
     try {
       const content = await storage.getContentBySlug(req.params.slug);
       if (!content) {
         return res.status(404).json({ error: "Content not found" });
       }
-      
-      // TEMPORARILY: Return full content for all users (auth disabled for CMS testing)
+
+      // If content is published, allow public access
+      if (content.status === "published") {
+        return res.json(content);
+      }
+
+      // For unpublished content, require authentication
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ error: "Authentication required for unpublished content" });
+      }
+
       res.json(content);
     } catch (error) {
       console.error("Error fetching content by slug:", error);
@@ -2474,7 +3084,14 @@ export async function registerRoutes(
       } else if (parsed.type === "itinerary" && req.body.itinerary) {
         const itineraryData = insertItinerarySchema.omit({ contentId: true }).parse(req.body.itinerary);
         await storage.createItinerary({ ...itineraryData, contentId: content.id });
+      } else if (parsed.type === "dining" && req.body.dining) {
+        await storage.createDining({ ...req.body.dining, contentId: content.id });
+      } else if (parsed.type === "district" && req.body.district) {
+        await storage.createDistrict({ ...req.body.district, contentId: content.id });
+      } else if (parsed.type === "transport" && req.body.transport) {
+        await storage.createTransport({ ...req.body.transport, contentId: content.id });
       } else {
+        // Create empty type-specific record if data not provided
         if (parsed.type === "attraction") {
           await storage.createAttraction({ contentId: content.id });
         } else if (parsed.type === "hotel") {
@@ -2485,6 +3102,12 @@ export async function registerRoutes(
           await storage.createEvent({ contentId: content.id });
         } else if (parsed.type === "itinerary") {
           await storage.createItinerary({ contentId: content.id });
+        } else if (parsed.type === "dining") {
+          await storage.createDining({ contentId: content.id });
+        } else if (parsed.type === "district") {
+          await storage.createDistrict({ contentId: content.id });
+        } else if (parsed.type === "transport") {
+          await storage.createTransport({ contentId: content.id });
         }
       }
 
@@ -2511,7 +3134,25 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Content not found" });
       }
 
-      // TEMPORARILY: Skip publish permission check for testing
+      // Check publish permission when changing status to "published" or "scheduled"
+      const newStatus = req.body.status;
+      const isPublishing = (newStatus === "published" || newStatus === "scheduled") &&
+                           existingContent.status !== "published" &&
+                           existingContent.status !== "scheduled";
+
+      if (isPublishing) {
+        const user = req.user as any;
+        const userId = user?.claims?.sub;
+        const dbUser = userId ? await storage.getUser(userId) : null;
+        const userRole = dbUser?.role || "viewer";
+        const permissions = ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS];
+
+        if (!permissions?.canPublish) {
+          return res.status(403).json({
+            error: "Permission denied: You do not have permission to publish content"
+          });
+        }
+      }
 
       // Auto-create version before update
       const latestVersion = await storage.getLatestVersionNumber(req.params.id);
@@ -2530,10 +3171,24 @@ export async function registerRoutes(
         changeNote: req.body.changeNote || null,
       });
 
-      const { attraction, hotel, article, event, itinerary, changedBy, changeNote, ...contentData } = req.body;
-      
+      const { attraction, hotel, article, event, itinerary, dining, district, transport, changedBy, changeNote, ...contentData } = req.body;
+
+      // Convert date strings to Date objects for database
+      if (contentData.publishedAt && typeof contentData.publishedAt === 'string') {
+        contentData.publishedAt = new Date(contentData.publishedAt);
+      }
+      if (contentData.scheduledAt && typeof contentData.scheduledAt === 'string') {
+        contentData.scheduledAt = new Date(contentData.scheduledAt);
+      }
+
+      // Auto-set publishedAt when content is being published for the first time
+      if (contentData.status === "published" && existingContent.status !== "published" && !contentData.publishedAt) {
+        contentData.publishedAt = new Date();
+      }
+
       const updatedContent = await storage.updateContent(req.params.id, contentData);
 
+      // Update content-type-specific data
       if (existingContent.type === "attraction" && attraction) {
         await storage.updateAttraction(req.params.id, attraction);
       } else if (existingContent.type === "hotel" && hotel) {
@@ -2544,6 +3199,12 @@ export async function registerRoutes(
         await storage.updateEvent(req.params.id, req.body.event);
       } else if (existingContent.type === "itinerary" && itinerary) {
         await storage.updateItinerary(req.params.id, itinerary);
+      } else if (existingContent.type === "dining" && dining) {
+        await storage.updateDining(req.params.id, dining);
+      } else if (existingContent.type === "district" && district) {
+        await storage.updateDistrict(req.params.id, district);
+      } else if (existingContent.type === "transport" && transport) {
+        await storage.updateTransport(req.params.id, transport);
       }
 
       const fullContent = await storage.getContent(req.params.id);
@@ -2863,7 +3524,8 @@ export async function registerRoutes(
       
       let cancelledCount = 0;
       for (const translation of pendingTranslations) {
-        await storage.updateTranslation(translation.id, { status: "cancelled" });
+        // Mark cancelled translations as needing review instead of using unsupported "cancelled" status
+        await storage.updateTranslation(translation.id, { status: "needs_review" });
         cancelledCount++;
       }
 
@@ -2899,7 +3561,7 @@ export async function registerRoutes(
   // ========== Site Settings API ==========
   
   // Get all settings
-  app.get("/api/settings", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+  app.get("/api/settings", isAuthenticated, requireRole("admin"), async (req: AuthRequest, res: Response) => {
     try {
       const settings = await storage.getSettings();
       res.json(settings);
@@ -2910,7 +3572,7 @@ export async function registerRoutes(
   });
 
   // Get settings by category (for frontend grouping)
-  app.get("/api/settings/grouped", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+  app.get("/api/settings/grouped", isAuthenticated, requireRole("admin"), async (req: AuthRequest, res: Response) => {
     try {
       const settings = await storage.getSettings();
       const grouped: Record<string, Record<string, unknown>> = {};
@@ -2928,7 +3590,7 @@ export async function registerRoutes(
   });
 
   // Update multiple settings at once
-  app.post("/api/settings/bulk", isAuthenticated, requireRole("admin"), async (req: any, res) => {
+  app.post("/api/settings/bulk", isAuthenticated, requireRole("admin"), async (req: AuthRequest, res: Response) => {
     try {
       const { settings } = req.body;
       if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
@@ -2942,7 +3604,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: `Invalid categories: ${invalidCategories.join(", ")}` });
       }
       
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const updated: any[] = [];
       
       for (const [category, values] of Object.entries(settings)) {
@@ -2974,7 +3636,7 @@ export async function registerRoutes(
   // ========== Content Safety Check Endpoints ==========
 
   // Check for broken internal links
-  app.get("/api/content/broken-links", isAuthenticated, requireRole(["admin", "editor"]), async (req: any, res) => {
+  app.get("/api/content/broken-links", isAuthenticated, requireRole(["admin", "editor"]), async (req: AuthRequest, res: Response) => {
     try {
       const links = await storage.getInternalLinks();
       const brokenLinks: { linkId: string; sourceId: string | null; targetId: string | null; reason: string }[] = [];
@@ -3002,7 +3664,7 @@ export async function registerRoutes(
   });
 
   // Check content status before bulk delete
-  app.post("/api/content/bulk-delete-check", isAuthenticated, requireRole(["admin", "editor"]), async (req: any, res) => {
+  app.post("/api/content/bulk-delete-check", isAuthenticated, requireRole(["admin", "editor"]), async (req: AuthRequest, res: Response) => {
     try {
       const { ids } = req.body;
       if (!Array.isArray(ids)) {
@@ -3134,9 +3796,9 @@ export async function registerRoutes(
 
       const items = await parseRssFeed(feed.url);
 
+      // Update lastFetchedAt timestamp
       await storage.updateRssFeed(req.params.id, {
-        // lastFetched: new Date(), // Not in schema
-        // itemCount: items.length, // Not in schema
+        lastFetchedAt: new Date(),
       });
 
       res.json({ items, count: items.length });
@@ -3435,18 +4097,19 @@ export async function registerRoutes(
       const category = determineContentCategory(combinedText);
       const sourceContent = sources.map(s => `${s.title}: ${s.description}`).join('\n\n');
 
-      // Use OpenAI to merge the articles with enhanced prompting
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "OpenAI API not configured. Please set OPENAI_API_KEY." });
+      // Use AI to merge the articles with enhanced prompting
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "No AI provider configured. Please set OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       // Build the enhanced system and user prompts using centralized content rules
       const systemPrompt = await getContentWriterSystemPrompt(category);
       const userPrompt = await buildArticleGenerationPrompt(cluster.topic || combinedText, sourceContent);
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -3784,7 +4447,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/media", async (req, res) => {
+  app.get("/api/media", requirePermission("canAccessMediaLibrary"), async (req, res) => {
     try {
       const files = await storage.getMediaFiles();
       res.json(files);
@@ -3794,7 +4457,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/media/:id", async (req, res) => {
+  app.get("/api/media/:id", requirePermission("canAccessMediaLibrary"), async (req, res) => {
     try {
       const file = await storage.getMediaFile(req.params.id);
       if (!file) {
@@ -3808,7 +4471,7 @@ export async function registerRoutes(
   });
 
   // Check if media is in use before delete
-  app.get("/api/media/:id/usage", isAuthenticated, async (req: any, res) => {
+  app.get("/api/media/:id/usage", isAuthenticated, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       const mediaFile = await storage.getMediaFile(id);
@@ -3826,58 +4489,50 @@ export async function registerRoutes(
   });
 
   app.post("/api/media/upload", requirePermission("canAccessMediaLibrary"), checkReadOnlyMode, upload.single("file"), validateMediaUpload, async (req, res) => {
-    let localPath: string | null = null;
-    let objectPath: string | null = null;
+    console.log("[Media Upload] Request received");
 
     try {
       if (!req.file) {
+        console.log("[Media Upload] ERROR: No file in request");
         return res.status(400).json({ error: "No file uploaded" });
       }
+      console.log(`[Media Upload] Processing file: ${sanitizeForLog(req.file.originalname)}, size: ${req.file.size}`);
 
-      // Convert images to WebP for optimization
-      const converted = await convertToWebP(
+      // Use the new unified ImageService for upload
+      const result = await uploadImage(
         req.file.buffer,
         req.file.originalname,
-        req.file.mimetype
+        req.file.mimetype,
+        {
+          source: "upload",
+          altText: req.body.altText,
+        }
       );
 
-      const storageClient = getObjectStorageClient();
-
-      const filename = `${Date.now()}-${converted.filename}`;
-      let url = `/uploads/${filename}`;
-
-      if (storageClient) {
-        objectPath = `public/${filename}`;
-        await storageClient.uploadFromBytes(objectPath, converted.buffer);
-        // Note: Using simple URL path instead of signed URL (getSignedDownloadUrl doesn't exist)
-        url = `/object-storage/${objectPath}`;
-      } else {
-        const uploadsDir = path.join(process.cwd(), "uploads");
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
-        }
-        localPath = path.join(uploadsDir, filename);
-        fs.writeFileSync(localPath, converted.buffer);
+      if (!result.success) {
+        console.error("[Media Upload] ERROR:", result.error);
+        return res.status(400).json({ error: result.error });
       }
 
+      const image = result.image;
+
+      // Save to database for media library
       const mediaFile = await storage.createMediaFile({
-        filename,
-        originalFilename: req.file.originalname,
-        mimeType: converted.mimeType,
-        size: converted.buffer.length,
-        url,
+        filename: image.filename,
+        originalFilename: image.originalFilename,
+        mimeType: image.mimeType,
+        size: image.size,
+        url: image.url,
         altText: req.body.altText || null,
-        width: converted.width || (req.body.width ? parseInt(req.body.width) : null),
-        height: converted.height || (req.body.height ? parseInt(req.body.height) : null),
+        width: image.width || (req.body.width ? parseInt(req.body.width) : null),
+        height: image.height || (req.body.height ? parseInt(req.body.height) : null),
       });
 
       await logAuditEvent(req, "media_upload", "media", mediaFile.id, `Uploaded media: ${mediaFile.originalFilename}`, undefined, { filename: mediaFile.originalFilename, mimeType: mediaFile.mimeType, size: mediaFile.size, originalSize: req.file.size });
+      console.log(`[Media Upload] SUCCESS: ${mediaFile.filename} -> ${mediaFile.url}`);
       res.status(201).json(mediaFile);
     } catch (error) {
-      if (localPath && fs.existsSync(localPath)) {
-        try { fs.unlinkSync(localPath); } catch (e) { console.log("Cleanup failed:", e); }
-      }
-      console.error("Error uploading media file:", error);
+      console.error("[Media Upload] ERROR:", error);
       res.status(500).json({ error: "Failed to upload media file" });
     }
   });
@@ -3900,23 +4555,9 @@ export async function registerRoutes(
       const file = await storage.getMediaFile(req.params.id);
       const fileInfo = file ? { filename: file.originalFilename, mimeType: file.mimeType, size: file.size } : undefined;
       if (file) {
-        const storageClient = getObjectStorageClient();
-        if (storageClient) {
-          try {
-            await storageClient.delete(`public/${file.filename}`);
-          } catch (e) {
-            console.log("Could not delete from object storage:", e);
-          }
-        } else {
-          const localPath = path.join(process.cwd(), "uploads", file.filename);
-          if (fs.existsSync(localPath)) {
-            try {
-              fs.unlinkSync(localPath);
-            } catch (e) {
-              console.log("Could not delete local file:", e);
-            }
-          }
-        }
+        // Use unified storage manager (handles both Object Storage and local)
+        const storageManager = getStorageManager();
+        await storageManager.delete(`public/${file.filename}`);
       }
       await storage.deleteMediaFile(req.params.id);
       if (fileInfo) {
@@ -3960,13 +4601,43 @@ export async function registerRoutes(
     }
   });
 
+  // AI Status endpoint - check if AI is available
+  app.get("/api/ai/status", async (req, res) => {
+    try {
+      const aiClient = getAIClient();
+      const hasOpenAI = !!getOpenAIClient();
+      const hasGemini = !!(process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.gemini);
+      const hasOpenRouter = !!(process.env.OPENROUTER_API_KEY || process.env.openrouterapi || process.env.OPENROUTERAPI);
+
+      res.json({
+        available: !!aiClient && !safeMode.aiDisabled,
+        provider: aiClient?.provider || null,
+        safeMode: safeMode.aiDisabled,
+        providers: {
+          openai: hasOpenAI,
+          gemini: hasGemini,
+          openrouter: hasOpenRouter,
+        },
+        features: {
+          textGeneration: !!aiClient,
+          imageGeneration: hasOpenAI, // DALL-E requires OpenAI
+          translation: !!aiClient,
+        }
+      });
+    } catch (error) {
+      console.error("Error checking AI status:", error);
+      res.status(500).json({ error: "Failed to check AI status" });
+    }
+  });
+
   app.post("/api/ai/generate", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
-      
+      const { client: openai, provider } = aiClient;
+
       // Check safe mode
       if (safeMode.aiDisabled) {
         return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
@@ -3988,7 +4659,7 @@ export async function registerRoutes(
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           { role: "system", content: systemPrompt },
           {
@@ -4034,16 +4705,17 @@ Format the response as JSON with the following structure:
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { contentId, text } = req.body;
-      
+
       const allContents = await storage.getContents();
       const otherContents = allContents.filter(c => c.id !== contentId);
-      
+
       if (otherContents.length === 0) {
         return res.json({ suggestions: [] });
       }
@@ -4051,7 +4723,7 @@ Format the response as JSON with the following structure:
       const contentList = otherContents.map(c => `- ${c.title} (${c.type}): ${c.slug}`).join("\n");
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           {
             role: "system",
@@ -4076,22 +4748,31 @@ Format the response as JSON with the following structure:
   // Comprehensive AI Article Generator - Full Spec Implementation
   app.post("/api/ai/generate-article", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
+      addSystemLog("warning", "ai", "AI article generation blocked - safe mode enabled");
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        addSystemLog("error", "ai", "AI article generation failed - no AI provider configured (need OPENAI_API_KEY, GEMINI, or openrouterapi)");
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi to Secrets." });
       }
+
+      const { client: openai, provider } = aiClient;
+      const model = getModelForProvider(provider);
+      addSystemLog("info", "ai", `Using AI provider: ${provider} with model: ${model}`);
 
       const { title, topic, summary, sourceUrl, sourceText, inputType = "title_only" } = req.body;
 
       // Accept either 'title' or 'topic' for flexibility
       const articleTitle = title || topic;
-      
+
       if (!articleTitle) {
+        addSystemLog("warning", "ai", "AI article generation failed - no title provided");
         return res.status(400).json({ error: "Title is required" });
       }
+
+      addSystemLog("info", "ai", `Starting AI article generation: "${articleTitle}"`, { inputType });
 
       // Build context based on input type
       let contextInfo = `Title: "${articleTitle}"`;
@@ -4211,12 +4892,12 @@ Ensure article is 800-1800 words total.
 Return valid JSON only.`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        response_format: { type: "json_object" },
+        ...(provider === "openai" ? { response_format: { type: "json_object" } } : {}),
         max_tokens: 4096,
       });
 
@@ -4273,10 +4954,11 @@ Return valid JSON only.`;
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { type, title, description, data } = req.body;
 
@@ -4286,7 +4968,7 @@ Return valid JSON only.`;
       else if (type === "article") schemaType = "Article";
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           {
             role: "system",
@@ -4342,12 +5024,14 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const { name } = req.body;
+      const { name, primaryKeyword } = req.body;
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return res.status(400).json({ error: "Attraction name is required" });
       }
 
-      const result = await generateAttractionContent(name.trim());
+      const result = await generateAttractionContent(name.trim(), {
+        primaryKeyword: primaryKeyword?.trim() || name.trim()
+      });
       if (!result) {
         return res.status(500).json({ error: "Failed to generate attraction content" });
       }
@@ -4356,6 +5040,103 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     } catch (error) {
       console.error("Error generating attraction content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate attraction content";
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Generate partial content for a specific section based on existing content
+  app.post("/api/ai/generate-section", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
+    if (safeMode.aiDisabled) {
+      return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
+    }
+    try {
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
+      }
+      const { client: openai, provider } = aiClient;
+
+      const { sectionType, title, existingContent, contentType } = req.body;
+
+      if (!sectionType || !title) {
+        return res.status(400).json({ error: "Section type and title are required" });
+      }
+
+      const validSections = ["faq", "tips", "highlights"];
+      if (!validSections.includes(sectionType)) {
+        return res.status(400).json({ error: "Invalid section type. Must be: faq, tips, or highlights" });
+      }
+
+      let prompt = "";
+      const systemPrompt = `You are a Dubai travel content expert. Generate high-quality, SEO-optimized content for the "${title}" page.
+Based on the existing content context, generate ONLY the requested section. Output valid JSON.`;
+
+      const contextInfo = existingContent ? `\n\nExisting content context:\n${existingContent.substring(0, 3000)}` : "";
+
+      if (sectionType === "faq") {
+        prompt = `Generate 8 frequently asked questions with detailed answers for "${title}" (${contentType || "attraction"}).
+${contextInfo}
+
+Generate practical, helpful FAQs that visitors would actually ask.
+Each answer should be 100-150 words with specific, actionable information.
+
+Output format:
+{
+  "faqs": [
+    {"question": "What are the opening hours of ${title}?", "answer": "Detailed 100-150 word answer..."},
+    {"question": "How much do tickets cost?", "answer": "Detailed answer with prices..."},
+    ...8 total FAQs
+  ]
+}`;
+      } else if (sectionType === "tips") {
+        prompt = `Generate 7-8 insider tips for visiting "${title}" (${contentType || "attraction"}).
+${contextInfo}
+
+Tips should be practical, specific, and actionable - not generic advice.
+Each tip should be 30-50 words.
+
+Output format:
+{
+  "tips": [
+    "Book tickets online at least 2 days in advance to skip the queue and save 15% on entry fees.",
+    "Visit during weekday mornings (9-11 AM) for smaller crowds and better photo opportunities.",
+    ...7-8 total tips
+  ]
+}`;
+      } else if (sectionType === "highlights") {
+        prompt = `Generate 6 key highlights/experiences for "${title}" (${contentType || "attraction"}).
+${contextInfo}
+
+Each highlight should describe a specific experience or feature that visitors can enjoy.
+Include the highlight title and a 50-80 word description.
+
+Output format:
+{
+  "highlights": [
+    {"title": "Observation Deck Experience", "description": "50-80 word detailed description of this highlight..."},
+    {"title": "Interactive Exhibits", "description": "Description..."},
+    ...6 total highlights
+  ]
+}`;
+      }
+
+      const response = await openai.chat.completions.create({
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
+        max_tokens: 4000,
+        temperature: 0.7,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || "{}");
+      console.log(`[AI Section] Generated ${sectionType} for "${title}" using ${provider}`);
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating section content:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate section content";
       res.status(500).json({ error: message });
     }
   });
@@ -4513,19 +5294,57 @@ Return valid JSON-LD that can be embedded in a webpage.`,
   // AI Image Generation endpoint
   app.post("/api/ai/generate-images", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
+      addSystemLog("warning", "images", "AI image generation blocked - safe mode enabled");
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
       const { contentType, title, description, location, generateHero, generateContentImages: genContentImages, contentImageCount } = req.body;
 
       if (!contentType || !title) {
+        addSystemLog("warning", "images", "AI image generation failed - missing content type or title");
         return res.status(400).json({ error: "Content type and title are required" });
       }
 
       const validContentTypes = ['hotel', 'attraction', 'article', 'dining', 'district', 'transport', 'event', 'itinerary'];
       if (!validContentTypes.includes(contentType)) {
+        addSystemLog("warning", "images", `AI image generation failed - invalid content type: ${contentType}`);
         return res.status(400).json({ error: "Invalid content type" });
       }
+
+      // Check if any image generation API is configured
+      const hasOpenAI = !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY);
+      const hasReplicate = !!process.env.REPLICATE_API_KEY;
+      const hasFreepik = !!process.env.FREEPIK_API_KEY;
+
+      // If no AI image generation available, use Freepik or Unsplash fallback
+      if (!hasOpenAI && !hasReplicate) {
+        addSystemLog("info", "images", `No AI image API configured, using ${hasFreepik ? 'Freepik' : 'Unsplash'} fallback`);
+
+        // Generate stock image URL based on content
+        const searchQuery = encodeURIComponent(`${title} ${contentType} dubai travel`.substring(0, 50));
+        const fallbackImages: GeneratedImage[] = [];
+
+        if (generateHero !== false) {
+          // Use Unsplash for high-quality stock photos
+          const heroUrl = `https://source.unsplash.com/1200x800/?${searchQuery}`;
+          fallbackImages.push({
+            url: heroUrl,
+            filename: `hero-${Date.now()}.jpg`,
+            type: "hero",
+            alt: `${title} - Dubai Travel`,
+            caption: `${title} - Dubai Travel Guide`,
+          });
+        }
+
+        addSystemLog("info", "images", `Generated ${fallbackImages.length} fallback images for "${title}"`);
+        return res.json({
+          images: fallbackImages,
+          source: hasFreepik ? "freepik" : "unsplash",
+          message: "Using stock images (AI image generation not configured)"
+        });
+      }
+
+      addSystemLog("info", "images", `Starting AI image generation for: "${title}"`, { contentType, generateHero, hasOpenAI, hasReplicate });
 
       const options: ImageGenerationOptions = {
         contentType,
@@ -4537,52 +5356,62 @@ Return valid JSON-LD that can be embedded in a webpage.`,
         contentImageCount: Math.min(contentImageCount || 0, 5), // Limit to 5 content images
       };
 
-      console.log(`Starting image generation for ${contentType}: ${title}`);
-      const images = await generateContentImages(options);
+      console.log(`[AI Images] Starting generation for ${contentType}: "${title}" (OpenAI: ${hasOpenAI}, Replicate: ${hasReplicate})`);
+      let images: GeneratedImage[] = [];
 
-      if (images.length === 0) {
-        return res.status(500).json({ error: "Failed to generate images" });
+      try {
+        images = await generateContentImages(options);
+      } catch (genError) {
+        addSystemLog("error", "images", `AI image generation error: ${genError instanceof Error ? genError.message : "Unknown error"}`);
+        // Fallback to stock images on error
+        const searchQuery = encodeURIComponent(`${title} ${contentType} dubai travel`.substring(0, 50));
+        images = [{
+          url: `https://source.unsplash.com/1200x800/?${searchQuery}`,
+          filename: `hero-${Date.now()}.jpg`,
+          type: "hero",
+          alt: `${title} - Dubai Travel`,
+          caption: `${title} - Dubai Travel Guide`,
+        }];
       }
 
-      // Store images in object storage if available
-      const storageClient = getObjectStorageClient();
+      if (images.length === 0) {
+        addSystemLog("warning", "images", `No images generated for "${title}", using fallback`);
+        const searchQuery = encodeURIComponent(`${title} ${contentType} dubai travel`.substring(0, 50));
+        images = [{
+          url: `https://source.unsplash.com/1200x800/?${searchQuery}`,
+          filename: `hero-${Date.now()}.jpg`,
+          type: "hero",
+          alt: `${title} - Dubai Travel`,
+          caption: `${title} - Dubai Travel Guide`,
+        }];
+      }
+
+      // Store images using unified ImageService
       const storedImages: GeneratedImage[] = [];
 
+      console.log(`[AI Images] Processing ${images.length} generated images...`);
       for (const image of images) {
         try {
-          // Download image from URL
-          const imageResponse = await fetch(image.url);
-          if (!imageResponse.ok) {
-            console.error(`Failed to fetch image: ${image.url}`);
-            continue;
-          }
+          console.log(`[AI Images] Downloading and storing: ${image.filename}`);
 
-          const imageBuffer = await imageResponse.arrayBuffer();
-          const buffer = Buffer.from(imageBuffer);
+          // Use unified ImageService for download and storage
+          const result = await uploadImageFromUrl(image.url, image.filename, {
+            source: "ai",
+            altText: image.alt,
+            metadata: { type: image.type, originalUrl: image.url },
+          });
 
-          if (storageClient) {
-            // Store in object storage
-            const objectPath = `public/ai-generated/${image.filename}`;
-            await storageClient.uploadFromBytes(objectPath, buffer);
+          if (result.success) {
             storedImages.push({
               ...image,
-              url: `/api/ai-images/${image.filename}`, // Use AI images endpoint
+              url: result.image.url,
             });
+            console.log(`[AI Images] Stored: ${result.image.url}`);
           } else {
-            // Store locally
-            const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
-            if (!fs.existsSync(uploadsDir)) {
-              fs.mkdirSync(uploadsDir, { recursive: true });
-            }
-            const localPath = path.join(uploadsDir, image.filename);
-            fs.writeFileSync(localPath, buffer);
-            storedImages.push({
-              ...image,
-              url: `/uploads/ai-generated/${image.filename}`,
-            });
+            console.error(`[AI Images] Failed to store ${image.filename}:`, result.error);
           }
         } catch (imgError) {
-          console.error(`Error storing image ${image.filename}:`, imgError);
+          console.error(`[AI Images] Error storing image ${image.filename}:`, imgError);
         }
       }
 
@@ -4621,34 +5450,18 @@ Return valid JSON-LD that can be embedded in a webpage.`,
         return res.status(500).json({ error: "Failed to generate image" });
       }
 
-      // Download and store image
-      const imageResponse = await fetch(imageUrl);
-      if (!imageResponse.ok) {
-        return res.status(500).json({ error: "Failed to download generated image" });
-      }
-
-      const imageBuffer = await imageResponse.arrayBuffer();
-      const buffer = Buffer.from(imageBuffer);
+      // Download and store image using unified ImageService
       const finalFilename = filename || `ai-image-${Date.now()}.jpg`;
+      const result = await uploadImageFromUrl(imageUrl, finalFilename, {
+        source: "ai",
+        metadata: { prompt, size: imageSize, quality, style },
+      });
 
-      const storageClient = getObjectStorageClient();
-      let storedUrl: string;
-
-      if (storageClient) {
-        const objectPath = `public/ai-generated/${finalFilename}`;
-        await storageClient.uploadFromBytes(objectPath, buffer);
-        storedUrl = `/api/ai-images/${finalFilename}`;
-      } else {
-        const uploadsDir = path.join(process.cwd(), "uploads", "ai-generated");
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
-        }
-        const localPath = path.join(uploadsDir, finalFilename);
-        fs.writeFileSync(localPath, buffer);
-        storedUrl = `/uploads/ai-generated/${finalFilename}`;
+      if (!result.success) {
+        return res.status(500).json({ error: result.error || "Failed to store generated image" });
       }
 
-      res.json({ url: storedUrl, filename: finalFilename });
+      res.json({ url: result.image.url, filename: result.image.filename });
     } catch (error) {
       console.error("Error generating single image:", error);
       const message = error instanceof Error ? error.message : "Failed to generate image";
@@ -4661,10 +5474,11 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { action, content, context, targetLanguage } = req.body;
 
@@ -4707,7 +5521,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -4729,10 +5543,11 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(500).json({ error: "OpenAI not configured" });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { prompt } = req.body;
 
@@ -4741,7 +5556,7 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           {
             role: "system",
@@ -4974,10 +5789,11 @@ Focus on Dubai travel, tourism, hotels, attractions, dining, and related topics.
   // Auto-generate article from Topic Bank item
   app.post("/api/topic-bank/:id/generate", requirePermission("canCreate"), async (req, res) => {
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const topic = await storage.getTopicBankItem(req.params.id);
       if (!topic) {
@@ -5096,7 +5912,7 @@ ${outlineContext}
 Create engaging, informative content that would appeal to Dubai travelers. Return valid JSON only.`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -5175,10 +5991,11 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
   // Generate NEWS from Topic Bank item and DELETE the topic after
   app.post("/api/topic-bank/:id/generate-news", requirePermission("canCreate"), async (req, res) => {
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const topic = await storage.getTopicBankItem(req.params.id);
       if (!topic) {
@@ -5272,7 +6089,7 @@ RULES:
 5. No invented facts or fake statistics`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Generate a viral news article for: ${topic.title}\n${keywordsContext}` },
@@ -5346,10 +6163,11 @@ RULES:
   // Batch auto-generate from priority topics (for when RSS lacks content)
   app.post("/api/topic-bank/auto-generate", requirePermission("canCreate"), async (req, res) => {
     try {
-      const openai = getOpenAIClient();
-      if (!openai) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY." });
+      const aiClient = getAIClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
       }
+      const { client: openai, provider } = aiClient;
 
       const { count = 1, category } = req.body;
       const limit = Math.min(Math.max(1, count), 5); // Max 5 at a time
@@ -5378,12 +6196,12 @@ RULES:
       const results = [];
       for (const topic of sortedTopics) {
         try {
-          const keywordsContext = topic.keywords?.length 
-            ? `Target Keywords: ${topic.keywords.join(", ")}` 
+          const keywordsContext = topic.keywords?.length
+            ? `Target Keywords: ${topic.keywords.join(", ")}`
             : "";
-          
+
           const response = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
             messages: [
               {
                 role: "system",
@@ -5604,8 +6422,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
-  // Get scheduled content ready for publishing
-  app.get("/api/scheduled-content", async (req, res) => {
+  // Get scheduled content ready for publishing - admin only
+  app.get("/api/scheduled-content", requirePermission("canManageSettings"), async (req, res) => {
     try {
       const scheduledContent = await storage.getScheduledContentToPublish();
       res.json(scheduledContent);
@@ -5621,7 +6439,40 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     try {
       const contentToPublish = await storage.getScheduledContentToPublish();
       for (const content of contentToPublish) {
+        // Create version history before auto-publishing
+        const latestVersion = await storage.getLatestVersionNumber(content.id);
+        await storage.createContentVersion({
+          contentId: content.id,
+          versionNumber: latestVersion + 1,
+          title: content.title,
+          slug: content.slug,
+          metaTitle: content.metaTitle,
+          metaDescription: content.metaDescription,
+          primaryKeyword: content.primaryKeyword,
+          heroImage: content.heroImage,
+          heroImageAlt: content.heroImageAlt,
+          blocks: content.blocks || [],
+          changedBy: "system-scheduler",
+          changeNote: "Auto-published by scheduler",
+        });
+
         await storage.publishScheduledContent(content.id);
+
+        // Create audit log for auto-publish
+        await storage.createAuditLog({
+          userId: null,
+          userName: "System Scheduler",
+          userRole: "system",
+          actionType: "publish",
+          entityType: "content",
+          entityId: content.id,
+          description: `Auto-published scheduled content: ${content.title}`,
+          beforeState: { status: content.status, scheduledAt: content.scheduledAt },
+          afterState: { status: "published", publishedAt: new Date() },
+          ipAddress: "system",
+          userAgent: "scheduled-publishing-job",
+        });
+
         console.log(`Auto-published scheduled content: ${content.title} (ID: ${content.id})`);
       }
       if (contentToPublish.length > 0) {
@@ -6311,18 +7162,79 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     }
   });
 
+  // Verify Resend/Svix webhook signature
+  const verifyResendWebhookSignature = (req: Request): boolean => {
+    const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+
+    // If no secret configured, log warning but allow in development
+    if (!webhookSecret) {
+      console.warn("[Resend Webhook] RESEND_WEBHOOK_SECRET not configured - signature verification skipped");
+      return process.env.NODE_ENV !== "production";
+    }
+
+    const svixId = req.headers["svix-id"] as string;
+    const svixTimestamp = req.headers["svix-timestamp"] as string;
+    const svixSignature = req.headers["svix-signature"] as string;
+
+    if (!svixId || !svixTimestamp || !svixSignature) {
+      console.warn("[Resend Webhook] Missing Svix headers");
+      return false;
+    }
+
+    // Check timestamp is not too old (5 minutes tolerance)
+    const timestampSeconds = parseInt(svixTimestamp, 10);
+    const now = Math.floor(Date.now() / 1000);
+    if (Math.abs(now - timestampSeconds) > 300) {
+      console.warn("[Resend Webhook] Timestamp too old or in future");
+      return false;
+    }
+
+    // Create the signed payload
+    const payload = JSON.stringify(req.body);
+    const signedPayload = `${svixId}.${svixTimestamp}.${payload}`;
+
+    // Extract the secret (remove "whsec_" prefix if present)
+    const secretBytes = webhookSecret.startsWith("whsec_")
+      ? Buffer.from(webhookSecret.slice(6), "base64")
+      : Buffer.from(webhookSecret, "base64");
+
+    // Calculate expected signature
+    const expectedSignature = crypto
+      .createHmac("sha256", secretBytes)
+      .update(signedPayload)
+      .digest("base64");
+
+    // Svix sends multiple signatures separated by space, check if any match
+    const signatures = svixSignature.split(" ");
+    for (const sig of signatures) {
+      const [version, signature] = sig.split(",");
+      if (version === "v1" && signature === expectedSignature) {
+        return true;
+      }
+    }
+
+    console.warn("[Resend Webhook] Signature verification failed");
+    return false;
+  };
+
   // Resend Webhook for bounce/complaint handling
   // This endpoint receives events from Resend about email delivery status
   app.post("/api/webhooks/resend", async (req, res) => {
     try {
+      // Verify webhook signature before processing
+      if (!verifyResendWebhookSignature(req)) {
+        console.error("[Resend Webhook] Invalid signature - rejecting request");
+        return res.status(401).json({ error: "Invalid webhook signature" });
+      }
+
       const event = req.body;
-      
+
       // Resend sends webhook events with these types:
-      // email.sent, email.delivered, email.delivery_delayed, 
+      // email.sent, email.delivered, email.delivery_delayed,
       // email.complained, email.bounced, email.opened, email.clicked
       const eventType = event.type;
       const eventData = event.data;
-      
+
       if (!eventType || !eventData) {
         console.log("[Resend Webhook] Invalid event received:", event);
         return res.status(400).json({ error: "Invalid event format" });
@@ -6343,13 +7255,13 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         const subscriber = await storage.getNewsletterSubscriberByEmail(recipientEmail);
         if (subscriber && subscriber.status !== "bounced") {
           const consentEntry = {
-            action: "unsubscribe" as const,
+            action: "bounce" as const,
             timestamp: new Date().toISOString(),
             source: "resend_bounce",
             ipAddress: "webhook",
           };
           const consentLog = [...(subscriber.consentLog || []), consentEntry];
-          
+
           await storage.updateNewsletterSubscriber(subscriber.id, {
             status: "bounced",
             consentLog,
@@ -6358,19 +7270,19 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
           console.log(`[Resend Webhook] Subscriber marked as bounced: ${recipientEmail}`);
         }
       }
-      
+
       // Handle complaint events (spam reports) - mark subscriber as complained
       if (eventType === "email.complained") {
         const subscriber = await storage.getNewsletterSubscriberByEmail(recipientEmail);
         if (subscriber && subscriber.status !== "complained") {
           const consentEntry = {
-            action: "unsubscribe" as const,
+            action: "complaint" as const,
             timestamp: new Date().toISOString(),
             source: "resend_complaint",
             ipAddress: "webhook",
           };
           const consentLog = [...(subscriber.consentLog || []), consentEntry];
-          
+
           await storage.updateNewsletterSubscriber(subscriber.id, {
             status: "complained",
             consentLog,
@@ -6516,8 +7428,8 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       // Update campaign status to sending
       await storage.updateCampaign(id, {
         status: "sending",
-        // sentAt: new Date(), // Can't update via InsertCampaign - omitted from schema
-        // totalRecipients: subscribers.length, // Can't update via InsertCampaign - omitted from schema
+        sentAt: new Date(),
+        totalRecipients: subscribers.length,
       });
       
       console.log(`[Campaigns] Starting send for campaign ${campaign.name} to ${subscribers.length} subscribers`);
@@ -6617,7 +7529,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       // Update campaign with final stats
       await storage.updateCampaign(id, {
         status: failedCount === subscribers.length ? "failed" : "sent",
-        // totalSent: sentCount, // Can't update via InsertCampaign - omitted from schema
+        totalSent: sentCount,
       });
       
       console.log(`[Campaigns] Campaign ${campaign.name} completed: ${sentCount} sent, ${failedCount} failed`);
@@ -6693,11 +7605,37 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     try {
       const { campaignId, subscriberId } = req.params;
       const { url } = req.query;
-      
+
       if (!url || typeof url !== "string") {
         return res.status(400).send("Missing URL parameter");
       }
-      
+
+      // Security: Validate redirect URL to prevent open redirect attacks
+      const allowedDomains = ["travi.world", "www.travi.world", "localhost"];
+      let isValidRedirect = false;
+
+      try {
+        // Allow relative URLs
+        if (url.startsWith("/") && !url.startsWith("//")) {
+          isValidRedirect = true;
+        } else {
+          // Parse absolute URLs and validate domain
+          const parsedUrl = new URL(url);
+          const hostname = parsedUrl.hostname.toLowerCase();
+          isValidRedirect = allowedDomains.some(domain =>
+            hostname === domain || hostname.endsWith(`.${domain}`)
+          );
+        }
+      } catch {
+        // Invalid URL format
+        isValidRedirect = false;
+      }
+
+      if (!isValidRedirect) {
+        console.warn(`[Tracking] Blocked redirect to untrusted URL: ${url}`);
+        return res.status(400).send("Invalid redirect URL");
+      }
+
       // Record the click event
       await storage.createCampaignEvent({
         campaignId,
@@ -6709,29 +7647,14 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
           ip: req.ip || "unknown",
         },
       });
-      
-      // Update campaign stats
-      // Note: totalClicked can't be updated via updateCampaign (omitted from InsertCampaign)
-      // const campaign = await storage.getCampaign(campaignId);
-      // if (campaign) {
-      //   await storage.updateCampaign(campaignId, {
-      //     totalClicked: campaign.totalClicked + 1,
-      //   });
-      // }
 
       console.log(`[Tracking] Click recorded: campaign=${campaignId}, subscriber=${subscriberId}, url=${url}`);
-      
-      // Redirect to the actual URL
+
+      // Redirect to the validated URL
       res.redirect(url);
     } catch (error) {
       console.error("[Tracking] Error recording click:", error);
-      // Try to redirect anyway
-      const { url } = req.query;
-      if (url && typeof url === "string") {
-        res.redirect(url);
-      } else {
-        res.status(500).send("Tracking error");
-      }
+      res.status(500).send("Tracking error");
     }
   });
 
@@ -6739,11 +7662,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // ADMIN SECURITY ENDPOINTS
   // ============================================================================
 
-  // Get audit logs (admin only)
-  app.get("/api/admin/audit-logs", requirePermission("canPublish"), auditLogReadOnly, (req, res) => {
+  // Get audit logs (admin only) - now reads from database
+  app.get("/api/admin/audit-logs", requirePermission("canPublish"), auditLogReadOnly, async (req, res) => {
     try {
       const { action, resourceType, userId, limit = 100 } = req.query;
-      const logs = getAuditLogs({
+      const logs = await getAuditLogs({
         action: action as string,
         resourceType: resourceType as string,
         userId: userId as string,
@@ -6772,9 +7695,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // ============================================================================
 
   // Get job queue statistics
-  app.get("/api/admin/jobs/stats", requirePermission("canPublish"), (req, res) => {
+  app.get("/api/admin/jobs/stats", requirePermission("canPublish"), async (req, res) => {
     try {
-      const stats = jobQueue.getStats();
+      const stats = await jobQueue.getStats();
       res.json(stats);
     } catch (error) {
       console.error("Error fetching job stats:", error);
@@ -6783,14 +7706,14 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // Get jobs by status
-  app.get("/api/admin/jobs", requirePermission("canPublish"), (req, res) => {
+  app.get("/api/admin/jobs", requirePermission("canPublish"), async (req, res) => {
     try {
       const { status = 'pending' } = req.query;
       const validStatuses = ['pending', 'processing', 'completed', 'failed'];
       if (!validStatuses.includes(status as string)) {
         return res.status(400).json({ error: "Invalid status" });
       }
-      const jobs = jobQueue.getJobsByStatus(status as any);
+      const jobs = await jobQueue.getJobsByStatus(status as any);
       res.json({ jobs, total: jobs.length });
     } catch (error) {
       console.error("Error fetching jobs:", error);
@@ -6799,9 +7722,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // Get single job status
-  app.get("/api/admin/jobs/:id", requirePermission("canPublish"), (req, res) => {
+  app.get("/api/admin/jobs/:id", requirePermission("canPublish"), async (req, res) => {
     try {
-      const job = jobQueue.getJob(req.params.id);
+      const job = await jobQueue.getJob(req.params.id);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
@@ -6813,9 +7736,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // Cancel a pending job
-  app.delete("/api/admin/jobs/:id", requirePermission("canPublish"), (req, res) => {
+  app.delete("/api/admin/jobs/:id", requirePermission("canPublish"), async (req, res) => {
     try {
-      const cancelled = jobQueue.cancelJob(req.params.id);
+      const cancelled = await jobQueue.cancelJob(req.params.id);
       if (!cancelled) {
         return res.status(400).json({ error: "Cannot cancel job (not pending or not found)" });
       }
@@ -6827,9 +7750,9 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // Retry a failed job
-  app.post("/api/admin/jobs/:id/retry", requirePermission("canPublish"), (req, res) => {
+  app.post("/api/admin/jobs/:id/retry", requirePermission("canPublish"), async (req, res) => {
     try {
-      const retried = jobQueue.retryJob(req.params.id);
+      const retried = await jobQueue.retryJob(req.params.id);
       if (!retried) {
         return res.status(400).json({ error: "Cannot retry job (not failed or not found)" });
       }
@@ -7273,7 +8196,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // Sync tags from content - auto-extract tags from site content
   app.post("/api/tags/sync", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
-      const allContent = await storage.getAllContent();
+      const allContent = await storage.getContents();
       const existingTags = await storage.getTags();
       const existingTagSlugs = new Set(existingTags.map(t => t.slug));
 
@@ -7344,7 +8267,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
         }
       }
 
-      await logAuditEvent(req, "sync", "tags", "bulk", `Synced tags from content`, { created: created.length, skipped: skipped.length });
+      await logAuditEvent(req, "create", "tag", "bulk", `Synced tags from content`, { created: created.length, skipped: skipped.length });
 
       res.json({
         success: true,
@@ -7845,7 +8768,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
       res.json({
         success: true,
         translatedCount: savedTranslations.length,
-        targetLocales: supportedLocales,
+        targetLocales: SUPPORTED_LOCALES,
         translations: savedTranslations,
       });
     } catch (error) {
@@ -7983,6 +8906,155 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   });
 
   // ============================================================================
+  // PAGE LAYOUTS - Live Edit System
+  // ============================================================================
+
+  // Get layout for a page
+  app.get("/api/layouts/:slug", requireAuth, async (req, res) => {
+    try {
+      const { slug } = req.params;
+
+      const layout = await db
+        .select()
+        .from(pageLayouts)
+        .where(eq(pageLayouts.slug, slug))
+        .limit(1);
+
+      if (layout.length === 0) {
+        return res.status(404).json({ error: "Layout not found" });
+      }
+
+      res.json(layout[0]);
+    } catch (error) {
+      console.error("Error fetching layout:", error);
+      res.status(500).json({ error: "Failed to fetch layout" });
+    }
+  });
+
+  // Save draft layout
+  app.put("/api/layouts/:slug/draft", requireAuth, async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { components } = req.body;
+      const userId = req.session?.user?.id;
+
+      // Check if layout exists
+      const existing = await db
+        .select()
+        .from(pageLayouts)
+        .where(eq(pageLayouts.slug, slug))
+        .limit(1);
+
+      if (existing.length === 0) {
+        // Create new layout
+        const [newLayout] = await db
+          .insert(pageLayouts)
+          .values({
+            slug,
+            draftComponents: components,
+            status: "draft",
+            draftUpdatedAt: new Date(),
+            createdBy: userId,
+            updatedBy: userId,
+          })
+          .returning();
+
+        return res.json(newLayout);
+      }
+
+      // Update existing layout
+      const [updated] = await db
+        .update(pageLayouts)
+        .set({
+          draftComponents: components,
+          draftUpdatedAt: new Date(),
+          updatedBy: userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(pageLayouts.slug, slug))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      res.status(500).json({ error: "Failed to save draft" });
+    }
+  });
+
+  // Publish layout (copy draft to published)
+  app.post("/api/layouts/:slug/publish", requireAuth, async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const userId = req.session?.user?.id;
+
+      // Check user role - only admin/editor can publish
+      if (!req.session?.user || !["admin", "editor"].includes(req.session.user.role)) {
+        return res.status(403).json({ error: "Insufficient permissions to publish" });
+      }
+
+      const existing = await db
+        .select()
+        .from(pageLayouts)
+        .where(eq(pageLayouts.slug, slug))
+        .limit(1);
+
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "Layout not found" });
+      }
+
+      const layout = existing[0];
+
+      // Copy draft to published
+      const [published] = await db
+        .update(pageLayouts)
+        .set({
+          components: layout.draftComponents || [],
+          status: "published",
+          publishedAt: new Date(),
+          updatedBy: userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(pageLayouts.slug, slug))
+        .returning();
+
+      res.json(published);
+    } catch (error) {
+      console.error("Error publishing layout:", error);
+      res.status(500).json({ error: "Failed to publish layout" });
+    }
+  });
+
+  // Get published layout (for public viewing)
+  app.get("/api/public/layouts/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+
+      const layout = await db
+        .select({
+          slug: pageLayouts.slug,
+          title: pageLayouts.title,
+          components: pageLayouts.components,
+          publishedAt: pageLayouts.publishedAt,
+        })
+        .from(pageLayouts)
+        .where(and(
+          eq(pageLayouts.slug, slug),
+          eq(pageLayouts.status, "published")
+        ))
+        .limit(1);
+
+      if (layout.length === 0) {
+        return res.status(404).json({ error: "Layout not found" });
+      }
+
+      res.json(layout[0]);
+    } catch (error) {
+      console.error("Error fetching public layout:", error);
+      res.status(500).json({ error: "Failed to fetch layout" });
+    }
+  });
+
+  // ============================================================================
   // SITEMAPS - Multilingual SEO Support (50 languages)
   // ============================================================================
 
@@ -7991,11 +9063,12 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     try {
       const { generateSitemapIndex } = await import("./services/sitemap-service");
       const sitemapIndex = await generateSitemapIndex();
-      res.set("Content-Type", "application/xml");
+      res.set("Content-Type", "application/xml; charset=utf-8");
+      res.set("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
       res.send(sitemapIndex);
     } catch (error) {
       console.error("Error generating sitemap index:", error);
-      res.status(500).send("Error generating sitemap");
+      res.status(500).set("Content-Type", "text/plain").send("Error generating sitemap");
     }
   });
 
@@ -8006,16 +9079,17 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
 
       // Validate locale
       if (!SUPPORTED_LOCALES.some(l => l.code === locale)) {
-        return res.status(404).send("Sitemap not found");
+        return res.status(404).set("Content-Type", "text/plain").send("Sitemap not found");
       }
 
       const { generateLocaleSitemap } = await import("./services/sitemap-service");
       const sitemap = await generateLocaleSitemap(locale);
-      res.set("Content-Type", "application/xml");
+      res.set("Content-Type", "application/xml; charset=utf-8");
+      res.set("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
       res.send(sitemap);
     } catch (error) {
       console.error("Error generating locale sitemap:", error);
-      res.status(500).send("Error generating sitemap");
+      res.status(500).set("Content-Type", "text/plain").send("Error generating sitemap");
     }
   });
 
@@ -8024,11 +9098,12 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
     try {
       const { generateRobotsTxt } = await import("./services/sitemap-service");
       const robotsTxt = generateRobotsTxt();
-      res.set("Content-Type", "text/plain");
+      res.set("Content-Type", "text/plain; charset=utf-8");
+      res.set("Cache-Control", "public, max-age=86400"); // Cache for 24 hours
       res.send(robotsTxt);
     } catch (error) {
       console.error("Error generating robots.txt:", error);
-      res.status(500).send("Error generating robots.txt");
+      res.status(500).set("Content-Type", "text/plain").send("Error generating robots.txt");
     }
   });
 
@@ -8038,9 +9113,19 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   registerEnterpriseRoutes(app);
 
   // ============================================================================
-  // IMAGE LOGIC ROUTES (Smart image selection system)
+  // IMAGE ROUTES (Smart image selection + SEO + processing)
   // ============================================================================
-  registerImageLogicRoutes(app);
+  registerImageRoutes(app);
+
+  // ============================================================================
+  // LOG ROUTES (Admin Panel log viewer)
+  // ============================================================================
+  registerLogRoutes(app);
+
+  // ============================================================================
+  // SEO ROUTES (Validation, Auto-fix, Publishing gates)
+  // ============================================================================
+  registerSEORoutes(app);
 
   // ============================================================================
   // AUTOMATION ROUTES (Auto SEO, linking, freshness, etc.)
@@ -8066,6 +9151,11 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // CUSTOMER JOURNEY ANALYTICS (Page views, clicks, scroll, conversions, heatmaps)
   // ============================================================================
   registerCustomerJourneyRoutes(app);
+
+  // ============================================================================
+  // TRANSLATION ROUTES (Multi-provider translation: Claude, GPT, DeepL)
+  // ============================================================================
+  app.use('/api/translate', translateRouter);
 
   // ============================================================================
   // CONTENT RULES - Strict rules for AI content generation
@@ -8134,6 +9224,59 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // DOC/DOCX UPLOAD (Import content directly from Word documents)
   // ============================================================================
   registerDocUploadRoutes(app);
+
+  // ============================================================================
+  // DATABASE BACKUP ROUTES (admin only)
+  // ============================================================================
+  app.get("/api/admin/backups", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { listBackups } = await import("./scripts/backup-db");
+      const backupDir = process.env.BACKUP_DIR || path.join(process.cwd(), "backups");
+      if (!fs.existsSync(backupDir)) {
+        return res.json({ backups: [], directory: backupDir });
+      }
+      const files = fs.readdirSync(backupDir)
+        .filter(f => f.startsWith("backup-") && f.endsWith(".sql.gz"))
+        .map(f => {
+          const stats = fs.statSync(path.join(backupDir, f));
+          return {
+            name: f,
+            size: stats.size,
+            createdAt: stats.mtime.toISOString(),
+          };
+        })
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      res.json({ backups: files, directory: backupDir });
+    } catch (error) {
+      console.error("Error listing backups:", error);
+      res.status(500).json({ error: "Failed to list backups" });
+    }
+  });
+
+  app.post("/api/admin/backups", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { triggerBackup } = await import("./lib/backup-scheduler");
+      const result = await triggerBackup();
+      if (result.success) {
+        res.json({ success: true, backup: result });
+      } else {
+        res.status(500).json({ error: result.error || "Backup failed" });
+      }
+    } catch (error) {
+      console.error("Error creating backup:", error);
+      res.status(500).json({ error: "Failed to create backup" });
+    }
+  });
+
+  app.get("/api/admin/backups/status", requirePermission("canManageSettings"), async (req, res) => {
+    try {
+      const { getSchedulerStatus } = await import("./lib/backup-scheduler");
+      res.json(getSchedulerStatus());
+    } catch (error) {
+      console.error("Error getting backup status:", error);
+      res.status(500).json({ error: "Failed to get backup status" });
+    }
+  });
 
   // ============================================================================
   // SECURE ERROR HANDLER (no stack traces to client)

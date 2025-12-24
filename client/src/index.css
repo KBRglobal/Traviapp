@@ -1,8 +1,23 @@
-@import url('https://fonts.cdnfonts.com/css/chillax');
-@import url('https://fonts.cdnfonts.com/css/satoshi');
+/* Font loading - these URLs include font-display: swap automatically */
+/* Note: Consider self-hosting fonts for better performance */
+@import url('https://fonts.cdnfonts.com/css/chillax?display=swap');
+@import url('https://fonts.cdnfonts.com/css/satoshi?display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap');
 
 @tailwind base;
+
+/* Critical font-face with fallback - ensures text is visible while fonts load */
+@font-face {
+  font-family: 'Satoshi-Fallback';
+  src: local('Arial'), local('Helvetica Neue'), local('Helvetica'), local('sans-serif');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Chillax-Fallback';
+  src: local('Arial Black'), local('Helvetica Neue'), local('Helvetica'), local('sans-serif');
+  font-display: swap;
+}
 @tailwind components;
 @tailwind utilities;
 

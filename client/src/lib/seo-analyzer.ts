@@ -12,6 +12,16 @@ export interface SeoAnalysis {
   wordCount: number;
 }
 
+export interface ImageSeoInput {
+  url: string;
+  alt: string;
+  title?: string;
+  width?: number;
+  height?: number;
+  caption?: string;
+  filename?: string;
+}
+
 export interface SeoInput {
   title: string;
   metaTitle: string;
@@ -19,7 +29,7 @@ export interface SeoInput {
   primaryKeyword: string;
   content: string;
   headings: { level: number; text: string }[];
-  images: { url: string; alt: string }[];
+  images: ImageSeoInput[];
   internalLinks: number;
   externalLinks: number;
 }
@@ -254,21 +264,11 @@ export function analyzeSeo(input: SeoInput): SeoAnalysis {
     });
   }
 
-  const imagesWithoutAlt = input.images.filter(img => !img.alt || img.alt.trim().length === 0);
-  if (imagesWithoutAlt.length > 0) {
-    issues.push({
-      type: "warning",
-      category: "Images",
-      message: `${imagesWithoutAlt.length} image(s) missing alt text`,
-      recommendation: "Add descriptive alt text to all images",
-    });
-    score -= 5;
-  } else if (input.images.length > 0) {
-    issues.push({
-      type: "success",
-      category: "Images",
-      message: "All images have alt text",
-    });
+  // Comprehensive Image SEO Analysis
+  if (input.images.length > 0) {
+    const imageAnalysis = analyzeImagesSeo(input.images, input.primaryKeyword);
+    issues.push(...imageAnalysis.issues);
+    score -= imageAnalysis.deduction;
   }
 
   if (input.internalLinks === 0) {
@@ -299,6 +299,220 @@ export function analyzeSeo(input: SeoInput): SeoAnalysis {
     issues,
     keywordDensity,
     wordCount,
+  };
+}
+
+// ==================== Image SEO Analysis ====================
+
+interface ImageAnalysisResult {
+  issues: SeoIssue[];
+  deduction: number;
+}
+
+function analyzeImagesSeo(images: ImageSeoInput[], primaryKeyword?: string): ImageAnalysisResult {
+  const issues: SeoIssue[] = [];
+  let totalDeduction = 0;
+
+  // Check for missing alt text
+  const imagesWithoutAlt = images.filter(img => !img.alt || img.alt.trim().length === 0);
+  if (imagesWithoutAlt.length > 0) {
+    issues.push({
+      type: "error",
+      category: "Images - Alt Text",
+      message: `${imagesWithoutAlt.length} image(s) missing alt text`,
+      recommendation: "Add descriptive alt text to all images for accessibility and SEO",
+    });
+    totalDeduction += 5 * Math.min(imagesWithoutAlt.length, 3);
+  } else {
+    issues.push({
+      type: "success",
+      category: "Images - Alt Text",
+      message: "All images have alt text",
+    });
+  }
+
+  // Check alt text quality
+  const shortAltImages = images.filter(img => img.alt && img.alt.length > 0 && img.alt.length < 20);
+  if (shortAltImages.length > 0) {
+    issues.push({
+      type: "warning",
+      category: "Images - Alt Text Quality",
+      message: `${shortAltImages.length} image(s) have short alt text (<20 chars)`,
+      recommendation: "Aim for 50-125 characters for descriptive alt text",
+    });
+    totalDeduction += 3;
+  }
+
+  const longAltImages = images.filter(img => img.alt && img.alt.length > 125);
+  if (longAltImages.length > 0) {
+    issues.push({
+      type: "warning",
+      category: "Images - Alt Text Quality",
+      message: `${longAltImages.length} image(s) have long alt text (>125 chars)`,
+      recommendation: "Keep alt text under 125 characters",
+    });
+    totalDeduction += 2;
+  }
+
+  // Check for generic alt text patterns
+  const genericPatterns = /^(image|photo|picture|pic|img)(\s+of)?$/i;
+  const genericAltImages = images.filter(img => img.alt && genericPatterns.test(img.alt.trim()));
+  if (genericAltImages.length > 0) {
+    issues.push({
+      type: "error",
+      category: "Images - Alt Text Quality",
+      message: `${genericAltImages.length} image(s) have generic alt text`,
+      recommendation: "Describe what is actually shown in the image",
+    });
+    totalDeduction += 5;
+  }
+
+  // Check for keyword in alt text
+  if (primaryKeyword && images.length > 0) {
+    const keywordLower = primaryKeyword.toLowerCase();
+    const imagesWithKeyword = images.filter(img =>
+      img.alt && img.alt.toLowerCase().includes(keywordLower)
+    );
+
+    if (imagesWithKeyword.length === 0) {
+      issues.push({
+        type: "info",
+        category: "Images - Keywords",
+        message: "Primary keyword not found in any image alt text",
+        recommendation: "Consider including your keyword naturally in at least one image alt text",
+      });
+      totalDeduction += 3;
+    } else {
+      issues.push({
+        type: "success",
+        category: "Images - Keywords",
+        message: `Primary keyword found in ${imagesWithKeyword.length} image(s) alt text`,
+      });
+    }
+  }
+
+  // Check for missing dimensions (CLS prevention)
+  const imagesWithoutDimensions = images.filter(img => !img.width || !img.height);
+  if (imagesWithoutDimensions.length > 0) {
+    issues.push({
+      type: "warning",
+      category: "Images - Dimensions",
+      message: `${imagesWithoutDimensions.length} image(s) missing width/height`,
+      recommendation: "Specify dimensions to prevent Cumulative Layout Shift (CLS)",
+    });
+    totalDeduction += 3;
+  }
+
+  // Check for title attribute
+  const imagesWithoutTitle = images.filter(img => !img.title);
+  if (imagesWithoutTitle.length > 0 && imagesWithoutTitle.length < images.length) {
+    issues.push({
+      type: "info",
+      category: "Images - Title",
+      message: `${imagesWithoutTitle.length} image(s) missing title attribute`,
+      recommendation: "Add title attributes for additional context on hover",
+    });
+  }
+
+  // Check filename quality
+  const badFilenames: string[] = [];
+  const genericFilenamePatterns = /^(img|image|photo|picture|untitled|dsc|img_|photo_|\d+)\.(jpg|jpeg|png|webp|gif)$/i;
+
+  images.forEach(img => {
+    const filename = img.filename || img.url.split('/').pop() || '';
+    if (genericFilenamePatterns.test(filename)) {
+      badFilenames.push(filename);
+    }
+  });
+
+  if (badFilenames.length > 0) {
+    issues.push({
+      type: "warning",
+      category: "Images - Filenames",
+      message: `${badFilenames.length} image(s) have generic filenames`,
+      recommendation: "Use descriptive, keyword-rich filenames (e.g., burj-khalifa-sunset-view.webp)",
+    });
+    totalDeduction += 3;
+  }
+
+  // Check for WebP format
+  const nonWebpImages = images.filter(img => {
+    const url = img.url.toLowerCase();
+    return !url.includes('.webp') && !url.includes('format=webp');
+  });
+
+  if (nonWebpImages.length > 0 && nonWebpImages.length > images.length / 2) {
+    issues.push({
+      type: "info",
+      category: "Images - Format",
+      message: `${nonWebpImages.length} image(s) not in WebP format`,
+      recommendation: "Consider using WebP for better compression and performance",
+    });
+  }
+
+  // Check for caption
+  const imagesWithCaption = images.filter(img => img.caption && img.caption.trim().length > 0);
+  if (imagesWithCaption.length > 0) {
+    issues.push({
+      type: "success",
+      category: "Images - Captions",
+      message: `${imagesWithCaption.length} image(s) have captions`,
+    });
+  } else if (images.length >= 3) {
+    issues.push({
+      type: "info",
+      category: "Images - Captions",
+      message: "No images have captions",
+      recommendation: "Add captions to important images for better context and SEO",
+    });
+  }
+
+  return {
+    issues,
+    deduction: Math.min(totalDeduction, 25), // Cap at 25 points deduction for images
+  };
+}
+
+// ==================== Image SEO Score Calculation ====================
+
+export interface ImageSeoScore {
+  score: number;
+  issues: SeoIssue[];
+  summary: {
+    totalImages: number;
+    imagesWithAlt: number;
+    imagesWithTitle: number;
+    imagesWithDimensions: number;
+    imagesWithCaption: number;
+    webpImages: number;
+    seoFriendlyFilenames: number;
+  };
+}
+
+export function analyzeImageSeoDetailed(images: ImageSeoInput[], primaryKeyword?: string): ImageSeoScore {
+  const result = analyzeImagesSeo(images, primaryKeyword);
+
+  const summary = {
+    totalImages: images.length,
+    imagesWithAlt: images.filter(img => img.alt && img.alt.trim().length > 0).length,
+    imagesWithTitle: images.filter(img => img.title && img.title.trim().length > 0).length,
+    imagesWithDimensions: images.filter(img => img.width && img.height).length,
+    imagesWithCaption: images.filter(img => img.caption && img.caption.trim().length > 0).length,
+    webpImages: images.filter(img => img.url.toLowerCase().includes('.webp') || img.url.includes('format=webp')).length,
+    seoFriendlyFilenames: images.filter(img => {
+      const filename = img.filename || img.url.split('/').pop() || '';
+      const genericPatterns = /^(img|image|photo|picture|untitled|dsc|img_|photo_|\d+)\.(jpg|jpeg|png|webp|gif)$/i;
+      return !genericPatterns.test(filename) && !filename.includes('_') && /^[a-z0-9-]+\.[a-z]+$/i.test(filename);
+    }).length,
+  };
+
+  // Calculate score (100 - deductions)
+  const score = Math.max(0, 100 - result.deduction);
+
+  return {
+    score,
+    issues: result.issues,
+    summary,
   };
 }
 

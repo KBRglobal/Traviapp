@@ -3,6 +3,44 @@ import { storage } from "./storage";
 import { ROLE_PERMISSIONS, type UserRole } from "@shared/schema";
 
 // ============================================================================
+// AUTH USER TYPES
+// ============================================================================
+export interface AuthUserClaims {
+  sub: string;
+  email?: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+}
+
+export interface AuthenticatedUser {
+  claims: AuthUserClaims;
+}
+
+/**
+ * Type guard to check if req.user is an authenticated user
+ */
+export function isAuthenticatedUser(user: unknown): user is AuthenticatedUser {
+  return (
+    typeof user === "object" &&
+    user !== null &&
+    "claims" in user &&
+    typeof (user as AuthenticatedUser).claims?.sub === "string"
+  );
+}
+
+/**
+ * Safely get user ID from request
+ */
+export function getUserId(req: Request): string | undefined {
+  if (isAuthenticatedUser(req.user)) {
+    return req.user.claims.sub;
+  }
+  return undefined;
+}
+
+// ============================================================================
 // SAFE MODE CONFIGURATION
 // Toggle via environment variables - no code changes needed
 // ============================================================================
@@ -16,14 +54,20 @@ export const safeMode = {
 };
 
 // ============================================================================
-// RATE LIMITING
-// In-memory rate limiting (for single-instance deployment)
+// RATE LIMITING (In-memory for performance, Redis recommended for production)
+// ============================================================================
+// Architecture:
+// - Short-term limits: In-memory (acceptable data loss on restart)
+// - Long-term AI limits: Database-backed with cache (see aiUsageCache)
+// - IP blocking: In-memory transient (see suspiciousIps)
+// For multi-instance/distributed deployments, replace with Redis.
 // ============================================================================
 interface RateLimitEntry {
   count: number;
   resetTime: number;
 }
 
+// In-memory rate limit store - use Redis for distributed deployments
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 // Clean up expired entries every 5 minutes
@@ -47,7 +91,7 @@ export function createRateLimiter(config: RateLimitConfig) {
 
   return (req: Request, res: Response, next: NextFunction) => {
     const ip = req.ip || req.socket.remoteAddress || "unknown";
-    const userId = (req.user as any)?.claims?.sub || "anonymous";
+    const userId = getUserId(req) || "anonymous";
     const key = `${keyPrefix}:${ip}:${userId}`;
 
     const now = Date.now();
@@ -101,18 +145,19 @@ export const rateLimiters = {
 };
 
 // ============================================================================
-// AI USAGE LIMITS (per user, per day)
+// AI USAGE LIMITS (per user, per day) - Database-backed for persistence
 // ============================================================================
 interface AiUsageEntry {
   count: number;
   resetTime: number;
 }
 
-const aiUsageStore = new Map<string, AiUsageEntry>();
+// In-memory cache for fast lookups (synced with DB)
+const aiUsageCache = new Map<string, AiUsageEntry>();
 
 const AI_DAILY_LIMIT = 100; // requests per user per day
 
-export function checkAiUsageLimit(req: Request, res: Response, next: NextFunction) {
+export async function checkAiUsageLimit(req: Request, res: Response, next: NextFunction) {
   if (safeMode.aiDisabled) {
     return res.status(503).json({
       error: "AI features are temporarily disabled",
@@ -120,18 +165,33 @@ export function checkAiUsageLimit(req: Request, res: Response, next: NextFunctio
     });
   }
 
-  const userId = (req.user as any)?.claims?.sub;
+  const userId = getUserId(req);
   if (!userId) {
     return res.status(401).json({ error: "Authentication required for AI features" });
   }
 
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
-  const entry = aiUsageStore.get(userId);
+  const key = `ai_daily:${userId}`;
 
+  // Check in-memory cache first
+  let entry = aiUsageCache.get(key);
+
+  // If not in cache or expired, check database
   if (!entry || entry.resetTime < now) {
-    aiUsageStore.set(userId, { count: 1, resetTime: now + dayMs });
-    return next();
+    try {
+      const dbLimit = await storage.getRateLimit(key);
+      if (dbLimit && dbLimit.resetAt.getTime() > now) {
+        entry = { count: dbLimit.count, resetTime: dbLimit.resetAt.getTime() };
+        aiUsageCache.set(key, entry);
+      } else {
+        // Reset or new entry
+        entry = { count: 0, resetTime: now + dayMs };
+      }
+    } catch (err) {
+      console.error('[RateLimit] DB lookup failed, using cache:', err);
+      entry = entry || { count: 0, resetTime: now + dayMs };
+    }
   }
 
   if (entry.count >= AI_DAILY_LIMIT) {
@@ -142,7 +202,15 @@ export function checkAiUsageLimit(req: Request, res: Response, next: NextFunctio
     });
   }
 
+  // Increment count
   entry.count++;
+  aiUsageCache.set(key, entry);
+
+  // Persist to database asynchronously (don't block request)
+  storage.incrementRateLimit(key, new Date(entry.resetTime)).catch(err => {
+    console.error('[RateLimit] DB persist failed:', err);
+  });
+
   next();
 }
 
@@ -150,8 +218,7 @@ export function checkAiUsageLimit(req: Request, res: Response, next: NextFunctio
 // AUTHENTICATION MIDDLEWARE
 // ============================================================================
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const user = req.user as any;
-  if (!req.isAuthenticated() || !user?.claims?.sub) {
+  if (!req.isAuthenticated() || !getUserId(req)) {
     return res.status(401).json({ error: "Not authenticated" });
   }
   next();
@@ -182,12 +249,12 @@ function hasPermission(role: UserRole, permission: PermissionKey): boolean {
 
 export function requirePermission(permission: PermissionKey) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const user = req.user as any;
-    if (!req.isAuthenticated() || !user?.claims?.sub) {
+    const userId = getUserId(req);
+    if (!req.isAuthenticated() || !userId) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const dbUser = await storage.getUser(user.claims.sub);
+    const dbUser = await storage.getUser(userId);
     const userRole: UserRole = dbUser?.role || "viewer";
 
     if (!hasPermission(userRole, permission)) {
@@ -249,7 +316,11 @@ export function requireOwnContentOrPermission(permission: PermissionKey) {
 // ============================================================================
 const ALLOWED_ORIGINS = [
   process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : null,
+  process.env.FRONTEND_URL,
+  process.env.SITE_URL,
+  "http://localhost:5173",
   "http://localhost:5000",
+  "http://localhost:3000",
   "http://127.0.0.1:5000",
   "https://travi.world",
   "https://www.travi.world",
@@ -441,48 +512,89 @@ export interface AuditLogEntry {
   details?: Record<string, unknown>;
 }
 
-const auditLogStore: AuditLogEntry[] = [];
-const MAX_AUDIT_LOGS = 10000; // Keep last 10k entries in memory
+// Audit logs are now persisted to database via storage.createAuditLog()
+// In-memory store only used as fallback if DB write fails
+const auditLogFallback: AuditLogEntry[] = [];
+const MAX_FALLBACK_LOGS = 100;
 
-export function logAuditEvent(entry: Omit<AuditLogEntry, 'timestamp'>) {
+// Map audit actions to valid database enum values
+function mapActionToDbEnum(action: AuditLogEntry['action']): 'create' | 'update' | 'delete' | 'publish' | 'login' | 'logout' {
+  switch (action) {
+    case 'translate': return 'update';  // Translation is a form of update
+    case 'ai_generate': return 'create'; // AI generation creates new content
+    default: return action;
+  }
+}
+
+export async function logAuditEvent(entry: Omit<AuditLogEntry, 'timestamp'>) {
   const logEntry: AuditLogEntry = {
     ...entry,
     timestamp: new Date().toISOString(),
   };
 
-  auditLogStore.push(logEntry);
-
-  // Trim old entries
-  if (auditLogStore.length > MAX_AUDIT_LOGS) {
-    auditLogStore.splice(0, auditLogStore.length - MAX_AUDIT_LOGS);
-  }
-
-  // Console log for persistence (can be picked up by logging services)
+  // Console log for immediate visibility (with original action for debugging)
   console.log('[AUDIT]', JSON.stringify(logEntry));
+
+  try {
+    // Persist to database (map action to valid DB enum)
+    await storage.createAuditLog({
+      userId: entry.userId,
+      userName: entry.userEmail,
+      actionType: mapActionToDbEnum(entry.action),
+      entityType: entry.resourceType as any,
+      entityId: entry.resourceId,
+      description: `${entry.action} on ${entry.resourceType}${entry.resourceId ? ` (${entry.resourceId})` : ''}`,
+      ipAddress: entry.ip,
+      userAgent: entry.userAgent,
+      afterState: entry.details as Record<string, unknown>,
+    });
+  } catch (err) {
+    // Fallback to in-memory if DB fails
+    console.error('[AUDIT] Failed to persist to DB:', err);
+    auditLogFallback.push(logEntry);
+    if (auditLogFallback.length > MAX_FALLBACK_LOGS) {
+      auditLogFallback.splice(0, auditLogFallback.length - MAX_FALLBACK_LOGS);
+    }
+  }
 }
 
-export function getAuditLogs(options?: {
+export async function getAuditLogs(options?: {
   action?: string;
   resourceType?: string;
   userId?: string;
   limit?: number;
-}): AuditLogEntry[] {
-  let logs = [...auditLogStore];
+}): Promise<AuditLogEntry[]> {
+  try {
+    // Query from database
+    const dbLogs = await storage.getAuditLogs({
+      actionType: options?.action as any,
+      entityType: options?.resourceType,
+      userId: options?.userId,
+      limit: options?.limit || 100,
+    });
 
-  if (options?.action) {
-    logs = logs.filter(l => l.action === options.action);
+    // Convert to AuditLogEntry format
+    return dbLogs.map(log => ({
+      timestamp: log.timestamp.toISOString(),
+      action: log.actionType as AuditLogEntry['action'],
+      resourceType: log.entityType,
+      resourceId: log.entityId || undefined,
+      userId: log.userId || undefined,
+      userEmail: log.userName || undefined,
+      ip: log.ipAddress || 'unknown',
+      userAgent: log.userAgent || undefined,
+      details: log.afterState || undefined,
+    }));
+  } catch (err) {
+    console.error('[AUDIT] Failed to read from DB:', err);
+    // Return fallback logs if DB fails
+    let logs = [...auditLogFallback];
+    if (options?.action) logs = logs.filter(l => l.action === options.action);
+    if (options?.resourceType) logs = logs.filter(l => l.resourceType === options.resourceType);
+    if (options?.userId) logs = logs.filter(l => l.userId === options.userId);
+    logs.reverse();
+    return options?.limit ? logs.slice(0, options.limit) : logs;
   }
-  if (options?.resourceType) {
-    logs = logs.filter(l => l.resourceType === options.resourceType);
-  }
-  if (options?.userId) {
-    logs = logs.filter(l => l.userId === options.userId);
-  }
-
-  // Return newest first
-  logs.reverse();
-
-  return options?.limit ? logs.slice(0, options.limit) : logs;
 }
 
 // Middleware to auto-log requests
@@ -525,11 +637,11 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   // Content Security Policy
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com https://www.googletagmanager.com https://www.google-analytics.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.cdnfonts.com",
+    "font-src 'self' https://fonts.gstatic.com https://fonts.cdnfonts.com data:",
     "img-src 'self' data: blob: https: http:",
-    "connect-src 'self' https://*.replit.dev https://api.deepl.com https://api.openai.com https://images.unsplash.com wss:",
+    "connect-src 'self' https://*.replit.dev https://*.replit.app https://api.deepl.com https://api.openai.com https://generativelanguage.googleapis.com https://openrouter.ai https://images.unsplash.com https://www.google-analytics.com wss:",
     "frame-ancestors 'self'",
     "form-action 'self'",
     "base-uri 'self'",
@@ -541,6 +653,132 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  // Remove server fingerprinting headers
+  res.removeHeader('X-Powered-By');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+
+  next();
+}
+
+// ============================================================================
+// CORS CONFIGURATION (uses ALLOWED_ORIGINS from CSRF section above)
+// ============================================================================
+// In development, allow all Replit preview URLs
+const isReplitOrigin = (origin: string) => {
+  return origin.includes('.replit.dev') ||
+         origin.includes('.replit.app') ||
+         origin.includes('.repl.co');
+};
+
+/**
+ * CORS middleware with proper origin validation
+ */
+export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
+  const origin = req.headers.origin;
+
+  // Allow requests with no origin (mobile apps, curl, Postman, same-origin)
+  if (!origin) {
+    return next();
+  }
+
+  // Check if origin is allowed
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) ||
+                    (process.env.NODE_ENV !== 'production' && isReplitOrigin(origin));
+
+  if (isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count, X-Page, X-Limit');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
+  next();
+}
+
+// ============================================================================
+// INPUT SANITIZATION MIDDLEWARE
+// ============================================================================
+// HTML entity encoding for untrusted input
+function escapeHtml(str: string): string {
+  const htmlEscapes: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;',
+  };
+  return str.replace(/[&<>"'/]/g, char => htmlEscapes[char]);
+}
+
+// Remove null bytes and other dangerous characters
+function sanitizeString(value: string): string {
+  // Remove null bytes
+  let sanitized = value.replace(/\0/g, '');
+
+  // Remove other control characters (except newline and tab)
+  sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+  return sanitized.trim();
+}
+
+// Recursively sanitize an object
+function sanitizeObject(obj: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    // Skip sensitive fields that shouldn't be modified
+    if (['password', 'secret', 'token', 'apiKey', 'api_key'].includes(key.toLowerCase())) {
+      sanitized[key] = value;
+      continue;
+    }
+
+    if (typeof value === 'string') {
+      // For short strings (likely form fields), sanitize more strictly
+      if (value.length < 500) {
+        sanitized[key] = sanitizeString(value);
+      } else {
+        // For longer content (like body/content), just remove dangerous control chars
+        sanitized[key] = value.replace(/\0/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+      }
+    } else if (Array.isArray(value)) {
+      sanitized[key] = value.map(item => {
+        if (typeof item === 'string') return sanitizeString(item);
+        if (typeof item === 'object' && item !== null) return sanitizeObject(item as Record<string, unknown>);
+        return item;
+      });
+    } else if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizeObject(value as Record<string, unknown>);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+
+  return sanitized;
+}
+
+/**
+ * Middleware to sanitize incoming request body and query parameters
+ * Removes null bytes, control characters, and trims whitespace
+ */
+export function sanitizeInput(req: Request, res: Response, next: NextFunction) {
+  // Sanitize body
+  if (req.body && typeof req.body === 'object') {
+    req.body = sanitizeObject(req.body);
+  }
+
+  // Sanitize query parameters
+  if (req.query && typeof req.query === 'object') {
+    req.query = sanitizeObject(req.query as Record<string, unknown>) as typeof req.query;
+  }
 
   next();
 }
@@ -630,6 +868,140 @@ export function ipBlockMiddleware(req: Request, res: Response, next: NextFunctio
   }
 
   next();
+}
+
+// ============================================================================
+// SSRF PROTECTION - Validate URLs before server-side requests
+// ============================================================================
+
+interface SSRFValidationResult {
+  valid: boolean;
+  error?: string;
+  sanitizedUrl?: string;
+}
+
+// Private IP ranges that should be blocked
+const PRIVATE_IP_PATTERNS = [
+  /^127\./,                          // Loopback
+  /^10\./,                           // Private Class A
+  /^172\.(1[6-9]|2[0-9]|3[0-1])\./,  // Private Class B
+  /^192\.168\./,                     // Private Class C
+  /^169\.254\./,                     // Link-local (AWS metadata, etc.)
+  /^0\./,                            // Current network
+  /^100\.(6[4-9]|[7-9][0-9]|1[0-2][0-9])\./,  // Shared address space
+  /^198\.18\./,                      // Benchmark testing
+  /^::1$/,                           // IPv6 loopback
+  /^fe80:/i,                         // IPv6 link-local
+  /^fc00:/i,                         // IPv6 unique local
+  /^fd00:/i,                         // IPv6 unique local
+];
+
+// Blocked hostnames
+const BLOCKED_HOSTNAMES = [
+  'localhost',
+  'localhost.localdomain',
+  '0.0.0.0',
+  '[::1]',
+  'metadata.google.internal',
+  'metadata.google.com',
+  'instance-data',
+  'instance-metadata',
+];
+
+// Only allow these protocols
+const ALLOWED_PROTOCOLS = ['http:', 'https:'];
+
+/**
+ * Validate a URL to prevent SSRF attacks
+ * Call this before making any server-side HTTP request to user-provided URLs
+ */
+export function validateUrlForSSRF(urlString: string): SSRFValidationResult {
+  if (!urlString || typeof urlString !== 'string') {
+    return { valid: false, error: 'URL is required' };
+  }
+
+  try {
+    const url = new URL(urlString.trim());
+
+    // Check protocol
+    if (!ALLOWED_PROTOCOLS.includes(url.protocol)) {
+      return {
+        valid: false,
+        error: `Protocol not allowed: ${url.protocol}. Only HTTP and HTTPS are permitted.`
+      };
+    }
+
+    // Check for blocked hostnames
+    const hostname = url.hostname.toLowerCase();
+    if (BLOCKED_HOSTNAMES.some(blocked => hostname === blocked || hostname.endsWith('.' + blocked))) {
+      return { valid: false, error: 'Hostname not allowed' };
+    }
+
+    // Check if hostname is an IP address and validate it
+    const ipMatch = hostname.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$|^\[(.+)\]$/);
+    if (ipMatch) {
+      const ip = ipMatch[1] || ipMatch[2];
+      if (isPrivateIP(ip)) {
+        return { valid: false, error: 'Private IP addresses are not allowed' };
+      }
+    }
+
+    // Check for suspicious port usage (common internal service ports)
+    const port = url.port ? parseInt(url.port, 10) : (url.protocol === 'https:' ? 443 : 80);
+    const suspiciousPorts = [22, 23, 25, 3306, 5432, 6379, 11211, 27017, 9200, 9300];
+    if (suspiciousPorts.includes(port)) {
+      return { valid: false, error: `Port ${port} is not allowed for security reasons` };
+    }
+
+    // Check for URL with credentials (user:pass@host)
+    if (url.username || url.password) {
+      return { valid: false, error: 'URLs with credentials are not allowed' };
+    }
+
+    // Prevent DNS rebinding by checking for numeric-looking hostnames
+    if (/^[0-9.]+$/.test(hostname) && !ipMatch) {
+      return { valid: false, error: 'Invalid hostname format' };
+    }
+
+    return {
+      valid: true,
+      sanitizedUrl: url.toString()
+    };
+  } catch (err) {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+}
+
+/**
+ * Check if an IP address is private/internal
+ */
+function isPrivateIP(ip: string): boolean {
+  return PRIVATE_IP_PATTERNS.some(pattern => pattern.test(ip));
+}
+
+/**
+ * Middleware to validate URL parameters for SSRF
+ */
+export function ssrfProtectionMiddleware(urlParamName: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const url = req.body?.[urlParamName] || req.query?.[urlParamName];
+
+    if (url) {
+      const result = validateUrlForSSRF(url);
+      if (!result.valid) {
+        return res.status(400).json({
+          error: 'Invalid URL',
+          details: result.error,
+        });
+      }
+      // Replace with sanitized URL
+      if (req.body?.[urlParamName]) {
+        req.body[urlParamName] = result.sanitizedUrl;
+      }
+    }
+
+    next();
+  };
 }
 
 // ============================================================================

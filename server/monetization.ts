@@ -7,8 +7,19 @@
  */
 
 import { db } from "./db";
-import { contents, users } from "@shared/schema";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import {
+  contents,
+  users,
+  premiumContent as premiumContentTable,
+  contentPurchases,
+  businessListings as businessListingsTable,
+  leads as leadsTable,
+  type PremiumContentRow,
+  type ContentPurchase as ContentPurchaseRow,
+  type BusinessListing as BusinessListingRow,
+  type Lead as LeadRow,
+} from "@shared/schema";
+import { eq, desc, and, gte, lte, sql, inArray } from "drizzle-orm";
 import { cache } from "./cache";
 import * as crypto from "crypto";
 
@@ -107,66 +118,105 @@ export interface Lead {
 }
 
 // ============================================================================
-// IN-MEMORY STORAGE
-// ============================================================================
-
-const premiumContentStore: Map<string, PremiumContent> = new Map();
-const purchaseStore: Map<string, ContentPurchase> = new Map();
-const businessStore: Map<string, BusinessListing> = new Map();
-const leadStore: Map<string, Lead> = new Map();
-
-// ============================================================================
-// PREMIUM CONTENT
+// PREMIUM CONTENT (Database-backed)
 // ============================================================================
 
 export const premiumContent = {
   /**
-   * Mark content as premium
+   * Mark content as premium (persisted to DB)
    */
   async setPremium(
     contentId: string,
     options: Omit<PremiumContent, "contentId">
   ): Promise<PremiumContent> {
-    const premium: PremiumContent = {
-      contentId,
-      ...options,
+    const [result] = await db
+      .insert(premiumContentTable)
+      .values({
+        contentId,
+        isPremium: options.isPremium,
+        previewPercentage: options.previewPercentage,
+        price: options.price,
+        currency: options.currency,
+        accessType: options.accessType,
+        subscriptionTier: options.subscriptionTier,
+      })
+      .onConflictDoUpdate({
+        target: premiumContentTable.contentId,
+        set: {
+          isPremium: options.isPremium,
+          previewPercentage: options.previewPercentage,
+          price: options.price,
+          currency: options.currency,
+          accessType: options.accessType,
+          subscriptionTier: options.subscriptionTier,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    return {
+      contentId: result.contentId,
+      isPremium: result.isPremium,
+      previewPercentage: result.previewPercentage,
+      price: result.price,
+      currency: result.currency,
+      accessType: result.accessType,
+      subscriptionTier: result.subscriptionTier || undefined,
     };
-    premiumContentStore.set(contentId, premium);
-    return premium;
   },
 
   /**
    * Check if content is premium
    */
   async isPremium(contentId: string): Promise<PremiumContent | null> {
-    return premiumContentStore.get(contentId) || null;
+    const [result] = await db
+      .select()
+      .from(premiumContentTable)
+      .where(eq(premiumContentTable.contentId, contentId));
+
+    if (!result) return null;
+
+    return {
+      contentId: result.contentId,
+      isPremium: result.isPremium,
+      previewPercentage: result.previewPercentage,
+      price: result.price,
+      currency: result.currency,
+      accessType: result.accessType,
+      subscriptionTier: result.subscriptionTier || undefined,
+    };
   },
 
   /**
    * Check if user has access to premium content
    */
   async hasAccess(userId: string, contentId: string): Promise<boolean> {
-    const premium = premiumContentStore.get(contentId);
+    const premium = await this.isPremium(contentId);
     if (!premium || !premium.isPremium) return true;
 
-    // Check for purchase
-    const purchases = [...purchaseStore.values()].filter(
-      p => p.userId === userId &&
-           p.contentId === contentId &&
-           p.status === "completed" &&
-           (!p.expiresAt || p.expiresAt > new Date())
-    );
+    // Check for purchase in database
+    const [purchase] = await db
+      .select()
+      .from(contentPurchases)
+      .where(and(
+        eq(contentPurchases.userId, userId),
+        eq(contentPurchases.contentId, contentId),
+        eq(contentPurchases.status, "completed")
+      ))
+      .limit(1);
 
-    if (purchases.length > 0) return true;
-
-    // Check for subscription (if applicable)
-    // In production, check user's subscription status
+    if (purchase) {
+      // Check if expired
+      if (!purchase.expiresAt || purchase.expiresAt > new Date()) {
+        return true;
+      }
+    }
 
     return false;
   },
 
   /**
-   * Purchase content
+   * Purchase content (persisted to DB)
    */
   async purchase(
     userId: string,
@@ -176,35 +226,63 @@ export const premiumContent = {
       paymentId?: string;
     }
   ): Promise<ContentPurchase> {
-    const premium = premiumContentStore.get(contentId);
+    const premium = await this.isPremium(contentId);
     if (!premium) throw new Error("Content not found");
 
-    const purchase: ContentPurchase = {
-      id: `pur_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
-      userId,
-      contentId,
-      amount: premium.price,
-      currency: premium.currency,
-      paymentMethod: paymentDetails.paymentMethod,
-      paymentId: paymentDetails.paymentId,
-      status: "completed",
-      createdAt: new Date(),
-      expiresAt: premium.accessType === "subscription"
-        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        : undefined,
-    };
+    const expiresAt = premium.accessType === "subscription"
+      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      : null;
 
-    purchaseStore.set(purchase.id, purchase);
-    return purchase;
+    const [purchase] = await db
+      .insert(contentPurchases)
+      .values({
+        userId,
+        contentId,
+        amount: premium.price,
+        currency: premium.currency,
+        paymentMethod: paymentDetails.paymentMethod,
+        paymentId: paymentDetails.paymentId,
+        status: "completed",
+        expiresAt,
+      })
+      .returning();
+
+    return {
+      id: purchase.id,
+      userId: purchase.userId,
+      contentId: purchase.contentId,
+      amount: purchase.amount,
+      currency: purchase.currency,
+      paymentMethod: purchase.paymentMethod,
+      paymentId: purchase.paymentId || undefined,
+      status: purchase.status,
+      createdAt: purchase.createdAt,
+      expiresAt: purchase.expiresAt || undefined,
+    };
   },
 
   /**
    * Get user's purchases
    */
   async getUserPurchases(userId: string): Promise<ContentPurchase[]> {
-    return [...purchaseStore.values()]
-      .filter(p => p.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const purchases = await db
+      .select()
+      .from(contentPurchases)
+      .where(eq(contentPurchases.userId, userId))
+      .orderBy(desc(contentPurchases.createdAt));
+
+    return purchases.map(p => ({
+      id: p.id,
+      userId: p.userId,
+      contentId: p.contentId,
+      amount: p.amount,
+      currency: p.currency,
+      paymentMethod: p.paymentMethod,
+      paymentId: p.paymentId || undefined,
+      status: p.status,
+      createdAt: p.createdAt,
+      expiresAt: p.expiresAt || undefined,
+    }));
   },
 
   /**
@@ -220,7 +298,7 @@ export const premiumContent = {
     const [content] = await db.select().from(contents).where(eq(contents.id, contentId));
     if (!content) return { content: null, isPremium: false, previewPercentage: 100, price: 0, currency: "USD" };
 
-    const premium = premiumContentStore.get(contentId);
+    const premium = await this.isPremium(contentId);
 
     if (!premium || !premium.isPremium) {
       return {
@@ -260,7 +338,18 @@ export const premiumContent = {
     totalPurchases: number;
     topContent: Array<{ contentId: string; title: string; purchases: number; revenue: number }>;
   }> {
-    const allPurchases = [...purchaseStore.values()].filter(p => p.status === "completed");
+    // Count premium content
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(premiumContentTable)
+      .where(eq(premiumContentTable.isPremium, true));
+
+    // Get all completed purchases
+    const allPurchases = await db
+      .select()
+      .from(contentPurchases)
+      .where(eq(contentPurchases.status, "completed"));
+
     const totalRevenue = allPurchases.reduce((sum, p) => sum + p.amount, 0);
 
     // Group by content
@@ -290,7 +379,7 @@ export const premiumContent = {
     );
 
     return {
-      totalPremiumContent: premiumContentStore.size,
+      totalPremiumContent: countResult?.count || 0,
       totalRevenue,
       totalPurchases: allPurchases.length,
       topContent,
@@ -339,75 +428,106 @@ const businessTiers = {
 
 export const businessListings = {
   /**
-   * Create business listing
+   * Create business listing (persisted to DB)
    */
   async create(
     data: Omit<BusinessListing, "id" | "impressions" | "clicks" | "leads" | "conversions" | "createdAt">
   ): Promise<BusinessListing> {
-    const id = `biz_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
+    const [listing] = await db
+      .insert(businessListingsTable)
+      .values({
+        businessName: data.businessName,
+        businessType: data.businessType,
+        contactEmail: data.contactEmail,
+        contactPhone: data.contactPhone,
+        website: data.website,
+        contentIds: data.contentIds,
+        tier: data.tier,
+        status: data.status,
+        features: data.features,
+        monthlyPrice: data.monthlyPrice,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        settings: data.settings,
+      })
+      .returning();
 
-    const listing: BusinessListing = {
-      ...data,
-      id,
-      impressions: 0,
-      clicks: 0,
-      leads: 0,
-      conversions: 0,
-      createdAt: new Date(),
-    };
-
-    businessStore.set(id, listing);
-    return listing;
+    return this.mapToBusinessListing(listing);
   },
 
   /**
-   * Update listing
+   * Update listing (persisted to DB)
    */
   async update(id: string, updates: Partial<BusinessListing>): Promise<BusinessListing | null> {
-    const listing = businessStore.get(id);
-    if (!listing) return null;
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (updates.businessName) updateData.businessName = updates.businessName;
+    if (updates.businessType) updateData.businessType = updates.businessType;
+    if (updates.contactEmail) updateData.contactEmail = updates.contactEmail;
+    if (updates.contactPhone !== undefined) updateData.contactPhone = updates.contactPhone;
+    if (updates.website !== undefined) updateData.website = updates.website;
+    if (updates.contentIds) updateData.contentIds = updates.contentIds;
+    if (updates.tier) updateData.tier = updates.tier;
+    if (updates.status) updateData.status = updates.status;
+    if (updates.features) updateData.features = updates.features;
+    if (updates.monthlyPrice !== undefined) updateData.monthlyPrice = updates.monthlyPrice;
+    if (updates.endDate !== undefined) updateData.endDate = updates.endDate;
+    if (updates.settings) updateData.settings = updates.settings;
 
-    Object.assign(listing, updates);
-    businessStore.set(id, listing);
-    return listing;
+    const [listing] = await db
+      .update(businessListingsTable)
+      .set(updateData)
+      .where(eq(businessListingsTable.id, id))
+      .returning();
+
+    if (!listing) return null;
+    return this.mapToBusinessListing(listing);
   },
 
   /**
    * Get listing by ID
    */
   async get(id: string): Promise<BusinessListing | null> {
-    return businessStore.get(id) || null;
+    const [listing] = await db
+      .select()
+      .from(businessListingsTable)
+      .where(eq(businessListingsTable.id, id));
+
+    if (!listing) return null;
+    return this.mapToBusinessListing(listing);
   },
 
   /**
    * Get listings by content
    */
   async getByContent(contentId: string): Promise<BusinessListing[]> {
-    return [...businessStore.values()].filter(
-      l => l.contentIds.includes(contentId) && l.status === "active"
-    );
+    const listings = await db
+      .select()
+      .from(businessListingsTable)
+      .where(eq(businessListingsTable.status, "active"));
+
+    return listings
+      .filter(l => (l.contentIds || []).includes(contentId))
+      .map(l => this.mapToBusinessListing(l));
   },
 
   /**
-   * Track impression
+   * Track impression (persisted to DB)
    */
   async trackImpression(listingId: string): Promise<void> {
-    const listing = businessStore.get(listingId);
-    if (listing) {
-      listing.impressions++;
-      businessStore.set(listingId, listing);
-    }
+    await db
+      .update(businessListingsTable)
+      .set({ impressions: sql`${businessListingsTable.impressions} + 1` })
+      .where(eq(businessListingsTable.id, listingId));
   },
 
   /**
-   * Track click
+   * Track click (persisted to DB)
    */
   async trackClick(listingId: string): Promise<void> {
-    const listing = businessStore.get(listingId);
-    if (listing) {
-      listing.clicks++;
-      businessStore.set(listingId, listing);
-    }
+    await db
+      .update(businessListingsTable)
+      .set({ clicks: sql`${businessListingsTable.clicks} + 1` })
+      .where(eq(businessListingsTable.id, listingId));
   },
 
   /**
@@ -427,12 +547,16 @@ export const businessListings = {
     leads: Lead[];
     impressionsByDay: Array<{ date: string; count: number }>;
   } | null> {
-    const listing = businessStore.get(listingId);
+    const listing = await this.get(listingId);
     if (!listing) return null;
 
-    const leads = [...leadStore.values()]
-      .filter(l => l.businessId === listingId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const dbLeads = await db
+      .select()
+      .from(leadsTable)
+      .where(eq(leadsTable.businessId, listingId))
+      .orderBy(desc(leadsTable.createdAt));
+
+    const leads = dbLeads.map(l => mapToLead(l));
 
     return {
       listing,
@@ -450,18 +574,79 @@ export const businessListings = {
     businessType?: string;
     tier?: string;
   }): Promise<BusinessListing[]> {
-    let result = [...businessStore.values()].filter(l => l.status === "active");
+    const conditions = [eq(businessListingsTable.status, "active")];
 
     if (filters?.businessType) {
-      result = result.filter(l => l.businessType === filters.businessType);
+      conditions.push(eq(businessListingsTable.businessType, filters.businessType as any));
     }
     if (filters?.tier) {
-      result = result.filter(l => l.tier === filters.tier);
+      conditions.push(eq(businessListingsTable.tier, filters.tier as any));
     }
 
-    return result;
+    const listings = await db
+      .select()
+      .from(businessListingsTable)
+      .where(and(...conditions));
+
+    return listings.map(l => this.mapToBusinessListing(l));
+  },
+
+  /**
+   * Helper to map DB row to BusinessListing interface
+   */
+  mapToBusinessListing(row: BusinessListingRow): BusinessListing {
+    return {
+      id: row.id,
+      businessName: row.businessName,
+      businessType: row.businessType,
+      contactEmail: row.contactEmail,
+      contactPhone: row.contactPhone || undefined,
+      website: row.website || undefined,
+      contentIds: row.contentIds || [],
+      tier: row.tier,
+      status: row.status,
+      features: row.features || [],
+      monthlyPrice: row.monthlyPrice,
+      startDate: row.startDate,
+      endDate: row.endDate || undefined,
+      impressions: row.impressions,
+      clicks: row.clicks,
+      leads: row.leads,
+      conversions: row.conversions,
+      settings: row.settings || {
+        showPhone: true,
+        showEmail: true,
+        enableLeadForm: true,
+        enableBookingWidget: false,
+        featuredPlacement: false,
+      },
+      createdAt: row.createdAt!,
+    };
   },
 };
+
+// Helper function to map DB lead to Lead interface
+function mapToLead(row: LeadRow): Lead {
+  return {
+    id: row.id,
+    businessId: row.businessId,
+    contentId: row.contentId,
+    type: row.type,
+    name: row.name,
+    email: row.email,
+    phone: row.phone || undefined,
+    message: row.message || undefined,
+    checkIn: row.checkIn || undefined,
+    checkOut: row.checkOut || undefined,
+    guests: row.guests || undefined,
+    budget: row.budget || undefined,
+    source: row.source,
+    status: row.status,
+    notes: row.notes || undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt || undefined,
+  };
+}
 
 // ============================================================================
 // LEAD GENERATION
@@ -469,33 +654,37 @@ export const businessListings = {
 
 export const leadGeneration = {
   /**
-   * Submit lead
+   * Submit lead (persisted to DB)
    */
   async submit(
     data: Omit<Lead, "id" | "status" | "createdAt">
   ): Promise<Lead> {
-    const id = `lead_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
-
-    const lead: Lead = {
-      ...data,
-      id,
-      status: "new",
-      createdAt: new Date(),
-    };
-
-    leadStore.set(id, lead);
+    const [lead] = await db
+      .insert(leadsTable)
+      .values({
+        businessId: data.businessId,
+        contentId: data.contentId,
+        type: data.type,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        message: data.message,
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        guests: data.guests,
+        budget: data.budget,
+        source: data.source,
+        status: "new",
+      })
+      .returning();
 
     // Update business lead count
-    const listing = businessStore.get(data.businessId);
-    if (listing) {
-      listing.leads++;
-      businessStore.set(data.businessId, listing);
-    }
+    await db
+      .update(businessListingsTable)
+      .set({ leads: sql`${businessListingsTable.leads} + 1` })
+      .where(eq(businessListingsTable.id, data.businessId));
 
-    // In production, send notification to business
-    // await this.notifyBusiness(lead);
-
-    return lead;
+    return mapToLead(lead);
   },
 
   /**
@@ -510,51 +699,68 @@ export const leadGeneration = {
       endDate?: Date;
     }
   ): Promise<Lead[]> {
-    let result = [...leadStore.values()].filter(l => l.businessId === businessId);
+    const conditions = [eq(leadsTable.businessId, businessId)];
 
     if (filters?.status) {
-      result = result.filter(l => l.status === filters.status);
+      conditions.push(eq(leadsTable.status, filters.status));
     }
     if (filters?.type) {
-      result = result.filter(l => l.type === filters.type);
+      conditions.push(eq(leadsTable.type, filters.type));
     }
     if (filters?.startDate) {
-      result = result.filter(l => l.createdAt >= filters.startDate!);
+      conditions.push(gte(leadsTable.createdAt, filters.startDate));
     }
     if (filters?.endDate) {
-      result = result.filter(l => l.createdAt <= filters.endDate!);
+      conditions.push(lte(leadsTable.createdAt, filters.endDate));
     }
 
-    return result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const dbLeads = await db
+      .select()
+      .from(leadsTable)
+      .where(and(...conditions))
+      .orderBy(desc(leadsTable.createdAt));
+
+    return dbLeads.map(l => mapToLead(l));
   },
 
   /**
-   * Update lead status
+   * Update lead status (persisted to DB)
    */
   async updateStatus(
     leadId: string,
     status: Lead["status"],
     notes?: string
   ): Promise<Lead | null> {
-    const lead = leadStore.get(leadId);
-    if (!lead) return null;
+    // Get current lead to check previous status
+    const [currentLead] = await db
+      .select()
+      .from(leadsTable)
+      .where(eq(leadsTable.id, leadId));
 
-    const wasNew = lead.status === "new";
-    lead.status = status;
-    lead.notes = notes;
-    lead.updatedAt = new Date();
-    leadStore.set(leadId, lead);
+    if (!currentLead) return null;
+
+    const wasNew = currentLead.status === "new";
+
+    // Update lead
+    const [updatedLead] = await db
+      .update(leadsTable)
+      .set({
+        status,
+        notes,
+        updatedAt: new Date(),
+      })
+      .where(eq(leadsTable.id, leadId))
+      .returning();
 
     // Track conversion
     if (status === "converted" && wasNew) {
-      const listing = businessStore.get(lead.businessId);
-      if (listing) {
-        listing.conversions++;
-        businessStore.set(lead.businessId, listing);
-      }
+      await db
+        .update(businessListingsTable)
+        .set({ conversions: sql`${businessListingsTable.conversions} + 1` })
+        .where(eq(businessListingsTable.id, currentLead.businessId));
     }
 
-    return lead;
+    return mapToLead(updatedLead);
   },
 
   /**
@@ -645,7 +851,7 @@ export const leadGeneration = {
 
 export const revenueDashboard = {
   /**
-   * Get overall revenue stats
+   * Get overall revenue stats (from database)
    */
   async getStats(): Promise<{
     totalRevenue: number;
@@ -655,13 +861,19 @@ export const revenueDashboard = {
     byMonth: Array<{ month: string; revenue: number }>;
     topSources: Array<{ source: string; revenue: number; percentage: number }>;
   }> {
-    // Premium content revenue
-    const purchases = [...purchaseStore.values()].filter(p => p.status === "completed");
-    const premiumRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
+    // Premium content revenue from database
+    const [purchaseSum] = await db
+      .select({ total: sql<number>`COALESCE(SUM(${contentPurchases.amount}), 0)::int` })
+      .from(contentPurchases)
+      .where(eq(contentPurchases.status, "completed"));
+    const premiumRevenue = purchaseSum?.total || 0;
 
-    // Business listing revenue (monthly * active months)
-    const listings = [...businessStore.values()].filter(l => l.status === "active");
-    const listingRevenue = listings.reduce((sum, l) => sum + l.monthlyPrice, 0);
+    // Business listing revenue (monthly price of active listings)
+    const [listingSum] = await db
+      .select({ total: sql<number>`COALESCE(SUM(${businessListingsTable.monthlyPrice}), 0)::int` })
+      .from(businessListingsTable)
+      .where(eq(businessListingsTable.status, "active"));
+    const listingRevenue = listingSum?.total || 0;
 
     // Affiliate revenue would come from affiliate tracking system
     const affiliateRevenue = 0;

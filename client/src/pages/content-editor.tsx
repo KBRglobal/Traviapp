@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
+import DOMPurify from "dompurify";
 import {
   DndContext,
   closestCenter,
@@ -32,8 +33,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useImageUpload } from "@/hooks/use-image-upload";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Save,
@@ -75,6 +80,7 @@ import {
   Award,
   MapPin,
   Clock,
+  CalendarDays,
   DollarSign,
   Plus,
   GripHorizontal,
@@ -94,6 +100,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Keyboard,
+  Lock,
 } from "lucide-react";
 import type {
   ContentWithRelations,
@@ -106,6 +113,7 @@ import type {
   RelatedItem
 } from "@shared/schema";
 import { SeoScore } from "@/components/seo-score";
+import { SEOValidationGate } from "@/components/seo-validation-gate";
 import { SchemaPreview } from "@/components/schema-preview";
 import { AttractionSeoEditor } from "@/components/attraction-seo-editor";
 import { HotelSeoEditor } from "@/components/hotel-seo-editor";
@@ -167,6 +175,19 @@ const blockCategories = [
   { id: "interactive", label: "Interactive", icon: MousePointer },
 ];
 
+// Environment-based configuration
+const GOOGLE_MAPS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8";
+
+// Safe deep clone function to handle potential JSON errors
+function safeDeepClone<T>(obj: T): T | null {
+  try {
+    return JSON.parse(JSON.stringify(obj));
+  } catch (e) {
+    console.error("Failed to deep clone object:", e);
+    return null;
+  }
+}
+
 const defaultTemplateBlocks: ContentBlock[] = [
   { id: "hero-default", type: "hero", data: { image: "", alt: "", title: "" }, order: 0 },
   { id: "intro-default", type: "text", data: { content: "" }, order: 1 },
@@ -185,6 +206,10 @@ function generateSlug(title: string): string {
 }
 
 function generateId(): string {
+  // Use crypto.randomUUID() for secure ID generation, fallback to less secure method
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID().substring(0, 8);
+  }
   return Math.random().toString(36).substring(2, 9);
 }
 
@@ -484,6 +509,7 @@ export default function ContentEditor() {
   const [heroImageAlt, setHeroImageAlt] = useState("");
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [status, setStatus] = useState<string>("draft");
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | null>(null);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
@@ -507,6 +533,9 @@ export default function ContentEditor() {
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
 
+  // SEO Validation Gate state
+  const [seoCanPublish, setSeoCanPublish] = useState(true);
+
   // Undo/Redo History
   const [history, setHistory] = useState<ContentBlock[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -514,9 +543,12 @@ export default function ContentEditor() {
 
   // Save state to history (called when blocks change significantly)
   const pushToHistory = useCallback((newBlocks: ContentBlock[]) => {
+    const cloned = safeDeepClone(newBlocks);
+    if (!cloned) return; // Skip if cloning failed
+
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push(JSON.parse(JSON.stringify(newBlocks)));
+      newHistory.push(cloned);
       if (newHistory.length > maxHistorySize) {
         newHistory.shift();
         return newHistory;
@@ -528,15 +560,21 @@ export default function ContentEditor() {
 
   const undo = useCallback(() => {
     if (historyIndex > 0) {
-      setHistoryIndex(prev => prev - 1);
-      setBlocks(JSON.parse(JSON.stringify(history[historyIndex - 1])));
+      const cloned = safeDeepClone(history[historyIndex - 1]);
+      if (cloned) {
+        setHistoryIndex(prev => prev - 1);
+        setBlocks(cloned);
+      }
     }
   }, [history, historyIndex]);
 
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      setHistoryIndex(prev => prev + 1);
-      setBlocks(JSON.parse(JSON.stringify(history[historyIndex + 1])));
+      const cloned = safeDeepClone(history[historyIndex + 1]);
+      if (cloned) {
+        setHistoryIndex(prev => prev + 1);
+        setBlocks(cloned);
+      }
     }
   }, [history, historyIndex]);
 
@@ -648,12 +686,25 @@ export default function ContentEditor() {
       issues.push("Missing hero image");
     }
 
-    // Content (15 points)
-    const textBlocks = blocks.filter(b => b.type === 'text' || b.type === 'hero');
-    const totalWords = textBlocks.reduce((acc, b) => {
-      const text = String(b.data?.content || b.data?.text || '');
-      return acc + text.split(/\s+/).filter(w => w.length > 0).length;
-    }, 0);
+    // Content (15 points) - count all text content, not just text blocks
+    const allTextContent = blocks.map(b => {
+      if (b.type === "text") return String(b.data?.content || '');
+      if (b.type === "hero") return String(b.data?.title || '');
+      if (b.type === "faq" && b.data?.faqs) {
+        return (b.data.faqs as Array<{question?: string; answer?: string}>)
+          .map(f => `${f.question || ''} ${f.answer || ''}`).join(' ');
+      }
+      if (b.type === "highlights" && b.data?.items) {
+        return (b.data.items as Array<{title?: string; description?: string}>)
+          .map(i => `${i.title || ''} ${i.description || ''}`).join(' ');
+      }
+      if (b.type === "tips" && b.data?.tips) {
+        return (b.data.tips as string[]).join(' ');
+      }
+      if (b.type === "cta") return String(b.data?.text || '');
+      return '';
+    }).join(' ');
+    const totalWords = allTextContent.split(/\s+/).filter(w => w.length > 0).length;
 
     if (totalWords >= 300) { score += 5; passed.push("Content ≥300 words"); }
     else issues.push(`Content: ${totalWords} words (min: 300)`);
@@ -1043,9 +1094,15 @@ export default function ContentEditor() {
           status,
         };
 
-        // Include attraction-specific SEO data if this is an attraction
+        // Include content-type-specific SEO data (use property names expected by backend)
         if (contentType === "attraction") {
-          autosaveData.attractionData = attractionSeoData;
+          autosaveData.attraction = attractionSeoData;
+        } else if (contentType === "hotel") {
+          autosaveData.hotel = hotelSeoData;
+        } else if (contentType === "dining") {
+          autosaveData.dining = diningSeoData;
+        } else if (contentType === "district") {
+          autosaveData.district = districtSeoData;
         }
 
         autosaveMutation.mutate(autosaveData);
@@ -1058,7 +1115,7 @@ export default function ContentEditor() {
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [title, slug, metaTitle, metaDescription, primaryKeyword, heroImage, heroImageAlt, blocks, status, contentId, contentType, attractionSeoData]);
+  }, [title, slug, metaTitle, metaDescription, primaryKeyword, heroImage, heroImageAlt, blocks, status, contentId, contentType, attractionSeoData, hotelSeoData, diningSeoData, districtSeoData]);
 
   // Generate blocks from attraction/hotel/article extension data
   // Blocks use simple string content (one item per line) for tips, highlights, info_grid
@@ -1342,9 +1399,17 @@ export default function ContentEditor() {
     },
     onSuccess: (result) => {
       setStatus("published");
+      // Invalidate admin content caches
       queryClient.invalidateQueries({ queryKey: ["/api/contents"] });
       queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${contentType}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      // Invalidate public content caches so published content appears immediately
+      queryClient.invalidateQueries({ queryKey: ["/api/public/contents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/public/contents?includeExtensions=true"] });
+      // Invalidate specific slug cache if editing existing content
+      if (slug) {
+        queryClient.invalidateQueries({ queryKey: ["/api/contents/slug", slug] });
+      }
       toast({ title: "Published", description: "Your content is now live." });
       if (isNew && result?.id) {
         navigate(`/admin/${contentType}s/${result.id}`);
@@ -1381,8 +1446,11 @@ export default function ContentEditor() {
       }
       setImageGeneratingBlock(null);
     },
-    onError: () => {
-      toast({ title: "Generation Failed", description: "Failed to generate images.", variant: "destructive" });
+    onError: (error: Error) => {
+      const message = error.message?.includes("API_NOT_CONFIGURED") || error.message?.includes("not configured")
+        ? "Image generation API not configured. Please add OPENAI_API_KEY or REPLICATE_API_KEY."
+        : "Failed to generate images. Check server logs for details.";
+      toast({ title: "Generation Failed", description: message, variant: "destructive" });
       setImageGeneratingBlock(null);
     },
   });
@@ -1400,7 +1468,10 @@ export default function ContentEditor() {
         // contentType === "itinerary" ? "/api/ai/generate-itinerary" :
         "/api/ai/generate-article";
 
-      const body = contentType === "article" ? { topic: input } : { name: input };
+      // Build request body with primaryKeyword for better SEO
+      const body = contentType === "article"
+        ? { topic: input, primaryKeyword: primaryKeyword || input }
+        : { name: input, primaryKeyword: primaryKeyword || input };
       // Note: When itinerary is re-enabled, use: contentType === "itinerary" ? { duration: input } : { name: input }
 
       const res = await apiRequest("POST", endpoint, body);
@@ -1415,8 +1486,123 @@ export default function ContentEditor() {
         setPrimaryKeyword(result.content.primaryKeyword || "");
         if (result.content.heroImage) setHeroImage(result.content.heroImage);
         setHeroImageAlt(result.content.heroImageAlt || "");
-        setBlocks(Array.isArray(result.content.blocks) ? result.content.blocks : []);
+
+        // Process blocks - expand FAQ and Tips blocks that have arrays
+        let processedBlocks: ContentBlock[] = [];
+        let orderIndex = 0;
+        const rawBlocks = Array.isArray(result.content.blocks) ? result.content.blocks : [];
+
+        for (const block of rawBlocks) {
+          // Handle FAQ blocks with faqs array
+          if (block.type === "faq" && Array.isArray(block.data?.faqs)) {
+            for (const faqItem of block.data.faqs) {
+              processedBlocks.push({
+                id: `faq-${Math.random().toString(36).substring(2, 9)}`,
+                type: "faq",
+                data: { question: faqItem.question || "", answer: faqItem.answer || "" },
+                order: orderIndex++,
+              });
+            }
+          }
+          // Handle tips blocks with tips array
+          else if (block.type === "tips" && Array.isArray(block.data?.tips)) {
+            processedBlocks.push({
+              id: block.id || `tips-${Math.random().toString(36).substring(2, 9)}`,
+              type: "tips",
+              data: { content: block.data.tips.join("\n") },
+              order: orderIndex++,
+            });
+          }
+          // Handle highlights blocks with items array
+          else if (block.type === "highlights" && Array.isArray(block.data?.items)) {
+            const items = block.data.items.map((item: string | { title?: string; description?: string }) =>
+              typeof item === "string" ? item : `${item.title || ""}: ${item.description || ""}`
+            );
+            processedBlocks.push({
+              id: block.id || `highlights-${Math.random().toString(36).substring(2, 9)}`,
+              type: "highlights",
+              data: { content: items.join("\n") },
+              order: orderIndex++,
+            });
+          }
+          // Keep other blocks as-is
+          else {
+            processedBlocks.push({
+              ...block,
+              id: block.id || `block-${Math.random().toString(36).substring(2, 9)}`,
+              order: orderIndex++,
+            });
+          }
+        }
+
+        setBlocks(processedBlocks);
       }
+
+      // Populate attraction-specific SEO data if available
+      if (result.attraction && contentType === "attraction") {
+        setAttractionSeoData({
+          introText: result.attraction.introText || "",
+          expandedIntroText: result.attraction.expandedIntroText || "",
+          quickInfoBar: result.attraction.quickInfoBar || [],
+          highlights: result.attraction.highlights || [],
+          ticketInfo: result.attraction.ticketInfo || [],
+          essentialInfo: result.attraction.essentialInfo || [],
+          visitorTips: result.attraction.visitorTips || [],
+          relatedAttractions: result.attraction.relatedAttractions || result.attraction.nearbyAttractions || [],
+          trustSignals: result.attraction.trustSignals || [],
+          primaryCta: result.attraction.primaryCta || "",
+          location: result.attraction.location || "",
+          priceFrom: result.attraction.priceFrom || "",
+          duration: result.attraction.duration || "",
+        });
+      }
+
+      // Populate hotel-specific SEO data if available
+      if (result.hotel && contentType === "hotel") {
+        setHotelSeoData(prev => ({
+          ...prev,
+          quickInfoBar: result.hotel.quickInfoBar || prev.quickInfoBar,
+          highlights: result.hotel.highlights || prev.highlights,
+          roomTypes: result.hotel.roomTypes || prev.roomTypes,
+          amenities: result.hotel.amenities || prev.amenities,
+          trustSignals: result.hotel.trustSignals || prev.trustSignals,
+          primaryCta: result.hotel.primaryCta || prev.primaryCta,
+          location: result.hotel.location || prev.location,
+          starRating: result.hotel.starRating || prev.starRating,
+        }));
+      }
+
+      // Populate dining-specific SEO data if available
+      if (result.dining && contentType === "dining") {
+        setDiningSeoData(prev => ({
+          ...prev,
+          quickInfoBar: result.dining.quickInfoBar || prev.quickInfoBar,
+          highlights: result.dining.highlights || prev.highlights,
+          menuHighlights: result.dining.menuHighlights || prev.menuHighlights,
+          trustSignals: result.dining.trustSignals || prev.trustSignals,
+          primaryCta: result.dining.primaryCta || prev.primaryCta,
+          location: result.dining.location || prev.location,
+          priceRange: result.dining.priceRange || prev.priceRange,
+          cuisineType: result.dining.cuisineType || prev.cuisineType,
+        }));
+      }
+
+      // Populate district-specific SEO data if available
+      if (result.district && contentType === "district") {
+        setDistrictSeoData(prev => ({
+          ...prev,
+          introText: result.district.introText || prev.introText,
+          expandedIntroText: result.district.expandedIntroText || prev.expandedIntroText,
+          quickInfoBar: result.district.quickInfoBar || prev.quickInfoBar,
+          highlights: result.district.highlights || prev.highlights,
+          thingsToDo: result.district.topAttractions || prev.thingsToDo,
+          diningHighlights: result.district.diningOptions || prev.diningHighlights,
+          trustSignals: result.district.trustSignals || prev.trustSignals,
+          primaryCta: result.district.primaryCta || prev.primaryCta,
+          location: result.district.location || prev.location,
+        }));
+      }
+
       setAiGenerateDialogOpen(false);
       setAiGenerateInput("");
       toast({ title: "Generated", description: "AI content generated. Review and edit as needed." });
@@ -1426,8 +1612,69 @@ export default function ContentEditor() {
     },
   });
 
+  // Generate individual sections (FAQ, Tips, Highlights) when empty
+  const [generatingSectionId, setGeneratingSectionId] = useState<string | null>(null);
+
+  const generateSectionMutation = useMutation({
+    mutationFn: async ({ sectionType, blockId }: { sectionType: string; blockId: string }) => {
+      // Collect existing content for context
+      const existingContent = blocks
+        .filter(b => b.type === "text" || b.type === "hero")
+        .map(b => b.data?.content || b.data?.title || "")
+        .join("\n");
+
+      const res = await apiRequest("POST", "/api/ai/generate-section", {
+        sectionType,
+        title: title || "Dubai Attraction",
+        existingContent,
+        contentType,
+      });
+      return { result: await res.json(), sectionType, blockId };
+    },
+    onSuccess: ({ result, sectionType, blockId }) => {
+      if (sectionType === "faq" && result.faqs) {
+        // Replace the empty FAQ block with generated FAQs
+        const newBlocks = blocks.filter(b => b.id !== blockId);
+        let orderIndex = newBlocks.length;
+        const faqBlocks = result.faqs.map((faq: { question: string; answer: string }) => ({
+          id: `faq-${Math.random().toString(36).substring(2, 9)}`,
+          type: "faq" as const,
+          data: { question: faq.question, answer: faq.answer },
+          order: orderIndex++,
+        }));
+        setBlocks([...newBlocks, ...faqBlocks]);
+        toast({ title: "FAQ Generated", description: `Generated ${result.faqs.length} FAQ items.` });
+      } else if (sectionType === "tips" && result.tips) {
+        // Update the tips block with generated content
+        updateBlock(blockId, { content: result.tips.join("\n") });
+        toast({ title: "Tips Generated", description: `Generated ${result.tips.length} tips.` });
+      } else if (sectionType === "highlights" && result.highlights) {
+        // Update the highlights block with generated content
+        const highlightText = result.highlights
+          .map((h: { title: string; description: string }) => `${h.title}: ${h.description}`)
+          .join("\n");
+        updateBlock(blockId, { content: highlightText });
+        toast({ title: "Highlights Generated", description: `Generated ${result.highlights.length} highlights.` });
+      }
+      setGeneratingSectionId(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Generation Failed", description: error.message || "Failed to generate section.", variant: "destructive" });
+      setGeneratingSectionId(null);
+    },
+  });
+
+  const handleGenerateSection = (sectionType: string, blockId: string) => {
+    if (!title) {
+      toast({ title: "Title Required", description: "Please enter a title before generating sections.", variant: "destructive" });
+      return;
+    }
+    setGeneratingSectionId(blockId);
+    generateSectionMutation.mutate({ sectionType, blockId });
+  };
+
   const { data: versions = [], isLoading: isLoadingVersions } = useQuery<ContentVersion[]>({
-    queryKey: ['/api/contents', contentId, 'versions'],
+    queryKey: [`/api/contents/${contentId}/versions`],
     enabled: !!contentId && versionHistoryOpen,
   });
 
@@ -1438,7 +1685,7 @@ export default function ContentEditor() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: [`/api/contents/${contentId}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/contents', contentId, 'versions'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contents/${contentId}/versions`] });
       setVersionHistoryOpen(false);
       setSelectedVersion(null);
       if (result) {
@@ -1459,12 +1706,27 @@ export default function ContentEditor() {
     },
   });
 
-  const wordCount = blocks.reduce((count, block) => {
-    if (block.type === "text" && typeof block.data?.content === "string") {
-      return count + block.data.content.split(/\s+/).filter(Boolean).length;
-    }
-    return count;
-  }, 0);
+  // Word count - use same logic as SEO calculation for consistency
+  const wordCount = useMemo(() => {
+    const allText = blocks.map(b => {
+      if (b.type === "text") return String(b.data?.content || '');
+      if (b.type === "hero") return String(b.data?.title || '');
+      if (b.type === "faq" && b.data?.faqs) {
+        return (b.data.faqs as Array<{question?: string; answer?: string}>)
+          .map(f => `${f.question || ''} ${f.answer || ''}`).join(' ');
+      }
+      if (b.type === "highlights" && b.data?.items) {
+        return (b.data.items as Array<{title?: string; description?: string}>)
+          .map(i => `${i.title || ''} ${i.description || ''}`).join(' ');
+      }
+      if (b.type === "tips" && b.data?.tips) {
+        return (b.data.tips as string[]).join(' ');
+      }
+      if (b.type === "cta") return String(b.data?.text || '');
+      return '';
+    }).join(' ');
+    return allText.split(/\s+/).filter(w => w.length > 0).length;
+  }, [blocks]);
 
   const seoContentText = useMemo(() => {
     return blocks.map(b => {
@@ -1519,6 +1781,21 @@ export default function ContentEditor() {
     return images;
   }, [blocks, heroImage, heroImageAlt]);
 
+  // Handler for SEO auto-fix results
+  const handleSeoAutoFix = useCallback((fixedData: Record<string, unknown>) => {
+    if (fixedData.metaTitle) setMetaTitle(fixedData.metaTitle as string);
+    if (fixedData.metaDescription) setMetaDescription(fixedData.metaDescription as string);
+    if (fixedData.primaryKeyword) setPrimaryKeyword(fixedData.primaryKeyword as string);
+    if (fixedData.heroAlt) setHeroImageAlt(fixedData.heroAlt as string);
+    if (fixedData.slug) setSlug(fixedData.slug as string);
+    toast({ title: "SEO Auto-Fixed", description: "Fields have been automatically updated." });
+  }, [toast]);
+
+  // Handler for SEO validation complete
+  const handleSeoValidationComplete = useCallback((canPublishResult: boolean) => {
+    setSeoCanPublish(canPublishResult);
+  }, []);
+
   const handleSave = () => {
     const saveData: Record<string, unknown> = {
       title,
@@ -1533,15 +1810,20 @@ export default function ContentEditor() {
       status,
     };
 
-    // Include content-type-specific SEO data
+    // Include scheduled date if status is scheduled
+    if (status === "scheduled" && scheduledDate) {
+      saveData.scheduledAt = scheduledDate.toISOString();
+    }
+
+    // Include content-type-specific SEO data (use property names expected by backend)
     if (contentType === "attraction") {
-      saveData.attractionData = attractionSeoData;
+      saveData.attraction = attractionSeoData;
     } else if (contentType === "hotel") {
-      saveData.hotelData = hotelSeoData;
+      saveData.hotel = hotelSeoData;
     } else if (contentType === "dining") {
-      saveData.diningData = diningSeoData;
+      saveData.dining = diningSeoData;
     } else if (contentType === "district") {
-      saveData.districtData = districtSeoData;
+      saveData.district = districtSeoData;
     }
 
     saveMutation.mutate(saveData);
@@ -1562,15 +1844,15 @@ export default function ContentEditor() {
       publishedAt: new Date().toISOString(),
     };
 
-    // Include content-type-specific SEO data
+    // Include content-type-specific SEO data (use property names expected by backend)
     if (contentType === "attraction") {
-      publishData.attractionData = attractionSeoData;
+      publishData.attraction = attractionSeoData;
     } else if (contentType === "hotel") {
-      publishData.hotelData = hotelSeoData;
+      publishData.hotel = hotelSeoData;
     } else if (contentType === "dining") {
-      publishData.diningData = diningSeoData;
+      publishData.dining = diningSeoData;
     } else if (contentType === "district") {
-      publishData.districtData = districtSeoData;
+      publishData.district = districtSeoData;
     }
 
     publishMutation.mutate(publishData);
@@ -1916,10 +2198,24 @@ export default function ContentEditor() {
             )}
           </div>
           {canPublish && (
-            <Button size="sm" onClick={handlePublish} disabled={publishMutation.isPending} data-testid="button-publish">
-              {publishMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
-              Publish
-            </Button>
+            <div className="flex items-center gap-2">
+              {!seoCanPublish && (
+                <div className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                  <Lock className="h-3 w-3" />
+                  <span>SEO Blocked</span>
+                </div>
+              )}
+              <Button
+                size="sm"
+                onClick={handlePublish}
+                disabled={publishMutation.isPending || !seoCanPublish}
+                data-testid="button-publish"
+                title={!seoCanPublish ? "Fix critical SEO issues before publishing" : undefined}
+              >
+                {publishMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+                Publish
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -2006,6 +2302,31 @@ export default function ContentEditor() {
 
         {/* Center - Canvas */}
         <div className="flex-1 overflow-auto bg-muted/50" ref={canvasRef} onClick={handleCanvasClick}>
+          {/* Preview Mode Container */}
+          {showPreview ? (
+            <div className="flex justify-center py-8 px-4">
+              <div
+                className={`bg-background rounded-lg shadow-lg overflow-hidden transition-all duration-300 ${
+                  previewDevice === "mobile"
+                    ? "w-[375px]"
+                    : previewDevice === "tablet"
+                      ? "w-[768px]"
+                      : "w-full max-w-4xl"
+                }`}
+              >
+                <div className="space-y-0">
+                  {blocks.map((block) => (
+                    <PreviewBlock key={block.id} block={block} title={title} />
+                  ))}
+                  {blocks.length === 0 && (
+                    <div className="text-center py-20 text-muted-foreground">
+                      <p>No content to preview</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="max-w-3xl mx-auto py-8 px-4">
             {/* Canvas blocks with Drag & Drop */}
             <DndContext
@@ -2040,6 +2361,8 @@ export default function ContentEditor() {
                         onTitleChange={setTitle}
                         onGenerateImage={() => handleGenerateImage(blockId, block.type === "hero" ? "hero" : "image")}
                         isGeneratingImage={imageGeneratingBlock === blockId}
+                        onGenerateSection={(sectionType) => handleGenerateSection(sectionType, blockId)}
+                        isGeneratingSection={generatingSectionId === blockId}
                         onContextMenu={(e) => handleContextMenu(e, blockId)}
                       />
                     );
@@ -2120,11 +2443,12 @@ export default function ContentEditor() {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Right Panel - Settings */}
-        <div className="w-80 border-l bg-background shrink-0 flex flex-col">
-          <div className="p-3 border-b">
+        <div className="w-80 border-l bg-background shrink-0 flex flex-col overflow-hidden">
+          <div className="p-3 border-b shrink-0">
             <h3 className="font-medium text-sm flex items-center gap-2">
               {selectedBlock ? (
                 <>
@@ -2139,8 +2463,8 @@ export default function ContentEditor() {
               )}
             </h3>
           </div>
-          <ScrollArea className="flex-1">
-            <div className="p-4">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-4 pb-8">
               {selectedBlock ? (
                 <BlockSettingsPanel
                   block={selectedBlock}
@@ -2162,6 +2486,8 @@ export default function ContentEditor() {
                       onSlugChange={setSlug}
                       status={status}
                       onStatusChange={setStatus}
+                      scheduledDate={scheduledDate}
+                      onScheduledDateChange={setScheduledDate}
                       metaTitle={metaTitle}
                       onMetaTitleChange={setMetaTitle}
                       metaDescription={metaDescription}
@@ -2169,6 +2495,7 @@ export default function ContentEditor() {
                       primaryKeyword={primaryKeyword}
                       onPrimaryKeywordChange={setPrimaryKeyword}
                       contentId={contentId}
+                      contentType={contentType}
                     />
                     <Separator />
                     <SeoScore
@@ -2179,6 +2506,23 @@ export default function ContentEditor() {
                       content={seoContentText}
                       headings={seoHeadings}
                       images={seoImages}
+                    />
+                    <Separator />
+                    <SEOValidationGate
+                      title={title}
+                      metaTitle={metaTitle}
+                      metaDescription={metaDescription}
+                      primaryKeyword={primaryKeyword}
+                      heroImage={heroImage}
+                      heroImageAlt={heroImageAlt}
+                      content={seoContentText}
+                      headings={seoHeadings.map(h => h.text)}
+                      blocks={blocks}
+                      slug={slug}
+                      contentType={contentType}
+                      contentId={contentId}
+                      onAutoFix={handleSeoAutoFix}
+                      onValidationComplete={handleSeoValidationComplete}
                     />
                   </TabsContent>
                   <TabsContent value="seo" className="mt-4">
@@ -2217,6 +2561,8 @@ export default function ContentEditor() {
                     onSlugChange={setSlug}
                     status={status}
                     onStatusChange={setStatus}
+                    scheduledDate={scheduledDate}
+                    onScheduledDateChange={setScheduledDate}
                     metaTitle={metaTitle}
                     onMetaTitleChange={setMetaTitle}
                     metaDescription={metaDescription}
@@ -2224,6 +2570,7 @@ export default function ContentEditor() {
                     primaryKeyword={primaryKeyword}
                     onPrimaryKeywordChange={setPrimaryKeyword}
                     contentId={contentId}
+                    contentType={contentType}
                   />
                   <Separator />
                   <SeoScore
@@ -2234,6 +2581,23 @@ export default function ContentEditor() {
                     content={seoContentText}
                     headings={seoHeadings}
                     images={seoImages}
+                  />
+                  <Separator />
+                  <SEOValidationGate
+                    title={title}
+                    metaTitle={metaTitle}
+                    metaDescription={metaDescription}
+                    primaryKeyword={primaryKeyword}
+                    heroImage={heroImage}
+                    heroImageAlt={heroImageAlt}
+                    content={seoContentText}
+                    headings={seoHeadings.map(h => h.text)}
+                    blocks={blocks}
+                    slug={slug}
+                    contentType={contentType}
+                    contentId={contentId}
+                    onAutoFix={handleSeoAutoFix}
+                    onValidationComplete={handleSeoValidationComplete}
                   />
                 </div>
               )}
@@ -2557,6 +2921,8 @@ function SortableCanvasBlock({
   onTitleChange,
   onGenerateImage,
   isGeneratingImage,
+  onGenerateSection,
+  isGeneratingSection,
   onContextMenu,
 }: {
   id: string;
@@ -2575,6 +2941,8 @@ function SortableCanvasBlock({
   onTitleChange: (title: string) => void;
   onGenerateImage: () => void;
   isGeneratingImage: boolean;
+  onGenerateSection?: (sectionType: string) => void;
+  isGeneratingSection?: boolean;
   onContextMenu?: (e: React.MouseEvent) => void;
 }) {
   const {
@@ -2662,6 +3030,8 @@ function SortableCanvasBlock({
         onUpdate={onUpdate}
         onGenerateImage={onGenerateImage}
         isGeneratingImage={isGeneratingImage}
+        onGenerateSection={onGenerateSection}
+        isGeneratingSection={isGeneratingSection}
       />
     </div>
   );
@@ -2676,6 +3046,8 @@ function CanvasBlockContent({
   onUpdate,
   onGenerateImage,
   isGeneratingImage,
+  onGenerateSection,
+  isGeneratingSection,
 }: {
   block: ContentBlock;
   isSelected: boolean;
@@ -2684,12 +3056,16 @@ function CanvasBlockContent({
   onUpdate?: (data: Record<string, unknown>) => void;
   onGenerateImage?: () => void;
   isGeneratingImage?: boolean;
+  onGenerateSection?: (sectionType: string) => void;
+  isGeneratingSection?: boolean;
 }) {
   // Provide no-op fallbacks for optional handlers (used in DragOverlay)
   const handleUpdate = onUpdate || (() => {});
   const handleTitleChange = onTitleChange || (() => {});
   const handleGenerateImage = onGenerateImage || (() => {});
+  const handleGenerateSection = onGenerateSection || (() => {});
   const generating = isGeneratingImage || false;
+  const generatingSection = isGeneratingSection || false;
 
   return (
     <div className="bg-background rounded-lg overflow-hidden">
@@ -2711,16 +3087,16 @@ function CanvasBlockContent({
           <ImageBlockCanvas block={block} onUpdate={handleUpdate} onGenerateImage={handleGenerateImage} isGeneratingImage={generating} isSelected={isSelected} />
         )}
         {block.type === "faq" && (
-          <FAQBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+          <FAQBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} onGenerateSection={handleGenerateSection} isGeneratingSection={generatingSection} />
         )}
         {block.type === "cta" && (
           <CTABlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
         )}
         {block.type === "highlights" && (
-          <HighlightsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+          <HighlightsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} onGenerateSection={handleGenerateSection} isGeneratingSection={generatingSection} />
         )}
         {block.type === "tips" && (
-          <TipsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
+          <TipsBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} onGenerateSection={handleGenerateSection} isGeneratingSection={generatingSection} />
         )}
         {block.type === "info_grid" && (
           <InfoGridBlockCanvas block={block} onUpdate={handleUpdate} isSelected={isSelected} />
@@ -2784,34 +3160,27 @@ function HeroBlockCanvas({
   isSelected: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const hasImage = !!block.data?.image;
 
-  const uploadFile = async (file: File) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/media/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) throw new Error("Upload failed");
-      const result = await response.json();
+  // Use unified image upload hook
+  const { uploadFile: upload, isUploading } = useImageUpload();
+
+  const handleUpload = async (file: File) => {
+    const result = await upload(file, {
+      showSuccessToast: true,
+      successMessage: "Hero image uploaded successfully"
+    });
+    if (result) {
       onUpdate({ image: result.url, alt: file.name });
-    } catch (error) {
-      console.error("Upload error:", error);
-    } finally {
-      setIsUploading(false);
     }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    await uploadFile(file);
+    await handleUpload(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -2833,7 +3202,7 @@ function HeroBlockCanvas({
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
-      await uploadFile(file);
+      await handleUpload(file);
     }
   };
 
@@ -2842,8 +3211,14 @@ function HeroBlockCanvas({
   };
 
   return (
-    <div 
-      className={`relative aspect-[21/9] bg-gradient-to-br from-muted to-muted/50 overflow-hidden transition-all ${isDragging ? "ring-4 ring-primary ring-inset" : ""}`}
+    <div
+      className={`relative aspect-[21/9] overflow-hidden transition-all rounded-lg ${
+        hasImage
+          ? ""
+          : isDragging
+            ? "bg-primary/5 border-2 border-dashed border-primary"
+            : "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:bg-primary/5"
+      }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -2859,39 +3234,46 @@ function HeroBlockCanvas({
       {hasImage ? (
         <div className="relative w-full h-full group">
           <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full h-full object-cover" />
-          {/* Controls to change image - visible on hover (desktop) or when selected (touch) */}
-          <div className={`absolute top-4 right-4 z-30 transition-opacity flex gap-2 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-change-upload-${block.id}`}>
+          {/* Gradient overlay for better button visibility */}
+          <div className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
+          {/* Controls to change image */}
+          <div className={`absolute top-4 right-4 z-30 transition-all flex gap-2 ${isSelected ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-change-upload-${block.id}`}>
               {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             </Button>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`hero-change-library-${block.id}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`hero-change-library-${block.id}`}>
               <FolderOpen className="h-4 w-4" />
             </Button>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); onUpdate({ image: "", alt: "" }); }} data-testid={`hero-remove-${block.id}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950" onClick={(e) => { e.stopPropagation(); onUpdate({ image: "", alt: "" }); }} data-testid={`hero-remove-${block.id}`}>
               <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
       ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10">
-          <ImagePlus className="h-12 w-12 text-muted-foreground/50" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 p-6">
+          <div className={`p-4 rounded-full transition-all ${isDragging ? "bg-primary/20 scale-110" : "bg-slate-100 dark:bg-slate-800"}`}>
+            <ImagePlus className={`h-10 w-10 transition-colors ${isDragging ? "text-primary" : "text-slate-400 dark:text-slate-500"}`} />
+          </div>
           {isDragging ? (
-            <p className="text-lg font-medium text-primary">Drop image here</p>
+            <p className="text-lg font-semibold text-primary animate-pulse">Drop image here</p>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">Drag & drop an image or</p>
+              <div className="text-center">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Hero Image</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Drag & drop or choose an option</p>
+              </div>
               <div className="flex flex-wrap gap-2 justify-center">
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-upload-${block.id}`}>
+                <Button size="sm" className="shadow-sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`hero-upload-${block.id}`}>
                   {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                   Upload
                 </Button>
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`hero-library-${block.id}`}>
+                <Button variant="outline" size="sm" className="shadow-sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`hero-library-${block.id}`}>
                   <FolderOpen className="h-4 w-4 mr-2" />
                   Library
                 </Button>
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`hero-generate-${block.id}`}>
-                  {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                  Generate
+                <Button variant="outline" size="sm" className="shadow-sm bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-violet-200 dark:border-violet-800 hover:from-violet-500/20 hover:to-purple-500/20" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`hero-generate-${block.id}`}>
+                  {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2 text-violet-500" />}
+                  <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent font-medium">AI Generate</span>
                 </Button>
               </div>
             </>
@@ -2957,34 +3339,27 @@ function ImageBlockCanvas({
   isSelected: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const hasImage = !!block.data?.image;
 
-  const uploadFile = async (file: File) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/media/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) throw new Error("Upload failed");
-      const result = await response.json();
+  // Use unified image upload hook
+  const { uploadFile: upload, isUploading } = useImageUpload();
+
+  const handleUpload = async (file: File) => {
+    const result = await upload(file, {
+      showSuccessToast: true,
+      successMessage: "Image uploaded successfully"
+    });
+    if (result) {
       onUpdate({ image: result.url, alt: file.name });
-    } catch (error) {
-      console.error("Upload error:", error);
-    } finally {
-      setIsUploading(false);
     }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    await uploadFile(file);
+    await handleUpload(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -3006,7 +3381,7 @@ function ImageBlockCanvas({
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
-      await uploadFile(file);
+      await handleUpload(file);
     }
   };
 
@@ -3030,41 +3405,52 @@ function ImageBlockCanvas({
         onChange={handleFileSelect}
       />
       {hasImage ? (
-        <div className="relative aspect-video rounded-lg overflow-hidden group">
+        <div className="relative aspect-video rounded-lg overflow-hidden group shadow-sm">
           <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full h-full object-cover" />
-          {/* Controls to change image - visible on hover (desktop) or when selected (touch) */}
-          <div className={`absolute top-4 right-4 z-10 transition-opacity flex gap-2 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-change-upload-${block.id}`}>
+          {/* Gradient overlay for better button visibility */}
+          <div className={`absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
+          {/* Controls to change image */}
+          <div className={`absolute top-3 right-3 z-10 transition-all flex gap-2 ${isSelected ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-change-upload-${block.id}`}>
               {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             </Button>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`image-change-library-${block.id}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`image-change-library-${block.id}`}>
               <FolderOpen className="h-4 w-4" />
             </Button>
-            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); onUpdate({ image: "", alt: "" }); }} data-testid={`image-remove-${block.id}`}>
+            <Button variant="secondary" size="sm" className="shadow-lg backdrop-blur-sm bg-white/90 hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950" onClick={(e) => { e.stopPropagation(); onUpdate({ image: "", alt: "" }); }} data-testid={`image-remove-${block.id}`}>
               <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
       ) : (
-        <div className={`aspect-video rounded-lg bg-muted flex flex-col items-center justify-center gap-4 transition-all ${isDragging ? "ring-4 ring-primary ring-inset" : ""}`}>
-          <ImagePlus className="h-10 w-10 text-muted-foreground/50" />
+        <div className={`aspect-video rounded-lg flex flex-col items-center justify-center gap-4 transition-all ${
+          isDragging
+            ? "bg-primary/5 border-2 border-dashed border-primary"
+            : "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:bg-primary/5"
+        }`}>
+          <div className={`p-3 rounded-full transition-all ${isDragging ? "bg-primary/20 scale-110" : "bg-slate-100 dark:bg-slate-800"}`}>
+            <ImagePlus className={`h-8 w-8 transition-colors ${isDragging ? "text-primary" : "text-slate-400 dark:text-slate-500"}`} />
+          </div>
           {isDragging ? (
-            <p className="text-lg font-medium text-primary">Drop image here</p>
+            <p className="text-lg font-semibold text-primary animate-pulse">Drop image here</p>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">Drag & drop an image or</p>
+              <div className="text-center">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Add Image</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Drag & drop or choose an option</p>
+              </div>
               <div className="flex flex-wrap gap-2 justify-center">
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-upload-${block.id}`}>
+                <Button size="sm" className="shadow-sm" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading} data-testid={`image-upload-${block.id}`}>
                   {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                   Upload
                 </Button>
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`image-library-${block.id}`}>
+                <Button variant="outline" size="sm" className="shadow-sm" onClick={(e) => { e.stopPropagation(); setShowLibrary(true); }} data-testid={`image-library-${block.id}`}>
                   <FolderOpen className="h-4 w-4 mr-2" />
                   Library
                 </Button>
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`image-generate-${block.id}`}>
-                  {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                  Generate
+                <Button variant="outline" size="sm" className="shadow-sm bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-violet-200 dark:border-violet-800 hover:from-violet-500/20 hover:to-purple-500/20" onClick={(e) => { e.stopPropagation(); onGenerateImage(); }} disabled={isGeneratingImage} data-testid={`image-generate-${block.id}`}>
+                  {isGeneratingImage ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2 text-violet-500" />}
+                  <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent font-medium">AI Generate</span>
                 </Button>
               </div>
             </>
@@ -3080,30 +3466,54 @@ function FAQBlockCanvas({
   block,
   onUpdate,
   isSelected,
+  onGenerateSection,
+  isGeneratingSection,
 }: {
   block: ContentBlock;
   onUpdate: (data: Record<string, unknown>) => void;
   isSelected: boolean;
+  onGenerateSection?: (sectionType: string) => void;
+  isGeneratingSection?: boolean;
 }) {
+  const isEmpty = !block.data?.question && !block.data?.answer;
+
   return (
     <div className="p-6 space-y-3">
-      <input
-        type="text"
-        value={String(block.data?.question || "")}
-        onChange={(e) => onUpdate({ question: e.target.value })}
-        onClick={(e) => e.stopPropagation()}
-        placeholder="Enter your question..."
-        className="w-full bg-transparent border-none outline-none text-lg font-semibold placeholder:text-muted-foreground/50 focus:ring-0"
-        data-testid={`faq-question-${block.id}`}
-      />
-      <textarea
-        value={String(block.data?.answer || "")}
-        onChange={(e) => onUpdate({ answer: e.target.value })}
-        onClick={(e) => e.stopPropagation()}
-        placeholder="Enter your answer..."
-        className="w-full min-h-[80px] bg-transparent border-none outline-none resize-none text-muted-foreground placeholder:text-muted-foreground/50 focus:ring-0"
-        data-testid={`faq-answer-${block.id}`}
-      />
+      {isEmpty && onGenerateSection ? (
+        <div className="flex flex-col items-center justify-center py-8 gap-3 bg-muted/30 rounded-lg border-2 border-dashed">
+          <HelpCircle className="h-10 w-10 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No FAQ content yet</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onGenerateSection("faq"); }}
+            disabled={isGeneratingSection}
+          >
+            {isGeneratingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            Generate FAQ
+          </Button>
+        </div>
+      ) : (
+        <>
+          <input
+            type="text"
+            value={String(block.data?.question || "")}
+            onChange={(e) => onUpdate({ question: e.target.value })}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Enter your question..."
+            className="w-full bg-transparent border-none outline-none text-lg font-semibold placeholder:text-muted-foreground/50 focus:ring-0"
+            data-testid={`faq-question-${block.id}`}
+          />
+          <textarea
+            value={String(block.data?.answer || "")}
+            onChange={(e) => onUpdate({ answer: e.target.value })}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Enter your answer..."
+            className="w-full min-h-[80px] bg-transparent border-none outline-none resize-none text-muted-foreground placeholder:text-muted-foreground/50 focus:ring-0"
+            data-testid={`faq-answer-${block.id}`}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -3147,12 +3557,17 @@ function HighlightsBlockCanvas({
   block,
   onUpdate,
   isSelected,
+  onGenerateSection,
+  isGeneratingSection,
 }: {
   block: ContentBlock;
   onUpdate: (data: Record<string, unknown>) => void;
   isSelected: boolean;
+  onGenerateSection?: (sectionType: string) => void;
+  isGeneratingSection?: boolean;
 }) {
   const content = String(block.data?.content || "");
+  const isEmpty = !content.trim();
 
   return (
     <div className="p-6">
@@ -3160,14 +3575,30 @@ function HighlightsBlockCanvas({
         <Star className="h-5 w-5 text-primary" />
         <span className="font-semibold">Highlights</span>
       </div>
-      <textarea
-        value={content}
-        onChange={(e) => onUpdate({ content: e.target.value })}
-        onClick={(e) => e.stopPropagation()}
-        placeholder="Enter highlights (one per line)..."
-        className="w-full min-h-[100px] bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground/50 focus:ring-0"
-        data-testid={`highlights-content-${block.id}`}
-      />
+      {isEmpty && onGenerateSection ? (
+        <div className="flex flex-col items-center justify-center py-6 gap-3 bg-muted/30 rounded-lg border-2 border-dashed">
+          <Star className="h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No highlights yet</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onGenerateSection("highlights"); }}
+            disabled={isGeneratingSection}
+          >
+            {isGeneratingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            Generate Highlights
+          </Button>
+        </div>
+      ) : (
+        <textarea
+          value={content}
+          onChange={(e) => onUpdate({ content: e.target.value })}
+          onClick={(e) => e.stopPropagation()}
+          placeholder="Enter highlights (one per line)..."
+          className="w-full min-h-[100px] bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground/50 focus:ring-0"
+          data-testid={`highlights-content-${block.id}`}
+        />
+      )}
     </div>
   );
 }
@@ -3177,12 +3608,17 @@ function TipsBlockCanvas({
   block,
   onUpdate,
   isSelected,
+  onGenerateSection,
+  isGeneratingSection,
 }: {
   block: ContentBlock;
   onUpdate: (data: Record<string, unknown>) => void;
   isSelected: boolean;
+  onGenerateSection?: (sectionType: string) => void;
+  isGeneratingSection?: boolean;
 }) {
   const content = String(block.data?.content || "");
+  const isEmpty = !content.trim();
 
   return (
     <div className="p-6">
@@ -3190,14 +3626,30 @@ function TipsBlockCanvas({
         <Lightbulb className="h-5 w-5 text-yellow-500" />
         <span className="font-semibold">Tips</span>
       </div>
-      <textarea
-        value={content}
-        onChange={(e) => onUpdate({ content: e.target.value })}
-        onClick={(e) => e.stopPropagation()}
-        placeholder="Enter tips (one per line)..."
-        className="w-full min-h-[100px] bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground/50 focus:ring-0"
-        data-testid={`tips-content-${block.id}`}
-      />
+      {isEmpty && onGenerateSection ? (
+        <div className="flex flex-col items-center justify-center py-6 gap-3 bg-muted/30 rounded-lg border-2 border-dashed">
+          <Lightbulb className="h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No tips yet</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onGenerateSection("tips"); }}
+            disabled={isGeneratingSection}
+          >
+            {isGeneratingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            Generate Tips
+          </Button>
+        </div>
+      ) : (
+        <textarea
+          value={content}
+          onChange={(e) => onUpdate({ content: e.target.value })}
+          onClick={(e) => e.stopPropagation()}
+          placeholder="Enter tips (one per line)..."
+          className="w-full min-h-[100px] bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground/50 focus:ring-0"
+          data-testid={`tips-content-${block.id}`}
+        />
+      )}
     </div>
   );
 }
@@ -3243,34 +3695,28 @@ function GalleryBlockCanvas({
   isSelected: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const images = (block.data?.images as Array<{ url: string; alt: string }>) || [];
 
-  const uploadFile = async (file: File) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/media/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) throw new Error("Upload failed");
-      const result = await response.json();
+  // Use unified image upload hook
+  const { uploadFile: upload, uploadFiles, isUploading } = useImageUpload();
+
+  const handleUpload = async (file: File) => {
+    const result = await upload(file, {
+      showSuccessToast: true,
+      successMessage: "Image added to gallery"
+    });
+    if (result) {
       const newImages = [...images, { url: result.url, alt: file.name.replace(/\.[^/.]+$/, "") }];
       onUpdate({ images: newImages });
-    } catch (error) {
-      console.error("Upload error:", error);
-    } finally {
-      setIsUploading(false);
     }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
+      // Upload files one by one to maintain gallery order
       for (const file of Array.from(files)) {
-        await uploadFile(file);
+        await handleUpload(file);
       }
     }
     e.target.value = "";
@@ -3589,8 +4035,8 @@ function MapBlockCanvas({
   const lng = Number(block.data?.lng || 55.2708);
 
   const mapUrl = address
-    ? `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(address)}`
-    : `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${lat},${lng}&zoom=14`;
+    ? `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(address)}`
+    : `https://www.google.com/maps/embed/v1/view?key=${GOOGLE_MAPS_API_KEY}&center=${lat},${lng}&zoom=14`;
 
   return (
     <div className={`p-4 ${isSelected ? "bg-muted/30" : ""}`} onClick={(e) => e.stopPropagation()}>
@@ -3895,7 +4341,7 @@ function HtmlBlockCanvas({
         {showPreview ? (
           <div
             className="border rounded-lg p-4 min-h-[100px] bg-background"
-            dangerouslySetInnerHTML={{ __html: code }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(code, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling'] }) }}
           />
         ) : (
           <Textarea
@@ -3928,7 +4374,15 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
   if (block.type === "text") {
     return (
       <div className="p-8">
-        <p className="text-lg leading-relaxed">{String(block.data?.content || "")}</p>
+        <p className="text-lg leading-relaxed whitespace-pre-wrap">{String(block.data?.content || "")}</p>
+      </div>
+    );
+  }
+
+  if (block.type === "heading") {
+    return (
+      <div className="p-8">
+        <h2 className="text-2xl font-bold">{String(block.data?.content || "")}</h2>
       </div>
     );
   }
@@ -3937,15 +4391,115 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     return (
       <div className="p-8">
         <img src={String(block.data.image)} alt={String(block.data?.alt || "")} className="w-full rounded-lg" />
+        {block.data?.caption ? <p className="text-sm text-muted-foreground text-center mt-2">{String(block.data.caption)}</p> : null}
+      </div>
+    );
+  }
+
+  if (block.type === "gallery") {
+    const images = (block.data?.images as Array<{ url: string; alt: string }>) || [];
+    if (images.length === 0) return null;
+    return (
+      <div className="p-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {images.map((img: { url: string; alt: string }, i: number) => (
+            <img key={i} src={img.url} alt={img.alt} className="w-full aspect-square object-cover rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "video") {
+    const videoUrl = String(block.data?.url || "");
+    if (!videoUrl) return null;
+    return (
+      <div className="p-8">
+        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+          <iframe src={videoUrl} className="w-full h-full border-0" allowFullScreen />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "quote") {
+    return (
+      <div className="p-8">
+        <blockquote className="border-l-4 border-primary pl-6 italic text-lg">
+          <p>{String(block.data?.content || "")}</p>
+          {block.data?.author ? <cite className="block mt-2 text-sm text-muted-foreground">— {String(block.data.author)}</cite> : null}
+        </blockquote>
+      </div>
+    );
+  }
+
+  if (block.type === "divider") {
+    return (
+      <div className="p-8">
+        <hr className="border-t border-border" />
       </div>
     );
   }
 
   if (block.type === "faq") {
     return (
-      <div className="p-8 space-y-2">
+      <div className="p-8 space-y-2 border-b last:border-b-0">
         <h3 className="text-xl font-semibold">{String(block.data?.question || "Question")}</h3>
         <p className="text-muted-foreground">{String(block.data?.answer || "Answer")}</p>
+      </div>
+    );
+  }
+
+  if (block.type === "tips") {
+    const content = String(block.data?.content || "");
+    if (!content) return null;
+    return (
+      <div className="p-8">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+          <div className="flex gap-3">
+            <Lightbulb className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-amber-900">{content}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "highlights") {
+    const items = (block.data?.items as string[]) || [];
+    if (items.length === 0) return null;
+    return (
+      <div className="p-8">
+        <div className="bg-primary/5 rounded-lg p-6">
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Star className="h-5 w-5 text-primary" />
+            Highlights
+          </h3>
+          <ul className="space-y-2">
+            {items.map((item: string, i: number) => (
+              <li key={i} className="flex items-start gap-2">
+                <Check className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === "map") {
+    const address = String(block.data?.address || "");
+    if (!address) return null;
+    const mapUrl = `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(address)}`;
+    return (
+      <div className="p-8">
+        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+          <iframe src={mapUrl} className="w-full h-full border-0" loading="lazy" />
+        </div>
+        <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
+          <MapPin className="h-3 w-3" /> {address}
+        </p>
       </div>
     );
   }
@@ -3958,6 +4512,20 @@ function PreviewBlock({ block, title }: { block: ContentBlock; title: string }) 
     );
   }
 
+  if (block.type === "html") {
+    const code = String(block.data?.code || "");
+    if (!code) return null;
+    return (
+      <div className="p-8">
+        <div
+          className="rounded-lg overflow-hidden"
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(code, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling'] }) }}
+        />
+      </div>
+    );
+  }
+
+  // Fallback for unknown block types - show a placeholder in preview
   return null;
 }
 
@@ -4140,6 +4708,8 @@ function PageSettingsPanel({
   onSlugChange,
   status,
   onStatusChange,
+  scheduledDate,
+  onScheduledDateChange,
   metaTitle,
   onMetaTitleChange,
   metaDescription,
@@ -4147,6 +4717,7 @@ function PageSettingsPanel({
   primaryKeyword,
   onPrimaryKeywordChange,
   contentId,
+  contentType = "article",
 }: {
   title: string;
   onTitleChange: (v: string) => void;
@@ -4154,6 +4725,8 @@ function PageSettingsPanel({
   onSlugChange: (v: string) => void;
   status: string;
   onStatusChange: (v: string) => void;
+  scheduledDate?: Date;
+  onScheduledDateChange?: (v: Date | undefined) => void;
   metaTitle: string;
   onMetaTitleChange: (v: string) => void;
   metaDescription: string;
@@ -4161,6 +4734,7 @@ function PageSettingsPanel({
   primaryKeyword: string;
   onPrimaryKeywordChange: (v: string) => void;
   contentId?: string;
+  contentType?: string;
 }) {
   return (
     <div className="space-y-6">
@@ -4172,7 +4746,8 @@ function PageSettingsPanel({
             <Label>Title</Label>
             <AITitleSuggestions
               currentTitle={title}
-              onSelect={(newTitle) => {
+              contentType={contentType}
+              onSelectTitle={(newTitle: string) => {
                 onTitleChange(newTitle);
                 if (!slug || slug === generateSlug(title)) {
                   onSlugChange(generateSlug(newTitle));
@@ -4220,6 +4795,46 @@ function PageSettingsPanel({
             </SelectContent>
           </Select>
         </div>
+        {status === "scheduled" && onScheduledDateChange && (
+          <div className="space-y-2">
+            <Label>Scheduled Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                  data-testid="settings-scheduled-date"
+                >
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {scheduledDate ? format(scheduledDate, "PPP 'at' p") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={scheduledDate}
+                  onSelect={onScheduledDateChange}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                />
+                <div className="p-3 border-t">
+                  <Label className="text-xs text-muted-foreground">Time</Label>
+                  <Input
+                    type="time"
+                    value={scheduledDate ? format(scheduledDate, "HH:mm") : "12:00"}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(":").map(Number);
+                      const newDate = scheduledDate ? new Date(scheduledDate) : new Date();
+                      newDate.setHours(hours, minutes, 0, 0);
+                      onScheduledDateChange(newDate);
+                    }}
+                    className="mt-1"
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
 
       <Separator />

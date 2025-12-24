@@ -70,7 +70,7 @@ function PromotionsList({ section }: { section: HomepageSection }) {
   });
 
   const { data: publishedContents = [] } = useQuery<Content[]>({
-    queryKey: ["/api/contents", { status: "published" }],
+    queryKey: ["/api/contents?status=published"],
   });
 
   const filteredContents = publishedContents.filter((c) => {

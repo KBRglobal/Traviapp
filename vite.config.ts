@@ -30,6 +30,17 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // Enable minification for better performance
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log in production
+        drop_debugger: true,
+      },
+    },
+    // CSS optimization
+    cssMinify: true,
+    cssCodeSplit: true,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -71,11 +82,15 @@ export default defineConfig({
           'query-vendor': ['@tanstack/react-query'],
           // Icons
           'icons-vendor': ['lucide-react'],
+          // DnD kit - large library, separate chunk
+          'dnd-vendor': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
         },
       },
     },
     // Increase chunk size warning limit since we're splitting
     chunkSizeWarningLimit: 600,
+    // Enable source maps for debugging in production (optional)
+    sourcemap: false,
   },
   server: {
     fs: {

@@ -10,6 +10,13 @@ import { docUploadService } from "./doc-upload-service";
 import { db } from "./db";
 import { hotels, articles, attractions } from "@shared/schema";
 
+// Security: Sanitize user input for logging to prevent log injection
+function sanitizeForLog(input: string): string {
+  if (!input) return "";
+  // Remove newlines, carriage returns, and null bytes to prevent log injection
+  return input.replace(/[\r\n\x00]/g, "").substring(0, 200);
+}
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -53,7 +60,7 @@ export function registerDocUploadRoutes(app: Express) {
 
         const contentType = (req.body.contentType || 'article') as 'hotel' | 'article' | 'attraction' | 'dining' | 'district';
 
-        console.log(`[DocUpload] Parsing file: ${req.file.originalname} as ${contentType}`);
+        console.log(`[DocUpload] Parsing file: ${sanitizeForLog(req.file.originalname)} as ${contentType}`);
 
         const result = await docUploadService.processDocUpload(
           req.file.buffer,
@@ -101,7 +108,7 @@ export function registerDocUploadRoutes(app: Express) {
         const locale = req.body.locale || 'en';
         const category = req.body.category;
 
-        console.log(`[DocUpload] Importing file: ${req.file.originalname} as ${contentType}`);
+        console.log(`[DocUpload] Importing file: ${sanitizeForLog(req.file.originalname)} as ${contentType}`);
 
         const result = await docUploadService.processDocUpload(
           req.file.buffer,

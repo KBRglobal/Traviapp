@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
+import { useUrlState } from "@/hooks/use-url-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -157,14 +158,26 @@ export default function ContentList({ type }: ContentListProps) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const config = typeConfig[type];
-  
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // URL-synced filter state - persists across page refreshes and enables shareable links
+  const [urlState, setUrlState] = useUrlState({
+    search: "",
+    status: "all",
+    view: "table",
+  });
+
+  const searchQuery = urlState.search;
+  const statusFilter = urlState.status;
+  const viewMode = urlState.view as "table" | "kanban";
+
+  const setSearchQuery = (value: string) => setUrlState({ search: value });
+  const setStatusFilter = (value: string) => setUrlState({ status: value });
+  const setViewMode = (value: "table" | "kanban") => setUrlState({ view: value });
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleteWarnings, setDeleteWarnings] = useState<DeleteWarning[]>([]);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [isCheckingDelete, setIsCheckingDelete] = useState(false);
-  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 
   const { data: contents, isLoading } = useQuery<ContentWithRelations[]>({
     queryKey: [`/api/contents?type=${type}`],
@@ -174,19 +187,35 @@ export default function ContentList({ type }: ContentListProps) {
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/contents/${id}`);
     },
+    // Optimistic update: remove item immediately
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: [`/api/contents?type=${type}`] });
+      const previousContents = queryClient.getQueryData<ContentWithRelations[]>([`/api/contents?type=${type}`]);
+      queryClient.setQueryData<ContentWithRelations[]>(
+        [`/api/contents?type=${type}`],
+        (old) => old?.filter((item) => item.id !== id) ?? []
+      );
+      return { previousContents };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${type}`] });
       toast({
         title: "Content deleted",
         description: "The content has been deleted successfully.",
       });
     },
-    onError: () => {
+    onError: (_err, _id, context) => {
+      // Rollback on error
+      if (context?.previousContents) {
+        queryClient.setQueryData([`/api/contents?type=${type}`], context.previousContents);
+      }
       toast({
         title: "Error",
         description: "Failed to delete content. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${type}`] });
     },
   });
 
@@ -196,13 +225,33 @@ export default function ContentList({ type }: ContentListProps) {
     mutationFn: async (data: { ids: string[]; status: string }) => {
       await apiRequest("POST", "/api/contents/bulk-status", data);
     },
+    // Optimistic update: change status immediately
+    onMutate: async (data: { ids: string[]; status: string }) => {
+      await queryClient.cancelQueries({ queryKey: [`/api/contents?type=${type}`] });
+      const previousContents = queryClient.getQueryData<ContentWithRelations[]>([`/api/contents?type=${type}`]);
+      queryClient.setQueryData<ContentWithRelations[]>(
+        [`/api/contents?type=${type}`],
+        (old) =>
+          old?.map((item) =>
+            data.ids.includes(item.id)
+              ? { ...item, status: data.status as ContentWithRelations["status"] }
+              : item
+          ) ?? []
+      );
+      return { previousContents };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${type}`] });
       setSelectedIds([]);
       toast({ title: "Status updated", description: "Selected items have been updated." });
     },
-    onError: () => {
+    onError: (_err, _data, context) => {
+      if (context?.previousContents) {
+        queryClient.setQueryData([`/api/contents?type=${type}`], context.previousContents);
+      }
       toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${type}`] });
     },
   });
 
@@ -210,13 +259,28 @@ export default function ContentList({ type }: ContentListProps) {
     mutationFn: async (ids: string[]) => {
       await apiRequest("POST", "/api/contents/bulk-delete", { ids });
     },
+    // Optimistic update: remove items immediately
+    onMutate: async (ids: string[]) => {
+      await queryClient.cancelQueries({ queryKey: [`/api/contents?type=${type}`] });
+      const previousContents = queryClient.getQueryData<ContentWithRelations[]>([`/api/contents?type=${type}`]);
+      queryClient.setQueryData<ContentWithRelations[]>(
+        [`/api/contents?type=${type}`],
+        (old) => old?.filter((item) => !ids.includes(item.id)) ?? []
+      );
+      return { previousContents };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${type}`] });
       setSelectedIds([]);
       toast({ title: "Deleted", description: "Selected items have been deleted." });
     },
-    onError: () => {
+    onError: (_err, _ids, context) => {
+      if (context?.previousContents) {
+        queryClient.setQueryData([`/api/contents?type=${type}`], context.previousContents);
+      }
       toast({ title: "Error", description: "Failed to delete items.", variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contents?type=${type}`] });
     },
   });
 
@@ -355,8 +419,7 @@ export default function ContentList({ type }: ContentListProps) {
   ];
 
   const handleClearFilters = () => {
-    setSearchQuery("");
-    setStatusFilter("all");
+    setUrlState({ search: "", status: "all" });
   };
 
   const hasFilters = searchQuery || statusFilter !== "all";

@@ -50,12 +50,18 @@ export default function MediaLibrary() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
-      const response = await fetch("/api/media/upload", {
+      const response = await fetch("/api/images/upload", {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
-      if (!response.ok) throw new Error("Upload failed");
-      return response.json();
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Upload failed" }));
+        throw new Error(error.error || "Upload failed");
+      }
+      const result = await response.json();
+      // Map new API response to expected format
+      return result.image || result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/media"] });

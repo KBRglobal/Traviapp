@@ -114,9 +114,9 @@ function analyzeSEO(content: ContentWithRelations): SEOIssue[] {
     issues.push({ type: "warning", category: "Content", message: "Content could be longer (< 800 words)", field: "content" });
   }
 
-  // Featured image
-  if (!content.featuredImage) {
-    issues.push({ type: "warning", category: "Images", message: "Missing featured image", field: "featuredImage" });
+  // Featured/Hero image
+  if (!content.heroImage) {
+    issues.push({ type: "warning", category: "Images", message: "Missing hero image", field: "heroImage" });
   }
 
   // SEO score

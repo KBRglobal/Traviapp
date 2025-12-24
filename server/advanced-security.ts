@@ -8,10 +8,11 @@
  */
 
 import { db } from "./db";
-import { users, auditLogs } from "@shared/schema";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { users, auditLogs, twoFactorSecrets } from "@shared/schema";
+import { eq, desc, and, gte, lte, sql, like } from "drizzle-orm";
 import { cache } from "./cache";
 import * as crypto from "crypto";
+import { authenticator } from "otplib";
 
 // ============================================================================
 // RATE LIMITING
@@ -172,43 +173,51 @@ export const rateLimiter = {
 // TWO-FACTOR AUTHENTICATION
 // ============================================================================
 
-interface TwoFactorSecret {
-  secret: string;
-  backupCodes: string[];
-  verified: boolean;
-  createdAt: Date;
-}
-
-// In-memory 2FA store (use database in production)
-const twoFactorStore: Map<string, TwoFactorSecret> = new Map();
+// In-memory cache for fast lookups (synced with DB)
+const twoFactorCache: Map<string, { secret: string; backupCodes: string[]; verified: boolean }> = new Map();
 
 export const twoFactorAuth = {
   /**
-   * Generate TOTP secret for user
+   * Generate TOTP secret for user (RFC 6238 compliant)
+   * Persists to database for durability
    */
   async generateSecret(userId: string): Promise<{
     secret: string;
     qrCodeUrl: string;
     backupCodes: string[];
   }> {
-    // Generate random secret (would use speakeasy or otplib in production)
-    const secret = crypto.randomBytes(20).toString("hex").substring(0, 16).toUpperCase();
+    // Generate RFC 6238 compliant base32 secret using otplib
+    const secret = authenticator.generateSecret();
 
     // Generate backup codes
     const backupCodes = Array.from({ length: 10 }, () =>
       crypto.randomBytes(4).toString("hex").toUpperCase()
     );
 
-    // Store secret (not verified yet)
-    twoFactorStore.set(userId, {
-      secret,
-      backupCodes,
-      verified: false,
-      createdAt: new Date(),
-    });
+    // Store secret in database (upsert in case user regenerates)
+    await db
+      .insert(twoFactorSecrets)
+      .values({
+        userId,
+        secret,
+        backupCodes,
+        verified: false,
+      })
+      .onConflictDoUpdate({
+        target: twoFactorSecrets.userId,
+        set: {
+          secret,
+          backupCodes,
+          verified: false,
+          updatedAt: new Date(),
+        },
+      });
 
-    // Generate QR code URL (for apps like Google Authenticator)
-    const qrCodeUrl = `otpauth://totp/Travi:${userId}?secret=${secret}&issuer=Travi`;
+    // Update cache
+    twoFactorCache.set(userId, { secret, backupCodes, verified: false });
+
+    // Generate QR code URL using otplib (RFC 6238 compliant)
+    const qrCodeUrl = authenticator.keyuri(userId, "Travi CMS", secret);
 
     return { secret, qrCodeUrl, backupCodes };
   },
@@ -217,15 +226,20 @@ export const twoFactorAuth = {
    * Verify TOTP code and enable 2FA
    */
   async verifyAndEnable(userId: string, code: string): Promise<boolean> {
-    const stored = twoFactorStore.get(userId);
+    const stored = await this.getStoredSecret(userId);
     if (!stored) return false;
 
-    // Verify code (simplified - use speakeasy.totp.verify in production)
     const isValid = this.verifyCode(stored.secret, code);
 
     if (isValid) {
-      stored.verified = true;
-      twoFactorStore.set(userId, stored);
+      // Update database
+      await db
+        .update(twoFactorSecrets)
+        .set({ verified: true, updatedAt: new Date() })
+        .where(eq(twoFactorSecrets.userId, userId));
+
+      // Update cache
+      twoFactorCache.set(userId, { ...stored, verified: true });
 
       // Log 2FA enabled
       await auditLogger.log({
@@ -240,34 +254,52 @@ export const twoFactorAuth = {
   },
 
   /**
-   * Verify TOTP code
+   * Get stored 2FA secret (from cache or DB)
    */
-  verifyCode(secret: string, code: string): boolean {
-    // Simplified TOTP verification
-    // In production, use: speakeasy.totp.verify({ secret, encoding: 'base32', token: code })
-    const timeStep = Math.floor(Date.now() / 30000);
-    const expectedCode = this.generateCode(secret, timeStep);
-    const previousCode = this.generateCode(secret, timeStep - 1);
+  async getStoredSecret(userId: string): Promise<{ secret: string; backupCodes: string[]; verified: boolean } | null> {
+    // Check cache first
+    const cached = twoFactorCache.get(userId);
+    if (cached) return cached;
 
-    return code === expectedCode || code === previousCode;
+    // Fallback to database
+    const [stored] = await db
+      .select()
+      .from(twoFactorSecrets)
+      .where(eq(twoFactorSecrets.userId, userId));
+
+    if (!stored) return null;
+
+    // Update cache
+    const data = { secret: stored.secret, backupCodes: stored.backupCodes || [], verified: stored.verified };
+    twoFactorCache.set(userId, data);
+    return data;
   },
 
   /**
-   * Generate TOTP code (simplified)
+   * Verify TOTP code (RFC 6238 compliant)
    */
-  generateCode(secret: string, counter: number): string {
-    // Simplified - use proper HOTP/TOTP library in production
-    const hash = crypto.createHmac("sha1", secret)
-      .update(counter.toString())
-      .digest("hex");
-    return (parseInt(hash.substring(0, 8), 16) % 1000000).toString().padStart(6, "0");
+  verifyCode(secret: string, code: string): boolean {
+    try {
+      // Use otplib's authenticator for RFC 6238 compliant verification
+      // Includes time window tolerance for clock drift
+      return authenticator.verify({ token: code, secret });
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Generate current TOTP code (RFC 6238 compliant)
+   */
+  generateCode(secret: string): string {
+    return authenticator.generate(secret);
   },
 
   /**
    * Check if user has 2FA enabled
    */
   async isEnabled(userId: string): Promise<boolean> {
-    const stored = twoFactorStore.get(userId);
+    const stored = await this.getStoredSecret(userId);
     return stored?.verified === true;
   },
 
@@ -278,7 +310,7 @@ export const twoFactorAuth = {
     success: boolean;
     usedBackupCode?: boolean;
   }> {
-    const stored = twoFactorStore.get(userId);
+    const stored = await this.getStoredSecret(userId);
     if (!stored || !stored.verified) {
       return { success: false };
     }
@@ -292,13 +324,22 @@ export const twoFactorAuth = {
     const backupIndex = stored.backupCodes.indexOf(code.toUpperCase());
     if (backupIndex !== -1) {
       // Remove used backup code
-      stored.backupCodes.splice(backupIndex, 1);
-      twoFactorStore.set(userId, stored);
+      const newBackupCodes = [...stored.backupCodes];
+      newBackupCodes.splice(backupIndex, 1);
+
+      // Update database
+      await db
+        .update(twoFactorSecrets)
+        .set({ backupCodes: newBackupCodes, updatedAt: new Date() })
+        .where(eq(twoFactorSecrets.userId, userId));
+
+      // Update cache
+      twoFactorCache.set(userId, { ...stored, backupCodes: newBackupCodes });
 
       await auditLogger.log({
         action: "security:2fa_backup_code_used",
         userId,
-        details: { remainingBackupCodes: stored.backupCodes.length },
+        details: { remainingBackupCodes: newBackupCodes.length },
         severity: "warning",
       });
 
@@ -312,8 +353,16 @@ export const twoFactorAuth = {
    * Disable 2FA for user
    */
   async disable(userId: string, adminId?: string): Promise<boolean> {
-    const existed = twoFactorStore.has(userId);
-    twoFactorStore.delete(userId);
+    const stored = await this.getStoredSecret(userId);
+    const existed = !!stored;
+
+    // Delete from database
+    await db
+      .delete(twoFactorSecrets)
+      .where(eq(twoFactorSecrets.userId, userId));
+
+    // Remove from cache
+    twoFactorCache.delete(userId);
 
     if (existed) {
       await auditLogger.log({
@@ -331,15 +380,21 @@ export const twoFactorAuth = {
    * Regenerate backup codes
    */
   async regenerateBackupCodes(userId: string): Promise<string[] | null> {
-    const stored = twoFactorStore.get(userId);
+    const stored = await this.getStoredSecret(userId);
     if (!stored || !stored.verified) return null;
 
     const newCodes = Array.from({ length: 10 }, () =>
       crypto.randomBytes(4).toString("hex").toUpperCase()
     );
 
-    stored.backupCodes = newCodes;
-    twoFactorStore.set(userId, stored);
+    // Update database
+    await db
+      .update(twoFactorSecrets)
+      .set({ backupCodes: newCodes, updatedAt: new Date() })
+      .where(eq(twoFactorSecrets.userId, userId));
+
+    // Update cache
+    twoFactorCache.set(userId, { ...stored, backupCodes: newCodes });
 
     await auditLogger.log({
       action: "security:2fa_backup_codes_regenerated",
@@ -467,39 +522,76 @@ export const auditLogger = {
     logs: Array<AuditLogEntry & { id: string; timestamp: Date }>;
     total: number;
   }> {
-    let filtered = [...auditLogStore];
+    // Read from database for persistence (not just in-memory)
+    try {
+      const conditions = [];
 
-    if (filters.userId) {
-      filtered = filtered.filter(l => l.userId === filters.userId);
-    }
-    if (filters.action) {
-      filtered = filtered.filter(l => l.action.includes(filters.action!));
-    }
-    if (filters.severity) {
-      filtered = filtered.filter(l => l.severity === filters.severity);
-    }
-    if (filters.startDate) {
-      filtered = filtered.filter(l => l.timestamp >= filters.startDate!);
-    }
-    if (filters.endDate) {
-      filtered = filtered.filter(l => l.timestamp <= filters.endDate!);
-    }
+      if (filters.userId) {
+        conditions.push(eq(auditLogs.userId, filters.userId));
+      }
+      if (filters.action) {
+        conditions.push(like(auditLogs.description, `%${filters.action}%`));
+      }
+      if (filters.startDate) {
+        conditions.push(gte(auditLogs.timestamp, filters.startDate));
+      }
+      if (filters.endDate) {
+        conditions.push(lte(auditLogs.timestamp, filters.endDate));
+      }
 
-    // Sort by timestamp descending
-    filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const total = filtered.length;
-    const offset = filters.offset || 0;
-    const limit = filters.limit || 50;
+      // Get total count
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(auditLogs)
+        .where(whereClause);
+      const total = Number(countResult[0]?.count || 0);
 
-    return {
-      logs: filtered.slice(offset, offset + limit),
-      total,
-    };
+      // Get paginated results
+      const offset = filters.offset || 0;
+      const limit = filters.limit || 50;
+
+      const results = await db
+        .select()
+        .from(auditLogs)
+        .where(whereClause)
+        .orderBy(desc(auditLogs.timestamp))
+        .limit(limit)
+        .offset(offset);
+
+      // Transform to expected format
+      const logs: Array<AuditLogEntry & { id: string; timestamp: Date }> = results.map(row => ({
+        id: row.id,
+        timestamp: row.timestamp,
+        action: row.description,
+        userId: row.userId,
+        targetType: row.entityType as string,
+        targetId: row.entityId ?? undefined,
+        details: row.afterState || {},
+        severity: "info" as const,
+        ipAddress: row.ipAddress ?? undefined,
+        userAgent: row.userAgent ?? undefined,
+      }));
+
+      return { logs, total };
+    } catch (error) {
+      console.error("Error fetching audit logs from database:", error);
+      // Fallback to in-memory if database fails
+      let filtered = [...auditLogStore];
+      if (filters.userId) filtered = filtered.filter(l => l.userId === filters.userId);
+      if (filters.action) filtered = filtered.filter(l => l.action.includes(filters.action!));
+      if (filters.startDate) filtered = filtered.filter(l => l.timestamp >= filters.startDate!);
+      if (filters.endDate) filtered = filtered.filter(l => l.timestamp <= filters.endDate!);
+      filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      const offset = filters.offset || 0;
+      const limit = filters.limit || 50;
+      return { logs: filtered.slice(offset, offset + limit), total: filtered.length };
+    }
   },
 
   /**
-   * Get user activity summary
+   * Get user activity summary from database
    */
   async getUserActivity(userId: string, days: number = 30): Promise<{
     totalActions: number;
@@ -508,31 +600,43 @@ export const auditLogger = {
     recentActivity: Array<{ action: string; timestamp: Date }>;
   }> {
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    const userLogs = auditLogStore.filter(
-      l => l.userId === userId && l.timestamp >= cutoff
-    );
 
-    const byAction: Record<string, number> = {};
-    const bySeverity: Record<string, number> = {};
+    try {
+      const userLogs = await db
+        .select()
+        .from(auditLogs)
+        .where(and(
+          eq(auditLogs.userId, userId),
+          gte(auditLogs.timestamp, cutoff)
+        ))
+        .orderBy(desc(auditLogs.timestamp));
 
-    for (const log of userLogs) {
-      byAction[log.action] = (byAction[log.action] || 0) + 1;
-      bySeverity[log.severity] = (bySeverity[log.severity] || 0) + 1;
+      const byAction: Record<string, number> = {};
+      const bySeverity: Record<string, number> = {};
+
+      for (const log of userLogs) {
+        const actionType = log.actionType || "unknown";
+        byAction[actionType] = (byAction[actionType] || 0) + 1;
+        bySeverity["info"] = (bySeverity["info"] || 0) + 1;
+      }
+
+      return {
+        totalActions: userLogs.length,
+        byAction,
+        bySeverity,
+        recentActivity: userLogs.slice(0, 10).map(l => ({
+          action: l.description,
+          timestamp: l.timestamp,
+        })),
+      };
+    } catch (error) {
+      console.error("Error fetching user activity from database:", error);
+      return { totalActions: 0, byAction: {}, bySeverity: {}, recentActivity: [] };
     }
-
-    return {
-      totalActions: userLogs.length,
-      byAction,
-      bySeverity,
-      recentActivity: userLogs.slice(0, 10).map(l => ({
-        action: l.action,
-        timestamp: l.timestamp,
-      })),
-    };
   },
 
   /**
-   * Get security summary
+   * Get security summary from database
    */
   async getSecuritySummary(hours: number = 24): Promise<{
     totalEvents: number;
@@ -543,42 +647,54 @@ export const auditLogger = {
     suspiciousIps: Array<{ ip: string; events: number }>;
   }> {
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
-    const recentLogs = auditLogStore.filter(l => l.timestamp >= cutoff);
 
-    const actionCounts: Record<string, number> = {};
-    const ipCounts: Record<string, number> = {};
-    let warnings = 0, errors = 0, critical = 0;
+    try {
+      const recentLogs = await db
+        .select()
+        .from(auditLogs)
+        .where(gte(auditLogs.timestamp, cutoff));
 
-    for (const log of recentLogs) {
-      actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
+      const actionCounts: Record<string, number> = {};
+      const ipCounts: Record<string, number> = {};
+      let warnings = 0, errors = 0, critical = 0;
 
-      if (log.ipAddress) {
-        ipCounts[log.ipAddress] = (ipCounts[log.ipAddress] || 0) + 1;
+      for (const log of recentLogs) {
+        const actionType = log.actionType || "unknown";
+        actionCounts[actionType] = (actionCounts[actionType] || 0) + 1;
+
+        if (log.ipAddress) {
+          ipCounts[log.ipAddress] = (ipCounts[log.ipAddress] || 0) + 1;
+        }
+
+        // Check description for severity indicators
+        const desc = log.description.toLowerCase();
+        if (desc.includes("warning") || desc.includes("failed")) warnings++;
+        else if (desc.includes("error")) errors++;
+        else if (desc.includes("critical") || desc.includes("breach")) critical++;
       }
 
-      if (log.severity === "warning") warnings++;
-      else if (log.severity === "error") errors++;
-      else if (log.severity === "critical") critical++;
+      // Find suspicious IPs (many events)
+      const suspiciousIps = Object.entries(ipCounts)
+        .filter(([, count]) => count > 50)
+        .map(([ip, events]) => ({ ip, events }))
+        .sort((a, b) => b.events - a.events)
+        .slice(0, 10);
+
+      return {
+        totalEvents: recentLogs.length,
+        warnings,
+        errors,
+        critical,
+        topActions: Object.entries(actionCounts)
+          .map(([action, count]) => ({ action, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10),
+        suspiciousIps,
+      };
+    } catch (error) {
+      console.error("Error fetching security summary from database:", error);
+      return { totalEvents: 0, warnings: 0, errors: 0, critical: 0, topActions: [], suspiciousIps: [] };
     }
-
-    // Find suspicious IPs (many events or mostly warnings/errors)
-    const suspiciousIps = Object.entries(ipCounts)
-      .filter(([, count]) => count > 50)
-      .map(([ip, events]) => ({ ip, events }))
-      .sort((a, b) => b.events - a.events)
-      .slice(0, 10);
-
-    return {
-      totalEvents: recentLogs.length,
-      warnings,
-      errors,
-      critical,
-      topActions: Object.entries(actionCounts)
-        .map(([action, count]) => ({ action, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10),
-      suspiciousIps,
-    };
   },
 
   /**

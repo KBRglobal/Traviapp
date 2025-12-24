@@ -1,4 +1,4 @@
-import { eq, desc, sql, and, ilike, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, ilike, inArray, or } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
@@ -8,7 +8,9 @@ import {
   articles,
   events,
   itineraries,
+  dining,
   districts,
+  transports,
   rssFeeds,
   affiliateLinks,
   mediaFiles,
@@ -20,6 +22,7 @@ import {
   contentFingerprints,
   contentViews,
   auditLogs,
+  rateLimits,
   newsletterSubscribers,
   contentClusters,
   clusterMembers,
@@ -43,7 +46,12 @@ import {
   type InsertEvent,
   type Itinerary,
   type InsertItinerary,
+  type Dining,
+  type InsertDining,
   type District,
+  type InsertDistrict,
+  type Transport,
+  type InsertTransport,
   type RssFeed,
   type InsertRssFeed,
   type AffiliateLink,
@@ -181,7 +189,7 @@ export interface IStorage {
   getTopicBankItems(filters?: { category?: string; isActive?: boolean }): Promise<TopicBank[]>;
   getTopicBankItem(id: string): Promise<TopicBank | undefined>;
   createTopicBankItem(item: InsertTopicBank): Promise<TopicBank>;
-  updateTopicBankItem(id: string, data: Partial<InsertTopicBank>): Promise<TopicBank | undefined>;
+  updateTopicBankItem(id: string, data: Partial<Omit<TopicBank, 'id' | 'createdAt'>>): Promise<TopicBank | undefined>;
   deleteTopicBankItem(id: string): Promise<boolean>;
   incrementTopicUsage(id: string): Promise<TopicBank | undefined>;
 
@@ -281,7 +289,7 @@ export interface IStorage {
   getCampaigns(): Promise<NewsletterCampaign[]>;
   getCampaign(id: string): Promise<NewsletterCampaign | undefined>;
   createCampaign(campaign: InsertCampaign): Promise<NewsletterCampaign>;
-  updateCampaign(id: string, data: Partial<InsertCampaign>): Promise<NewsletterCampaign | undefined>;
+  updateCampaign(id: string, data: Partial<NewsletterCampaign>): Promise<NewsletterCampaign | undefined>;
   deleteCampaign(id: string): Promise<boolean>;
 
   // Campaign Events
@@ -409,9 +417,19 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getContents(filters?: { type?: string; status?: string; search?: string }): Promise<Content[]> {
+  async getContents(filters?: {
+    type?: string;
+    status?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Content[]> {
+    // Set default limit with max cap to prevent memory issues
+    const limit = Math.min(filters?.limit || 50, 200);
+    const offset = filters?.offset || 0;
+
     let query = db.select().from(contents);
-    
+
     const conditions = [];
     // Filter out soft-deleted content
     conditions.push(sql`${contents.deletedAt} IS NULL`);
@@ -424,52 +442,103 @@ export class DatabaseStorage implements IStorage {
     if (filters?.search) {
       conditions.push(ilike(contents.title, `%${filters.search}%`));
     }
-    
+
     if (conditions.length > 0) {
       query = query.where(and(...conditions)) as any;
     }
-    
-    return await query.orderBy(desc(contents.createdAt));
+
+    return await query
+      .orderBy(desc(contents.createdAt))
+      .limit(limit)
+      .offset(offset);
   }
 
-  async getContentsWithRelations(filters?: { type?: string; status?: string; search?: string }): Promise<ContentWithRelations[]> {
+  async getContentsWithRelations(filters?: {
+    type?: string;
+    status?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ContentWithRelations[]> {
     const baseContents = await this.getContents(filters);
-    
-    const results: ContentWithRelations[] = [];
-    
-    for (const content of baseContents) {
+
+    if (baseContents.length === 0) return [];
+
+    // Collect all content IDs and author IDs for batch fetching
+    const contentIds = baseContents.map(c => c.id);
+    const authorIds = [...new Set(baseContents.filter(c => c.authorId).map(c => c.authorId!))];
+
+    // Batch fetch all related data in parallel (fixes N+1 query pattern)
+    const [
+      attractionsData,
+      hotelsData,
+      articlesData,
+      eventsData,
+      itinerariesData,
+      districtsData,
+      diningData,
+      transportsData,
+      authorsData,
+    ] = await Promise.all([
+      db.select().from(attractions).where(inArray(attractions.contentId, contentIds)),
+      db.select().from(hotels).where(inArray(hotels.contentId, contentIds)),
+      db.select().from(articles).where(inArray(articles.contentId, contentIds)),
+      db.select().from(events).where(inArray(events.contentId, contentIds)),
+      db.select().from(itineraries).where(inArray(itineraries.contentId, contentIds)),
+      db.select().from(districts).where(inArray(districts.contentId, contentIds)),
+      db.select().from(dining).where(inArray(dining.contentId, contentIds)),
+      db.select().from(transports).where(inArray(transports.contentId, contentIds)),
+      authorIds.length > 0 ? db.select().from(users).where(inArray(users.id, authorIds)) : Promise.resolve([]),
+    ]);
+
+    // Create lookup maps for O(1) access
+    const attractionsMap = new Map(attractionsData.map(a => [a.contentId, a]));
+    const hotelsMap = new Map(hotelsData.map(h => [h.contentId, h]));
+    const articlesMap = new Map(articlesData.map(a => [a.contentId, a]));
+    const eventsMap = new Map(eventsData.map(e => [e.contentId, e]));
+    const itinerariesMap = new Map(itinerariesData.map(i => [i.contentId, i]));
+    const districtsMap = new Map(districtsData.map(d => [d.contentId, d]));
+    const diningMap = new Map(diningData.map(d => [d.contentId, d]));
+    const transportsMap = new Map(transportsData.map(t => [t.contentId, t]));
+    const authorsMap = new Map(authorsData.map(a => [a.id, a]));
+
+    // Map relations to contents
+    return baseContents.map(content => {
       const result: ContentWithRelations = { ...content };
-      
-      if (content.type === "attraction") {
-        const [attraction] = await db.select().from(attractions).where(eq(attractions.contentId, content.id));
-        result.attraction = attraction;
-      } else if (content.type === "hotel") {
-        const [hotel] = await db.select().from(hotels).where(eq(hotels.contentId, content.id));
-        result.hotel = hotel;
-      } else if (content.type === "article") {
-        const [article] = await db.select().from(articles).where(eq(articles.contentId, content.id));
-        result.article = article;
-      } else if (content.type === "event") {
-        const [event] = await db.select().from(events).where(eq(events.contentId, content.id));
-        result.event = event;
-      } else if (content.type === "itinerary") {
-        const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, content.id));
-        result.itinerary = itinerary;
-      } else if (content.type === "district") {
-        const [district] = await db.select().from(districts).where(eq(districts.contentId, content.id));
-        result.district = district;
+
+      switch (content.type) {
+        case "attraction":
+          result.attraction = attractionsMap.get(content.id);
+          break;
+        case "hotel":
+          result.hotel = hotelsMap.get(content.id);
+          break;
+        case "article":
+          result.article = articlesMap.get(content.id);
+          break;
+        case "event":
+          result.event = eventsMap.get(content.id);
+          break;
+        case "itinerary":
+          result.itinerary = itinerariesMap.get(content.id);
+          break;
+        case "district":
+          result.district = districtsMap.get(content.id);
+          break;
+        case "dining":
+          result.dining = diningMap.get(content.id);
+          break;
+        case "transport":
+          result.transport = transportsMap.get(content.id);
+          break;
       }
 
-      // Fetch author if authorId exists
       if (content.authorId) {
-        const [author] = await db.select().from(users).where(eq(users.id, content.authorId));
-        result.author = author;
+        result.author = authorsMap.get(content.authorId);
       }
-      
-      results.push(result);
-    }
-    
-    return results;
+
+      return result;
+    });
   }
 
   async getContent(id: string): Promise<ContentWithRelations | undefined> {
@@ -493,9 +562,15 @@ export class DatabaseStorage implements IStorage {
     } else if (content.type === "itinerary") {
       const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, id));
       result.itinerary = itinerary;
+    } else if (content.type === "dining") {
+      const [diningItem] = await db.select().from(dining).where(eq(dining.contentId, id));
+      result.dining = diningItem;
     } else if (content.type === "district") {
       const [district] = await db.select().from(districts).where(eq(districts.contentId, id));
       result.district = district;
+    } else if (content.type === "transport") {
+      const [transport] = await db.select().from(transports).where(eq(transports.contentId, id));
+      result.transport = transport;
     }
 
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, id));
@@ -531,9 +606,15 @@ export class DatabaseStorage implements IStorage {
     } else if (content.type === "itinerary") {
       const [itinerary] = await db.select().from(itineraries).where(eq(itineraries.contentId, content.id));
       result.itinerary = itinerary;
+    } else if (content.type === "dining") {
+      const [diningItem] = await db.select().from(dining).where(eq(dining.contentId, content.id));
+      result.dining = diningItem;
     } else if (content.type === "district") {
       const [district] = await db.select().from(districts).where(eq(districts.contentId, content.id));
       result.district = district;
+    } else if (content.type === "transport") {
+      const [transport] = await db.select().from(transports).where(eq(transports.contentId, content.id));
+      result.transport = transport;
     }
 
     result.affiliateLinks = await db.select().from(affiliateLinks).where(eq(affiliateLinks.contentId, content.id));
@@ -665,6 +746,66 @@ export class DatabaseStorage implements IStorage {
       .where(eq(itineraries.contentId, contentId))
       .returning();
     return itinerary;
+  }
+
+  // Dining CRUD
+  async getDining(contentId: string): Promise<Dining | undefined> {
+    const [diningItem] = await db.select().from(dining).where(eq(dining.contentId, contentId));
+    return diningItem;
+  }
+
+  async createDining(insertDining: InsertDining): Promise<Dining> {
+    const [diningItem] = await db.insert(dining).values(insertDining as any).returning();
+    return diningItem;
+  }
+
+  async updateDining(contentId: string, updateData: Partial<InsertDining>): Promise<Dining | undefined> {
+    const [diningItem] = await db
+      .update(dining)
+      .set(updateData as any)
+      .where(eq(dining.contentId, contentId))
+      .returning();
+    return diningItem;
+  }
+
+  // District CRUD
+  async getDistrict(contentId: string): Promise<District | undefined> {
+    const [district] = await db.select().from(districts).where(eq(districts.contentId, contentId));
+    return district;
+  }
+
+  async createDistrict(insertDistrict: InsertDistrict): Promise<District> {
+    const [district] = await db.insert(districts).values(insertDistrict as any).returning();
+    return district;
+  }
+
+  async updateDistrict(contentId: string, updateData: Partial<InsertDistrict>): Promise<District | undefined> {
+    const [district] = await db
+      .update(districts)
+      .set(updateData as any)
+      .where(eq(districts.contentId, contentId))
+      .returning();
+    return district;
+  }
+
+  // Transport CRUD
+  async getTransport(contentId: string): Promise<Transport | undefined> {
+    const [transport] = await db.select().from(transports).where(eq(transports.contentId, contentId));
+    return transport;
+  }
+
+  async createTransport(insertTransport: InsertTransport): Promise<Transport> {
+    const [transport] = await db.insert(transports).values(insertTransport as any).returning();
+    return transport;
+  }
+
+  async updateTransport(contentId: string, updateData: Partial<InsertTransport>): Promise<Transport | undefined> {
+    const [transport] = await db
+      .update(transports)
+      .set(updateData as any)
+      .where(eq(transports.contentId, contentId))
+      .returning();
+    return transport;
   }
 
   async getRssFeeds(): Promise<RssFeed[]> {
@@ -828,7 +969,7 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
-  async updateTopicBankItem(id: string, updateData: Partial<InsertTopicBank>): Promise<TopicBank | undefined> {
+  async updateTopicBankItem(id: string, updateData: Partial<Omit<TopicBank, 'id' | 'createdAt'>>): Promise<TopicBank | undefined> {
     const [item] = await db.update(topicBank).set(updateData as any).where(eq(topicBank.id, id)).returning();
     return item;
   }
@@ -1345,6 +1486,51 @@ export class DatabaseStorage implements IStorage {
     return result[0]?.count || 0;
   }
 
+  // Rate Limits - for persistent rate limiting
+  async getRateLimit(key: string): Promise<{ count: number; resetAt: Date } | null> {
+    const [limit] = await db.select().from(rateLimits).where(eq(rateLimits.key, key));
+    if (!limit) return null;
+    return { count: limit.count, resetAt: limit.resetAt };
+  }
+
+  async incrementRateLimit(key: string, resetAt: Date): Promise<{ count: number; resetAt: Date }> {
+    // Use upsert with increment
+    const [result] = await db
+      .insert(rateLimits)
+      .values({ key, count: 1, resetAt, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: rateLimits.key,
+        set: {
+          count: sql`${rateLimits.count} + 1`,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return { count: result.count, resetAt: result.resetAt };
+  }
+
+  async resetRateLimit(key: string, resetAt: Date): Promise<void> {
+    await db
+      .insert(rateLimits)
+      .values({ key, count: 1, resetAt, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: rateLimits.key,
+        set: {
+          count: 1,
+          resetAt,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  async cleanupExpiredRateLimits(): Promise<number> {
+    const result = await db
+      .delete(rateLimits)
+      .where(sql`${rateLimits.resetAt} < NOW()`)
+      .returning();
+    return result.length;
+  }
+
   // Newsletter Subscribers
   async getNewsletterSubscribers(filters?: { status?: string }): Promise<NewsletterSubscriber[]> {
     if (filters?.status) {
@@ -1435,7 +1621,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCampaign(campaign: InsertCampaign): Promise<NewsletterCampaign> {
-    const [newCampaign] = await db.insert(newsletterCampaigns).values(campaign).returning();
+    const [newCampaign] = await db.insert(newsletterCampaigns).values(campaign as any).returning();
     return newCampaign;
   }
 
@@ -1497,18 +1683,20 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  // Cluster Members
+  // Cluster Members - Fixed N+1 with batch query
   async getClusterMembers(clusterId: string): Promise<(ClusterMember & { content?: Content })[]> {
     const members = await db.select().from(clusterMembers)
       .where(eq(clusterMembers.clusterId, clusterId))
       .orderBy(clusterMembers.position);
-    
-    const result: (ClusterMember & { content?: Content })[] = [];
-    for (const member of members) {
-      const [content] = await db.select().from(contents).where(eq(contents.id, member.contentId));
-      result.push({ ...member, content });
-    }
-    return result;
+
+    if (members.length === 0) return [];
+
+    // Batch fetch all contents at once
+    const contentIds = [...new Set(members.map(m => m.contentId))];
+    const allContents = await db.select().from(contents).where(inArray(contents.id, contentIds));
+    const contentMap = new Map(allContents.map(c => [c.id, c]));
+
+    return members.map(member => ({ ...member, content: contentMap.get(member.contentId) }));
   }
 
   async addClusterMember(member: InsertClusterMember): Promise<ClusterMember> {
@@ -1574,29 +1762,33 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  // Content Tags
+  // Content Tags - Fixed N+1 with batch query
   async getContentTags(contentId: string): Promise<(ContentTag & { tag?: Tag })[]> {
     const cts = await db.select().from(contentTags)
       .where(eq(contentTags.contentId, contentId));
-    
-    const result: (ContentTag & { tag?: Tag })[] = [];
-    for (const ct of cts) {
-      const [tag] = await db.select().from(tags).where(eq(tags.id, ct.tagId));
-      result.push({ ...ct, tag });
-    }
-    return result;
+
+    if (cts.length === 0) return [];
+
+    // Batch fetch all tags at once
+    const tagIds = [...new Set(cts.map(ct => ct.tagId))];
+    const allTags = await db.select().from(tags).where(inArray(tags.id, tagIds));
+    const tagMap = new Map(allTags.map(t => [t.id, t]));
+
+    return cts.map(ct => ({ ...ct, tag: tagMap.get(ct.tagId) }));
   }
 
   async getTagContents(tagId: string): Promise<(ContentTag & { content?: Content })[]> {
     const cts = await db.select().from(contentTags)
       .where(eq(contentTags.tagId, tagId));
-    
-    const result: (ContentTag & { content?: Content })[] = [];
-    for (const ct of cts) {
-      const [content] = await db.select().from(contents).where(eq(contents.id, ct.contentId));
-      result.push({ ...ct, content });
-    }
-    return result;
+
+    if (cts.length === 0) return [];
+
+    // Batch fetch all contents at once
+    const contentIds = [...new Set(cts.map(ct => ct.contentId))];
+    const allContents = await db.select().from(contents).where(inArray(contents.id, contentIds));
+    const contentMap = new Map(allContents.map(c => [c.id, c]));
+
+    return cts.map(ct => ({ ...ct, content: contentMap.get(ct.contentId) }));
   }
 
   async addContentTag(contentTag: InsertContentTag): Promise<ContentTag> {
@@ -1638,17 +1830,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async bulkAddTagToContents(contentIds: string[], tagId: string): Promise<number> {
-    let added = 0;
-    for (const contentId of contentIds) {
-      const existing = await db.select().from(contentTags)
-        .where(and(eq(contentTags.contentId, contentId), eq(contentTags.tagId, tagId)));
-      if (existing.length === 0) {
-        await db.insert(contentTags).values({ contentId, tagId });
-        added++;
-      }
-    }
+    if (contentIds.length === 0) return 0;
+
+    // Batch check for existing tags
+    const existing = await db.select({ contentId: contentTags.contentId })
+      .from(contentTags)
+      .where(and(
+        inArray(contentTags.contentId, contentIds),
+        eq(contentTags.tagId, tagId)
+      ));
+
+    const existingSet = new Set(existing.map(e => e.contentId));
+    const toAdd = contentIds.filter(id => !existingSet.has(id));
+
+    if (toAdd.length === 0) return 0;
+
+    // Batch insert all new tags at once
+    await db.insert(contentTags).values(
+      toAdd.map(contentId => ({ contentId, tagId }))
+    );
+
     await this.updateTagUsageCount(tagId);
-    return added;
+    return toAdd.length;
   }
 
   async bulkRemoveTagFromContents(contentIds: string[], tagId: string): Promise<number> {
@@ -1728,35 +1931,28 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount ?? 0) > 0;
   }
 
-  // Media Usage Check
+  // Media Usage Check - Optimized with database-level search
   async checkMediaUsage(mediaUrl: string): Promise<{ isUsed: boolean; usedIn: { id: string; title: string; type: string }[] }> {
-    const usedIn: { id: string; title: string; type: string }[] = [];
-    
-    // Check heroImage
-    const heroMatches = await db
+    // Use database LIKE/ILIKE to search in JSON blocks - avoids full table scan in JS
+    // Combine heroImage check and blocks search in single queries
+    const results = await db
       .select({ id: contents.id, title: contents.title, type: contents.type })
       .from(contents)
-      .where(and(eq(contents.heroImage, mediaUrl), sql`${contents.deletedAt} IS NULL`));
-    
-    for (const match of heroMatches) {
-      usedIn.push({ id: match.id, title: match.title, type: match.type });
-    }
-    
-    // Check blocks JSON for image URLs
-    const allContent = await db
-      .select({ id: contents.id, title: contents.title, type: contents.type, blocks: contents.blocks })
-      .from(contents)
-      .where(sql`${contents.deletedAt} IS NULL`);
-    
-    for (const content of allContent) {
-      const blocksStr = JSON.stringify(content.blocks || []);
-      if (blocksStr.includes(mediaUrl)) {
-        if (!usedIn.find(u => u.id === content.id)) {
-          usedIn.push({ id: content.id, title: content.title, type: content.type });
-        }
-      }
-    }
-    
+      .where(and(
+        sql`${contents.deletedAt} IS NULL`,
+        or(
+          eq(contents.heroImage, mediaUrl),
+          sql`${contents.blocks}::text LIKE ${`%${mediaUrl}%`}`
+        )
+      ))
+      .limit(100); // Limit results to prevent huge responses
+
+    const usedIn = results.map(r => ({
+      id: r.id,
+      title: r.title,
+      type: r.type
+    }));
+
     return { isUsed: usedIn.length > 0, usedIn };
   }
 

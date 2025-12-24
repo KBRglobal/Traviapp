@@ -58,6 +58,25 @@ function extractLinks(htmlContent: string): string[] {
   return [...new Set(links)]; // Remove duplicates
 }
 
+// Extract HTML content from content blocks
+function getContentBody(content: ContentWithRelations): string {
+  if (!content.blocks || !Array.isArray(content.blocks)) return "";
+
+  return content.blocks
+    .map((block: { type: string; data?: Record<string, unknown> }) => {
+      if (!block.data) return "";
+      // Extract text content from various block types
+      const parts: string[] = [];
+      if (typeof block.data.text === "string") parts.push(block.data.text);
+      if (typeof block.data.html === "string") parts.push(block.data.html);
+      if (typeof block.data.content === "string") parts.push(block.data.content);
+      if (typeof block.data.description === "string") parts.push(block.data.description);
+      if (typeof block.data.caption === "string") parts.push(block.data.caption);
+      return parts.join(" ");
+    })
+    .join(" ");
+}
+
 // Check if internal link exists
 function checkInternalLink(
   url: string,
@@ -177,8 +196,9 @@ export function BrokenLinkChecker({
     let processed = 0;
 
     for (const content of publishedContent) {
-      if (content.body) {
-        const links = extractLinks(content.body);
+      const body = getContentBody(content);
+      if (body) {
+        const links = extractLinks(body);
 
         for (const url of links) {
           const isExternal = url.startsWith("http") && !url.includes(window.location.host);

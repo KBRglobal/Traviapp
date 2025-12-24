@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
+import {
   Star, Building2, Waves, Briefcase, Users, Heart,
   Sparkles, Award, Crown, Plane, Palmtree, Building,
   Umbrella, Utensils, Dumbbell, Car, Wifi, Coffee,
-  Sun, Moon, TreePalm, Baby, MapPin, TrendingUp
+  Sun, Moon, TreePalm, Baby, MapPin, TrendingUp, Loader2
 } from "lucide-react";
 import { PageContainer, Section, ContentCard, CategoryGrid } from "@/components/public-layout";
 import { PublicHero } from "@/components/public-hero";
@@ -14,6 +14,44 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+
+// Types for API response
+interface ApiHotel {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  featuredImage?: string;
+  status: string;
+  type: string;
+  hotel?: {
+    location?: string;
+    starRating?: number;
+    amenities?: string[];
+  };
+}
+
+// Display hotel type
+interface DisplayHotel {
+  name: string;
+  tagline: string;
+  description: string;
+  image: string;
+  features: string[];
+  rating: number;
+  area: string;
+  vibe: string;
+  slug?: string;
+}
+
+// Fetch hotels from API
+async function fetchHotels(): Promise<ApiHotel[]> {
+  const response = await fetch("/api/public/contents?type=hotel&limit=100");
+  if (!response.ok) throw new Error("Failed to fetch hotels");
+  return response.json();
+}
 
 const hotelCategories = [
   {
@@ -663,8 +701,32 @@ function AreaCard({ area }: { area: typeof dubaiAreas[0] }) {
 
 export default function PublicHotels() {
   const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
-  const { isRTL } = useLocale();
-  
+  const { isRTL, localePath } = useLocale();
+
+  // Fetch hotels from database
+  const { data: apiHotels, isLoading: isLoadingHotels } = useQuery({
+    queryKey: ["public-hotels"],
+    queryFn: fetchHotels,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Convert API hotels to display format and merge with static data
+  const allHotels = useMemo((): DisplayHotel[] => {
+    const dbHotels: DisplayHotel[] = (apiHotels || []).map((h) => ({
+      name: h.title,
+      tagline: h.excerpt || "Luxury Hotel in Dubai",
+      description: h.excerpt || "",
+      image: h.featuredImage || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&h=600&fit=crop",
+      features: h.hotel?.amenities?.slice(0, 3) || ["Luxury", "Service"],
+      rating: h.hotel?.starRating || 5,
+      area: h.hotel?.location || "Dubai",
+      vibe: "city",
+      slug: h.slug,
+    }));
+    // Return DB hotels first (they're from admin panel), then static hotels
+    return [...dbHotels, ...(featuredHotels as DisplayHotel[])];
+  }, [apiHotels]);
+
   useDocumentMeta({
     title: "Luxury Hotels in Dubai | From Palm Jumeirah to Downtown | Travi",
     description: "Discover Dubai's finest hotels. From Palm Jumeirah beachfront resorts to Downtown high-rises overlooking Burj Khalifa. 5-star luxury, world-class service.",
@@ -673,9 +735,9 @@ export default function PublicHotels() {
     ogType: "website",
   });
 
-  const filteredHotels = selectedVibe 
-    ? featuredHotels.filter(h => h.vibe === selectedVibe)
-    : featuredHotels;
+  const filteredHotels = selectedVibe
+    ? allHotels.filter(h => h.vibe === selectedVibe)
+    : allHotels;
 
   return (
     <PageContainer navVariant="transparent">

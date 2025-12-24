@@ -13,6 +13,7 @@ import { initGA } from "@/lib/analytics";
 import { Loader2 } from "lucide-react";
 import { LocaleProvider } from "@/lib/i18n/LocaleRouter";
 import { FavoritesProvider } from "@/hooks/use-favorites";
+import { LiveEditProvider } from "@/components/live-edit";
 
 // Lazy load all pages for better performance
 const ComingSoon = lazy(() => import("@/pages/coming-soon"));
@@ -104,6 +105,7 @@ const Dashboard = lazy(() => import("@/pages/dashboard"));
 const ContentList = lazy(() => import("@/pages/content-list"));
 const ContentEditor = lazy(() => import("@/pages/content-editor"));
 const PublicContentViewer = lazy(() => import("@/pages/public-content-viewer"));
+const PublicDocs = lazy(() => import("@/pages/public-docs"));
 
 const RssFeeds = lazy(() => import("@/pages/rss-feeds"));
 const AffiliateLinks = lazy(() => import("@/pages/affiliate-links"));
@@ -120,6 +122,7 @@ const UsersPage = lazy(() => import("@/pages/users"));
 const HomepagePromotions = lazy(() => import("@/pages/homepage-promotions"));
 const Analytics = lazy(() => import("@/pages/analytics"));
 const AuditLogs = lazy(() => import("@/pages/audit-logs"));
+const AdminLogs = lazy(() => import("@/pages/admin-logs"));
 const NewsletterSubscribers = lazy(() => import("@/pages/newsletter-subscribers"));
 const Campaigns = lazy(() => import("@/pages/campaigns"));
 const TranslationsPage = lazy(() => import("@/pages/translations"));
@@ -137,6 +140,7 @@ import { KeyboardShortcuts, useKeyboardShortcuts } from "@/components/keyboard-s
 import { NotificationsCenter } from "@/components/notifications-center";
 import { MultiTabProvider, EditorTabBar, TabCountBadge } from "@/components/multi-tab-editor";
 import { ContentExpiryAlerts } from "@/components/content-expiry-alerts";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 // Loading fallback component
 function PageLoader() {
@@ -235,6 +239,7 @@ function AdminRouter() {
         <Route path="/admin/homepage-promotions" component={HomepagePromotions} />
         <Route path="/admin/analytics" component={Analytics} />
         <Route path="/admin/audit-logs" component={AuditLogs} />
+        <Route path="/admin/logs" component={AdminLogs} />
         <Route path="/admin/newsletter" component={NewsletterSubscribers} />
         <Route path="/admin/campaigns" component={Campaigns} />
         <Route path="/admin/translations" component={TranslationsPage} />
@@ -287,7 +292,9 @@ function AdminLayout() {
             </header>
             <EditorTabBar />
             <main className="flex-1 overflow-auto p-6">
-              <AdminRouter />
+              <ErrorBoundary>
+                <AdminRouter />
+              </ErrorBoundary>
             </main>
           </div>
           <AIAssistant />
@@ -381,6 +388,9 @@ const publicRoutes = [
   { path: "/shopping", component: PublicShopping },
   // News portal
   { path: "/news", component: PublicNews },
+  // Documentation
+  { path: "/docs", component: PublicDocs },
+  { path: "/docs/:path*", component: PublicDocs },
   // District pages
   { path: "/districts", component: DistrictsGateway },
   { path: "/districts/downtown-dubai", component: DistrictDowntownDubai },
@@ -457,7 +467,9 @@ function App() {
               {isAdminRoute ? (
                 <AdminLayout />
               ) : (
-                <PublicRouter />
+                <LiveEditProvider>
+                  <PublicRouter />
+                </LiveEditProvider>
               )}
             </Suspense>
             <Toaster />

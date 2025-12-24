@@ -1,24 +1,48 @@
 import { Link } from "wouter";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  MapPin, Utensils, ArrowRight, ChefHat, Wine, 
+  MapPin, Utensils, ArrowRight, ChefHat, Wine,
   Globe, Award, Sparkles, Waves, Coffee, Fish,
   UtensilsCrossed, Beef, Calendar, TreePalm, Flame,
   IceCream, Salad, Star, TrendingUp, DollarSign,
-  Clock, Phone, Cake, Soup, Pizza, Cookie
+  Clock, Phone, Cake, Soup, Pizza, Cookie, Loader2
 } from "lucide-react";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
-import { 
-  PageContainer, 
-  Section, 
-  CategoryGrid 
+import {
+  PageContainer,
+  Section,
+  CategoryGrid
 } from "@/components/public-layout";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+
+// Types for API response
+interface ApiDining {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  featuredImage?: string;
+  status: string;
+  type: string;
+  dining?: {
+    cuisine?: string;
+    location?: string;
+    priceRange?: string;
+  };
+}
+
+// Fetch dining from API
+async function fetchDining(): Promise<ApiDining[]> {
+  const response = await fetch("/api/public/contents?type=dining&limit=100");
+  if (!response.ok) throw new Error("Failed to fetch dining");
+  return response.json();
+}
 
 const cravingOptions = [
   {
@@ -391,6 +415,31 @@ export default function PublicDining() {
   const [selectedCraving, setSelectedCraving] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
+  // Fetch dining from database
+  const { data: apiDining, isLoading: isLoadingDining } = useQuery({
+    queryKey: ["public-dining"],
+    queryFn: fetchDining,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Convert API restaurants to display format
+  const dbRestaurants = useMemo(() => {
+    if (!apiDining) return [];
+    return apiDining.map((d) => ({
+      name: d.title,
+      location: d.dining?.location || "Dubai",
+      description: d.excerpt || "",
+      highlight: d.dining?.cuisine || "International",
+      image: d.featuredImage || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=600&fit=crop",
+      icon: Utensils,
+      cuisine: d.dining?.cuisine || "International",
+      priceLevel: d.dining?.priceRange === "$$$$$" ? 5 : d.dining?.priceRange === "$$$$" ? 4 : 3,
+      isTrending: true,
+      signatureDish: "Chef's Special",
+      slug: d.slug,
+    }));
+  }, [apiDining]);
+
   useDocumentMeta({
     title: "Dubai's Best Restaurants & Dining Experiences 2025 | Travi",
     description: "Discover Dubai's culinary scene: 1000+ restaurants, 100+ cuisines, sky dining at Burj Khalifa, underwater restaurants at Atlantis. From Michelin stars to street food.",
@@ -693,8 +742,9 @@ export default function PublicDining() {
           </Badge>
         </div>
         <CategoryGrid columns={3}>
-          {uniqueExperiences.map((experience) => {
-            const IconComponent = experience.icon;
+          {/* Show database restaurants first, then static ones */}
+          {[...dbRestaurants, ...uniqueExperiences].map((experience) => {
+            const IconComponent = experience.icon || Utensils;
             const isHovered = hoveredCard === experience.name;
             
             return (

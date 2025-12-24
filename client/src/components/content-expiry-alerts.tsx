@@ -54,8 +54,10 @@ const FRESHNESS_RULES: Record<string, { warning: number; critical: number }> = {
 };
 
 // Calculate days since last update
-function daysSinceUpdate(updatedAt: Date | string): number {
+function daysSinceUpdate(updatedAt: Date | string | null | undefined): number {
+  if (!updatedAt) return 0;
   const updated = new Date(updatedAt);
+  if (isNaN(updated.getTime())) return 0;
   const now = new Date();
   const diff = now.getTime() - updated.getTime();
   return Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -65,9 +67,18 @@ function daysSinceUpdate(updatedAt: Date | string): number {
 function daysUntilExpiry(expiryDate: Date | string | null | undefined): number | null {
   if (!expiryDate) return null;
   const expiry = new Date(expiryDate);
+  if (isNaN(expiry.getTime())) return null;
   const now = new Date();
   const diff = expiry.getTime() - now.getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+// Helper to get event end date from content
+function getEventEndDate(content: ContentWithRelations): Date | null {
+  if (content.type === "event" && content.event?.endDate) {
+    return new Date(content.event.endDate);
+  }
+  return null;
 }
 
 // Determine alert level
@@ -77,19 +88,10 @@ function getAlertLevel(
   const rules = FRESHNESS_RULES[content.type] || FRESHNESS_RULES.article;
   const daysSince = daysSinceUpdate(content.updatedAt);
 
-  // Check for explicit expiry date
-  if (content.expiryDate) {
-    const daysUntil = daysUntilExpiry(content.expiryDate);
-    if (daysUntil !== null) {
-      if (daysUntil < 0) return "expired";
-      if (daysUntil <= 7) return "critical";
-      if (daysUntil <= 30) return "warning";
-    }
-  }
-
   // Check for event end dates
-  if (content.type === "event" && content.eventEndDate) {
-    const daysUntil = daysUntilExpiry(content.eventEndDate);
+  const eventEndDate = getEventEndDate(content);
+  if (eventEndDate) {
+    const daysUntil = daysUntilExpiry(eventEndDate);
     if (daysUntil !== null) {
       if (daysUntil < 0) return "expired";
       if (daysUntil <= 1) return "critical";
@@ -105,7 +107,8 @@ function getAlertLevel(
 }
 
 // Format relative date
-function formatRelativeDate(date: Date | string): string {
+function formatRelativeDate(date: Date | string | null | undefined): string {
+  if (!date) return "Unknown";
   const days = daysSinceUpdate(date);
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
@@ -131,16 +134,15 @@ export function ContentExpiryAlerts({
   // Analyze content for expiry
   const alerts = useMemo(() => {
     const results = contents
-      .map((content) => ({
-        content,
-        level: getAlertLevel(content),
-        daysSinceUpdate: daysSinceUpdate(content.updatedAt),
-        daysUntilExpiry: content.expiryDate
-          ? daysUntilExpiry(content.expiryDate)
-          : content.eventEndDate
-          ? daysUntilExpiry(content.eventEndDate)
-          : null,
-      }))
+      .map((content) => {
+        const eventEndDate = getEventEndDate(content);
+        return {
+          content,
+          level: getAlertLevel(content),
+          daysSinceUpdate: daysSinceUpdate(content.updatedAt),
+          daysUntilExpiry: eventEndDate ? daysUntilExpiry(eventEndDate) : null,
+        };
+      })
       .filter((item) => item.level !== "ok")
       .sort((a, b) => {
         // Sort by severity first, then by urgency

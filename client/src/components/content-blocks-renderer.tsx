@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import DOMPurify from "dompurify";
 import {
   Accordion,
   AccordionContent,
@@ -167,7 +168,7 @@ function TextBlock({ data }: { data: TextBlockData }) {
       )}
       <div 
         className="prose prose-neutral dark:prose-invert max-w-none text-muted-foreground"
-        dangerouslySetInnerHTML={{ __html: data.content }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.content || "") }}
       />
     </Card>
   );
@@ -421,7 +422,7 @@ function TipsBlock({ data }: { data: TipsBlockData }) {
             {data.title || "Pro Tips"}
           </h2>
           <ul className="space-y-2" role="list">
-            {tips.map((tip, index) => (
+            {data.tips.map((tip: string, index: number) => (
               <li key={index} className="text-muted-foreground text-sm" role="listitem">
                 {tip}
               </li>

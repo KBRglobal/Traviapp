@@ -1,7 +1,9 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import crypto from "crypto";
-import { SUPPORTED_LOCALES, type Locale, type ContentBlock } from "@shared/schema";
+import { SUPPORTED_LOCALES, type Locale, type ContentBlock, translationBatchJobs } from "@shared/schema";
+import { db } from "../db";
+import { eq } from "drizzle-orm";
 
 // Generate a hash of the content for tracking translation freshness
 export function generateContentHash(content: {
@@ -89,6 +91,51 @@ function getOpenAIClient(): OpenAI | null {
     apiKey,
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
   });
+}
+
+// Gemini via OpenAI-compatible API
+function getGeminiClient(): OpenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.gemini;
+  if (!apiKey) return null;
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+  });
+}
+
+// OpenRouter - supports many models
+function getOpenRouterClient(): OpenAI | null {
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.openrouterapi || process.env.OPENROUTERAPI;
+  if (!apiKey) return null;
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": process.env.APP_URL || "https://travi.world",
+      "X-Title": "Travi CMS",
+    },
+  });
+}
+
+// Get best available AI client with fallbacks
+function getAIClient(): { client: OpenAI; provider: string } | null {
+  const openai = getOpenAIClient();
+  if (openai) return { client: openai, provider: "openai" };
+  const gemini = getGeminiClient();
+  if (gemini) return { client: gemini, provider: "gemini" };
+  const openrouter = getOpenRouterClient();
+  if (openrouter) return { client: openrouter, provider: "openrouter" };
+  return null;
+}
+
+// Get model for provider
+function getModelForProvider(provider: string): string {
+  switch (provider) {
+    case "openai": return "gpt-4o-mini";
+    case "gemini": return "gemini-1.5-flash";
+    case "openrouter": return "google/gemini-flash-1.5";
+    default: return "gpt-4o-mini";
+  }
 }
 
 // Initialize Anthropic client for Claude translations (RECOMMENDED)
@@ -457,18 +504,19 @@ export async function translateText(
   };
 
   try {
-    const openai = getOpenAIClient();
-    if (!openai) {
+    const aiClient = getAIClient();
+    if (!aiClient) {
       return {
         translatedText: "",
         locale: targetLocale,
         success: false,
-        error: "OpenAI client not initialized - check API key",
+        error: "No AI client configured - check OPENAI_API_KEY, GEMINI, or openrouterapi",
       };
     }
+    const { client: openai, provider } = aiClient;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",  // Cost-effective fallback
+      model: getModelForProvider(provider),
       max_tokens: 4096,
       messages: [
         {
@@ -759,8 +807,7 @@ interface BatchTranslationJob {
   batchId?: string;  // OpenAI batch ID
 }
 
-// In-memory store for batch jobs (in production, persist to database)
-const batchJobs: Map<string, BatchTranslationJob> = new Map();
+// Note: Batch jobs are now persisted to PostgreSQL via translationBatchJobs table
 
 export const batchTranslation = {
   /**
@@ -775,9 +822,10 @@ export const batchTranslation = {
       contentType?: "title" | "description" | "body" | "meta";
     }>
   ): Promise<string> {
+    // Batch API is OpenAI-specific, requires direct OpenAI client
     const openai = getOpenAIClient();
     if (!openai) {
-      throw new Error("OpenAI client not configured");
+      throw new Error("OpenAI client required for batch processing - OPENAI_API_KEY not configured");
     }
 
     const jobId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -837,23 +885,23 @@ ${req.text}`,
         completion_window: '24h',
       });
 
-      // Store job
-      const job: BatchTranslationJob = {
-        id: jobId,
-        status: 'processing',
-        requests: requests.map((req, index) => ({
-          customId: `req_${index}`,
-          text: req.text,
-          sourceLocale: req.sourceLocale,
-          targetLocale: req.targetLocale,
-          contentType: req.contentType || "body",
-        })),
-        createdAt: new Date(),
-        batchId: batch.id,
-      };
+      // Store job in database
+      const [row] = await db.insert(translationBatchJobs)
+        .values({
+          id: jobId,
+          status: 'processing',
+          batchId: batch.id,
+          requests: requests.map((req, index) => ({
+            customId: `req_${index}`,
+            text: req.text,
+            sourceLocale: req.sourceLocale,
+            targetLocale: req.targetLocale,
+            contentType: req.contentType || "body",
+          })),
+        })
+        .returning();
 
-      batchJobs.set(jobId, job);
-      return jobId;
+      return row.id;
     } catch (error) {
       console.error("Error creating batch translation job:", error);
       throw error;
@@ -864,8 +912,23 @@ ${req.text}`,
    * Check status of a batch translation job
    */
   async getJobStatus(jobId: string): Promise<BatchTranslationJob | null> {
-    const job = batchJobs.get(jobId);
-    if (!job) return null;
+    // Query from database
+    const [row] = await db.select()
+      .from(translationBatchJobs)
+      .where(eq(translationBatchJobs.id, jobId));
+
+    if (!row) return null;
+
+    // Convert DB row to BatchTranslationJob format
+    const job: BatchTranslationJob = {
+      id: row.id,
+      status: row.status as BatchTranslationJob['status'],
+      requests: row.requests as BatchTranslationJob['requests'],
+      results: row.results ? new Map(Object.entries(row.results)) : undefined,
+      createdAt: row.createdAt,
+      completedAt: row.completedAt || undefined,
+      batchId: row.batchId || undefined,
+    };
 
     if (job.status === 'processing' && job.batchId) {
       const openai = getOpenAIClient();
@@ -890,11 +953,25 @@ ${req.text}`,
               }
             }
 
+            // Update database with completed status
+            await db.update(translationBatchJobs)
+              .set({
+                status: 'completed',
+                results: Object.fromEntries(results),
+                completedAt: new Date(),
+              })
+              .where(eq(translationBatchJobs.id, jobId));
+
             job.status = 'completed';
             job.results = results;
             job.completedAt = new Date();
           }
         } else if (batch.status === 'failed' || batch.status === 'expired' || batch.status === 'cancelled') {
+          // Update database with failed status
+          await db.update(translationBatchJobs)
+            .set({ status: 'failed' })
+            .where(eq(translationBatchJobs.id, jobId));
+
           job.status = 'failed';
         }
       } catch (error) {

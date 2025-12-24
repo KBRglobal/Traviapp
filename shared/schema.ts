@@ -382,6 +382,44 @@ export const mediaFiles = pgTable("media_files", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Page Layouts - Live Edit System
+export const pageLayoutStatusEnum = pgEnum("page_layout_status", ["draft", "published"]);
+
+export const pageLayouts = pgTable("page_layouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug").notNull().unique(), // e.g., "public-attractions", "district-downtown"
+  title: text("title"),
+  // Published components (what visitors see)
+  components: jsonb("components").$type<Array<{
+    id: string;
+    type: string;
+    order: number;
+    parentId?: string;
+    props: Record<string, any>;
+  }>>().default([]),
+  // Draft components (what editors are working on)
+  draftComponents: jsonb("draft_components").$type<Array<{
+    id: string;
+    type: string;
+    order: number;
+    parentId?: string;
+    props: Record<string, any>;
+  }>>(),
+  status: pageLayoutStatusEnum("status").default("draft"),
+  publishedAt: timestamp("published_at"),
+  draftUpdatedAt: timestamp("draft_updated_at"),
+  createdBy: integer("created_by").references(() => users.id),
+  updatedBy: integer("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPageLayoutSchema = createInsertSchema(pageLayouts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Image Engine - AI Generated Images Library
 export const imageSourceEnum = pgEnum("image_source", ["gemini", "openai", "freepik", "stock", "upload"]);
 export const imageRatingEnum = pgEnum("image_rating", ["like", "dislike", "skip"]);
@@ -706,6 +744,270 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 
+// Rate Limits table - for persistent rate limiting (especially AI usage)
+export const rateLimits = pgTable("rate_limits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key").notNull().unique(),  // e.g., "ai_daily:user123"
+  count: integer("count").notNull().default(0),
+  resetAt: timestamp("reset_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_rate_limits_key").on(table.key),
+  index("IDX_rate_limits_reset").on(table.resetAt),
+]);
+
+export type RateLimit = typeof rateLimits.$inferSelect;
+export type InsertRateLimit = typeof rateLimits.$inferInsert;
+
+// Analytics event type enum
+export const analyticsEventTypeEnum = pgEnum("analytics_event_type", [
+  "page_view", "click", "scroll", "form_start", "form_submit", "form_abandon",
+  "cta_click", "outbound_link", "search", "filter", "share", "video_play",
+  "video_complete", "download", "copy", "print", "add_to_favorites",
+  "exit_intent", "conversion", "engagement"
+]);
+
+// Analytics Events table - for customer journey tracking
+export const analyticsEvents = pgTable("analytics_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  visitorId: varchar("visitor_id").notNull(),
+  eventType: analyticsEventTypeEnum("event_type").notNull(),
+  eventName: varchar("event_name"),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  pageUrl: text("page_url"),
+  pagePath: varchar("page_path"),
+  pageTitle: varchar("page_title"),
+  referrer: text("referrer"),
+  // Element details
+  elementId: varchar("element_id"),
+  elementClass: varchar("element_class"),
+  elementText: text("element_text"),
+  elementHref: text("element_href"),
+  // Position data
+  scrollDepth: integer("scroll_depth"),
+  viewportWidth: integer("viewport_width"),
+  viewportHeight: integer("viewport_height"),
+  clickX: integer("click_x"),
+  clickY: integer("click_y"),
+  // Session data
+  timeOnPage: integer("time_on_page"),
+  pageLoadTime: integer("page_load_time"),
+  isNewSession: boolean("is_new_session"),
+  isNewVisitor: boolean("is_new_visitor"),
+  // User context
+  userAgent: text("user_agent"),
+  deviceType: varchar("device_type"),
+  browser: varchar("browser"),
+  os: varchar("os"),
+  language: varchar("language"),
+  country: varchar("country"),
+  city: varchar("city"),
+  // Content context
+  contentId: varchar("content_id"),
+  contentType: varchar("content_type"),
+  contentTitle: varchar("content_title"),
+  // UTM parameters
+  utmSource: varchar("utm_source"),
+  utmMedium: varchar("utm_medium"),
+  utmCampaign: varchar("utm_campaign"),
+  utmTerm: varchar("utm_term"),
+  utmContent: varchar("utm_content"),
+  // Custom data
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+}, (table) => [
+  index("IDX_analytics_session").on(table.sessionId),
+  index("IDX_analytics_visitor").on(table.visitorId),
+  index("IDX_analytics_timestamp").on(table.timestamp),
+  index("IDX_analytics_event_type").on(table.eventType),
+  index("IDX_analytics_page_path").on(table.pagePath),
+]);
+
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type InsertAnalyticsEvent = typeof analyticsEvents.$inferInsert;
+
+// Two-Factor Authentication Secrets table
+export const twoFactorSecrets = pgTable("two_factor_secrets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  secret: varchar("secret").notNull(),
+  backupCodes: jsonb("backup_codes").$type<string[]>().notNull().default([]),
+  verified: boolean("verified").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_2fa_user").on(table.userId),
+]);
+
+export type TwoFactorSecret = typeof twoFactorSecrets.$inferSelect;
+export type InsertTwoFactorSecret = typeof twoFactorSecrets.$inferInsert;
+
+// A/B Test status enum
+export const abTestStatusEnum = pgEnum("ab_test_status", ["running", "completed", "paused"]);
+
+// A/B Test type enum
+export const abTestTypeEnum = pgEnum("ab_test_type", ["title", "heroImage", "metaDescription"]);
+
+// A/B Tests table for content testing
+export const abTests = pgTable("ab_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull(),
+  testType: abTestTypeEnum("test_type").notNull(),
+  variants: jsonb("variants").$type<Array<{
+    id: string;
+    value: string;
+    impressions: number;
+    clicks: number;
+    ctr: number;
+  }>>().notNull().default([]),
+  status: abTestStatusEnum("status").notNull().default("running"),
+  winner: varchar("winner"),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  endsAt: timestamp("ends_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_ab_tests_content").on(table.contentId),
+  index("IDX_ab_tests_status").on(table.status),
+]);
+
+export type ABTest = typeof abTests.$inferSelect;
+export type InsertABTest = typeof abTests.$inferInsert;
+
+// ============================================================================
+// MONETIZATION TABLES
+// ============================================================================
+
+// Premium content access type enum
+export const premiumAccessTypeEnum = pgEnum("premium_access_type", ["one-time", "subscription"]);
+
+// Premium Content table
+export const premiumContent = pgTable("premium_content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().unique(),
+  isPremium: boolean("is_premium").notNull().default(true),
+  previewPercentage: integer("preview_percentage").notNull().default(20),
+  price: integer("price").notNull(), // In cents
+  currency: varchar("currency").notNull().default("USD"),
+  accessType: premiumAccessTypeEnum("access_type").notNull().default("one-time"),
+  subscriptionTier: varchar("subscription_tier"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_premium_content_id").on(table.contentId),
+]);
+
+export type PremiumContentRow = typeof premiumContent.$inferSelect;
+export type InsertPremiumContent = typeof premiumContent.$inferInsert;
+
+// Purchase status enum
+export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "completed", "refunded"]);
+
+// Content Purchases table
+export const contentPurchases = pgTable("content_purchases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  contentId: varchar("content_id").notNull(),
+  amount: integer("amount").notNull(),
+  currency: varchar("currency").notNull().default("USD"),
+  paymentMethod: varchar("payment_method").notNull(),
+  paymentId: varchar("payment_id"),
+  status: purchaseStatusEnum("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"),
+}, (table) => [
+  index("IDX_purchases_user").on(table.userId),
+  index("IDX_purchases_content").on(table.contentId),
+]);
+
+export type ContentPurchase = typeof contentPurchases.$inferSelect;
+export type InsertContentPurchase = typeof contentPurchases.$inferInsert;
+
+// Business type enum
+export const businessTypeEnum = pgEnum("business_type", ["restaurant", "hotel", "tour", "shop", "service"]);
+
+// Business tier enum
+export const businessTierEnum = pgEnum("business_tier", ["basic", "premium", "enterprise"]);
+
+// Business status enum
+export const businessStatusEnum = pgEnum("business_status", ["active", "pending", "expired", "cancelled"]);
+
+// Business Listings table
+export const businessListings = pgTable("business_listings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessName: varchar("business_name").notNull(),
+  businessType: businessTypeEnum("business_type").notNull(),
+  contactEmail: varchar("contact_email").notNull(),
+  contactPhone: varchar("contact_phone"),
+  website: varchar("website"),
+  contentIds: jsonb("content_ids").$type<string[]>().notNull().default([]),
+  tier: businessTierEnum("tier").notNull().default("basic"),
+  status: businessStatusEnum("status").notNull().default("pending"),
+  features: jsonb("features").$type<string[]>().notNull().default([]),
+  monthlyPrice: integer("monthly_price").notNull().default(0),
+  startDate: timestamp("start_date").notNull().defaultNow(),
+  endDate: timestamp("end_date"),
+  impressions: integer("impressions").notNull().default(0),
+  clicks: integer("clicks").notNull().default(0),
+  leads: integer("leads").notNull().default(0),
+  conversions: integer("conversions").notNull().default(0),
+  settings: jsonb("settings").$type<{
+    showPhone: boolean;
+    showEmail: boolean;
+    enableLeadForm: boolean;
+    enableBookingWidget: boolean;
+    featuredPlacement: boolean;
+  }>().notNull().default({
+    showPhone: true,
+    showEmail: true,
+    enableLeadForm: true,
+    enableBookingWidget: false,
+    featuredPlacement: false,
+  }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_business_status").on(table.status),
+  index("IDX_business_type").on(table.businessType),
+]);
+
+export type BusinessListing = typeof businessListings.$inferSelect;
+export type InsertBusinessListing = typeof businessListings.$inferInsert;
+
+// Lead type enum
+export const leadTypeEnum = pgEnum("lead_type", ["inquiry", "booking_request", "quote_request", "contact"]);
+
+// Lead status enum
+export const leadStatusEnum = pgEnum("lead_status", ["new", "contacted", "qualified", "converted", "lost"]);
+
+// Leads table
+export const leads = pgTable("leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessId: varchar("business_id").notNull().references(() => businessListings.id, { onDelete: "cascade" }),
+  contentId: varchar("content_id").notNull(),
+  type: leadTypeEnum("type").notNull(),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
+  message: text("message"),
+  checkIn: timestamp("check_in"),
+  checkOut: timestamp("check_out"),
+  guests: integer("guests"),
+  budget: varchar("budget"),
+  source: varchar("source").notNull(),
+  status: leadStatusEnum("status").notNull().default("new"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_leads_business").on(table.businessId),
+  index("IDX_leads_status").on(table.status),
+]);
+
+export type Lead = typeof leads.$inferSelect;
+export type InsertLead = typeof leads.$inferInsert;
+
 // Subscriber status enum for newsletter
 export const subscriberStatusEnum = pgEnum("subscriber_status", [
   "pending_confirmation",
@@ -717,7 +1019,7 @@ export const subscriberStatusEnum = pgEnum("subscriber_status", [
 
 // Consent log entry type
 export interface ConsentLogEntry {
-  action: "subscribe" | "confirm" | "unsubscribe" | "resubscribe";
+  action: "subscribe" | "confirm" | "unsubscribe" | "resubscribe" | "bounce" | "complaint";
   timestamp: string;
   ipAddress?: string;
   userAgent?: string;
@@ -730,15 +1032,23 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   email: varchar("email").notNull().unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  locale: varchar("locale").default("en"),
   source: varchar("source").default("coming_soon"),
   status: subscriberStatusEnum("status").notNull().default("pending_confirmation"),
   ipAddress: varchar("ip_address"),
   confirmToken: varchar("confirm_token"),
+  tags: jsonb("tags").$type<string[]>().default([]),
+  preferences: jsonb("preferences").$type<{ frequency: string; categories: string[] }>().default({ frequency: "weekly", categories: [] }),
   subscribedAt: timestamp("subscribed_at").defaultNow(),
   confirmedAt: timestamp("confirmed_at"),
   unsubscribedAt: timestamp("unsubscribed_at"),
+  lastEmailAt: timestamp("last_email_at"),
+  emailsReceived: integer("emails_received").default(0),
+  emailsOpened: integer("emails_opened").default(0),
+  emailsClicked: integer("emails_clicked").default(0),
   consentLog: jsonb("consent_log").$type<ConsentLogEntry[]>().default([]),
   isActive: boolean("is_active").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertNewsletterSubscriberSchema = createInsertSchema(newsletterSubscribers).omit({
@@ -753,7 +1063,7 @@ export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
 export type SubscriberStatus = "pending_confirmation" | "subscribed" | "unsubscribed" | "bounced" | "complained";
 
 // Lead status enum for property inquiries
-export const leadStatusEnum = pgEnum("lead_status", [
+export const propertyLeadStatusEnum = pgEnum("property_lead_status", [
   "new",
   "contacted",
   "qualified",
@@ -775,7 +1085,7 @@ export const propertyLeads = pgTable("property_leads", {
   timeline: varchar("timeline"),
   message: text("message"),
   source: varchar("source").default("off-plan-form"),
-  status: leadStatusEnum("status").notNull().default("new"),
+  status: propertyLeadStatusEnum("status").notNull().default("new"),
   ipAddress: varchar("ip_address"),
   userAgent: text("user_agent"),
   consentGiven: boolean("consent_given").notNull().default(false),
@@ -818,9 +1128,14 @@ export const newsletterCampaigns = pgTable("newsletter_campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
   subject: varchar("subject").notNull(),
+  subjectHe: varchar("subject_he"),
   previewText: varchar("preview_text"),
+  previewTextHe: varchar("preview_text_he"),
   htmlContent: text("html_content").notNull(),
+  htmlContentHe: text("html_content_he"),
   status: campaignStatusEnum("status").notNull().default("draft"),
+  targetTags: jsonb("target_tags").$type<string[]>(),
+  targetLocales: jsonb("target_locales").$type<string[]>(),
   scheduledAt: timestamp("scheduled_at"),
   sentAt: timestamp("sent_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -871,6 +1186,138 @@ export const insertCampaignEventSchema = createInsertSchema(campaignEvents).omit
 export type InsertCampaignEvent = z.infer<typeof insertCampaignEventSchema>;
 export type CampaignEvent = typeof campaignEvents.$inferSelect;
 export type EmailEventType = "sent" | "delivered" | "opened" | "clicked" | "bounced" | "complained" | "unsubscribed";
+
+// Sequence trigger enum
+export const sequenceTriggerEnum = pgEnum("sequence_trigger", [
+  "signup",
+  "tag_added",
+  "inactivity",
+  "custom"
+]);
+
+// Sequence email structure type
+export interface SequenceEmail {
+  delayDays: number;
+  subject: string;
+  subjectHe: string;
+  contentHtml: string;
+  contentHtmlHe: string;
+}
+
+// Automated Sequences table
+export const automatedSequences = pgTable("automated_sequences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  trigger: sequenceTriggerEnum("trigger").notNull(),
+  triggerValue: varchar("trigger_value"),
+  emails: jsonb("emails").$type<SequenceEmail[]>().notNull().default([]),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type AutomatedSequence = typeof automatedSequences.$inferSelect;
+export type InsertAutomatedSequence = typeof automatedSequences.$inferInsert;
+
+// Job status enum
+export const jobStatusEnum = pgEnum("job_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed"
+]);
+
+// Job type enum
+export const jobTypeEnum = pgEnum("job_type", [
+  "translate",
+  "ai_generate",
+  "email",
+  "image_process",
+  "cleanup"
+]);
+
+// Background Jobs table
+export const backgroundJobs = pgTable("background_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: jobTypeEnum("type").notNull(),
+  status: jobStatusEnum("status").notNull().default("pending"),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+  result: jsonb("result").$type<Record<string, unknown>>(),
+  error: text("error"),
+  retries: integer("retries").notNull().default(0),
+  maxRetries: integer("max_retries").notNull().default(3),
+  priority: integer("priority").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("IDX_jobs_status").on(table.status),
+  index("IDX_jobs_type").on(table.type),
+  index("IDX_jobs_priority").on(table.priority),
+]);
+
+export type BackgroundJob = typeof backgroundJobs.$inferSelect;
+export type InsertBackgroundJob = typeof backgroundJobs.$inferInsert;
+
+// Push Subscriptions table for PWA notifications
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dhKey: text("p256dh_key").notNull(),
+  authKey: text("auth_key").notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  locale: varchar("locale").notNull().default("en"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_push_user").on(table.userId),
+  index("IDX_push_locale").on(table.locale),
+]);
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
+
+// Search Queries table for analytics
+export const searchQueries = pgTable("search_queries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  query: varchar("query").notNull(),
+  resultsCount: integer("results_count").notNull().default(0),
+  clickedResultId: varchar("clicked_result_id"),
+  locale: varchar("locale").notNull().default("en"),
+  sessionId: varchar("session_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("IDX_search_query").on(table.query),
+  index("IDX_search_created").on(table.createdAt),
+  index("IDX_search_results").on(table.resultsCount),
+]);
+
+export type SearchQuery = typeof searchQueries.$inferSelect;
+export type InsertSearchQuery = typeof searchQueries.$inferInsert;
+
+// Translation batch jobs table
+export const translationBatchJobs = pgTable("translation_batch_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  status: varchar("status").notNull().default("pending"),
+  batchId: varchar("batch_id"), // OpenAI batch ID
+  requests: jsonb("requests").$type<Array<{
+    customId: string;
+    text: string;
+    sourceLocale: string;
+    targetLocale: string;
+    contentType: "title" | "description" | "body" | "meta";
+  }>>().notNull().default([]),
+  results: jsonb("results").$type<Record<string, string>>().default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("IDX_batch_status").on(table.status),
+  index("IDX_batch_created").on(table.createdAt),
+]);
+
+export type TranslationBatchJob = typeof translationBatchJobs.$inferSelect;
+export type InsertTranslationBatchJob = typeof translationBatchJobs.$inferInsert;
 
 // Relations
 export const contentsRelations = relations(contents, ({ one, many }) => ({
@@ -1014,6 +1461,28 @@ export interface NearbyItem {
 export interface GalleryImage {
   image: string;
   alt: string;
+  // SEO enhancements
+  title?: string;
+  caption?: string;
+  // Multilingual support
+  altHe?: string;
+  altAr?: string;
+  captionHe?: string;
+  captionAr?: string;
+  // Technical specs
+  width?: number;
+  height?: number;
+  // Schema metadata
+  keywords?: string[];
+  datePublished?: string;
+  contentLocation?: {
+    name: string;
+    addressLocality?: string;
+    addressRegion?: string;
+    addressCountry?: string;
+    latitude?: string;
+    longitude?: string;
+  };
 }
 
 export interface MenuHighlightItem {
@@ -1710,41 +2179,9 @@ export type InsertScheduledTask = z.infer<typeof insertScheduledTaskSchema>;
 export type ScheduledTask = typeof scheduledTasks.$inferSelect;
 
 // ============================================================================
-// TELEGRAM BOT TABLES - For Telegram integration (matching existing DB structure)
+// TELEGRAM BOT TABLES - ARCHIVED (see ARCHIVED_CODE_v1.0.md)
+// Tables exist in database but code integration removed for optimization
 // ============================================================================
-
-export const telegramUserProfiles = pgTable("telegram_user_profiles", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  telegramId: varchar("telegram_id").notNull(),
-  telegramUsername: varchar("telegram_username"),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  language: varchar("language"),
-  isPremium: boolean("is_premium").default(false),
-  interests: jsonb("interests").$type<string[]>().default([]),
-  favorites: jsonb("favorites").$type<string[]>().default([]),
-  tripDates: jsonb("trip_dates").$type<Record<string, unknown>>(),
-  travelStyle: varchar("travel_style"),
-  budget: varchar("budget"),
-  notificationsEnabled: boolean("notifications_enabled").default(true),
-  dailyDigestEnabled: boolean("daily_digest_enabled").default(false),
-  totalInteractions: integer("total_interactions").default(0),
-  badges: jsonb("badges").$type<string[]>().default([]),
-  points: integer("points").default(0),
-  lastActiveAt: timestamp("last_active_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const telegramConversations = pgTable("telegram_conversations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  telegramUserId: varchar("telegram_user_id").references(() => telegramUserProfiles.id),
-  role: varchar("role"),
-  content: text("content"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export type TelegramUserProfile = typeof telegramUserProfiles.$inferSelect;
-export type TelegramConversation = typeof telegramConversations.$inferSelect;
 
 // ============================================================================
 // CONTENT RULES - Strict rules for AI content generation (cannot be bypassed)

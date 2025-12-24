@@ -370,7 +370,7 @@ export function registerContentIntelligenceRoutes(app: Express) {
   // Get all running tests
   app.get("/api/intelligence/ab-tests", requireAuth, async (req, res) => {
     try {
-      const tests = contentIntelligence.abTesting.getRunningTests();
+      const tests = await contentIntelligence.abTesting.getRunningTests();
       res.json({ tests, count: tests.length });
     } catch (error) {
       console.error("[Intelligence] Error getting running tests:", error);
@@ -382,7 +382,7 @@ export function registerContentIntelligenceRoutes(app: Express) {
   app.get("/api/intelligence/ab-tests/content/:contentId", requireAuth, async (req, res) => {
     try {
       const { contentId } = req.params;
-      const tests = contentIntelligence.abTesting.getTestsForContent(contentId);
+      const tests = await contentIntelligence.abTesting.getTestsForContent(contentId);
       res.json({ tests, count: tests.length });
     } catch (error) {
       console.error("[Intelligence] Error getting content tests:", error);
@@ -483,7 +483,7 @@ export function registerContentIntelligenceRoutes(app: Express) {
           items: toneIssues.slice(0, 3).map(t => ({ title: t.title, score: t.score })),
         },
         abTests: {
-          running: contentIntelligence.abTesting.getRunningTests().length,
+          running: (await contentIntelligence.abTesting.getRunningTests()).length,
         },
       });
     } catch (error) {

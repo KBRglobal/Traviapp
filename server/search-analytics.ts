@@ -5,21 +5,20 @@
  * - Identify content gaps
  * - Improve navigation
  * - Understand user intent
+ *
+ * Now persisted to PostgreSQL for production reliability.
  */
 
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq, gte, desc, count } from "drizzle-orm";
 import { cache } from "./cache";
+import { searchQueries } from "@shared/schema";
 
 // ============================================================================
-// SCHEMA (would add to main schema)
+// TYPES
 // ============================================================================
 
-// Using in-memory storage + cache for now
-// In production, add to database schema:
-// searchQueries table: id, query, results_count, clicked_result_id, timestamp, locale, session_id
-
-interface SearchQuery {
+interface SearchQueryData {
   id: string;
   query: string;
   resultsCount: number;
@@ -29,11 +28,8 @@ interface SearchQuery {
   sessionId?: string;
 }
 
-// In-memory store (would be database in production)
-const searchStore: SearchQuery[] = [];
-
 // ============================================================================
-// SEARCH TRACKING
+// SEARCH TRACKING - Database Persistence
 // ============================================================================
 
 export const searchAnalytics = {
@@ -46,36 +42,36 @@ export const searchAnalytics = {
     locale: string = "en",
     sessionId?: string
   ): Promise<string> {
-    const id = `search_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    searchStore.push({
-      id,
-      query: query.toLowerCase().trim(),
-      resultsCount,
-      timestamp: new Date(),
-      locale,
-      sessionId,
-    });
-
-    // Keep only last 10000 searches in memory
-    if (searchStore.length > 10000) {
-      searchStore.splice(0, searchStore.length - 10000);
-    }
+    const [row] = await db.insert(searchQueries)
+      .values({
+        query: query.toLowerCase().trim(),
+        resultsCount,
+        locale,
+        sessionId: sessionId || null,
+      })
+      .returning();
 
     // Invalidate analytics cache
     await cache.invalidate("search-analytics:*");
 
-    return id;
+    // Periodically clean up old searches (older than 90 days)
+    if (Math.random() < 0.01) {
+      const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      db.delete(searchQueries)
+        .where(sql`${searchQueries.createdAt} < ${cutoff}`)
+        .catch(err => console.error("[SearchAnalytics] Cleanup failed:", err));
+    }
+
+    return row.id;
   },
 
   /**
    * Log when user clicks a search result
    */
   async logClick(searchId: string, resultId: string): Promise<void> {
-    const search = searchStore.find(s => s.id === searchId);
-    if (search) {
-      search.clickedResultId = resultId;
-    }
+    await db.update(searchQueries)
+      .set({ clickedResultId: resultId })
+      .where(eq(searchQueries.id, searchId));
   },
 
   /**
@@ -96,6 +92,11 @@ export const searchAnalytics = {
 
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
+    // Query from database with aggregation
+    const rows = await db.select()
+      .from(searchQueries)
+      .where(gte(searchQueries.createdAt, cutoff));
+
     // Group searches by query
     const queryStats = new Map<string, {
       count: number;
@@ -103,9 +104,7 @@ export const searchAnalytics = {
       clicks: number;
     }>();
 
-    for (const search of searchStore) {
-      if (search.timestamp < cutoff) continue;
-
+    for (const search of rows) {
       const existing = queryStats.get(search.query);
       if (existing) {
         existing.count++;
@@ -152,23 +151,25 @@ export const searchAnalytics = {
 
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
+    // Query from database
+    const rows = await db.select()
+      .from(searchQueries)
+      .where(sql`${searchQueries.createdAt} >= ${cutoff} AND ${searchQueries.resultsCount} = 0`);
+
     // Find searches with 0 results
     const zeroResults = new Map<string, { count: number; lastSearched: Date }>();
 
-    for (const search of searchStore) {
-      if (search.timestamp < cutoff) continue;
-      if (search.resultsCount > 0) continue;
-
+    for (const search of rows) {
       const existing = zeroResults.get(search.query);
       if (existing) {
         existing.count++;
-        if (search.timestamp > existing.lastSearched) {
-          existing.lastSearched = search.timestamp;
+        if (search.createdAt > existing.lastSearched) {
+          existing.lastSearched = search.createdAt;
         }
       } else {
         zeroResults.set(search.query, {
           count: 1,
-          lastSearched: search.timestamp,
+          lastSearched: search.createdAt,
         });
       }
     }
@@ -223,6 +224,13 @@ export const searchAnalytics = {
     avgResults: number;
     avgClickRate: number;
   }>> {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // Query from database
+    const rows = await db.select()
+      .from(searchQueries)
+      .where(gte(searchQueries.createdAt, cutoff));
+
     const trends: Map<string, {
       searches: number;
       queries: Set<string>;
@@ -230,12 +238,8 @@ export const searchAnalytics = {
       clicks: number;
     }> = new Map();
 
-    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-    for (const search of searchStore) {
-      if (search.timestamp < cutoff) continue;
-
-      const dateKey = search.timestamp.toISOString().split('T')[0];
+    for (const search of rows) {
+      const dateKey = search.createdAt.toISOString().split('T')[0];
       const existing = trends.get(dateKey);
 
       if (existing) {
@@ -339,14 +343,27 @@ export const searchAnalytics = {
       this.getSearchTrends(7),
     ]);
 
-    const totalSearches = trends.reduce((sum, t) => sum + t.totalSearches, 0);
-    const uniqueQueries = new Set(searchStore.map(s => s.query)).size;
+    // Query for unique queries and zero results from DB
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const [totalCount] = await db.select({ count: count() })
+      .from(searchQueries)
+      .where(gte(searchQueries.createdAt, cutoff));
+
+    const uniqueQueriesResult = await db.selectDistinct({ query: searchQueries.query })
+      .from(searchQueries)
+      .where(gte(searchQueries.createdAt, cutoff));
+
+    const [zeroResultCount] = await db.select({ count: count() })
+      .from(searchQueries)
+      .where(sql`${searchQueries.createdAt} >= ${cutoff} AND ${searchQueries.resultsCount} = 0`);
+
+    const totalSearches = totalCount?.count || 0;
+    const uniqueQueries = uniqueQueriesResult.length;
     const avgClickRate = popular.length > 0
       ? Math.round(popular.reduce((sum, p) => sum + p.clickRate, 0) / popular.length)
       : 0;
-    const zeroResultSearches = searchStore.filter(s => s.resultsCount === 0).length;
     const zeroResultRate = totalSearches > 0
-      ? Math.round((zeroResultSearches / totalSearches) * 100)
+      ? Math.round(((zeroResultCount?.count || 0) / totalSearches) * 100)
       : 0;
 
     return {

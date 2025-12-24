@@ -1,9 +1,29 @@
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import { registerRoutes, autoProcessRssFeeds } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { securityHeaders, corsMiddleware, sanitizeInput } from "./security";
 
 const app = express();
+
+// Disable X-Powered-By header globally
+app.disable('x-powered-by');
+
+// Apply security headers and CORS to all requests
+app.use(securityHeaders);
+app.use(corsMiddleware);
+
+// Enable gzip/deflate compression for all responses
+app.use(compression({
+  level: 6, // Balanced compression level
+  threshold: 1024, // Only compress responses > 1KB
+  filter: (req, res) => {
+    // Always compress HTML, CSS, JS, JSON, SVG
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  }
+}));
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -12,15 +32,23 @@ declare module "http" {
   }
 }
 
+// Security: Limit request body size to prevent DoS attacks
 app.use(
   express.json({
+    limit: '10mb',  // Maximum JSON body size
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({
+  extended: false,
+  limit: '10mb',  // Maximum URL-encoded body size
+}));
+
+// Sanitize incoming request data (remove null bytes, control chars)
+app.use(sanitizeInput);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -62,12 +90,39 @@ app.use((req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  // Global error handler middleware
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    // Log the error
+    log(`Error: ${err.message || 'Unknown error'} - ${req.method} ${req.path}`, 'error');
+    if (process.env.NODE_ENV === 'development') {
+      console.error(err.stack);
+    }
 
-    res.status(status).json({ message });
-    throw err;
+    // Handle Zod validation errors
+    if (err.name === 'ZodError' && err.errors) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        details: err.errors.map((e: any) => ({
+          field: e.path?.join('.') || 'unknown',
+          message: e.message
+        }))
+      });
+    }
+
+    // Handle known operational errors
+    if (err.isOperational) {
+      return res.status(err.statusCode || err.status || 400).json({
+        error: err.message
+      });
+    }
+
+    // Get appropriate status code
+    const status = err.status || err.statusCode || 500;
+    const message = process.env.NODE_ENV === 'production' && status === 500
+      ? 'Internal Server Error'
+      : err.message || 'Internal Server Error';
+
+    res.status(status).json({ error: message });
   });
 
   // importantly only setup vite in development and after
@@ -85,6 +140,12 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
+
+  // Security: Set server timeouts to prevent slow loris attacks
+  httpServer.timeout = 120000;        // 2 minutes for complete request
+  httpServer.keepAliveTimeout = 65000; // Keep alive timeout
+  httpServer.headersTimeout = 66000;   // Headers timeout (must be > keepAliveTimeout)
+
   httpServer.listen(
     {
       port,
@@ -122,4 +183,34 @@ app.use((req, res, next) => {
       }, RSS_AUTO_PROCESS_INTERVAL_MS);
     },
   );
+
+  // Graceful shutdown handling
+  const shutdown = async (signal: string) => {
+    log(`${signal} received. Starting graceful shutdown...`, "server");
+
+    // Stop accepting new connections
+    httpServer.close(() => {
+      log("HTTP server closed", "server");
+    });
+
+    // Give existing requests 10 seconds to complete
+    setTimeout(() => {
+      log("Forcing shutdown after timeout", "server");
+      process.exit(0);
+    }, 10000);
+
+    try {
+      // Close database pool
+      const { pool } = await import("./db");
+      await pool.end();
+      log("Database pool closed", "server");
+    } catch (error) {
+      log(`Error closing database pool: ${error}`, "server");
+    }
+
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 })();
