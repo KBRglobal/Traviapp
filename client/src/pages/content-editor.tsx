@@ -126,6 +126,7 @@ import { RelatedContentFinder } from "@/components/related-content-finder";
 import { BrokenLinkChecker } from "@/components/broken-link-checker";
 import { ReadingTimeCalculator } from "@/components/reading-time-calculator";
 import { useRegisterTab } from "@/components/multi-tab-editor";
+import { WriterSelector } from "@/components/writers/WriterSelector";
 
 type ContentType = "attraction" | "hotel" | "article" | "dining" | "district";
 // TEMPORARILY DISABLED: "transport" | "event" | "itinerary" - Will be enabled later
@@ -521,6 +522,7 @@ export default function ContentEditor() {
   });
   const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
   const [aiGenerateInput, setAiGenerateInput] = useState("");
+  const [selectedWriterId, setSelectedWriterId] = useState<string>("");
   const [imageGeneratingBlock, setImageGeneratingBlock] = useState<string | null>(null);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<ContentVersion | null>(null);
@@ -1458,6 +1460,19 @@ export default function ContentEditor() {
 
   const aiGenerateMutation = useMutation({
     mutationFn: async (input: string) => {
+      // Use new AI Writers system if a writer is selected
+      if (selectedWriterId) {
+        const body = {
+          type: contentType,
+          topic: input,
+          keywords: primaryKeyword ? [primaryKeyword] : [],
+          writerId: selectedWriterId,
+        };
+        const res = await apiRequest("POST", "/api/ai/generate", body);
+        return res.json();
+      }
+
+      // Fallback to legacy content-type-specific endpoints
       const endpoint =
         contentType === "hotel" ? "/api/ai/generate-hotel" :
         contentType === "attraction" ? "/api/ai/generate-attraction" :
@@ -1479,19 +1494,22 @@ export default function ContentEditor() {
       return res.json();
     },
     onSuccess: (result) => {
-      if (result.content) {
-        setTitle(result.content.title || "");
-        setSlug(result.content.slug || "");
-        setMetaTitle(result.content.metaTitle || "");
-        setMetaDescription(result.content.metaDescription || "");
-        setPrimaryKeyword(result.content.primaryKeyword || "");
-        if (result.content.heroImage) setHeroImage(result.content.heroImage);
-        setHeroImageAlt(result.content.heroImageAlt || "");
+      // Handle new AI Writers response format (flat structure)
+      const content = result.content || result;
+      
+      if (content) {
+        setTitle(content.title || "");
+        setSlug(content.slug || "");
+        setMetaTitle(content.metaTitle || "");
+        setMetaDescription(content.metaDescription || "");
+        setPrimaryKeyword(content.primaryKeyword || "");
+        if (content.heroImage) setHeroImage(content.heroImage);
+        setHeroImageAlt(content.heroImageAlt || "");
 
         // Process blocks - expand FAQ and Tips blocks that have arrays
         let processedBlocks: ContentBlock[] = [];
         let orderIndex = 0;
-        const rawBlocks = Array.isArray(result.content.blocks) ? result.content.blocks : [];
+        const rawBlocks = Array.isArray(content.blocks) ? content.blocks : [];
 
         for (const block of rawBlocks) {
           // Handle FAQ blocks with faqs array
@@ -2648,7 +2666,7 @@ export default function ContentEditor() {
 
       {/* AI Generate Dialog */}
       <Dialog open={aiGenerateDialogOpen} onOpenChange={setAiGenerateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Generate with AI</DialogTitle>
             <DialogDescription>
@@ -2656,13 +2674,25 @@ export default function ContentEditor() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <Input
-              value={aiGenerateInput}
-              onChange={(e) => setAiGenerateInput(e.target.value)}
-              placeholder={contentType === "article" ? "e.g., Best Dubai beaches for families" : contentType === "hotel" ? "e.g., Atlantis The Palm" : "e.g., Burj Khalifa"}
-              disabled={aiGenerateMutation.isPending}
-              data-testid="input-ai-generate"
+            <div className="space-y-2">
+              <Label>Topic / Name</Label>
+              <Input
+                value={aiGenerateInput}
+                onChange={(e) => setAiGenerateInput(e.target.value)}
+                placeholder={contentType === "article" ? "e.g., Best Dubai beaches for families" : contentType === "hotel" ? "e.g., Atlantis The Palm" : "e.g., Burj Khalifa"}
+                disabled={aiGenerateMutation.isPending}
+                data-testid="input-ai-generate"
+              />
+            </div>
+            
+            {/* NEW: Writer Selection */}
+            <WriterSelector
+              contentType={contentType}
+              onSelect={(writerId) => setSelectedWriterId(writerId)}
+              showRecommended={true}
+              selectedWriterId={selectedWriterId}
             />
+            
             {aiGenerateMutation.isPending && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -2674,7 +2704,21 @@ export default function ContentEditor() {
             <Button variant="outline" onClick={() => setAiGenerateDialogOpen(false)} disabled={aiGenerateMutation.isPending}>
               Cancel
             </Button>
-            <Button onClick={() => aiGenerateMutation.mutate(aiGenerateInput)} disabled={aiGenerateMutation.isPending || !aiGenerateInput.trim()} data-testid="button-confirm-ai-generate">
+            <Button 
+              onClick={() => {
+                if (!selectedWriterId) {
+                  toast({ 
+                    title: "Writer Required", 
+                    description: "Please select an AI writer first", 
+                    variant: "destructive" 
+                  });
+                  return;
+                }
+                aiGenerateMutation.mutate(aiGenerateInput);
+              }} 
+              disabled={aiGenerateMutation.isPending || !aiGenerateInput.trim()} 
+              data-testid="button-confirm-ai-generate"
+            >
               {aiGenerateMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
               Generate
             </Button>
