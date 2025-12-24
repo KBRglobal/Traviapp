@@ -4,14 +4,17 @@ import { registerRoutes, autoProcessRssFeeds } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { securityHeaders, corsMiddleware, sanitizeInput } from "./security";
+import { setupSecurityMiddleware } from "./security/index";
 
 const app = express();
 
 // Disable X-Powered-By header globally
 app.disable('x-powered-by');
 
-// Apply security headers and CORS to all requests
-app.use(securityHeaders);
+// Initialize enterprise security layer (Helmet + attack detection)
+setupSecurityMiddleware(app);
+
+// Apply CORS to all requests (from existing security.ts)
 app.use(corsMiddleware);
 
 // Enable gzip/deflate compression for all responses
