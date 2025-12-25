@@ -81,9 +81,12 @@ import {
 // AI client providers (single source of truth)
 import {
   getAIClient,
+  getAllAIClients,
+  markProviderFailed,
   getOpenAIClient,
   getGeminiClient,
-  getOpenRouterClient
+  getOpenRouterClient,
+  type AIProvider
 } from "./ai/providers";
 // Security validators (single source of truth for sanitization)
 import { sanitizeHtml as sanitizeHtmlContent } from "./security/validators";
@@ -1355,15 +1358,14 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
     }
 
     const pendingClusters = await storage.getTopicClusters({ status: "pending" });
-    const aiClient = getAIClient();
+    const aiProviders = getAllAIClients();
 
-    if (!aiClient) {
+    if (aiProviders.length === 0) {
       console.log("[RSS Auto-Process] No AI provider configured, skipping article generation");
       return result;
     }
-    const { client: openai, provider } = aiClient;
-    const model = getModelForProvider(provider);
-
+    
+    console.log(`[RSS Auto-Process] Available AI providers: ${aiProviders.map(p => p.provider).join(", ")}`);
     console.log(`[RSS Auto-Process] Found ${pendingClusters.length} pending clusters to process`);
 
     for (const cluster of pendingClusters) {
@@ -1412,15 +1414,48 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
             });
           }
 
-          const completion = await openai.chat.completions.create({
-            model: provider === "openai" ? "gpt-4o" : model, // Use GPT-4o for OpenAI, otherwise use provider's model
-            messages,
-            response_format: { type: "json_object" },
-            temperature: attempts === 1 ? 0.7 : 0.5, // Lower temp on retries for more predictable output
-            max_tokens: 12000, // Increased for 1800+ word articles with JSON overhead
-          });
+          // Try each provider in fallback chain until one succeeds
+          let completionSuccess = false;
+          for (const aiProvider of aiProviders) {
+            const { client: openai, provider, model } = aiProvider;
+            
+            try {
+              console.log(`[RSS Auto-Process] Trying provider: ${provider} with model: ${model}`);
+              
+              const completion = await openai.chat.completions.create({
+                model: provider === "openai" ? "gpt-4o" : model,
+                messages,
+                ...(provider === "openai" ? { response_format: { type: "json_object" } } : {}),
+                temperature: attempts === 1 ? 0.7 : 0.5,
+                max_tokens: 12000,
+              });
 
-          lastResponse = JSON.parse(completion.choices[0].message.content || "{}");
+              lastResponse = JSON.parse(completion.choices[0].message.content || "{}");
+              completionSuccess = true;
+              console.log(`[RSS Auto-Process] Successfully got response from ${provider}`);
+              break; // Exit provider loop on success
+              
+            } catch (providerError: any) {
+              const isRateLimitError = providerError?.status === 429 || 
+                                       providerError?.code === 'insufficient_quota' ||
+                                       providerError?.message?.includes('quota') ||
+                                       providerError?.message?.includes('429');
+              
+              console.log(`[RSS Auto-Process] Provider ${provider} failed: ${providerError?.message || 'Unknown error'}`);
+              
+              if (isRateLimitError) {
+                markProviderFailed(provider);
+                console.log(`[RSS Auto-Process] Marked ${provider} as temporarily unavailable, trying next...`);
+              }
+              // Continue to next provider
+            }
+          }
+
+          if (!completionSuccess) {
+            console.log(`[RSS Auto-Process] All providers failed for attempt ${attempts}`);
+            break; // Exit attempts loop if no providers worked
+          }
+
           const validation = await validateArticleResponse(lastResponse);
 
           if (validation.isValid && validation.data) {
@@ -4643,22 +4678,21 @@ export async function registerRoutes(
     }
   });
 
-  // Comprehensive AI Article Generator - Full Spec Implementation
+  // Comprehensive AI Article Generator - Full Spec Implementation with Multi-Provider Fallback
   app.post("/api/ai/generate-article", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
       addSystemLog("warning", "ai", "AI article generation blocked - safe mode enabled");
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const aiClient = getAIClient();
-      if (!aiClient) {
-        addSystemLog("error", "ai", "AI article generation failed - no AI provider configured (need OPENAI_API_KEY, GEMINI, or openrouterapi)");
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi to Secrets." });
+      // Get all available AI providers for fallback chain
+      const aiProviders = getAllAIClients();
+      if (aiProviders.length === 0) {
+        addSystemLog("error", "ai", "AI article generation failed - no AI provider configured (need OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, or openrouterapi)");
+        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, or openrouterapi to Secrets." });
       }
 
-      const { client: openai, provider } = aiClient;
-      const model = getModelForProvider(provider);
-      addSystemLog("info", "ai", `Using AI provider: ${provider} with model: ${model}`);
+      addSystemLog("info", "ai", `Available AI providers: ${aiProviders.map(p => p.provider).join(", ")}`);
 
       const { title, topic, summary, sourceUrl, sourceText, inputType = "title_only" } = req.body;
 
@@ -4794,17 +4828,69 @@ CRITICAL WORD COUNT REQUIREMENTS:
 
 Return valid JSON only.`;
 
-      const response = await openai.chat.completions.create({
-        model: model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        ...(provider === "openai" ? { response_format: { type: "json_object" } } : {}),
-        max_tokens: 8000,
-      });
+      // Try each provider in fallback chain until one succeeds
+      let generatedArticle: any = null;
+      let successfulProvider: string | null = null;
+      let lastError: Error | null = null;
 
-      let generatedArticle = JSON.parse(response.choices[0].message.content || "{}");
+      for (const aiProvider of aiProviders) {
+        const { client: openai, provider, model } = aiProvider;
+        
+        try {
+          addSystemLog("info", "ai", `Trying AI provider: ${provider} with model: ${model}`);
+          
+          const response = await openai.chat.completions.create({
+            model: model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            ...(provider === "openai" ? { response_format: { type: "json_object" } } : {}),
+            max_tokens: 8000,
+          });
+
+          generatedArticle = JSON.parse(response.choices[0].message.content || "{}");
+          successfulProvider = provider;
+          addSystemLog("info", "ai", `Successfully generated with ${provider}`);
+          break; // Success! Exit the loop
+          
+        } catch (providerError: any) {
+          lastError = providerError;
+          const isRateLimitError = providerError?.status === 429 || 
+                                   providerError?.code === 'insufficient_quota' ||
+                                   providerError?.message?.includes('quota') ||
+                                   providerError?.message?.includes('429');
+          
+          addSystemLog("warning", "ai", `Provider ${provider} failed: ${providerError?.message || 'Unknown error'}`, {
+            status: providerError?.status,
+            isRateLimit: isRateLimitError
+          });
+          
+          if (isRateLimitError) {
+            // Mark this provider as temporarily unavailable
+            markProviderFailed(provider);
+            addSystemLog("info", "ai", `Marked ${provider} as temporarily unavailable, trying next provider...`);
+          }
+          
+          // Continue to next provider
+        }
+      }
+
+      if (!generatedArticle || !successfulProvider) {
+        const errorMsg = lastError?.message || 'All AI providers failed';
+        addSystemLog("error", "ai", `All AI providers failed: ${errorMsg}`);
+        return res.status(503).json({ 
+          error: "All AI providers failed. Please check API quotas and try again later.",
+          details: errorMsg,
+          triedProviders: aiProviders.map(p => p.provider)
+        });
+      }
+
+      // Use the successful provider for any subsequent calls
+      const successfulClient = aiProviders.find(p => p.provider === successfulProvider);
+      const openai = successfulClient!.client;
+      const provider = successfulClient!.provider;
+      const model = successfulClient!.model;
       
       // Server-side word count validation and auto-expansion
       const countWords = (text: string): number => text.trim().split(/\s+/).filter(w => w.length > 0).length;
