@@ -22,12 +22,9 @@ export {
   generateTitles,
   generateIntro,
   rewriteInVoice,
-  validateVoiceConsistency,
-  validateContentVoice,
   optimizeForSeo,
   type WriteContentRequest,
   type WriteContentResponse,
-  type VoiceValidationResult,
 } from "./writer-engine";
 
 // Export assignment system
@@ -54,10 +51,10 @@ export {
   getWriterGuidelines,
 } from "./prompts";
 
-// Export voice validator
+// Export voice validator (SINGLE source of truth for voice validation)
 export {
   voiceValidator,
-  validateVoiceConsistency as validateWriterVoiceConsistency,
+  validateVoiceConsistency,
   getVoiceScore,
   type VoiceConsistencyResult,
 } from "./voice-validator";

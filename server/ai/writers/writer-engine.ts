@@ -1,19 +1,19 @@
 /**
  * AI Writer Engine
- * 
+ *
  * Generates content using the selected writer's voice and style
  */
 
 import { getAIClient } from "../providers";
 import type { AIWriter } from "./writer-registry";
 import { getWriterById } from "./writer-registry";
+import { voiceValidator } from "./voice-validator";
 import {
   getWriterSystemPrompt,
   getContentGenerationPrompt,
   getTitleGenerationPrompt,
   getIntroGenerationPrompt,
   getRewritePrompt,
-  getVoiceValidationPrompt,
   getSeoOptimizationPrompt,
   type WriteContentRequest,
 } from "./prompts";
@@ -35,12 +35,15 @@ export interface WriteContentResponse {
   };
 }
 
-export interface VoiceValidationResult {
-  score: number;
-  voiceAuthenticity: string;
-  styleConsistency: string;
-  signatureElements: string;
-  improvements: string[];
+/**
+ * Helper to get AI client with proper error handling
+ */
+function getClient() {
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("No AI provider configured. Please add OPENAI_API_KEY, GEMINI, or OPENROUTER_API_KEY.");
+  }
+  return aiClient.client;
 }
 
 /**
@@ -54,7 +57,7 @@ export async function generateContent(
     throw new Error(`Writer not found: ${request.writerId}`);
   }
 
-  const client = await getAIClient();
+  const client = getClient();
   const systemPrompt = getWriterSystemPrompt(writer);
   const userPrompt = getContentGenerationPrompt(writer, request);
 
@@ -77,7 +80,7 @@ export async function generateContent(
     // Calculate metadata
     const wordCount = generatedContent.split(/\s+/).length;
     const readingTime = Math.ceil(wordCount / 200); // Average reading speed
-    const voiceScore = await validateVoiceConsistency(request.writerId, generatedContent);
+    const voiceScore = await voiceValidator.getScore(request.writerId, generatedContent);
 
     return {
       content: parsedContent,
@@ -107,7 +110,7 @@ export async function generateTitles(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  const client = await getAIClient();
+  const client = getClient();
   const systemPrompt = getWriterSystemPrompt(writer);
   const userPrompt = getTitleGenerationPrompt(writer, topic);
 
@@ -151,7 +154,7 @@ export async function generateIntro(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  const client = await getAIClient();
+  const client = getClient();
   const systemPrompt = getWriterSystemPrompt(writer);
   const userPrompt = getIntroGenerationPrompt(writer, topic, title);
 
@@ -185,7 +188,7 @@ export async function rewriteInVoice(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  const client = await getAIClient();
+  const client = getClient();
   const systemPrompt = getWriterSystemPrompt(writer);
   const userPrompt = getRewritePrompt(writer, content);
 
@@ -208,89 +211,6 @@ export async function rewriteInVoice(
 }
 
 /**
- * Validate voice consistency
- */
-export async function validateVoiceConsistency(
-  writerId: string,
-  content: string
-): Promise<number> {
-  const writer = getWriterById(writerId);
-  if (!writer) {
-    throw new Error(`Writer not found: ${writerId}`);
-  }
-
-  const client = await getAIClient();
-  const prompt = getVoiceValidationPrompt(writer, content);
-
-  try {
-    const response = await client.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { 
-          role: "system", 
-          content: "You are a voice consistency analyzer. Return only valid JSON." 
-        },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.3, // Lower for more consistent analysis
-      max_tokens: 1000,
-    });
-
-    const resultText = response.choices[0]?.message?.content || "{}";
-    const result = JSON.parse(resultText) as VoiceValidationResult;
-    
-    return result.score || 0;
-  } catch (error) {
-    console.error("Error validating voice:", error);
-    // Return a default score on error
-    return 50;
-  }
-}
-
-/**
- * Get detailed voice validation
- */
-export async function validateContentVoice(
-  writerId: string,
-  content: string
-): Promise<VoiceValidationResult> {
-  const writer = getWriterById(writerId);
-  if (!writer) {
-    throw new Error(`Writer not found: ${writerId}`);
-  }
-
-  const client = await getAIClient();
-  const prompt = getVoiceValidationPrompt(writer, content);
-
-  try {
-    const response = await client.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { 
-          role: "system", 
-          content: "You are a voice consistency analyzer. Return only valid JSON." 
-        },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 1000,
-    });
-
-    const resultText = response.choices[0]?.message?.content || "{}";
-    return JSON.parse(resultText) as VoiceValidationResult;
-  } catch (error) {
-    console.error("Error validating voice:", error);
-    return {
-      score: 50,
-      voiceAuthenticity: "Error analyzing voice",
-      styleConsistency: "Error analyzing style",
-      signatureElements: "Error analyzing elements",
-      improvements: ["Unable to analyze due to error"],
-    };
-  }
-}
-
-/**
  * Optimize content for SEO while maintaining voice
  */
 export async function optimizeForSeo(
@@ -303,7 +223,7 @@ export async function optimizeForSeo(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  const client = await getAIClient();
+  const client = getClient();
   const systemPrompt = getWriterSystemPrompt(writer);
   const userPrompt = getSeoOptimizationPrompt(writer, content, keywords);
 
@@ -376,7 +296,6 @@ export const writerEngine = {
   generateTitles,
   generateIntro,
   rewriteInVoice,
-  validateVoiceConsistency,
-  validateContentVoice,
   optimizeForSeo,
+  // Voice validation is now handled by voiceValidator from ./voice-validator
 };

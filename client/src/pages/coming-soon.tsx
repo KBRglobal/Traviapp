@@ -5,8 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Check, Globe, ChevronDown } from "lucide-react";
 import { SiInstagram, SiTelegram } from "react-icons/si";
 import { apiRequest } from "@/lib/queryClient";
-import fullLogo from "@assets/Full_Logo_for_Dark_Background_1765637862936.png";
-import mascot from "@assets/Mascot_for_Dark_Background_1765637862937.png";
+import fullLogo from "@assets/Full_Logo_for_Dark_Background_1765497703860.png";
+import mascot from "@assets/Mascot_for_Dark_Background_1765497703861.png";
 import {
   DropdownMenu,
   DropdownMenuContent,

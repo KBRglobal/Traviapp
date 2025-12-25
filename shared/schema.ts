@@ -2938,62 +2938,10 @@ export type ContentScore = typeof contentScores.$inferSelect;
 export type InsertContentScore = z.infer<typeof insertContentScoreSchema>;
 
 // ============================================================================
-// WEBHOOK TABLES
-// ============================================================================
-
-export const webhookStatusEnum = pgEnum("webhook_status", ["active", "inactive", "failed"]);
-
-export const webhooks = pgTable("webhooks", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  url: text("url").notNull(),
-  events: jsonb("events").$type<string[]>().default([]),
-  secret: varchar("secret").notNull(),
-  status: webhookStatusEnum("status").notNull().default("active"),
-  description: text("description"),
-  createdBy: varchar("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("IDX_webhooks_status").on(table.status),
-]);
-
-export const webhookLogs = pgTable("webhook_logs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  webhookId: varchar("webhook_id").references(() => webhooks.id, { onDelete: "cascade" }),
-  event: text("event").notNull(),
-  payload: jsonb("payload"),
-  response: jsonb("response"),
-  statusCode: integer("status_code"),
-  success: boolean("success").notNull(),
-  attempts: integer("attempts").default(1),
-  error: text("error"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("IDX_webhook_logs_webhook").on(table.webhookId),
-  index("IDX_webhook_logs_created").on(table.createdAt),
-]);
-
-export const insertWebhookSchema = createInsertSchema(webhooks).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertWebhookLogSchema = createInsertSchema(webhookLogs).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type Webhook = typeof webhooks.$inferSelect;
-export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
-export type WebhookLog = typeof webhookLogs.$inferSelect;
-export type InsertWebhookLog = z.infer<typeof insertWebhookLogSchema>;
-
-// ============================================================================
 // WORKFLOW TABLES
 // ============================================================================
 
-export const workflowStatusEnum = pgEnum("workflow_status", ["active", "inactive", "draft"]);
+export const automationStatusEnum = pgEnum("automation_status", ["active", "inactive", "draft"]);
 export const workflowExecutionStatusEnum = pgEnum("workflow_execution_status", ["pending", "running", "completed", "failed"]);
 
 export const workflows = pgTable("workflows", {
@@ -3008,7 +2956,7 @@ export const workflows = pgTable("workflows", {
     type: string;
     config: Record<string, unknown>;
   }>>().notNull(),
-  status: workflowStatusEnum("status").notNull().default("draft"),
+  status: automationStatusEnum("status").notNull().default("draft"),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -3059,11 +3007,11 @@ export const partners = pgTable("partners", {
   email: varchar("email").notNull().unique(),
   companyName: text("company_name"),
   website: text("website"),
-  commissionRate: integer("commission_rate").notNull(), // Basis points (e.g., 500 = 5%)
+  commissionRate: integer("commission_rate").notNull(),
   status: partnerStatusEnum("status").notNull().default("pending"),
   trackingCode: varchar("tracking_code").notNull().unique(),
   paymentDetails: jsonb("payment_details").$type<Record<string, unknown>>(),
-  totalEarnings: integer("total_earnings").default(0), // In cents
+  totalEarnings: integer("total_earnings").default(0),
   totalClicks: integer("total_clicks").default(0),
   totalConversions: integer("total_conversions").default(0),
   createdAt: timestamp("created_at").defaultNow(),
@@ -3076,10 +3024,10 @@ export const partners = pgTable("partners", {
 export const payouts = pgTable("payouts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   partnerId: varchar("partner_id").references(() => partners.id, { onDelete: "cascade" }),
-  amount: integer("amount").notNull(), // In cents
+  amount: integer("amount").notNull(),
   currency: varchar("currency").notNull().default("USD"),
   status: payoutStatusEnum("status").notNull().default("pending"),
-  method: text("method"), // e.g., "bank_transfer", "paypal"
+  method: text("method"),
   referenceId: text("reference_id"),
   periodStart: timestamp("period_start").notNull(),
   periodEnd: timestamp("period_end").notNull(),
@@ -3107,27 +3055,8 @@ export type Payout = typeof payouts.$inferSelect;
 export type InsertPayout = z.infer<typeof insertPayoutSchema>;
 
 // ============================================================================
-// A/B TESTING TABLES
+// A/B TESTING EXTENDED TABLES
 // ============================================================================
-
-export const abTestStatusEnum = pgEnum("ab_test_status", ["draft", "running", "paused", "completed"]);
-
-export const abTests = pgTable("ab_tests", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  description: text("description"),
-  type: text("type").notNull(), // e.g., "cta", "headline", "layout"
-  status: abTestStatusEnum("status").notNull().default("draft"),
-  targetUrl: text("target_url"),
-  startDate: timestamp("start_date"),
-  endDate: timestamp("end_date"),
-  trafficAllocation: integer("traffic_allocation").default(100), // Percentage
-  createdBy: varchar("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("IDX_ab_tests_status").on(table.status),
-]);
 
 export const abTestVariants = pgTable("ab_test_variants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3136,7 +3065,7 @@ export const abTestVariants = pgTable("ab_test_variants", {
   description: text("description"),
   config: jsonb("config").$type<Record<string, unknown>>().notNull(),
   isControl: boolean("is_control").notNull().default(false),
-  weight: integer("weight").notNull().default(50), // Traffic split percentage
+  weight: integer("weight").notNull().default(50),
   impressions: integer("impressions").default(0),
   clicks: integer("clicks").default(0),
   conversions: integer("conversions").default(0),
@@ -3149,7 +3078,7 @@ export const abTestEvents = pgTable("ab_test_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   testId: varchar("test_id").references(() => abTests.id, { onDelete: "cascade" }),
   variantId: varchar("variant_id").references(() => abTestVariants.id, { onDelete: "cascade" }),
-  eventType: text("event_type").notNull(), // "impression", "click", "conversion"
+  eventType: text("event_type").notNull(),
   userId: varchar("user_id"),
   sessionId: varchar("session_id"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
@@ -3159,12 +3088,6 @@ export const abTestEvents = pgTable("ab_test_events", {
   index("IDX_ab_test_events_variant").on(table.variantId),
   index("IDX_ab_test_events_created").on(table.createdAt),
 ]);
-
-export const insertAbTestSchema = createInsertSchema(abTests).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
 
 export const insertAbTestVariantSchema = createInsertSchema(abTestVariants).omit({
   id: true,
@@ -3176,8 +3099,6 @@ export const insertAbTestEventSchema = createInsertSchema(abTestEvents).omit({
   createdAt: true,
 });
 
-export type AbTest = typeof abTests.$inferSelect;
-export type InsertAbTest = z.infer<typeof insertAbTestSchema>;
 export type AbTestVariant = typeof abTestVariants.$inferSelect;
 export type InsertAbTestVariant = z.infer<typeof insertAbTestVariantSchema>;
 export type AbTestEvent = typeof abTestEvents.$inferSelect;
