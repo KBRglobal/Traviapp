@@ -58,11 +58,11 @@ export async function generate(
     }
   } else {
     // Auto-assign optimal writer
-    const assignment = await assignmentSystem.assignWriter(
-      request.contentType,
-      request.topic,
-      request.keywords
-    );
+    const assignment = await assignmentSystem.assignWriter({
+      contentType: request.contentType,
+      topic: request.topic,
+      keywords: request.keywords || [],
+    });
     writer = assignment.writer;
   }
 
@@ -153,7 +153,7 @@ export async function rewriteInVoice(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  return writerEngine.rewriteInVoice(writer.id, content, context);
+  return writerEngine.rewriteInVoice(writer.id, content);
 }
 
 // Legacy system removed - AI Writers is the only content generation system
@@ -166,7 +166,7 @@ export async function recommendWriter(
   topic: string,
   keywords?: string[]
 ) {
-  return assignmentSystem.assignWriter(contentType, topic, keywords);
+  return assignmentSystem.assignWriter({ contentType, topic, keywords: keywords || [] });
 }
 
 // Export main functions

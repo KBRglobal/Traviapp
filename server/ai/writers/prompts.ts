@@ -15,7 +15,9 @@ export interface WriteContentRequest {
   length?: 'short' | 'medium' | 'long';
   locale?: string;
   includeEmojis?: boolean;
-  targetAudience?: string;
+  targetAudience?: string | string[];
+  internalLinks?: Array<{ title: string; url: string }>;
+  additionalContext?: string;
 }
 
 /**
@@ -59,42 +61,104 @@ Your writing should feel natural and conversational while maintaining your uniqu
 
 /**
  * Generate prompt for content generation
+ * Updated with strict SEO requirements for high-quality articles
  */
 export function getContentGenerationPrompt(
   writer: AIWriter, 
   request: WriteContentRequest
 ): string {
   const lengthGuide = {
-    short: "300-500 words",
-    medium: "800-1200 words",
-    long: "1500-2500 words"
+    short: "1000-1200 words",
+    medium: "1800-2200 words", // Minimum for SEO compliance
+    long: "2500-3500 words"
   };
 
   const length = lengthGuide[request.length || 'medium'];
   const emojiNote = request.includeEmojis 
     ? "Use emojis naturally where appropriate to enhance engagement." 
-    : "Avoid using emojis unless they're part of your natural voice.";
+    : "Do NOT use emojis in the content.";
+  
+  const targetAudience = Array.isArray(request.targetAudience)
+    ? request.targetAudience.join(', ')
+    : (request.targetAudience || 'General travelers to Dubai');
 
-  return `Write a ${request.contentType} about "${request.topic}" in your unique voice.
+  // Build internal links section
+  const internalLinksSection = request.internalLinks?.length 
+    ? `
+INTERNAL LINKS TO USE (pick 5-8 relevant ones):
+${request.internalLinks.slice(0, 15).map(l => `- "${l.title}" -> ${l.url}`).join('\n')}
 
-TARGET LENGTH: ${length}
+Example: <a href="/attractions/burj-khalifa">Burj Khalifa</a>
+`
+    : '';
 
-KEY REQUIREMENTS:
-- Focus on these keywords naturally: ${request.keywords.join(', ')}
-- Target audience: ${request.targetAudience || 'General travelers to Dubai'}
-- ${emojiNote}
-- Provide actionable insights and practical information
-- Make it engaging and memorable
-- Maintain SEO best practices while keeping natural language
-- Include personal observations that match your expertise
+  return `Write a comprehensive ${request.contentType} about "${request.topic}" in your unique voice.
 
-STRUCTURE:
-1. Hook readers immediately with your personality
-2. Provide valuable information with your unique perspective
-3. Include practical tips from your area of expertise
-4. End with a memorable takeaway or call-to-action
+${request.additionalContext ? `CONTEXT: ${request.additionalContext}\n` : ''}
+==============================================================================
+MANDATORY OUTPUT FORMAT - Return valid JSON with this EXACT structure:
+==============================================================================
 
-Remember: Write as ${writer.name} would naturally write, with authentic voice and perspective.`;
+{
+  "title": "string (50-70 characters, SEO headline with primary keyword)",
+  "metaDescription": "string (EXACTLY 150-160 characters - THIS IS CRITICAL)",
+  "intro": "string (engaging introduction, 100-150 words)",
+  "body": "string (FULL HTML content - see requirements below)",
+  "conclusion": "string (strong closing with call-to-action, 80-120 words)"
+}
+
+==============================================================================
+STRICT SEO REQUIREMENTS (Article will be REJECTED if not met):
+==============================================================================
+
+1. CONTENT LENGTH: ${length} (approximately 9000+ characters)
+   - This is strictly enforced - short content WILL FAIL validation!
+
+2. H2 HEADER STRUCTURE: You MUST include 4-6 <h2> section headers
+   - Each section should be 200-400 words
+   - Use clear, descriptive H2 headings like: <h2>Best Time to Visit</h2>
+   - H2 headers are REQUIRED for SEO - missing them = REJECTED
+
+3. EXTERNAL AUTHORITATIVE LINKS: Include 2-3 external links
+   - REQUIRED: Add at least 2 of these EXACT URLs with <a> tags:
+   • <a href="https://www.visitdubai.com" target="_blank" rel="noopener">Visit Dubai</a>
+   • <a href="https://www.dubai.ae" target="_blank" rel="noopener">Dubai Government</a>
+   • <a href="https://www.dubaitourism.gov.ae" target="_blank" rel="noopener">Dubai Tourism</a>
+   - Links MUST appear in the "body" field with actual HTML anchor tags!
+${internalLinksSection}
+4. KEYWORDS: Use these naturally throughout: ${request.keywords.join(', ')}
+   - Primary keyword should appear 3-5 times
+   - Mention "Dubai" or "UAE" at least 5 times
+
+5. META DESCRIPTION: MUST be exactly 150-160 characters
+   - Include primary keyword
+   - Be compelling and action-oriented
+
+6. TARGET AUDIENCE: ${targetAudience}
+   - ${emojiNote}
+
+==============================================================================
+CONTENT STRUCTURE in the "body" field:
+==============================================================================
+
+The body should be formatted as HTML with:
+- 4-6 <h2> section headers (REQUIRED!)
+- <p> paragraphs for content
+- 2-3 <a href="..."> external links (REQUIRED!)
+- Optional: <ul>/<li> for lists where appropriate
+
+Example body structure:
+<h2>Why Visit This Attraction</h2>
+<p>Content here... Visit the <a href="https://www.visitdubai.com" target="_blank" rel="noopener">official Dubai tourism website</a> for more details.</p>
+
+<h2>Best Time to Go</h2>
+<p>More content...</p>
+
+<h2>What to Expect</h2>
+<p>Even more content...</p>
+
+Remember: Write as ${writer.name} with authentic voice, but SEO compliance is MANDATORY.
+Return ONLY the JSON object - no markdown code fences, no explanations.`;
 }
 
 /**
