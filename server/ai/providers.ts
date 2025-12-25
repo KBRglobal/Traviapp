@@ -12,18 +12,19 @@ import type { ContentTier, ModelConfig } from "./types";
 
 /**
  * Get a valid OpenAI API key (skips dummy keys)
+ * Priority: Replit AI integrations key (managed) → User's direct key
  */
 export function getValidOpenAIKey(): string | null {
-  // Check OPENAI_API_KEY first (user's direct key)
-  const directKey = process.env.OPENAI_API_KEY;
-  if (directKey && !directKey.includes('DUMMY')) {
-    return directKey;
-  }
-
-  // Fallback to AI integrations key
+  // Prefer AI integrations key first (Replit managed, reliable quota)
   const integrationsKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (integrationsKey && !integrationsKey.includes('DUMMY')) {
     return integrationsKey;
+  }
+
+  // Fallback to user's direct key
+  const directKey = process.env.OPENAI_API_KEY;
+  if (directKey && !directKey.includes('DUMMY')) {
+    return directKey;
   }
 
   return null;
