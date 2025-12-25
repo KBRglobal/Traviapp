@@ -1,0 +1,206 @@
+
+
+1. מה מצב המאמר כרגע (האבחון)
+
+המאמר על Dubai Mall הוא:
+	•	❌ לא “גרוע”
+	•	❌ לא לא־מקצועי
+
+אבל:
+	•	⚠️ לא סגור עריכתית
+	•	⚠️ לא עומד ב־Best Practice SEO מלא
+	•	⚠️ לא מנצל את כל הפוטנציאל שלו
+
+זה מאמר טוב שצריך ניקוי, חידוד וסגירה, לא כתיבה מחדש.
+
+⸻
+
+2. Meta Title – מה לא טוב ולמה
+
+מה שהיה
+
+Dubai Mall: Complete Visitor's Guid Guide 2025 | Travi
+
+מה לא טוב
+	•	❌ שגיאת כתיב (Guid Guide)
+	•	❌ נקודתיים פחות אידאליים
+	•	❌ אין הרחבת intent
+
+מה הצעתי
+
+Dubai Mall Visitor Guide 2025 – Attractions, Shopping & Tips | Travi
+
+למה זה טוב יותר
+	•	✔️ מילת מפתח ראשית בהתחלה
+	•	✔️ Intent ברור (Attractions, Shopping, Tips)
+	•	✔️ מותג בסוף
+	•	✔️ CTR גבוה יותר
+
+⸻
+
+3. Meta Description – מה לא טוב ולמה
+
+מה שהיה
+
+Dubai Mall: Dubai Mall: Complete Visitor's Guide to the World's Largest Shopping Center Comprehensive guide with prices and tips Discover more inside!
+
+מה לא טוב
+	•	❌ כפילות
+	•	❌ נראה כמו כותרת + CTA
+	•	❌ ארוך מדי
+	•	❌ לא קריא
+
+מה הצעתי
+
+Explore Dubai Mall with this complete visitor guide to the world’s largest shopping center, including attractions, prices, shopping tips, and insider advice
+
+למה זה טוב יותר
+	•	✔️ משפט זורם
+	•	✔️ ערך ברור לגולש
+	•	✔️ בלי keyword stuffing
+	•	✔️ מתאים ל־Guide
+
+⸻
+
+4. Secondary Keywords – מה לא טוב ולמה
+
+מה שהיה
+
+"Dubai Mall shopping guide", "world's largest mall Dubai", ...
+
+מה לא טוב
+	•	❌ גרשיים
+	•	❌ נראה כמו חיפוש Ads
+	•	❌ פוגע בזיהוי סמנטי
+
+מה הצעתי
+
+Dubai Mall shopping guide, world's largest mall in Dubai, Dubai Mall attractions, luxury shopping Dubai
+
+כלל שנשמר
+	•	בלי גרשיים
+	•	בלי נקודה
+	•	5–8 ביטויים
+
+⸻
+
+5. Internal Links – מה לא טוב ולמה
+
+מה שהיה
+
+"Burj Khalifa tickets and tours | Burj Khalifa Guide\nDubai Fountain show times | ..."
+
+מה לא טוב
+	•	❌ גרשיים
+	•	❌ \n טכני
+	•	❌ נראה כמו קוד
+
+מה הצעתי
+
+Burj Khalifa tickets and tours | Burj Khalifa Guide
+Dubai Fountain show times | Dubai Fountain Complete Guide
+
+למה זה חשוב
+	•	UX
+	•	SEO
+	•	קריאות אנושית
+
+⸻
+
+6. External Links – מה לא טוב ולמה
+
+מה שהיה
+
+"Visit Dubai Official Tourism Portal | visitdubai.com\n..."
+
+מה לא טוב
+	•	❌ גרשיים
+	•	❌ \n
+	•	❌ חוסר אחידות
+
+מה הצעתי
+
+Visit Dubai Official Tourism Portal | visitdubai.com
+Dubai Mall Official Website | thedubaimall.com
+
+
+⸻
+
+7. תמונות – מה חסר ולמה
+
+מצב נוכחי
+	•	❌ מעט מדי תמונות
+	•	❌ לא מחולקות לפי Sections
+	•	❌ אין אסטרטגיה
+
+מה הצעתי
+
+למאמר כמו Dubai Mall:
+	•	✔️ Hero image אחת
+	•	✔️ 1 תמונה לכל H2
+	•	✔️ סה״כ 8–12 תמונות
+
+למה זה קריטי
+	•	SEO (Image Search)
+	•	UX
+	•	זמן שהייה
+	•	אמינות
+
+⸻
+
+8. Alt Text – מה לא היה ולמה זה בעיה
+
+מה חסר
+	•	❌ אלטים ברורים
+	•	❌ כללים קבועים
+	•	❌ התאמה לחוקי נגישות
+
+מה הצעתי
+
+כללים קבועים:
+	•	תיאור עובדתי
+	•	5–15 מילים
+	•	בלי שיווק
+	•	בלי גרשיים
+	•	בלי נקודה
+
+דוגמה טובה
+
+Luxury shopping atrium inside Dubai Mall with marble floors and high ceilings
+
+
+⸻
+
+9. סעיף מחולל אלטים (פתרון קבוע)
+
+את זה הצעתי להכניס למסמך עבודה:
+
+[Main subject] + [location/context] + [visual detail]
+
+וזה פותר:
+	•	נגישות
+	•	SEO
+	•	אחידות
+
+⸻
+
+10. כלל סגירה שחייבים לזכור (וזכור לי)
+
+וזה חשוב מאוד:
+
+וכן, כמובן שצריך לבצע בדיקה פרטנית על שגיאות כתיב, תחביר, מטא־דאטה ו־Alt Text אחרי שכותבים את המאמר המלא, לפני העלאה.
+
+זה לא “אקסטרה” — זה שלב חובה.
+
+היוצר האוטומטי בכלל לא יוצר כמה תמונות 
+הוא יוצר אחד בהירו ולפעמי גם את זה לא 
+
+
+סיכום חד
+
+המאמר על Dubai Mall:
+	•	❌ לא רע
+	•	⚠️ לא סגור
+	•	✅ עם תיקונים — יכול להיות Guide ברמה גבוהה מאוד
+
+

@@ -109,13 +109,15 @@ const REQUIRED_ELEMENTS: Record<PageType, {
   guide: { minFaq: 8, maxFaq: 12, minInternalLinks: 8, maxInternalLinks: 12, minTips: 5 },
 };
 
-// Cliches to avoid
+// Cliches and clickbait phrases to avoid (matches writer-engine and client seo-analyzer)
 const CLICHES = [
-  "must-visit", "hidden gem", "world-class", "breathtaking",
-  "unforgettable", "once in a lifetime", "bucket list",
+  "must-visit", "must visit", "hidden gem", "hidden gems", "world-class", "world class",
+  "breathtaking", "awe-inspiring", "jaw-dropping", "unforgettable",
+  "once in a lifetime", "once-in-a-lifetime", "bucket list",
   "paradise on earth", "jewel in the crown", "like no other",
   "best kept secret", "off the beaten path", "sun-kissed",
-  "picture-perfect", "awe-inspiring"
+  "picture-perfect", "secret tips revealed", "you won't believe",
+  "mind-blowing", "epic adventure", "ultimate guide", "everything you need to know"
 ];
 
 // Dubai-specific locations for context

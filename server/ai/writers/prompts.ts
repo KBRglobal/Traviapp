@@ -176,6 +176,38 @@ Example body structure:
 <h2>What to Expect</h2>
 <p>Even more content...</p>
 
+==============================================================================
+BANNED PHRASES (DO NOT USE - content will be rejected):
+==============================================================================
+- "must-visit" or "must visit"
+- "world-class" or "world class"
+- "hidden gem" or "hidden gems"
+- "breathtaking", "awe-inspiring", "jaw-dropping"
+- "once-in-a-lifetime", "bucket list"
+- "secret tips revealed", "you won't believe"
+- "mind-blowing", "epic adventure"
+- "ultimate guide", "everything you need to know"
+
+INSTEAD USE professional alternatives:
+- "popular with first-time visitors" instead of "must-visit"
+- "internationally recognized" instead of "world-class"
+- "lesser-known" instead of "hidden gem"
+- "impressive", "remarkable" instead of "breathtaking"
+
+==============================================================================
+SECONDARY KEYWORDS FORMAT (NO QUOTES):
+==============================================================================
+When listing secondary keywords, use clean comma-separated format:
+CORRECT: Dubai Mall shopping guide, world's largest mall in Dubai, Dubai Mall attractions
+WRONG: "Dubai Mall shopping guide", "world's largest mall in Dubai"
+
+==============================================================================
+IMAGE REQUIREMENTS:
+==============================================================================
+For each H2 section, an image will be added automatically. When generating content:
+- Write content that would pair well with images
+- Reference visual elements naturally in the text
+
 Remember: Write as ${writer.name} with authentic voice, but SEO compliance is MANDATORY.
 Return ONLY the JSON object - no markdown code fences, no explanations.`;
 }
@@ -189,9 +221,12 @@ export function getTitleGenerationPrompt(writer: AIWriter, topic: string): strin
 Each title should:
 - Reflect your personality and voice
 - Be SEO-friendly but not robotic
-- Be 50-70 characters for optimal display
-- Include emotional triggers appropriate to your style
+- Be EXACTLY 50-60 characters for optimal display (will be truncated if longer!)
+- Include primary keyword at the beginning
+- Use professional tone - NO clickbait phrases like "Secret Tips Revealed", "You Won't Believe", "Must-Visit"
 - Be clear about the value readers will get
+
+BANNED PHRASES (do not use): must-visit, world-class, hidden gem, breathtaking, secret tips revealed, you won't believe, mind-blowing, epic adventure, ultimate guide
 
 Format: Return only the titles, one per line, numbered 1-5.`;
 }

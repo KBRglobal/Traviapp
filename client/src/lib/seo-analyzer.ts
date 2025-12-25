@@ -35,7 +35,7 @@ export interface SeoInput {
 }
 
 const META_TITLE_MIN = 50;
-const META_TITLE_MAX = 65;
+const META_TITLE_MAX = 60; // Strict 50-60 chars - above 60 gets truncated in SERP
 const META_DESC_MIN = 150;
 const META_DESC_MAX = 160;
 const MIN_WORD_COUNT = 1800;
@@ -45,6 +45,42 @@ const MIN_INTERNAL_LINKS = 5;
 const MIN_EXTERNAL_LINKS = 2;
 const IDEAL_KEYWORD_DENSITY_MIN = 1;
 const IDEAL_KEYWORD_DENSITY_MAX = 3;
+
+// Clichés and clickbait phrases to flag (synchronized with writer-engine and seo-validation-agent)
+const CLICHE_PHRASES = [
+  "must-visit",
+  "must visit",
+  "world-class",
+  "world class",
+  "hidden gem",
+  "hidden gems",
+  "breathtaking",
+  "awe-inspiring",
+  "jaw-dropping",
+  "unforgettable",
+  "once-in-a-lifetime",
+  "once in a lifetime",
+  "bucket list",
+  "paradise on earth",
+  "jewel in the crown",
+  "like no other",
+  "best kept secret",
+  "off the beaten path",
+  "sun-kissed",
+  "picture-perfect",
+  "secret tips revealed",
+  "you won't believe",
+  "mind-blowing",
+  "epic adventure",
+  "ultimate guide",
+  "everything you need to know",
+];
+
+// Alt text quality requirements
+const ALT_TEXT_MIN_WORDS = 5;
+const ALT_TEXT_MAX_WORDS = 15;
+const ALT_TEXT_MIN_CHARS = 20;
+const ALT_TEXT_MAX_CHARS = 125;
 
 function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(w => w.length > 0).length;
@@ -314,6 +350,32 @@ export function analyzeSeo(input: SeoInput): SeoAnalysis {
     });
   }
 
+  // Check for clichés and clickbait phrases
+  const allContent = `${input.title} ${input.metaTitle} ${input.metaDescription} ${input.content}`.toLowerCase();
+  const foundCliches = CLICHE_PHRASES.filter(phrase => allContent.includes(phrase.toLowerCase()));
+  if (foundCliches.length > 0) {
+    issues.push({
+      type: "warning",
+      category: "Content Quality",
+      message: `Found ${foundCliches.length} cliché/clickbait phrase(s): ${foundCliches.slice(0, 3).join(", ")}${foundCliches.length > 3 ? "..." : ""}`,
+      recommendation: "Replace with specific, professional language (e.g., 'popular with first-time visitors' instead of 'must-visit')",
+    });
+    score -= Math.min(foundCliches.length * 2, 10);
+  }
+
+  // Check image count relative to H2 sections (should have ~1 image per H2)
+  const h2CountForImages = input.headings.filter(h => h.level === 2).length;
+  const minRequiredImages = Math.max(1, Math.min(h2CountForImages, 6)); // At least 1, at most 6
+  if (input.images.length < minRequiredImages) {
+    issues.push({
+      type: "warning",
+      category: "Images",
+      message: `Not enough images (${input.images.length} found, recommend ${minRequiredImages}+ for ${h2CountForImages} sections)`,
+      recommendation: `Add images to illustrate each major section. Aim for 1 hero + 1 per H2 section.`,
+    });
+    score -= 5;
+  }
+
   score = Math.max(0, Math.min(100, score));
 
   issues.sort((a, b) => {
@@ -358,25 +420,46 @@ function analyzeImagesSeo(images: ImageSeoInput[], primaryKeyword?: string): Ima
     });
   }
 
-  // Check alt text quality
-  const shortAltImages = images.filter(img => img.alt && img.alt.length > 0 && img.alt.length < 20);
+  // Check alt text quality - enforce 5-15 words, 20-125 characters
+  const shortAltImages = images.filter(img => {
+    if (!img.alt || img.alt.length === 0) return false;
+    const wordCount = img.alt.split(/\s+/).filter(w => w.length > 0).length;
+    return img.alt.length < ALT_TEXT_MIN_CHARS || wordCount < ALT_TEXT_MIN_WORDS;
+  });
   if (shortAltImages.length > 0) {
     issues.push({
       type: "warning",
       category: "Images - Alt Text Quality",
-      message: `${shortAltImages.length} image(s) have short alt text (<20 chars)`,
-      recommendation: "Aim for 50-125 characters for descriptive alt text",
+      message: `${shortAltImages.length} image(s) have short alt text (need ${ALT_TEXT_MIN_WORDS}-${ALT_TEXT_MAX_WORDS} words)`,
+      recommendation: "Use format: [Subject] + [location/context] + [visual detail]. Example: 'Luxury shopping atrium inside Dubai Mall with marble floors and high ceilings'",
     });
     totalDeduction += 3;
   }
 
-  const longAltImages = images.filter(img => img.alt && img.alt.length > 125);
+  const longAltImages = images.filter(img => {
+    if (!img.alt) return false;
+    const wordCount = img.alt.split(/\s+/).filter(w => w.length > 0).length;
+    return img.alt.length > ALT_TEXT_MAX_CHARS || wordCount > ALT_TEXT_MAX_WORDS;
+  });
   if (longAltImages.length > 0) {
     issues.push({
       type: "warning",
       category: "Images - Alt Text Quality",
-      message: `${longAltImages.length} image(s) have long alt text (>125 chars)`,
-      recommendation: "Keep alt text under 125 characters",
+      message: `${longAltImages.length} image(s) have long alt text (max ${ALT_TEXT_MAX_WORDS} words / ${ALT_TEXT_MAX_CHARS} chars)`,
+      recommendation: "Keep alt text concise: 5-15 words describing the image factually",
+    });
+    totalDeduction += 2;
+  }
+
+  // Check for marketing language in alt text
+  const marketingPatterns = /must-visit|world-class|breathtaking|amazing|stunning|incredible|perfect|best|ultimate/i;
+  const marketingAltImages = images.filter(img => img.alt && marketingPatterns.test(img.alt));
+  if (marketingAltImages.length > 0) {
+    issues.push({
+      type: "warning",
+      category: "Images - Alt Text Quality",
+      message: `${marketingAltImages.length} image(s) have marketing language in alt text`,
+      recommendation: "Alt text should be factual description only, no promotional language",
     });
     totalDeduction += 2;
   }

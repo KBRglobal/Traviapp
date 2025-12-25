@@ -36,10 +36,40 @@ const SEO_REQUIREMENTS = {
   metaDescMinLength: 150,
   metaDescMaxLength: 160,
   titleMinLength: 50,
-  titleMaxLength: 60,
+  titleMaxLength: 60, // Strict 50-60, above 60 gets truncated in SERP
   keywordDensityMin: 1, // percentage
   keywordDensityMax: 3, // percentage
 };
+
+// Clichés and clickbait phrases to remove/avoid (synchronized with seo-analyzer and seo-validation-agent)
+const CLICHE_PHRASES = [
+  "must-visit",
+  "must visit", 
+  "world-class",
+  "world class",
+  "hidden gem",
+  "hidden gems",
+  "breathtaking",
+  "awe-inspiring",
+  "jaw-dropping",
+  "unforgettable",
+  "once-in-a-lifetime",
+  "once in a lifetime",
+  "bucket list",
+  "paradise on earth",
+  "jewel in the crown",
+  "like no other",
+  "best kept secret",
+  "off the beaten path",
+  "sun-kissed",
+  "picture-perfect",
+  "secret tips revealed",
+  "you won't believe",
+  "mind-blowing",
+  "epic adventure",
+  "ultimate guide",
+  "everything you need to know",
+];
 
 // SEO compliance thresholds
 const SEO_THRESHOLDS = {

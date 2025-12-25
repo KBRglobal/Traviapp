@@ -73,6 +73,34 @@ Unified AI provider system with automatic failover:
 - **Content Generation**: AI-powered article writing with SEO compliance (1800-3500 words, 4-6 H2 headers, internal/external links)
 - **Environment Variables**: ANTHROPIC_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY, openrouterapi (secret)
 
+### SEO Requirements (Strictly Enforced)
+- **Meta Title**: EXACTLY 50-60 characters (truncated at 60 in SERP)
+- **Meta Description**: EXACTLY 150-160 characters
+- **H2 Headers**: 4-6 per article
+- **Internal Links**: 5-8 per article
+- **External Links**: 2-3 to authoritative sources (visitdubai.com, dubai.ae, dubaitourism.gov.ae)
+- **Word Count**: 1800-3500 words
+- **Images**: 1 hero + 1 per H2 section (8-12 total for full articles)
+
+### Banned Clichés/Clickbait Phrases
+Content with these phrases will be flagged/rejected:
+- must-visit, world-class, hidden gem, breathtaking
+- secret tips revealed, you won't believe, jaw-dropping
+- once-in-a-lifetime, bucket list, paradise on earth
+- mind-blowing, epic adventure, ultimate guide
+
+**Professional Alternatives**:
+- "popular with first-time visitors" instead of "must-visit"
+- "internationally recognized" instead of "world-class"
+- "lesser-known" instead of "hidden gem"
+- "impressive", "remarkable" instead of "breathtaking"
+
+### Alt Text Requirements
+- **Length**: 5-15 words, 20-125 characters
+- **Format**: [Subject] + [location/context] + [visual detail]
+- **Style**: Factual descriptions only, NO marketing language
+- **Example**: "Luxury shopping atrium inside Dubai Mall with marble floors and high ceilings"
+
 ### Multi-Language SEO System
 - **DeepL API**: Automatic content translation to 17 languages
 - Requires `DEEPL_API_KEY` environment variable
