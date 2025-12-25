@@ -19,56 +19,55 @@ const INTERNAL_LINKS_CACHE_TTL = 300000; // 5 minutes
 export async function getInternalLinkUrls(excludeSlug?: string, limit = 30): Promise<typeof cachedInternalLinks> {
   const now = Date.now();
   
-  // Return cached if available
-  if (cachedInternalLinks && now - internalLinksCacheTime < INTERNAL_LINKS_CACHE_TTL) {
-    return excludeSlug 
-      ? cachedInternalLinks.filter(l => l.slug !== excludeSlug)
-      : cachedInternalLinks;
+  // Always refresh cache if expired
+  if (!cachedInternalLinks || now - internalLinksCacheTime >= INTERNAL_LINKS_CACHE_TTL) {
+    try {
+      const publishedContent = await db
+        .select({
+          title: contents.title,
+          slug: contents.slug,
+          type: contents.type,
+        })
+        .from(contents)
+        .where(eq(contents.status, "published"))
+        .limit(100);
+      
+      // Build URLs based on content type
+      const links = publishedContent.map(c => {
+        let url = "";
+        switch (c.type) {
+          case "attraction": url = `/attractions/${c.slug}`; break;
+          case "hotel": url = `/hotels/${c.slug}`; break;
+          case "article": url = `/articles/${c.slug}`; break;
+          case "dining": url = `/dining/${c.slug}`; break;
+          case "district": url = `/districts/${c.slug}`; break;
+          case "transport": url = `/transport/${c.slug}`; break;
+          case "event": url = `/events/${c.slug}`; break;
+          case "itinerary": url = `/itineraries/${c.slug}`; break;
+          default: url = `/${c.type}s/${c.slug}`;
+        }
+        return {
+          title: c.title,
+          slug: c.slug,
+          type: c.type,
+          url: url
+        };
+      });
+      
+      cachedInternalLinks = links;
+      internalLinksCacheTime = now;
+    } catch (error) {
+      console.error("Error fetching internal links:", error);
+      cachedInternalLinks = [];
+    }
   }
   
-  try {
-    const publishedContent = await db
-      .select({
-        title: contents.title,
-        slug: contents.slug,
-        type: contents.type,
-      })
-      .from(contents)
-      .where(eq(contents.status, "published"))
-      .limit(100);
-    
-    // Build URLs based on content type
-    const links = publishedContent.map(c => {
-      let url = "";
-      switch (c.type) {
-        case "attraction": url = `/attractions/${c.slug}`; break;
-        case "hotel": url = `/hotels/${c.slug}`; break;
-        case "article": url = `/articles/${c.slug}`; break;
-        case "dining": url = `/dining/${c.slug}`; break;
-        case "district": url = `/districts/${c.slug}`; break;
-        case "transport": url = `/transport/${c.slug}`; break;
-        case "event": url = `/events/${c.slug}`; break;
-        case "itinerary": url = `/itineraries/${c.slug}`; break;
-        default: url = `/${c.type}s/${c.slug}`;
-      }
-      return {
-        title: c.title,
-        slug: c.slug,
-        type: c.type,
-        url: url
-      };
-    });
-    
-    cachedInternalLinks = links;
-    internalLinksCacheTime = now;
-    
-    return excludeSlug 
-      ? links.filter(l => l.slug !== excludeSlug).slice(0, limit)
-      : links.slice(0, limit);
-  } catch (error) {
-    console.error("Error fetching internal links:", error);
-    return [];
-  }
+  // Always filter and slice from cached list per call
+  const filtered = excludeSlug 
+    ? (cachedInternalLinks || []).filter(l => l.slug !== excludeSlug)
+    : (cachedInternalLinks || []);
+  
+  return filtered.slice(0, limit);
 }
 
 // Clear internal links cache (call after publishing/unpublishing content)
@@ -668,9 +667,10 @@ export async function buildArticleGenerationPrompt(
   
   // Get internal links for the AI to use
   const internalLinks = await getInternalLinkUrls(undefined, 20);
-  const internalLinksList = internalLinks?.length 
+  const hasInternalLinks = internalLinks && internalLinks.length > 0;
+  const internalLinksList = hasInternalLinks
     ? internalLinks.map(l => `• "${l.title}" -> ${l.url}`).join('\n')
-    : '• No published content yet - use placeholder links like /attractions/example, /hotels/example';
+    : null; // Don't suggest placeholders - just skip internal links if none available
 
   return `Write a comprehensive article about: "${topic}"
 
@@ -738,27 +738,33 @@ STRICT REQUIREMENTS (Your response will be REJECTED if not met):
 
 5. SEO in "content":
    - Mention "Dubai" or "UAE" at least ${rules.dubaiMentionsMin} times
-   - Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal <a href="..."> links
-   - Include 1-2 external authoritative links (e.g., Dubai Tourism, Visit Dubai, official sources)
+   - ${hasInternalLinks ? 'Include 5-8 internal <a href="..."> links (see INTERNAL LINKS section below)' : 'Focus on external links since no internal links are available yet'}
+   - Include 2-3 external authoritative links (visitdubai.com, dubai.ae, dubaitourism.gov.ae)
 
 6. KEYWORDS to use naturally:
 ${keywordList.length > 0 ? keywordList.map(k => `   • ${k}`).join('\n') : '   • dubai tourism\n   • things to do in dubai\n   • dubai attractions\n   • visit dubai\n   • dubai guide'}
 
-==============================================================================
+${hasInternalLinks ? `==============================================================================
 INTERNAL LINKS - USE THESE URLs IN YOUR CONTENT (pick 5-8 relevant ones):
 ==============================================================================
 ${internalLinksList}
 
 EXAMPLE of how to add internal links in content:
 <p>When visiting Dubai, don't miss the <a href="/attractions/burj-khalifa">Burj Khalifa</a> for stunning views.</p>
+` : `==============================================================================
+NOTE: No internal links available yet - focus on external authoritative links
+==============================================================================
+`}
+==============================================================================
+EXTERNAL AUTHORITATIVE LINKS - You MUST add 1-2 of these exact URLs:
+==============================================================================
+• https://www.visitdubai.com - Official Dubai Tourism (use for general Dubai info)
+• https://www.dubai.ae - Dubai Government Portal (use for official announcements)
+• https://www.dubaitourism.gov.ae - DTCM (use for tourism regulations/policies)
+• https://www.rta.ae - RTA Dubai (use for transport/metro/taxi topics only)
 
-==============================================================================
-EXTERNAL AUTHORITATIVE LINKS - Add 1-2 of these:
-==============================================================================
-• Dubai Tourism Official: https://www.visitdubai.com
-• Dubai Government: https://www.dubai.ae
-• DTCM: https://www.dubaitourism.gov.ae
-• RTA Dubai: https://www.rta.ae (for transport topics)
+EXAMPLE of how to add external links:
+<p>For more information, visit the <a href="https://www.visitdubai.com" target="_blank" rel="noopener">official Dubai Tourism website</a>.</p>
 
 Respond ONLY with the JSON object, no markdown code fences.`;
 }
