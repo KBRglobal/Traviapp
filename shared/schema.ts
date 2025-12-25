@@ -2941,7 +2941,7 @@ export type InsertContentScore = z.infer<typeof insertContentScoreSchema>;
 // WORKFLOW TABLES
 // ============================================================================
 
-export const workflowStatusEnum = pgEnum("workflow_status", ["active", "inactive", "draft"]);
+export const automationStatusEnum = pgEnum("automation_status", ["active", "inactive", "draft"]);
 export const workflowExecutionStatusEnum = pgEnum("workflow_execution_status", ["pending", "running", "completed", "failed"]);
 
 export const workflows = pgTable("workflows", {
@@ -2956,7 +2956,7 @@ export const workflows = pgTable("workflows", {
     type: string;
     config: Record<string, unknown>;
   }>>().notNull(),
-  status: workflowStatusEnum("status").notNull().default("draft"),
+  status: automationStatusEnum("status").notNull().default("draft"),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
