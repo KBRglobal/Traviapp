@@ -6,8 +6,7 @@
  */
 
 import OpenAI from "openai";
-import { getWriterById } from "./writer-registry";
-import type { AIWriter } from "@shared/schema";
+import { getWriterById, type AIWriter } from "./writer-registry";
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
@@ -108,8 +107,10 @@ WRITER PROFILE:
 Name: ${writer.name}
 Personality: ${writer.personality}
 Writing Style: ${writer.writingStyle}
-Expertise: ${writer.expertise}
-Voice Prompt: ${writer.voicePrompt}
+Expertise: ${writer.expertise.join(', ')}
+
+Voice Characteristics:
+${writer.voiceCharacteristics.map(v => `- ${v}`).join('\n')}
 
 Sample Phrases (Writer's Typical Style):
 ${writer.samplePhrases?.slice(0, 3).map(p => `- "${p}"`).join('\n') || 'N/A'}

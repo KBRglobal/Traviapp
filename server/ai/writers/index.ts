@@ -25,7 +25,6 @@ export {
   validateVoiceConsistency,
   validateContentVoice,
   optimizeForSeo,
-  type WriteContentRequest,
   type WriteContentResponse,
   type VoiceValidationResult,
 } from "./writer-engine";
@@ -52,6 +51,7 @@ export {
   getVoiceValidationPrompt,
   getSeoOptimizationPrompt,
   getWriterGuidelines,
+  type WriteContentRequest,
 } from "./prompts";
 
 // Export voice validator
