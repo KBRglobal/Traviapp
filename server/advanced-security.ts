@@ -463,7 +463,7 @@ export const auditLogger = {
    * Log an audit event to both memory and database
    */
   async log(entry: AuditLogEntry): Promise<string> {
-    const id = `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id = `audit_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
     const fullEntry = {
       ...entry,
