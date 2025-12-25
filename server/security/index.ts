@@ -11,23 +11,60 @@
 
 import helmet from 'helmet';
 import type { Express, Request, Response, NextFunction } from 'express';
-import {
-  loginRateLimiter,
-  apiRateLimiter,
-  aiRateLimiter,
-  writeRateLimiter,
-} from './rate-limiter';
-import {
-  detectSqlInjection,
-  detectXss,
-  sanitizeText,
-} from './validators';
-import {
-  logSecurityEvent,
-  logSecurityEventFromRequest,
-  SecurityEventType,
-  SecuritySeverity,
-} from './audit-logger';
+
+// ============================================================================
+// INPUT VALIDATION - Inlined from validators.ts
+// ============================================================================
+
+/**
+ * SQL Injection Pattern Detection
+ * Returns true if suspicious SQL patterns are detected
+ */
+function detectSqlInjection(input: string): boolean {
+  if (!input) return false;
+
+  const sqlPatterns = [
+    /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE|UNION|DECLARE)\b)/gi,
+    /(\bOR\b\s+\d+\s*=\s*\d+)/gi,
+    /(\bAND\b\s+\d+\s*=\s*\d+)/gi,
+    /(--|\#|\/\*|\*\/)/g,
+    /(\bxp_\w+\b)/gi,
+    /(\bsp_\w+\b)/gi,
+    /('\s*OR\s*'?\d+'?\s*=\s*'?\d+'?)/gi,
+    /('\s*;)/gi,
+  ];
+
+  return sqlPatterns.some(pattern => pattern.test(input));
+}
+
+/**
+ * XSS Pattern Detection
+ * Returns true if suspicious XSS patterns are detected
+ */
+function detectXss(input: string): boolean {
+  if (!input) return false;
+
+  const xssPatterns = [
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    /javascript:/gi,
+    /on\w+\s*=/gi, // Event handlers like onclick, onerror
+    /<iframe/gi,
+    /<object/gi,
+    /<embed/gi,
+    /<img[^>]*on\w+/gi,
+    /eval\s*\(/gi,
+    /expression\s*\(/gi,
+  ];
+
+  return xssPatterns.some(pattern => pattern.test(input));
+}
+
+/**
+ * Log security event (simplified - just console log)
+ */
+function logSecurityEvent(type: string, details: any) {
+  console.log(`[SECURITY] ${type}:`, details);
+}
 
 /**
  * Attack detection middleware
@@ -38,24 +75,22 @@ export function attackDetectionMiddleware(req: Request, res: Response, next: Nex
     if (typeof data === 'string') {
       // Check for SQL injection
       if (detectSqlInjection(data)) {
-        logSecurityEventFromRequest(req, SecurityEventType.SQL_INJECTION_ATTEMPT, {
-          success: false,
-          resource: req.path,
-          action: req.method,
-          details: { field: path },
-          errorMessage: 'SQL injection pattern detected',
+        logSecurityEvent('SQL_INJECTION_ATTEMPT', {
+          path: req.path,
+          method: req.method,
+          field: path,
+          ip: req.ip,
         });
         return false;
       }
 
       // Check for XSS
       if (detectXss(data)) {
-        logSecurityEventFromRequest(req, SecurityEventType.XSS_ATTEMPT, {
-          success: false,
-          resource: req.path,
-          action: req.method,
-          details: { field: path },
-          errorMessage: 'XSS pattern detected',
+        logSecurityEvent('XSS_ATTEMPT', {
+          path: req.path,
+          method: req.method,
+          field: path,
+          ip: req.ip,
         });
         return false;
       }
@@ -170,35 +205,5 @@ export function setupSecurityMiddleware(app: Express): void {
 
   console.log('[Security] ✓ Helmet security headers configured');
   console.log('[Security] ✓ Attack detection middleware enabled');
-  console.log('[Security] ✓ Rate limiters configured:');
-  console.log('[Security]   - Login: 5 requests per 15 minutes');
-  console.log('[Security]   - API: 100 requests per minute');
-  console.log('[Security]   - AI: 50 requests per hour');
-  console.log('[Security]   - Write operations: 30 per minute');
   console.log('[Security] Enterprise security layer initialized successfully');
 }
-
-/**
- * Get rate limiter by type
- */
-export function getRateLimiter(type: 'login' | 'api' | 'ai' | 'write') {
-  switch (type) {
-    case 'login':
-      return loginRateLimiter;
-    case 'api':
-      return apiRateLimiter;
-    case 'ai':
-      return aiRateLimiter;
-    case 'write':
-      return writeRateLimiter;
-    default:
-      return apiRateLimiter;
-  }
-}
-
-// Export all security modules
-export * from './rate-limiter';
-export * from './validators';
-export * from './password-policy';
-export * from './file-upload';
-export * from './audit-logger';
