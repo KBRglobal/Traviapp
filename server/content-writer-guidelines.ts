@@ -1,7 +1,81 @@
 import { z } from "zod";
 import { db } from "./db";
-import { contentRules, DEFAULT_CONTENT_RULES, keywordRepository } from "@shared/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { contentRules, DEFAULT_CONTENT_RULES, keywordRepository, contents } from "@shared/schema";
+import { eq, desc, and, ne, sql } from "drizzle-orm";
+
+// ============================================================================
+// INTERNAL LINKS - Get existing published content URLs for linking
+// ============================================================================
+
+// Cache for internal links
+let cachedInternalLinks: { title: string; slug: string; type: string; url: string }[] | null = null;
+let internalLinksCacheTime = 0;
+const INTERNAL_LINKS_CACHE_TTL = 300000; // 5 minutes
+
+/**
+ * Get list of published content URLs for internal linking
+ * Returns URLs that the AI can use when generating content
+ */
+export async function getInternalLinkUrls(excludeSlug?: string, limit = 30): Promise<typeof cachedInternalLinks> {
+  const now = Date.now();
+  
+  // Return cached if available
+  if (cachedInternalLinks && now - internalLinksCacheTime < INTERNAL_LINKS_CACHE_TTL) {
+    return excludeSlug 
+      ? cachedInternalLinks.filter(l => l.slug !== excludeSlug)
+      : cachedInternalLinks;
+  }
+  
+  try {
+    const publishedContent = await db
+      .select({
+        title: contents.title,
+        slug: contents.slug,
+        type: contents.type,
+      })
+      .from(contents)
+      .where(eq(contents.status, "published"))
+      .limit(100);
+    
+    // Build URLs based on content type
+    const links = publishedContent.map(c => {
+      let url = "";
+      switch (c.type) {
+        case "attraction": url = `/attractions/${c.slug}`; break;
+        case "hotel": url = `/hotels/${c.slug}`; break;
+        case "article": url = `/articles/${c.slug}`; break;
+        case "dining": url = `/dining/${c.slug}`; break;
+        case "district": url = `/districts/${c.slug}`; break;
+        case "transport": url = `/transport/${c.slug}`; break;
+        case "event": url = `/events/${c.slug}`; break;
+        case "itinerary": url = `/itineraries/${c.slug}`; break;
+        default: url = `/${c.type}s/${c.slug}`;
+      }
+      return {
+        title: c.title,
+        slug: c.slug,
+        type: c.type,
+        url: url
+      };
+    });
+    
+    cachedInternalLinks = links;
+    internalLinksCacheTime = now;
+    
+    return excludeSlug 
+      ? links.filter(l => l.slug !== excludeSlug).slice(0, limit)
+      : links.slice(0, limit);
+  } catch (error) {
+    console.error("Error fetching internal links:", error);
+    return [];
+  }
+}
+
+// Clear internal links cache (call after publishing/unpublishing content)
+export function clearInternalLinksCache() {
+  cachedInternalLinks = null;
+  internalLinksCacheTime = 0;
+}
 
 // ============================================================================
 // STRICT CONTENT RULES - These rules CANNOT be bypassed by AI
@@ -549,10 +623,17 @@ STRICT VALIDATION RULES (Content REJECTED if violated):
 
 4. SEO:
    - Mention "Dubai" or "UAE" at least ${rules.dubaiMentionsMin} times
-   - Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal <a> links
+   - Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal <a href="/..."> links
+   - Include 1-2 external authoritative links (visitdubai.com, dubai.ae)
 
 🔑 KEYWORDS TO USE:
 ${keywordList.length > 0 ? keywordList.map(k => `• ${k}`).join('\n') : '• dubai tourism\n• things to do in dubai\n• dubai attractions'}
+
+5. LINKS IN CONTENT - CRITICAL FOR SEO SCORE:
+   - You MUST include actual <a href="..."> links in the "content" field
+   - Internal links should look like: <a href="/attractions/burj-khalifa">Burj Khalifa</a>
+   - External links: <a href="https://www.visitdubai.com" target="_blank" rel="noopener">Visit Dubai</a>
+   - DO NOT just mention links - you must use actual HTML anchor tags!
 
 REMEMBER: Return ONLY valid JSON. No markdown code fences. No explanations.`;
 }
@@ -584,6 +665,12 @@ export async function buildArticleGenerationPrompt(
   const keywordList = keywords?.map(k => k.keyword).slice(0, 15) || [];
   const minContentChars = rules.minWords * 5; // ~5 chars per word
   const faqAnswerMinChars = rules.faqAnswerWordsMin * 5;
+  
+  // Get internal links for the AI to use
+  const internalLinks = await getInternalLinkUrls(undefined, 20);
+  const internalLinksList = internalLinks?.length 
+    ? internalLinks.map(l => `• "${l.title}" -> ${l.url}`).join('\n')
+    : '• No published content yet - use placeholder links like /attractions/example, /hotels/example';
 
   return `Write a comprehensive article about: "${topic}"
 
@@ -652,9 +739,26 @@ STRICT REQUIREMENTS (Your response will be REJECTED if not met):
 5. SEO in "content":
    - Mention "Dubai" or "UAE" at least ${rules.dubaiMentionsMin} times
    - Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal <a href="..."> links
+   - Include 1-2 external authoritative links (e.g., Dubai Tourism, Visit Dubai, official sources)
 
 6. KEYWORDS to use naturally:
 ${keywordList.length > 0 ? keywordList.map(k => `   • ${k}`).join('\n') : '   • dubai tourism\n   • things to do in dubai\n   • dubai attractions\n   • visit dubai\n   • dubai guide'}
+
+==============================================================================
+INTERNAL LINKS - USE THESE URLs IN YOUR CONTENT (pick 5-8 relevant ones):
+==============================================================================
+${internalLinksList}
+
+EXAMPLE of how to add internal links in content:
+<p>When visiting Dubai, don't miss the <a href="/attractions/burj-khalifa">Burj Khalifa</a> for stunning views.</p>
+
+==============================================================================
+EXTERNAL AUTHORITATIVE LINKS - Add 1-2 of these:
+==============================================================================
+• Dubai Tourism Official: https://www.visitdubai.com
+• Dubai Government: https://www.dubai.ae
+• DTCM: https://www.dubaitourism.gov.ae
+• RTA Dubai: https://www.rta.ae (for transport topics)
 
 Respond ONLY with the JSON object, no markdown code fences.`;
 }
