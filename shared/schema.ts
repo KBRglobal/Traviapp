@@ -2937,6 +2937,173 @@ export const insertContentScoreSchema = createInsertSchema(contentScores).omit({
 export type ContentScore = typeof contentScores.$inferSelect;
 export type InsertContentScore = z.infer<typeof insertContentScoreSchema>;
 
+// ============================================================================
+// WORKFLOW TABLES
+// ============================================================================
+
+export const workflowStatusEnum = pgEnum("workflow_status", ["active", "inactive", "draft"]);
+export const workflowExecutionStatusEnum = pgEnum("workflow_execution_status", ["pending", "running", "completed", "failed"]);
+
+export const workflows = pgTable("workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  trigger: jsonb("trigger").$type<{
+    type: string;
+    conditions: Record<string, unknown>;
+  }>().notNull(),
+  actions: jsonb("actions").$type<Array<{
+    type: string;
+    config: Record<string, unknown>;
+  }>>().notNull(),
+  status: workflowStatusEnum("status").notNull().default("draft"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_workflows_status").on(table.status),
+]);
+
+export const workflowExecutions = pgTable("workflow_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").references(() => workflows.id, { onDelete: "cascade" }),
+  status: workflowExecutionStatusEnum("status").notNull().default("pending"),
+  triggerData: jsonb("trigger_data"),
+  result: jsonb("result"),
+  error: text("error"),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("IDX_workflow_executions_workflow").on(table.workflowId),
+  index("IDX_workflow_executions_status").on(table.status),
+]);
+
+export const insertWorkflowSchema = createInsertSchema(workflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutions).omit({
+  id: true,
+  startedAt: true,
+});
+
+export type Workflow = typeof workflows.$inferSelect;
+export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
+export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
+export type InsertWorkflowExecution = z.infer<typeof insertWorkflowExecutionSchema>;
+
+// ============================================================================
+// MONETIZATION - PARTNER & AFFILIATE TABLES
+// ============================================================================
+
+export const partnerStatusEnum = pgEnum("partner_status", ["active", "pending", "suspended", "inactive"]);
+export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
+
+export const partners = pgTable("partners", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  email: varchar("email").notNull().unique(),
+  companyName: text("company_name"),
+  website: text("website"),
+  commissionRate: integer("commission_rate").notNull(),
+  status: partnerStatusEnum("status").notNull().default("pending"),
+  trackingCode: varchar("tracking_code").notNull().unique(),
+  paymentDetails: jsonb("payment_details").$type<Record<string, unknown>>(),
+  totalEarnings: integer("total_earnings").default(0),
+  totalClicks: integer("total_clicks").default(0),
+  totalConversions: integer("total_conversions").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_partners_status").on(table.status),
+  index("IDX_partners_tracking").on(table.trackingCode),
+]);
+
+export const payouts = pgTable("payouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").references(() => partners.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  currency: varchar("currency").notNull().default("USD"),
+  status: payoutStatusEnum("status").notNull().default("pending"),
+  method: text("method"),
+  referenceId: text("reference_id"),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_payouts_partner").on(table.partnerId),
+  index("IDX_payouts_status").on(table.status),
+]);
+
+export const insertPartnerSchema = createInsertSchema(partners).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPayoutSchema = createInsertSchema(payouts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Partner = typeof partners.$inferSelect;
+export type InsertPartner = z.infer<typeof insertPartnerSchema>;
+export type Payout = typeof payouts.$inferSelect;
+export type InsertPayout = z.infer<typeof insertPayoutSchema>;
+
+// ============================================================================
+// A/B TESTING EXTENDED TABLES
+// ============================================================================
+
+export const abTestVariants = pgTable("ab_test_variants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  testId: varchar("test_id").references(() => abTests.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  config: jsonb("config").$type<Record<string, unknown>>().notNull(),
+  isControl: boolean("is_control").notNull().default(false),
+  weight: integer("weight").notNull().default(50),
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  conversions: integer("conversions").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_ab_test_variants_test").on(table.testId),
+]);
+
+export const abTestEvents = pgTable("ab_test_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  testId: varchar("test_id").references(() => abTests.id, { onDelete: "cascade" }),
+  variantId: varchar("variant_id").references(() => abTestVariants.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(),
+  userId: varchar("user_id"),
+  sessionId: varchar("session_id"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_ab_test_events_test").on(table.testId),
+  index("IDX_ab_test_events_variant").on(table.variantId),
+  index("IDX_ab_test_events_created").on(table.createdAt),
+]);
+
+export const insertAbTestVariantSchema = createInsertSchema(abTestVariants).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAbTestEventSchema = createInsertSchema(abTestEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AbTestVariant = typeof abTestVariants.$inferSelect;
+export type InsertAbTestVariant = z.infer<typeof insertAbTestVariantSchema>;
+export type AbTestEvent = typeof abTestEvents.$inferSelect;
+export type InsertAbTestEvent = z.infer<typeof insertAbTestEventSchema>;
+
 // Export ContentType for use in AI Writers system
 export type ContentType = typeof contents.$inferSelect.type;
 
