@@ -16,7 +16,10 @@ export type FieldType =
   | "tips" 
   | "highlights" 
   | "quickInfo" 
-  | "altText";
+  | "altText"
+  | "secondaryKeywords"
+  | "internalLinks"
+  | "externalLinks";
 
 interface AIFieldAssistantProps {
   readonly fieldName: string;
@@ -52,23 +55,23 @@ export function AIFieldAssistant({
     setAppliedIndex(null);
     
     try {
-      const response = await apiRequest<{ suggestions: string[] }>(
+      const response = await apiRequest(
+        "POST",
         "/api/ai/generate-field",
         {
-          method: "POST",
-          body: JSON.stringify({
-            fieldType,
-            currentValue,
-            title: contentContext.title,
-            contentType: contentContext.contentType,
-            primaryKeyword: contentContext.primaryKeyword,
-            maxLength,
-          }),
+          fieldType,
+          currentValue,
+          title: contentContext.title,
+          contentType: contentContext.contentType,
+          primaryKeyword: contentContext.primaryKeyword,
+          maxLength,
         }
       );
       
-      if (response.suggestions && response.suggestions.length > 0) {
-        setSuggestions(response.suggestions);
+      const data = await response.json() as { suggestions: string[] };
+      
+      if (data.suggestions && data.suggestions.length > 0) {
+        setSuggestions(data.suggestions);
       } else {
         toast({
           title: "No suggestions",
@@ -115,6 +118,9 @@ export function AIFieldAssistant({
       highlights: "Highlights",
       quickInfo: "Quick Info",
       altText: "Alt Text",
+      secondaryKeywords: "Secondary Keywords",
+      internalLinks: "Internal Links",
+      externalLinks: "External Links",
     };
     return labels[fieldType];
   };

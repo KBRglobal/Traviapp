@@ -101,8 +101,8 @@ MANDATORY OUTPUT FORMAT - Return valid JSON with this EXACT structure:
 ==============================================================================
 
 {
-  "title": "string (50-70 characters, SEO headline with primary keyword)",
-  "metaDescription": "string (EXACTLY 150-160 characters - THIS IS CRITICAL)",
+  "title": "string (EXACTLY 50-60 characters, SEO headline with primary keyword - STRICTLY ENFORCED)",
+  "metaDescription": "string (EXACTLY 150-160 characters - THIS IS CRITICAL, will be REJECTED if outside range)",
   "intro": "string (engaging introduction, 100-150 words)",
   "body": "string (FULL HTML content - see requirements below)",
   "conclusion": "string (strong closing with call-to-action, 80-120 words)"
@@ -127,15 +127,33 @@ STRICT SEO REQUIREMENTS (Article will be REJECTED if not met):
    • <a href="https://www.dubaitourism.gov.ae" target="_blank" rel="noopener">Dubai Tourism</a>
    - Links MUST appear in the "body" field with actual HTML anchor tags!
 ${internalLinksSection}
-4. KEYWORDS: Use these naturally throughout: ${request.keywords.join(', ')}
-   - Primary keyword should appear 3-5 times
-   - Mention "Dubai" or "UAE" at least 5 times
+4. KEYWORDS & KEYWORD DENSITY: Target 1-3% keyword density
+   - Use these naturally throughout: ${request.keywords.join(', ')}
+   - Primary keyword should appear 20-60 times in a 2000-word article (1-3% density)
+   - Mention "Dubai" or "UAE" at least 10 times throughout the content
+   - Distribute keywords evenly across all sections
 
-5. META DESCRIPTION: MUST be exactly 150-160 characters
+5. INTERNAL LINKS: Include 5-8 internal links to related content
+   - REQUIRED: Add at least 5 internal links using these URLs:
+   • <a href="/attractions">Top Attractions in Dubai</a>
+   • <a href="/hotels">Best Hotels in Dubai</a>
+   • <a href="/dining">Dubai Dining Guide</a>
+   • <a href="/districts">Dubai Districts</a>
+   • <a href="/events">Dubai Events Calendar</a>
+   • <a href="/transport">Getting Around Dubai</a>
+   - Place links naturally within the body content
+   - Links MUST appear in the "body" field with actual HTML anchor tags!
+
+6. META DESCRIPTION: MUST be EXACTLY 150-160 characters (count them!)
    - Include primary keyword
    - Be compelling and action-oriented
+   - Content WILL BE REJECTED if outside 150-160 range
 
-6. TARGET AUDIENCE: ${targetAudience}
+7. TITLE: MUST be EXACTLY 50-60 characters (count them!)
+   - Include primary keyword at the start
+   - Content WILL BE REJECTED if outside 50-60 range
+
+8. TARGET AUDIENCE: ${targetAudience}
    - ${emojiNote}
 
 ==============================================================================

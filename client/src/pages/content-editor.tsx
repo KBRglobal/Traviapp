@@ -33,6 +33,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -507,6 +508,9 @@ export default function ContentEditor() {
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
   const [primaryKeyword, setPrimaryKeyword] = useState("");
+  const [secondaryKeywords, setSecondaryKeywords] = useState("");
+  const [internalLinksText, setInternalLinksText] = useState("");
+  const [externalLinksText, setExternalLinksText] = useState("");
   const [heroImage, setHeroImage] = useState("");
   const [heroImageAlt, setHeroImageAlt] = useState("");
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
@@ -2070,9 +2074,6 @@ export default function ContentEditor() {
 
           <div className="flex items-center gap-2">
             <StatusBadge status={status as "draft" | "in_review" | "approved" | "scheduled" | "published"} />
-            {/* Live Word Count with Reading Time */}
-            <span className="text-sm text-muted-foreground">{seoScore.totalWords} words</span>
-            <ReadingTimeCalculator wordCount={seoScore.totalWords} />
           </div>
 
         </div>
@@ -2431,43 +2432,19 @@ export default function ContentEditor() {
                 </button>
               </div>
             )}
-          </div>
-          )}
-        </div>
 
-        {/* Right Panel - Settings */}
-        <div className="w-80 border-l bg-background shrink-0 flex flex-col overflow-hidden">
-          <div className="p-3 border-b shrink-0">
-            <h3 className="font-medium text-sm flex items-center gap-2">
-              {selectedBlock ? (
-                <>
-                  <FileText className="h-4 w-4" />
-                  Block Settings
-                </>
-              ) : (
-                <>
-                  <Settings className="h-4 w-4" />
-                  Page Settings
-                </>
-              )}
-            </h3>
-          </div>
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="p-4 pb-8">
-              {selectedBlock ? (
-                <BlockSettingsPanel
-                  block={selectedBlock}
-                  onUpdate={(data) => updateBlock(selectedBlock.id ?? '', data)}
-                  onGenerateImage={() => handleGenerateImage(selectedBlock.id ?? '', selectedBlock.type === "hero" ? "hero" : "image")}
-                  isGeneratingImage={imageGeneratingBlock === selectedBlock.id}
-                />
-              ) : (contentType === "attraction" || contentType === "hotel" || contentType === "dining" || contentType === "district") ? (
-                <Tabs defaultValue="basic" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="basic">Basic</TabsTrigger>
-                    <TabsTrigger value="seo">SEO Sections</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="basic" className="space-y-6 mt-4">
+            {/* Bottom Collapsible Settings Section */}
+            <div className="mt-8 space-y-4">
+              <Accordion type="multiple" defaultValue={[]} className="space-y-3">
+                {/* Page Settings Accordion */}
+                <AccordionItem value="page-settings" className="border rounded-lg bg-background shadow-sm">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline" data-testid="accordion-page-settings">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Page Settings</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
                     <PageSettingsPanel
                       title={title}
                       onTitleChange={setTitle}
@@ -2483,12 +2460,29 @@ export default function ContentEditor() {
                       onMetaDescriptionChange={setMetaDescription}
                       primaryKeyword={primaryKeyword}
                       onPrimaryKeywordChange={setPrimaryKeyword}
+                      secondaryKeywords={secondaryKeywords}
+                      onSecondaryKeywordsChange={setSecondaryKeywords}
+                      internalLinksText={internalLinksText}
+                      onInternalLinksTextChange={setInternalLinksText}
+                      externalLinksText={externalLinksText}
+                      onExternalLinksTextChange={setExternalLinksText}
                       contentId={contentId}
                       contentType={contentType}
                       selectedWriterId={selectedWriterId}
                       onWriterSelect={setSelectedWriterId}
                     />
-                    <Separator />
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* SEO Score Accordion */}
+                <AccordionItem value="seo-score" className="border rounded-lg bg-background shadow-sm">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline" data-testid="accordion-seo-score">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">SEO Score</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
                     <SeoScore
                       title={title}
                       metaTitle={metaTitle}
@@ -2498,7 +2492,18 @@ export default function ContentEditor() {
                       headings={seoHeadings}
                       images={seoImages}
                     />
-                    <Separator />
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* SEO Validation Accordion */}
+                <AccordionItem value="seo-validation" className="border rounded-lg bg-background shadow-sm">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline" data-testid="accordion-seo-validation">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">SEO Validation</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
                     <SEOValidationGate
                       title={title}
                       metaTitle={metaTitle}
@@ -2515,98 +2520,85 @@ export default function ContentEditor() {
                       onAutoFix={handleSeoAutoFix}
                       onValidationComplete={handleSeoValidationComplete}
                     />
-                  </TabsContent>
-                  <TabsContent value="seo" className="mt-4">
-                    {contentType === "attraction" && (
-                      <AttractionSeoEditor
-                        data={attractionSeoData}
-                        onChange={setAttractionSeoData}
-                        title={title}
-                        contentType={contentType}
-                        primaryKeyword={primaryKeyword}
-                      />
-                    )}
-                    {contentType === "hotel" && (
-                      <HotelSeoEditor
-                        data={hotelSeoData}
-                        onChange={setHotelSeoData}
-                        title={title}
-                        contentType={contentType}
-                        primaryKeyword={primaryKeyword}
-                      />
-                    )}
-                    {contentType === "dining" && (
-                      <DiningSeoEditor
-                        data={diningSeoData}
-                        onChange={setDiningSeoData}
-                        title={title}
-                        contentType={contentType}
-                        primaryKeyword={primaryKeyword}
-                      />
-                    )}
-                    {contentType === "district" && (
-                      <DistrictSeoEditor
-                        data={districtSeoData}
-                        onChange={setDistrictSeoData}
-                        title={title}
-                        contentType={contentType}
-                        primaryKeyword={primaryKeyword}
-                      />
-                    )}
-                  </TabsContent>
-                </Tabs>
-              ) : (
-                <div className="space-y-6">
-                  <PageSettingsPanel
-                    title={title}
-                    onTitleChange={setTitle}
-                    slug={slug}
-                    onSlugChange={setSlug}
-                    status={status}
-                    onStatusChange={setStatus}
-                    scheduledDate={scheduledDate}
-                    onScheduledDateChange={setScheduledDate}
-                    metaTitle={metaTitle}
-                    onMetaTitleChange={setMetaTitle}
-                    metaDescription={metaDescription}
-                    onMetaDescriptionChange={setMetaDescription}
-                    primaryKeyword={primaryKeyword}
-                    onPrimaryKeywordChange={setPrimaryKeyword}
-                    contentId={contentId}
-                    contentType={contentType}
-                  />
-                  <Separator />
-                  <SeoScore
-                    title={title}
-                    metaTitle={metaTitle}
-                    metaDescription={metaDescription}
-                    primaryKeyword={primaryKeyword}
-                    content={seoContentText}
-                    headings={seoHeadings}
-                    images={seoImages}
-                  />
-                  <Separator />
-                  <SEOValidationGate
-                    title={title}
-                    metaTitle={metaTitle}
-                    metaDescription={metaDescription}
-                    primaryKeyword={primaryKeyword}
-                    heroImage={heroImage}
-                    heroImageAlt={heroImageAlt}
-                    content={seoContentText}
-                    headings={seoHeadings.map(h => h.text)}
-                    blocks={blocks}
-                    slug={slug}
-                    contentType={contentType}
-                    contentId={contentId}
-                    onAutoFix={handleSeoAutoFix}
-                    onValidationComplete={handleSeoValidationComplete}
-                  />
-                </div>
-              )}
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Content Type Specific SEO Sections */}
+                {(contentType === "attraction" || contentType === "hotel" || contentType === "dining" || contentType === "district") && (
+                  <AccordionItem value="seo-sections" className="border rounded-lg bg-background shadow-sm">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline" data-testid="accordion-seo-sections">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">SEO Sections</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      {contentType === "attraction" && (
+                        <AttractionSeoEditor
+                          data={attractionSeoData}
+                          onChange={setAttractionSeoData}
+                          title={title}
+                          contentType={contentType}
+                          primaryKeyword={primaryKeyword}
+                        />
+                      )}
+                      {contentType === "hotel" && (
+                        <HotelSeoEditor
+                          data={hotelSeoData}
+                          onChange={setHotelSeoData}
+                          title={title}
+                          contentType={contentType}
+                          primaryKeyword={primaryKeyword}
+                        />
+                      )}
+                      {contentType === "dining" && (
+                        <DiningSeoEditor
+                          data={diningSeoData}
+                          onChange={setDiningSeoData}
+                          title={title}
+                          contentType={contentType}
+                          primaryKeyword={primaryKeyword}
+                        />
+                      )}
+                      {contentType === "district" && (
+                        <DistrictSeoEditor
+                          data={districtSeoData}
+                          onChange={setDistrictSeoData}
+                          title={title}
+                          contentType={contentType}
+                          primaryKeyword={primaryKeyword}
+                        />
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+              </Accordion>
             </div>
-          </ScrollArea>
+          </div>
+          )}
         </div>
+
+        {/* Right Panel - Block Settings Only (when block is selected) */}
+        {selectedBlock && (
+          <div className="w-80 border-l bg-background shrink-0 flex flex-col overflow-hidden">
+            <div className="p-3 border-b shrink-0">
+              <h3 className="font-medium text-sm flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Block Settings
+              </h3>
+            </div>
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="p-4 pb-8">
+                <BlockSettingsPanel
+                  block={selectedBlock}
+                  onUpdate={(data) => updateBlock(selectedBlock.id ?? '', data)}
+                  onGenerateImage={() => handleGenerateImage(selectedBlock.id ?? '', selectedBlock.type === "hero" ? "hero" : "image")}
+                  isGeneratingImage={imageGeneratingBlock === selectedBlock.id}
+                />
+              </div>
+            </ScrollArea>
+          </div>
+        )}
       </div>
 
       {/* Image Generation Dialog */}
@@ -4730,6 +4722,12 @@ function PageSettingsPanel({
   onMetaDescriptionChange,
   primaryKeyword,
   onPrimaryKeywordChange,
+  secondaryKeywords,
+  onSecondaryKeywordsChange,
+  internalLinksText,
+  onInternalLinksTextChange,
+  externalLinksText,
+  onExternalLinksTextChange,
   contentId,
   contentType = "article",
   selectedWriterId,
@@ -4749,6 +4747,12 @@ function PageSettingsPanel({
   onMetaDescriptionChange: (v: string) => void;
   primaryKeyword: string;
   onPrimaryKeywordChange: (v: string) => void;
+  secondaryKeywords: string;
+  onSecondaryKeywordsChange: (v: string) => void;
+  internalLinksText: string;
+  onInternalLinksTextChange: (v: string) => void;
+  externalLinksText: string;
+  onExternalLinksTextChange: (v: string) => void;
   contentId?: string;
   contentType?: string;
   selectedWriterId?: string;
@@ -4957,6 +4961,84 @@ function PageSettingsPanel({
             placeholder="Main keyword..."
             data-testid="settings-primary-keyword"
           />
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Secondary Keywords</Label>
+            <AIFieldAssistant
+              fieldName="Secondary Keywords"
+              fieldType="secondaryKeywords"
+              currentValue={secondaryKeywords}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={onSecondaryKeywordsChange}
+            />
+          </div>
+          <Textarea
+            value={secondaryKeywords}
+            onChange={(e) => onSecondaryKeywordsChange(e.target.value)}
+            placeholder="Comma-separated LSI keywords..."
+            className="min-h-[60px]"
+            data-testid="settings-secondary-keywords"
+          />
+          <p className="text-xs text-muted-foreground">
+            Add related/LSI keywords separated by commas
+          </p>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Internal Links</Label>
+            <AIFieldAssistant
+              fieldName="Internal Links"
+              fieldType="internalLinks"
+              currentValue={internalLinksText}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={onInternalLinksTextChange}
+            />
+          </div>
+          <Textarea
+            value={internalLinksText}
+            onChange={(e) => onInternalLinksTextChange(e.target.value)}
+            placeholder="Anchor text | Target page..."
+            className="min-h-[80px] font-mono text-xs"
+            data-testid="settings-internal-links"
+          />
+          <p className="text-xs text-muted-foreground">
+            Format: Anchor text | Target page (one per line)
+          </p>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>External Links</Label>
+            <AIFieldAssistant
+              fieldName="External Links"
+              fieldType="externalLinks"
+              currentValue={externalLinksText}
+              contentContext={{
+                title,
+                contentType,
+                primaryKeyword,
+              }}
+              onApply={onExternalLinksTextChange}
+            />
+          </div>
+          <Textarea
+            value={externalLinksText}
+            onChange={(e) => onExternalLinksTextChange(e.target.value)}
+            placeholder="Anchor text | URL..."
+            className="min-h-[80px] font-mono text-xs"
+            data-testid="settings-external-links"
+          />
+          <p className="text-xs text-muted-foreground">
+            Format: Anchor text | URL (one per line)
+          </p>
         </div>
       </div>
 

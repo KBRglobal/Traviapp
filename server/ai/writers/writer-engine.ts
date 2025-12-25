@@ -35,6 +35,10 @@ const SEO_REQUIREMENTS = {
   maxWordCount: 3500, // Upper bound matches DEFAULT_CONTENT_RULES
   metaDescMinLength: 150,
   metaDescMaxLength: 160,
+  titleMinLength: 50,
+  titleMaxLength: 60,
+  keywordDensityMin: 1, // percentage
+  keywordDensityMax: 3, // percentage
 };
 
 // SEO compliance thresholds
@@ -126,8 +130,14 @@ function evaluateSeoCompliance(
   if (metaDescLength < SEO_REQUIREMENTS.metaDescMinLength || metaDescLength > SEO_REQUIREMENTS.metaDescMaxLength) {
     deficits.push(`Adjust meta description to ${SEO_REQUIREMENTS.metaDescMinLength}-${SEO_REQUIREMENTS.metaDescMaxLength} characters (currently ${metaDescLength})`);
   }
-  if (keywordMentions < 5) {
-    deficits.push(`Include more mentions of "Dubai" or "UAE" (currently ${keywordMentions}, need 5+)`);
+  if (titleLength < SEO_REQUIREMENTS.titleMinLength || titleLength > SEO_REQUIREMENTS.titleMaxLength) {
+    deficits.push(`Adjust title to ${SEO_REQUIREMENTS.titleMinLength}-${SEO_REQUIREMENTS.titleMaxLength} characters (currently ${titleLength})`);
+  }
+  if (keywordMentions < 10) {
+    deficits.push(`Include more mentions of "Dubai" or "UAE" (currently ${keywordMentions}, need 10+)`);
+  }
+  if (h2Count > SEO_REQUIREMENTS.maxH2Count) {
+    deficits.push(`Reduce H2 sections from ${h2Count} to ${SEO_REQUIREMENTS.minH2Count}-${SEO_REQUIREMENTS.maxH2Count}`);
   }
   
   const isCompliant = essential >= SEO_THRESHOLDS.essential && 

@@ -5352,6 +5352,26 @@ Format: Return ONLY a JSON array where each element is a string with info items 
         altText: `Generate 3 SEO-friendly alt text options for the hero image of "${title}" (${contentType}). 
 Each should be 125-150 chars, descriptive, include keyword "${primaryKeyword || title}", and describe visual elements.
 Format: Return ONLY a JSON array of 3 strings.`,
+
+        secondaryKeywords: `Based on the primary keyword "${primaryKeyword || title}" for a ${contentType} page about "${title}", 
+generate 3 sets of 5-8 secondary/LSI keywords each. Focus on Dubai travel context, related search terms, and long-tail variations.
+Each set should cover different semantic aspects: synonyms, related topics, question-based keywords, and location variations.
+Format: Return ONLY a JSON array of 3 strings, where each string contains comma-separated keywords.`,
+
+        internalLinks: `For a ${contentType} page about "${title}" with primary keyword "${primaryKeyword || title}", 
+suggest 5-8 internal linking opportunities. Consider related Dubai travel topics like:
+- Nearby attractions, districts, hotels
+- Related activities, dining, transport
+- Complementary content (if beach -> water sports, if hotel -> nearby restaurants)
+Format: Return ONLY a JSON array of 3 different sets of suggestions. Each element is a string with link suggestions in format "Anchor Text | Target Topic" separated by newlines.`,
+
+        externalLinks: `For a ${contentType} page about "${title}" with keyword "${primaryKeyword || title}",
+suggest 5-6 authoritative external sources to link to. Focus on:
+- Official tourism websites (Visit Dubai, DTCM)
+- Government resources (Dubai.ae, UAE official sites)
+- Reputable travel guides (Lonely Planet, TripAdvisor, Time Out Dubai)
+- Official venue/brand websites
+Format: Return ONLY a JSON array of 3 different sets. Each element is a string with suggestions in format "Anchor Text | URL or Domain" separated by newlines.`,
       };
 
       const prompt = fieldPrompts[fieldType as keyof typeof fieldPrompts];

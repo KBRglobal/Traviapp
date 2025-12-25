@@ -229,8 +229,8 @@ export function clearKeywordCache() {
 
 export function createArticleResponseSchema(rules: typeof DEFAULT_CONTENT_RULES) {
   return z.object({
-    title: z.string().min(20).max(100).describe("SEO headline, keyword first"),
-    metaDescription: z.string().min(100).max(160).describe("Meta description 100-160 chars"),
+    title: z.string().min(50).max(60).describe("SEO headline 50-60 chars, keyword first"),
+    metaDescription: z.string().min(150).max(160).describe("Meta description 150-160 chars exactly"),
     category: z.string(),
     urgencyLevel: z.enum(["urgent", "relevant", "evergreen"]),
     targetAudience: z.array(z.string()).min(1),
@@ -453,6 +453,17 @@ VALIDATION ERRORS FOUND:
 ${errors.map(e => `• ${e}`).join('\n')}
 
 ==================================================
+STRICT SEO REQUIREMENTS (MUST BE FOLLOWED):
+==================================================
+
+📏 TITLE: EXACTLY 50-60 characters (not 66, not 45, EXACTLY 50-60)
+📝 META DESCRIPTION: EXACTLY 150-160 characters (not 174, not 140)
+📑 H2 HEADERS: EXACTLY 4-6 <h2> sections (not 9, not 3, EXACTLY 4-6)
+🔗 INTERNAL LINKS: 5-8 internal links (not 0, add them!)
+🌐 EXTERNAL LINKS: 2-3 authoritative external links (not 0, add them!)
+🔑 KEYWORD DENSITY: 1-3% for primary keyword
+
+==================================================
 COMMON MISTAKES TO AVOID:
 ==================================================
 
@@ -464,11 +475,12 @@ ${typeErrors.length > 0 ? `❌ TYPE ERRORS DETECTED:
 ` : ''}
 
 ${lengthErrors.length > 0 ? `❌ LENGTH ERRORS DETECTED:
+   - "title" MUST be 50-60 characters EXACTLY (count them!)
+   - "metaDescription" MUST be 150-160 characters EXACTLY (count them!)
    - "content" must be at least ${minContentChars} characters (${rules.minWords} words)
      You provided ${wordCount} words - need ${Math.max(0, rules.minWords - wordCount)} more!
    - Each FAQ "answer" must be at least ${faqAnswerMinChars} characters (${rules.faqAnswerWordsMin} words)
      Write full paragraph answers, not short sentences!
-   - "metaDescription" must be 100-160 characters (NOT more!)
 ` : ''}
 
 ${requiredErrors.length > 0 ? `❌ MISSING REQUIRED FIELDS:
@@ -479,16 +491,33 @@ ${requiredErrors.length > 0 ? `❌ MISSING REQUIRED FIELDS:
 ` : ''}
 
 ==================================================
+MANDATORY LINK REQUIREMENTS:
+==================================================
+
+❌ YOU HAD 0 INTERNAL LINKS - ADD THESE:
+   - <a href="/attractions">Top Attractions in Dubai</a>
+   - <a href="/hotels">Best Hotels in Dubai</a>
+   - <a href="/dining">Dubai Dining Guide</a>
+   - <a href="/districts">Dubai Districts</a>
+   - <a href="/events">Dubai Events Calendar</a>
+   - <a href="/transport">Getting Around Dubai</a>
+
+❌ YOU HAD 0 EXTERNAL LINKS - ADD THESE:
+   - <a href="https://www.visitdubai.com" target="_blank" rel="noopener">Visit Dubai</a>
+   - <a href="https://www.dubai.ae" target="_blank" rel="noopener">Dubai Government Portal</a>
+   - <a href="https://www.dubaitourism.gov.ae" target="_blank" rel="noopener">Dubai Tourism</a>
+
+==================================================
 CORRECT JSON STRUCTURE (FOLLOW EXACTLY):
 ==================================================
 
 {
-  "title": "Your SEO Title Here - 20 to 100 characters",
-  "metaDescription": "Compelling meta description between 100-160 characters only",
+  "title": "Your SEO Title Here - EXACTLY 50-60 characters",
+  "metaDescription": "Meta description EXACTLY 150-160 characters including spaces. Count carefully before submitting!",
   "category": "attractions",
   "urgencyLevel": "evergreen",
   "targetAudience": ["tourists", "families", "couples"],
-  "content": "<p>Your FULL article HTML here with at least ${rules.minWords} words...</p><h2>Section 1</h2><p>...</p>",
+  "content": "<h2>Section 1</h2><p>Content with internal links like <a href=\\"/attractions\\">attractions</a>...</p><h2>Section 2</h2><p>More content with external links like <a href=\\"https://www.visitdubai.com\\" target=\\"_blank\\" rel=\\"noopener\\">Visit Dubai</a>...</p><h2>Section 3</h2><p>...</p><h2>Section 4</h2><p>...</p>",
   "quickFacts": ["Fact 1 about the topic", "Fact 2", "Fact 3", "Fact 4", "Fact 5"],
   "proTips": ["Pro tip 1 with 20-35 words of actionable advice", "Pro tip 2", "Pro tip 3", "Pro tip 4", "Pro tip 5"],
   "warnings": [],
@@ -507,11 +536,14 @@ CORRECT JSON STRUCTURE (FOLLOW EXACTLY):
 }
 
 ==================================================
-WORD COUNT REMINDER:
+WORD COUNT & KEYWORD DENSITY REMINDER:
 ==================================================
 Current: ${wordCount} words
 Required: ${rules.minWords}-${rules.maxWords} words
 ${wordCount < rules.minWords ? `⚠️ You need ${rules.minWords - wordCount} MORE words!` : '✓ Word count OK'}
+
+🔑 KEYWORD DENSITY TARGET: 1-3% for primary keyword
+   (If article is 2000 words, primary keyword should appear 20-60 times)
 
 🔑 KEYWORDS to include:
 ${keywordList.length > 0 ? keywordList.slice(0, 10).map(k => `• ${k}`).join('\n') : '• dubai tourism\n• things to do in dubai'}
