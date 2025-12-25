@@ -167,6 +167,9 @@ export const contents = pgTable("contents", {
   wordCount: integer("word_count").default(0),
   viewCount: integer("view_count").default(0),
   authorId: varchar("author_id").references(() => users.id),
+  writerId: varchar("writer_id").references(() => aiWriters.id),
+  generatedByAI: boolean("generated_by_ai").default(false),
+  writerVoiceScore: integer("writer_voice_score"),
   scheduledAt: timestamp("scheduled_at"),
   publishedAt: timestamp("published_at"),
   deletedAt: timestamp("deleted_at"),
@@ -178,6 +181,7 @@ export const contents = pgTable("contents", {
   index("IDX_contents_type_status").on(table.type, table.status),
   index("IDX_contents_author").on(table.authorId),
   index("IDX_contents_published_at").on(table.publishedAt),
+  index("IDX_contents_writer").on(table.writerId),
 ]);
 
 // Attractions specific data
@@ -2276,6 +2280,11 @@ export type InsertContentRules = z.infer<typeof insertContentRulesSchema>;
 export type ContentRules = typeof contentRules.$inferSelect;
 
 // Default rules that will be seeded
+/**
+ * @deprecated Use the AI Writers system instead (server/ai/writers/content-generator.ts)
+ * This legacy content rules system is maintained for backward compatibility only.
+ * New content generation should use writer-specific prompts and personalities.
+ */
 export const DEFAULT_CONTENT_RULES = {
   name: "dubai-seo-standard",
   description: "Standard SEO rules for Dubai tourism content - STRICT enforcement",
@@ -3173,4 +3182,7 @@ export type AbTestVariant = typeof abTestVariants.$inferSelect;
 export type InsertAbTestVariant = z.infer<typeof insertAbTestVariantSchema>;
 export type AbTestEvent = typeof abTestEvents.$inferSelect;
 export type InsertAbTestEvent = z.infer<typeof insertAbTestEventSchema>;
+
+// Export ContentType for use in AI Writers system
+export type ContentType = typeof contents.$inferSelect.type;
 

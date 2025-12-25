@@ -1,6 +1,15 @@
 /**
  * AI Content Generator - Legacy Entry Point
  *
+ * @deprecated This file is maintained for backward compatibility only.
+ * New code should use the AI Writers system from './ai/writers/content-generator' instead.
+ * 
+ * The AI Writers system provides:
+ * - Writer-specific personalities and voices
+ * - Auto-assignment of optimal writers
+ * - Voice consistency scoring
+ * - Better content quality and variety
+ * 
  * This file now imports from the modular AI structure in ./ai/
  * and re-exports for backward compatibility. New code should
  * import directly from './ai' instead.
@@ -11,6 +20,7 @@
  * - ./ai/image-generation.ts - Image generation (Flux, DALL-E)
  * - ./ai/seo-tools.ts - SEO analysis and optimization
  * - ./ai/utils.ts - Utility functions
+ * - ./ai/writers/ - AI Writers Virtual Newsroom System (PREFERRED)
  */
 
 import type { ContentBlock } from "@shared/schema";

@@ -4676,6 +4676,42 @@ export async function registerRoutes(
 
   app.post("/api/ai/generate", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     try {
+      // Check if we should use the new AI Writers system (default: true)
+      const useWriters = req.body.useWriters !== false;
+      
+      if (useWriters) {
+        // 🆕 Use new AI Writers system (PREFERRED)
+        try {
+          const { aiWritersContentGenerator } = await import("./ai/writers/content-generator");
+          
+          const { type, topic, keywords, writerId, locale, length, tone } = req.body;
+
+          if (!type || !topic) {
+            return res.status(400).json({ error: "Type and topic are required" });
+          }
+
+          const result = await aiWritersContentGenerator.generate({
+            writerId, // Optional - auto-assigns if not provided
+            contentType: type,
+            topic,
+            keywords: keywords || [],
+            locale: locale || 'en',
+            length: length || 'medium',
+            tone,
+          });
+
+          return res.json({
+            ...result,
+            _system: 'ai-writers', // Indicator that new system was used
+          });
+        } catch (writerError: any) {
+          console.error("AI Writers generation failed:", writerError);
+          // Fall through to legacy system on error
+          console.warn("Falling back to legacy content generator due to error:", writerError.message);
+        }
+      }
+      
+      // ⚠️ LEGACY SYSTEM (Fallback or explicit opt-out)
       const aiClient = getAIClient();
       if (!aiClient) {
         return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
@@ -4737,7 +4773,12 @@ Format the response as JSON with the following structure:
       });
 
       const generatedContent = JSON.parse(response.choices[0].message.content || "{}");
-      res.json(generatedContent);
+      res.json({
+        ...generatedContent,
+        _system: 'legacy', // Indicator that legacy system was used
+        _deprecated: true,
+        _message: 'This endpoint uses the deprecated content generation system. Consider using AI Writers system for better results.'
+      });
     } catch (error) {
       console.error("Error generating AI content:", error);
       res.status(500).json({ error: "Failed to generate content" });

@@ -53,3 +53,20 @@ export {
   getSeoOptimizationPrompt,
   getWriterGuidelines,
 } from "./prompts";
+
+// Export voice validator
+export {
+  voiceValidator,
+  validateVoiceConsistency as validateWriterVoiceConsistency,
+  getVoiceScore,
+  type VoiceConsistencyResult,
+} from "./voice-validator";
+
+// Export content generator (primary entry point)
+export {
+  aiWritersContentGenerator,
+  generate as generateWithWriter,
+  recommendWriter,
+  type ContentGenerationRequest,
+  type ContentGenerationResult,
+} from "./content-generator";
