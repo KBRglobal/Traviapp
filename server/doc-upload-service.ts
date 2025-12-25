@@ -9,6 +9,7 @@
 
 import mammoth from "mammoth";
 import type { ContentBlock } from "@shared/schema";
+import { generateBlockId, generateSlug } from "./ai/utils";
 
 // ============================================================================
 // TYPES
@@ -219,18 +220,7 @@ function stripHtml(html: string): string {
 // CONTENT STRUCTURE MAPPING
 // ============================================================================
 
-function generateBlockId(): string {
-  return Math.random().toString(36).substring(2, 9);
-}
-
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
-}
+// generateBlockId and generateSlug imported from ./ai/utils (single source of truth)
 
 /**
  * Convert parsed document to CMS content blocks

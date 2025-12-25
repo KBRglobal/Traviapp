@@ -17,6 +17,8 @@ import type {
   ContentBlock,
   FaqItem,
 } from "@shared/schema";
+import { generateBlockId, generateSlug } from "./ai/utils";
+import { getOpenAIClient } from "./ai/providers";
 
 // ============================================================================
 // CLIENT INITIALIZATION
@@ -31,14 +33,7 @@ function getAnthropicClient(): Anthropic | null {
   return new Anthropic({ apiKey });
 }
 
-function getOpenAIClient(): OpenAI | null {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-  return new OpenAI({
-    apiKey,
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
-  });
-}
+// getOpenAIClient imported from ./ai/providers (single source of truth)
 
 // ============================================================================
 // COST-OPTIMIZED MODEL TIERS
@@ -562,18 +557,7 @@ Analyze and return JSON:
 // MAIN GENERATION FUNCTIONS
 // ============================================================================
 
-function generateBlockId(): string {
-  return Math.random().toString(36).substring(2, 9);
-}
-
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
-}
+// generateBlockId and generateSlug imported from ./ai/utils (single source of truth)
 
 /**
  * Generate premium hotel content with research + Claude + QA

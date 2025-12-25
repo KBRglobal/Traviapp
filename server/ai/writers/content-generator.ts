@@ -156,13 +156,7 @@ export async function rewriteInVoice(
   return writerEngine.rewriteInVoice(writer.id, content, context);
 }
 
-/**
- * Check if legacy system should be used (DEPRECATED)
- * Always returns false - new system should always be used
- */
-export function shouldUseLegacy(): boolean {
-  return false; // Always use new AI Writers system!
-}
+// Legacy system removed - AI Writers is the only content generation system
 
 /**
  * Get recommended writer for content type and topic
@@ -181,7 +175,6 @@ export const aiWritersContentGenerator = {
   generateTitles,
   generateIntro,
   rewriteInVoice,
-  shouldUseLegacy,
   recommendWriter
 };
 

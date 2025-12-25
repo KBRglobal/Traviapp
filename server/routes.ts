@@ -78,6 +78,15 @@ import {
   type GeneratedImage,
   type ImageGenerationOptions
 } from "./ai";
+// AI client providers (single source of truth)
+import {
+  getAIClient,
+  getOpenAIClient,
+  getGeminiClient,
+  getOpenRouterClient
+} from "./ai/providers";
+// Security validators (single source of truth for sanitization)
+import { sanitizeHtml as sanitizeHtmlContent } from "./security/validators";
 import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-queue";
 import {
   deviceFingerprint,
@@ -230,76 +239,9 @@ async function convertToWebP(buffer: Buffer, originalFilename: string, mimeType:
 // Object storage is now handled through the unified StorageManager
 // See: ./services/storage-adapter.ts
 
-// AI Provider Configuration
-interface AIProvider {
-  name: string;
-  client: OpenAI | null;
-  available: boolean;
-}
+// AI client functions imported from ./ai/providers (single source of truth)
 
-function getOpenAIClient(): OpenAI | null {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return null;
-  }
-  return new OpenAI({
-    apiKey,
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
-  });
-}
-
-// Gemini via OpenAI-compatible API
-function getGeminiClient(): OpenAI | null {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.gemini;
-  if (!apiKey) {
-    return null;
-  }
-  return new OpenAI({
-    apiKey,
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-  });
-}
-
-// OpenRouter - supports many models
-function getOpenRouterClient(): OpenAI | null {
-  const apiKey = process.env.OPENROUTER_API_KEY || process.env.openrouterapi || process.env.OPENROUTERAPI;
-  if (!apiKey) {
-    return null;
-  }
-  return new OpenAI({
-    apiKey,
-    baseURL: "https://openrouter.ai/api/v1",
-    defaultHeaders: {
-      "HTTP-Referer": process.env.APP_URL || "https://travi.world",
-      "X-Title": "Travi CMS",
-    },
-  });
-}
-
-// Get the best available AI client with fallbacks
-function getAIClient(): { client: OpenAI; provider: string } | null {
-  // Try OpenAI first
-  const openai = getOpenAIClient();
-  if (openai) {
-    return { client: openai, provider: "openai" };
-  }
-
-  // Try Gemini
-  const gemini = getGeminiClient();
-  if (gemini) {
-    return { client: gemini, provider: "gemini" };
-  }
-
-  // Try OpenRouter (has free models)
-  const openrouter = getOpenRouterClient();
-  if (openrouter) {
-    return { client: openrouter, provider: "openrouter" };
-  }
-
-  return null;
-}
-
-// Get appropriate model based on provider
+// Get appropriate model based on provider and task type
 function getModelForProvider(provider: string, task: "chat" | "image" = "chat"): string {
   if (task === "image") {
     if (provider === "openai") return "dall-e-3";
@@ -318,41 +260,7 @@ function getModelForProvider(provider: string, task: "chat" | "image" = "chat"):
   }
 }
 
-// Server-side HTML sanitization for RSS content to prevent XSS
-function sanitizeHtmlContent(html: string): string {
-  if (!html) return "";
-
-  // Remove script tags and their content
-  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
-
-  // Remove event handlers (onclick, onerror, onload, etc.)
-  sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, "");
-  sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]+/gi, "");
-
-  // Remove javascript: protocol URLs
-  sanitized = sanitized.replace(/javascript\s*:/gi, "");
-
-  // Remove data: URLs that could contain scripts
-  sanitized = sanitized.replace(/data\s*:\s*text\/html/gi, "");
-
-  // Remove style tags (can contain expressions)
-  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
-
-  // Remove iframe, object, embed, form tags
-  sanitized = sanitized.replace(/<(iframe|object|embed|form|base|meta|link)[^>]*>/gi, "");
-  sanitized = sanitized.replace(/<\/(iframe|object|embed|form|base|meta|link)>/gi, "");
-
-  // Remove SVG with potential script content
-  sanitized = sanitized.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, "");
-
-  // Remove expression() and url() from inline styles (IE vulnerability)
-  sanitized = sanitized.replace(/expression\s*\([^)]*\)/gi, "");
-
-  // Clean up any remaining dangerous attributes
-  sanitized = sanitized.replace(/\s*(src|href|action)\s*=\s*["']?\s*javascript:[^"'\s>]*/gi, "");
-
-  return sanitized.trim();
-}
+// sanitizeHtmlContent imported from ./security/validators (uses DOMPurify)
 
 async function parseRssFeed(url: string): Promise<{ title: string; link: string; description: string; pubDate?: string }[]> {
   // SSRF Protection: Validate URL before fetching
@@ -3855,18 +3763,7 @@ export async function registerRoutes(
     items: z.array(rssImportItemSchema).min(1).max(50),
   });
 
-  // Helper function to generate content fingerprint from title and URL
-  function generateFingerprint(title: string, url?: string): string {
-    const normalized = `${title.toLowerCase().trim()}|${(url || '').toLowerCase().trim()}`;
-    // Simple hash function for fingerprinting
-    let hash = 0;
-    for (let i = 0; i < normalized.length; i++) {
-      const char = normalized.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return `fp_${Math.abs(hash).toString(36)}`;
-  }
+  // generateFingerprint is defined at line 961 using crypto.createHash (single source of truth)
 
   app.post("/api/rss-feeds/:id/import", requirePermission("canCreate"), checkReadOnlyMode, async (req, res) => {
     try {
