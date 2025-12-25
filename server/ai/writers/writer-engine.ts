@@ -32,7 +32,7 @@ const SEO_REQUIREMENTS = {
   minInternalLinks: 5,
   maxInternalLinks: 8,
   minWordCount: 1800,
-  maxWordCount: 2200,
+  maxWordCount: 3500, // Upper bound matches DEFAULT_CONTENT_RULES
   metaDescMinLength: 150,
   metaDescMaxLength: 160,
 };
@@ -156,6 +156,8 @@ export interface WriteContentResponse {
     readingTime: number;
     seoScore: number;
     voiceConsistencyScore: number;
+    needsManualReview?: boolean;
+    seoDeficits?: string[];
   };
 }
 
@@ -208,7 +210,8 @@ export async function generateContent(
     let attempt = 0;
     
     // REGENERATION LOOP: Generate and validate until compliant or attempts exhausted
-    while (attempt <= MAX_REGENERATION_ATTEMPTS) {
+    // Loop runs attempt 1, 2, ... MAX_REGENERATION_ATTEMPTS + 1 (initial + retries)
+    while (attempt < MAX_REGENERATION_ATTEMPTS + 1) {
       attempt++;
       const isRetry = attempt > 1;
       
@@ -251,15 +254,15 @@ export async function generateContent(
         break;
       }
       
-      // Check if we've exhausted attempts
-      if (attempt > MAX_REGENERATION_ATTEMPTS) {
-        console.log(`[SEO] Max attempts exhausted. Applying programmatic fixes...`);
-        break;
-      }
     }
     
     if (!parsedContent || !compliance) {
       throw new Error("Failed to generate content after multiple attempts");
+    }
+    
+    // If not compliant after regeneration, log warning
+    if (!compliance.isCompliant) {
+      console.log(`[SEO] WARNING: Content did not pass thresholds after ${attempt} attempts. Deficits: ${compliance.deficits.join(', ')}`);
     }
     
     // POST-GENERATION SEO ENFORCEMENT: Inject links if still missing
@@ -295,6 +298,20 @@ export async function generateContent(
     const voiceScore = await voiceValidator.getScore(request.writerId, fullContent);
     
     console.log(`[SEO] Final Scores - Essential: ${finalCompliance.scores.essential}%, Technical: ${finalCompliance.scores.technical}%, Quality: ${finalCompliance.scores.quality}%, Combined: ${finalCompliance.scores.combined}%`);
+    
+    // Determine if manual review is needed (still non-compliant after all fixes)
+    const needsManualReview = !finalCompliance.isCompliant;
+    
+    if (needsManualReview) {
+      const deficitMsg = finalCompliance.deficits.join(', ');
+      console.log(`[SEO] Article flagged for manual review. Remaining deficits: ${deficitMsg}`);
+      
+      // For strict enforcement mode (RSS auto-processing), throw an error
+      // This ensures non-compliant content is rejected at the generation level
+      if (request.strictSeoEnforcement) {
+        throw new Error(`SEO compliance failed after ${attempt} attempts. Deficits: ${deficitMsg}`);
+      }
+    }
 
     return {
       content: finalParsedContent,
@@ -304,6 +321,8 @@ export async function generateContent(
         readingTime,
         seoScore: finalCompliance.scores.combined,
         voiceConsistencyScore: voiceScore,
+        needsManualReview,
+        seoDeficits: needsManualReview ? finalCompliance.deficits : undefined,
       },
     };
   } catch (error) {

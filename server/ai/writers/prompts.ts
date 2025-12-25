@@ -18,6 +18,7 @@ export interface WriteContentRequest {
   targetAudience?: string | string[];
   internalLinks?: Array<{ title: string; url: string }>;
   additionalContext?: string;
+  strictSeoEnforcement?: boolean; // If true, throw error when SEO thresholds not met
 }
 
 /**
