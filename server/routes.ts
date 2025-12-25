@@ -5905,14 +5905,16 @@ OUTPUT FORMAT - Return valid JSON matching this exact structure:
 }
 
 RULES:
-1. Article should be 1200-1800 words total across all text blocks
-2. Include 4-5 text sections with detailed content
+1. Article MUST be MINIMUM 1800-2500 words total across all text blocks (this is CRITICAL for SEO compliance)
+2. Include 4-6 text sections with detailed content (each H2 section should be 300-500 words)
 3. Add a highlights block with 6 key takeaways
 4. Include a tips block with 7 actionable expert tips - THIS IS REQUIRED
-5. Include 5 FAQ items with comprehensive 100-150 word answers - THIS IS REQUIRED
+5. Include 5 FAQ items with comprehensive 100-150 word answers each - THIS IS REQUIRED
 6. Make content traveler-focused and SEO-optimized
 7. No fake data, invented prices, or unverifiable facts
-8. Include a CTA block at the end`;
+8. Include a CTA block at the end
+9. Include 5-8 internal links to related content
+10. Include 2-3 external links to authoritative sources`;
 
       const userPrompt = `Generate a complete article for this Dubai travel topic:
 
@@ -5930,7 +5932,7 @@ Create engaging, informative content that would appeal to Dubai travelers. Retur
           { role: "user", content: userPrompt },
         ],
         response_format: { type: "json_object" },
-        max_tokens: 4096,
+        max_tokens: 8000,
       });
 
       const generated = JSON.parse(response.choices[0].message.content || "{}");
@@ -6219,10 +6221,11 @@ RULES:
                 role: "system",
                 content: `You are an expert Dubai travel content writer. Generate a complete, SEO-optimized article.
 
-Return JSON with: title, metaDescription, slug, heroImageAlt, blocks (array with hero, 4-5 text sections, highlights with 6 items, tips with 7 tips, faq with 5 items using "faqs" key, cta).
-Article should be 1200-1800 words, traveler-focused, no fake data.
+Return JSON with: title, metaDescription, slug, heroImageAlt, blocks (array with hero, 4-6 text sections, highlights with 6 items, tips with 7 tips, faq with 5 items using "faqs" key, cta).
+Article MUST be MINIMUM 1800-2500 words (this is CRITICAL for SEO compliance). Each H2 section should be 300-500 words.
 IMPORTANT: Include a "tips" block with "tips" array containing 7 actionable tips.
-IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with "question" and "answer" keys.`,
+IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with "question" and "answer" keys (each answer 100-150 words).
+IMPORTANT: Include 5-8 internal links and 2-3 external links in your text sections.`,
               },
               {
                 role: "user",
@@ -6230,7 +6233,7 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
               },
             ],
             response_format: { type: "json_object" },
-            max_tokens: 4096,
+            max_tokens: 8000,
           });
 
           const generated = JSON.parse(response.choices[0].message.content || "{}");
