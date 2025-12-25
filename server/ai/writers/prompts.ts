@@ -16,6 +16,7 @@ export interface WriteContentRequest {
   locale?: string;
   includeEmojis?: boolean;
   targetAudience?: string;
+  additionalContext?: string;
 }
 
 /**

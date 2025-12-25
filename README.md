@@ -49,13 +49,21 @@ See `.env.example` for all required environment variables.
 
 ## Key Features
 
+- **AI Writers System**: 10 specialized AI writers with unique voices and expertise
 - **Multi-language Support**: 16+ languages with automatic translation
 - **SEO Optimization**: 4-tier validation system with auto-fix
-- **AI Content Generation**: OpenAI-powered content creation
+- **AI Content Generation**: Unified system using specialized AI writers
 - **Image Management**: WebP conversion, thumbnails, lazy loading
 - **Role-Based Access**: Admin, Editor, Author, Viewer roles
 - **Newsletter System**: Campaign management with tracking
 - **PWA Support**: Offline-first with service worker
+
+## Recent Updates (December 2025)
+
+- ✅ **Optimized Codebase**: Removed 1,000+ lines of unused code
+- ✅ **TypeScript Compliance**: All modules compile without errors
+- ✅ **Unified AI System**: AI Writers as the primary content generator
+- ✅ **Improved Maintainability**: Cleaner, more focused architecture
 
 ## API Health Check
 
@@ -68,6 +76,10 @@ curl http://localhost:5000/api/health
 - [System Architecture](./replit.md)
 - [Product Requirements](./PRD.md)
 - [Design Guidelines](./design_guidelines.md)
+- [Implementation Status](./IMPLEMENTATION_STATUS.md)
+- [AI Writers System](./AI_WRITERS_IMPLEMENTATION.md)
+- [AI Writers Migration Guide](./docs/ai-writers-migration-guide.md)
+- [AI Writers API Reference](./docs/ai-writers-api-reference.md)
 
 ## Tech Stack
 

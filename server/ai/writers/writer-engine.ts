@@ -54,7 +54,11 @@ export async function generateContent(
     throw new Error(`Writer not found: ${request.writerId}`);
   }
 
-  const client = await getAIClient();
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("AI client not configured");
+  }
+  const { client } = aiClient;
   const systemPrompt = getWriterSystemPrompt(writer);
   const userPrompt = getContentGenerationPrompt(writer, request);
 
@@ -107,7 +111,11 @@ export async function generateTitles(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  const client = await getAIClient();
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("AI client not configured");
+  }
+  const { client } = aiClient;
   const systemPrompt = getWriterSystemPrompt(writer);
   const userPrompt = getTitleGenerationPrompt(writer, topic);
 
@@ -151,7 +159,11 @@ export async function generateIntro(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  const client = await getAIClient();
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("AI client not configured");
+  }
+  const { client } = aiClient;
   const systemPrompt = getWriterSystemPrompt(writer);
   const userPrompt = getIntroGenerationPrompt(writer, topic, title);
 
@@ -185,7 +197,11 @@ export async function rewriteInVoice(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  const client = await getAIClient();
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("AI client not configured");
+  }
+  const { client } = aiClient;
   const systemPrompt = getWriterSystemPrompt(writer);
   const userPrompt = getRewritePrompt(writer, content);
 
@@ -219,7 +235,11 @@ export async function validateVoiceConsistency(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  const client = await getAIClient();
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("AI client not configured");
+  }
+  const { client } = aiClient;
   const prompt = getVoiceValidationPrompt(writer, content);
 
   try {
@@ -259,7 +279,11 @@ export async function validateContentVoice(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  const client = await getAIClient();
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("AI client not configured");
+  }
+  const { client } = aiClient;
   const prompt = getVoiceValidationPrompt(writer, content);
 
   try {
@@ -303,7 +327,11 @@ export async function optimizeForSeo(
     throw new Error(`Writer not found: ${writerId}`);
   }
 
-  const client = await getAIClient();
+  const aiClient = getAIClient();
+  if (!aiClient) {
+    throw new Error("AI client not configured");
+  }
+  const { client } = aiClient;
   const systemPrompt = getWriterSystemPrompt(writer);
   const userPrompt = getSeoOptimizationPrompt(writer, content, keywords);
 
