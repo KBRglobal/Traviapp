@@ -238,32 +238,61 @@ export function SEOValidationGate({
   };
 
   // Build content data for validation
-  const buildContentData = () => ({
-    title,
-    metaTitle,
-    metaDescription,
-    primaryKeyword,
-    heroImage: heroImage || "",
-    heroAlt: heroImageAlt || "",
-    content,
-    headings,
-    slug: slug || "",
-    // Extract images from blocks
-    images: blocks
-      .filter(b => b.type === "image" || b.type === "hero" || b.type === "gallery")
-      .flatMap(b => {
-        if (b.type === "gallery" && Array.isArray(b.data.images)) {
-          return b.data.images.map((img: { url?: string; alt?: string }) => ({
-            url: img.url || "",
-            alt: img.alt || "",
-          }));
-        }
-        return [{
-          url: (b.data.image as string) || (b.data.url as string) || "",
-          alt: (b.data.alt as string) || "",
-        }];
-      }),
-  });
+  const buildContentData = () => {
+    // Extract FAQs from blocks
+    const faqBlocks = blocks.filter(b => b.type === "faq");
+    const faq = faqBlocks.flatMap(b => {
+      // Handle both single FAQ blocks and FAQ blocks with multiple items
+      if (b.data.faqs && Array.isArray(b.data.faqs)) {
+        return b.data.faqs;
+      }
+      if (b.data.question && b.data.answer) {
+        return [{ question: b.data.question, answer: b.data.answer }];
+      }
+      return [];
+    });
+    
+    // Extract tips from blocks
+    const tipsBlocks = blocks.filter(b => b.type === "tips");
+    const proTips = tipsBlocks.flatMap(b => {
+      if (b.data.tips && Array.isArray(b.data.tips)) {
+        return b.data.tips;
+      }
+      if (b.data.content && typeof b.data.content === "string") {
+        return b.data.content.split("\n").filter((t: string) => t.trim());
+      }
+      return [];
+    });
+    
+    return {
+      title,
+      metaTitle,
+      metaDescription,
+      primaryKeyword,
+      heroImage: heroImage || "",
+      heroAlt: heroImageAlt || "",
+      content,
+      headings,
+      slug: slug || "",
+      faq,
+      proTips,
+      // Extract images from blocks
+      images: blocks
+        .filter(b => b.type === "image" || b.type === "hero" || b.type === "gallery")
+        .flatMap(b => {
+          if (b.type === "gallery" && Array.isArray(b.data.images)) {
+            return b.data.images.map((img: { url?: string; alt?: string }) => ({
+              url: img.url || "",
+              alt: img.alt || "",
+            }));
+          }
+          return [{
+            url: (b.data.image as string) || (b.data.url as string) || "",
+            alt: (b.data.alt as string) || "",
+          }];
+        }),
+    };
+  };
 
   // Validate mutation
   const validateMutation = useMutation({
