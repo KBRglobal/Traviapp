@@ -43,13 +43,22 @@ export type {
 export {
   getValidOpenAIKey,
   getOpenAIClient,
-  getGeminiClient,
-  getOpenRouterClient,
   getAIClient,
   getOpenAIClientForImages,
   getModelForProvider,
   getContentTier,
   getModelConfig,
+  getAllAIClients,
+  getAllUnifiedProviders,
+  markProviderFailed,
+} from "./providers";
+
+export type {
+  AIMessage,
+  AICompletionOptions,
+  AICompletionResult,
+  UnifiedAIProvider,
+  AIProvider,
 } from "./providers";
 
 // ============================================================================

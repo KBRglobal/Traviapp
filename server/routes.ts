@@ -82,10 +82,9 @@ import {
 import {
   getAIClient,
   getAllAIClients,
+  getAllUnifiedProviders,
   markProviderFailed,
   getOpenAIClient,
-  getGeminiClient,
-  getOpenRouterClient,
   type AIProvider
 } from "./ai/providers";
 // Security validators (single source of truth for sanitization)
@@ -1358,14 +1357,14 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
     }
 
     const pendingClusters = await storage.getTopicClusters({ status: "pending" });
-    const aiProviders = getAllAIClients();
+    const unifiedProviders = getAllUnifiedProviders();
 
-    if (aiProviders.length === 0) {
+    if (unifiedProviders.length === 0) {
       console.log("[RSS Auto-Process] No AI provider configured, skipping article generation");
       return result;
     }
     
-    console.log(`[RSS Auto-Process] Available AI providers: ${aiProviders.map(p => p.provider).join(", ")}`);
+    console.log(`[RSS Auto-Process] Available AI providers: ${unifiedProviders.map(p => p.name).join(", ")}`);
     console.log(`[RSS Auto-Process] Found ${pendingClusters.length} pending clusters to process`);
 
     for (const cluster of pendingClusters) {
@@ -1414,25 +1413,23 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
             });
           }
 
-          // Try each provider in fallback chain until one succeeds
+          // Try each unified provider in fallback chain until one succeeds
           let completionSuccess = false;
-          for (const aiProvider of aiProviders) {
-            const { client: openai, provider, model } = aiProvider;
-            
+          for (const provider of unifiedProviders) {
             try {
-              console.log(`[RSS Auto-Process] Trying provider: ${provider} with model: ${model}`);
+              console.log(`[RSS Auto-Process] Trying provider: ${provider.name} with model: ${provider.model}`);
               
-              const completion = await openai.chat.completions.create({
-                model: provider === "openai" ? "gpt-4o" : model,
+              const result = await provider.generateCompletion({
                 messages,
-                ...(provider === "openai" ? { response_format: { type: "json_object" } } : {}),
+                model: provider.name === "openai" ? "gpt-4o" : provider.model,
                 temperature: attempts === 1 ? 0.7 : 0.5,
-                max_tokens: 12000,
+                maxTokens: 12000,
+                responseFormat: { type: "json_object" },
               });
 
-              lastResponse = JSON.parse(completion.choices[0].message.content || "{}");
+              lastResponse = JSON.parse(result.content || "{}");
               completionSuccess = true;
-              console.log(`[RSS Auto-Process] Successfully got response from ${provider}`);
+              console.log(`[RSS Auto-Process] Successfully got response from ${provider.name}`);
               break; // Exit provider loop on success
               
             } catch (providerError: any) {
@@ -1441,11 +1438,11 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
                                        providerError?.message?.includes('quota') ||
                                        providerError?.message?.includes('429');
               
-              console.log(`[RSS Auto-Process] Provider ${provider} failed: ${providerError?.message || 'Unknown error'}`);
+              console.log(`[RSS Auto-Process] Provider ${provider.name} failed: ${providerError?.message || 'Unknown error'}`);
               
               if (isRateLimitError) {
-                markProviderFailed(provider);
-                console.log(`[RSS Auto-Process] Marked ${provider} as temporarily unavailable, trying next...`);
+                markProviderFailed(provider.name);
+                console.log(`[RSS Auto-Process] Marked ${provider.name} as temporarily unavailable, trying next...`);
               }
               // Continue to next provider
             }
