@@ -4804,7 +4804,121 @@ Return valid JSON only.`;
         max_tokens: 8000,
       });
 
-      const generatedArticle = JSON.parse(response.choices[0].message.content || "{}");
+      let generatedArticle = JSON.parse(response.choices[0].message.content || "{}");
+      
+      // Server-side word count validation and auto-expansion
+      const countWords = (text: string): number => text.trim().split(/\s+/).filter(w => w.length > 0).length;
+      
+      const getArticleWordCount = (article: any): number => {
+        let totalWords = 0;
+        if (article.article?.intro) totalWords += countWords(article.article.intro);
+        if (article.article?.sections) {
+          for (const section of article.article.sections) {
+            if (section.body) totalWords += countWords(section.body);
+          }
+        }
+        if (article.article?.proTips) {
+          for (const tip of article.article.proTips) {
+            totalWords += countWords(tip);
+          }
+        }
+        if (article.article?.goodToKnow) {
+          for (const item of article.article.goodToKnow) {
+            totalWords += countWords(item);
+          }
+        }
+        if (article.article?.faq) {
+          for (const faq of article.article.faq) {
+            if (faq.a) totalWords += countWords(faq.a);
+          }
+        }
+        if (article.article?.closing) totalWords += countWords(article.article.closing);
+        return totalWords;
+      };
+
+      const MIN_WORD_TARGET = 1800;
+      const MAX_EXPANSION_ATTEMPTS = 3;
+      let wordCount = getArticleWordCount(generatedArticle);
+      let attempts = 0;
+
+      addSystemLog("info", "ai", `Initial generation: ${wordCount} words`, { title: articleTitle });
+
+      // Auto-expand if word count is below minimum
+      while (wordCount < MIN_WORD_TARGET && attempts < MAX_EXPANSION_ATTEMPTS) {
+        attempts++;
+        const wordsNeeded = MIN_WORD_TARGET - wordCount;
+        addSystemLog("info", "ai", `Expanding content: attempt ${attempts}, need ${wordsNeeded} more words`);
+
+        const expansionPrompt = `The article below has only ${wordCount} words but needs at least ${MIN_WORD_TARGET} words.
+
+Current sections: ${generatedArticle.article?.sections?.map((s: any) => s.heading).join(", ") || "none"}
+
+Please generate ${Math.max(3, Math.ceil(wordsNeeded / 200))} additional sections to expand this article about "${articleTitle}".
+Each section should have 250-400 words of detailed, valuable content.
+
+IMPORTANT: Generate NEW, UNIQUE sections that add value - do NOT repeat existing content.
+Focus on practical tips, insider information, comparisons, or detailed guides.
+
+Return JSON only:
+{
+  "additionalSections": [
+    {"heading": "H2 Section Title", "body": "Detailed paragraph content 250-400 words..."}
+  ],
+  "additionalFaqs": [
+    {"q": "Relevant question?", "a": "Detailed answer 80-120 words..."}
+  ]
+}`;
+
+        try {
+          const expansionResponse = await openai.chat.completions.create({
+            model: model,
+            messages: [
+              { role: "system", content: "You are an expert Dubai travel content writer. Generate high-quality expansion content to meet word count requirements." },
+              { role: "user", content: expansionPrompt },
+            ],
+            ...(provider === "openai" ? { response_format: { type: "json_object" } } : {}),
+            max_tokens: 4000,
+          });
+
+          const expansion = JSON.parse(expansionResponse.choices[0].message.content || "{}");
+          
+          // Merge expanded content
+          if (expansion.additionalSections && generatedArticle.article?.sections) {
+            generatedArticle.article.sections = [
+              ...generatedArticle.article.sections,
+              ...expansion.additionalSections
+            ];
+          }
+          if (expansion.additionalFaqs && generatedArticle.article?.faq) {
+            generatedArticle.article.faq = [
+              ...generatedArticle.article.faq,
+              ...expansion.additionalFaqs
+            ];
+          }
+
+          wordCount = getArticleWordCount(generatedArticle);
+          addSystemLog("info", "ai", `After expansion ${attempts}: ${wordCount} words`);
+        } catch (expansionError) {
+          console.error("Expansion attempt failed:", expansionError);
+          break;
+        }
+      }
+
+      // Final validation and warning
+      if (wordCount < MIN_WORD_TARGET) {
+        addSystemLog("warning", "ai", `Article generated with only ${wordCount} words (minimum: ${MIN_WORD_TARGET})`, { title: articleTitle });
+      } else {
+        addSystemLog("info", "ai", `Article meets word count requirement: ${wordCount} words`, { title: articleTitle });
+      }
+      
+      // Add word count to response for client validation
+      generatedArticle._generationStats = {
+        wordCount,
+        meetsMinimum: wordCount >= MIN_WORD_TARGET,
+        expansionAttempts: attempts,
+        sectionsCount: generatedArticle.article?.sections?.length || 0,
+        faqCount: generatedArticle.article?.faq?.length || 0
+      };
       
       // Fetch image from Freepik or AI after article generation
       let heroImage = null;
