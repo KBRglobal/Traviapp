@@ -185,6 +185,34 @@ export class SEOAutoFixer {
       }
     }
 
+    // Fix Internal Links in content body
+    const internalLinksResult = this.fixInternalLinksInBlocks(fixedArticle);
+    if (internalLinksResult.fixed) {
+      fixes.push({
+        field: "internal_links",
+        originalValue: null,
+        fixedValue: `Injected ${internalLinksResult.count} internal links`,
+        fixType: "generate",
+        success: true,
+        message: `Injected ${internalLinksResult.count} internal links into content`
+      });
+      fixedArticle.blocks = internalLinksResult.blocks;
+    }
+
+    // Fix External Links in content body
+    const externalLinksResult = this.fixExternalLinksInBlocks(fixedArticle);
+    if (externalLinksResult.fixed) {
+      fixes.push({
+        field: "external_links",
+        originalValue: null,
+        fixedValue: "Injected authoritative external link",
+        fixType: "generate",
+        success: true,
+        message: "Injected authoritative external link into content"
+      });
+      fixedArticle.blocks = externalLinksResult.blocks;
+    }
+
     // Count results
     const applied = fixes.filter(f => f.success).length;
     const failed = fixes.filter(f => !f.success).length;
@@ -703,6 +731,118 @@ export class SEOAutoFixer {
     }
 
     return parts.filter(Boolean).join(" ");
+  }
+
+  // ============================================================================
+  // LINK INJECTION METHODS
+  // ============================================================================
+
+  private fixInternalLinksInBlocks(article: Record<string, unknown>): { fixed: boolean; count: number; blocks: Array<Record<string, unknown>> } {
+    try {
+      const blocks = (article.blocks as Array<Record<string, unknown>>) || [];
+      if (blocks.length === 0) {
+        return { fixed: false, count: 0, blocks };
+      }
+
+      // Count existing internal links
+      let existingInternalLinks = 0;
+      for (const block of blocks) {
+        const content = (block.content as string) || "";
+        existingInternalLinks += (content.match(/href="\//gi) || []).length;
+      }
+
+      if (existingInternalLinks >= 5) {
+        return { fixed: false, count: 0, blocks };
+      }
+
+      // Fallback internal links
+      const internalLinks = [
+        { title: "Top Attractions in Dubai", url: "/attractions" },
+        { title: "Best Hotels in Dubai", url: "/hotels" },
+        { title: "Dubai Dining Guide", url: "/dining" },
+        { title: "Dubai Districts", url: "/districts" },
+        { title: "Dubai Events Calendar", url: "/events" },
+        { title: "Getting Around Dubai", url: "/transport" },
+      ];
+
+      const linksNeeded = Math.min(5 - existingInternalLinks, 4);
+      let injectedCount = 0;
+      const updatedBlocks = [...blocks];
+
+      // Find text blocks and inject links
+      for (let i = 0; i < updatedBlocks.length && injectedCount < linksNeeded; i++) {
+        const block = updatedBlocks[i];
+        if (block.type === "text" && block.content) {
+          const content = block.content as string;
+          if (content.length > 100 && !content.includes('href="/')) {
+            const link = internalLinks[injectedCount];
+            const linkHtml = ` <span class="related-content">See also: <a href="${link.url}">${link.title}</a>.</span>`;
+            updatedBlocks[i] = {
+              ...block,
+              content: content + linkHtml
+            };
+            injectedCount++;
+          }
+        }
+      }
+
+      return { fixed: injectedCount > 0, count: injectedCount, blocks: updatedBlocks };
+    } catch (e) {
+      logger.seo.error("Failed to inject internal links", { error: e instanceof Error ? e.message : String(e) });
+      return { fixed: false, count: 0, blocks: (article.blocks as Array<Record<string, unknown>>) || [] };
+    }
+  }
+
+  private fixExternalLinksInBlocks(article: Record<string, unknown>): { fixed: boolean; blocks: Array<Record<string, unknown>> } {
+    try {
+      const blocks = (article.blocks as Array<Record<string, unknown>>) || [];
+      if (blocks.length === 0) {
+        return { fixed: false, blocks };
+      }
+
+      // Count existing external links
+      let existingExternalLinks = 0;
+      for (const block of blocks) {
+        const content = (block.content as string) || "";
+        existingExternalLinks += (content.match(/href="https?:\/\//gi) || []).length;
+      }
+
+      if (existingExternalLinks >= 1) {
+        return { fixed: false, blocks };
+      }
+
+      // Authoritative external links
+      const externalLinks = [
+        { title: "Visit Dubai Official", url: "https://www.visitdubai.com" },
+        { title: "Dubai Government Portal", url: "https://www.dubai.ae" },
+      ];
+
+      const updatedBlocks = [...blocks];
+      let injected = false;
+
+      // Find a text block and inject external link
+      for (let i = 0; i < updatedBlocks.length; i++) {
+        const block = updatedBlocks[i];
+        if (block.type === "text" && block.content && !injected) {
+          const content = block.content as string;
+          if (content.length > 100) {
+            const link = externalLinks[0];
+            const linkHtml = ` <p class="external-reference">For official information, visit <a href="${link.url}" target="_blank" rel="noopener">${link.title}</a>.</p>`;
+            updatedBlocks[i] = {
+              ...block,
+              content: content + linkHtml
+            };
+            injected = true;
+            break;
+          }
+        }
+      }
+
+      return { fixed: injected, blocks: updatedBlocks };
+    } catch (e) {
+      logger.seo.error("Failed to inject external links", { error: e instanceof Error ? e.message : String(e) });
+      return { fixed: false, blocks: (article.blocks as Array<Record<string, unknown>>) || [] };
+    }
   }
 }
 

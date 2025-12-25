@@ -12,9 +12,30 @@ let cachedInternalLinks: { title: string; slug: string; type: string; url: strin
 let internalLinksCacheTime = 0;
 const INTERNAL_LINKS_CACHE_TTL = 300000; // 5 minutes
 
+// FALLBACK internal links when no published content exists
+const FALLBACK_INTERNAL_LINKS = [
+  { title: "Top Attractions in Dubai", slug: "top-attractions-dubai", type: "article", url: "/attractions" },
+  { title: "Best Hotels in Dubai", slug: "best-hotels-dubai", type: "article", url: "/hotels" },
+  { title: "Dubai Dining Guide", slug: "dubai-dining-guide", type: "article", url: "/dining" },
+  { title: "Dubai Districts", slug: "dubai-districts", type: "article", url: "/districts" },
+  { title: "Dubai Events Calendar", slug: "dubai-events", type: "article", url: "/events" },
+  { title: "Getting Around Dubai", slug: "dubai-transport", type: "article", url: "/transport" },
+];
+
+// AUTHORITATIVE external links for Dubai content
+export const AUTHORITATIVE_EXTERNAL_LINKS = [
+  { title: "Visit Dubai Official", url: "https://www.visitdubai.com", description: "Official Dubai Tourism Board" },
+  { title: "Dubai Government Portal", url: "https://www.dubai.ae", description: "Official Government of Dubai" },
+  { title: "Dubai Tourism Official", url: "https://www.dubaitourism.gov.ae", description: "Dubai Department of Economy and Tourism" },
+  { title: "Dubai RTA", url: "https://www.rta.ae", description: "Roads and Transport Authority" },
+  { title: "Dubai Municipality", url: "https://www.dm.gov.ae", description: "Dubai Municipality Official" },
+  { title: "Emirates Airlines", url: "https://www.emirates.com", description: "UAE National Carrier" },
+];
+
 /**
  * Get list of published content URLs for internal linking
  * Returns URLs that the AI can use when generating content
+ * Always returns at least fallback links if no published content exists
  */
 export async function getInternalLinkUrls(excludeSlug?: string, limit = 30): Promise<typeof cachedInternalLinks> {
   const now = Date.now();
@@ -54,18 +75,19 @@ export async function getInternalLinkUrls(excludeSlug?: string, limit = 30): Pro
         };
       });
       
-      cachedInternalLinks = links;
+      // Use fallback if no published content
+      cachedInternalLinks = links.length > 0 ? links : FALLBACK_INTERNAL_LINKS;
       internalLinksCacheTime = now;
     } catch (error) {
       console.error("Error fetching internal links:", error);
-      cachedInternalLinks = [];
+      cachedInternalLinks = FALLBACK_INTERNAL_LINKS;
     }
   }
   
   // Always filter and slice from cached list per call
   const filtered = excludeSlug 
-    ? (cachedInternalLinks || []).filter(l => l.slug !== excludeSlug)
-    : (cachedInternalLinks || []);
+    ? (cachedInternalLinks || FALLBACK_INTERNAL_LINKS).filter(l => l.slug !== excludeSlug)
+    : (cachedInternalLinks || FALLBACK_INTERNAL_LINKS);
   
   return filtered.slice(0, limit);
 }
