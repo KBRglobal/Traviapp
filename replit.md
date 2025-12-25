@@ -41,7 +41,12 @@ The system uses a base `contents` table with type-specific extension tables:
 - **hotels**: Star rating, room types, amenities, check-in/out times
 - **articles**: Category, source RSS feed, auto-generated flag
 
-Content blocks are stored as JSONB and support types: hero, text, image, gallery, FAQ, CTA, info_grid, highlights, tips.
+Content blocks are stored as JSONB and support types: hero, text, image, gallery, FAQ, CTA, info_grid, highlights, tips, video, quote, divider, heading.
+
+### Block Management
+- All blocks are assigned unique IDs when loaded from database or restored from versions
+- Blocks support drag-and-drop reordering via @dnd-kit/sortable
+- Image blocks support file upload, drag-drop, media library selection, and AI image generation
 
 ### Workflow States
 Content follows a status progression: draft → in_review → approved → scheduled → published
@@ -62,8 +67,11 @@ Content follows a status progression: draft → in_review → approved → sched
 - Requires `DEFAULT_OBJECT_STORAGE_BUCKET_ID` environment variable
 
 ### AI Services
-- **OpenAI API**: Content generation and enhancement features
-- Requires `OPENAI_API_KEY` environment variable
+Unified AI provider system with automatic failover:
+- **Provider Priority Order**: Anthropic → OpenRouter → DeepSeek → OpenAI
+- **Gemini Provider**: DISABLED (Replit AI Integrations modelfarm endpoint incompatible with all tested approaches)
+- **Content Generation**: AI-powered article writing with SEO compliance (1800-3500 words, 4-6 H2 headers, internal/external links)
+- **Environment Variables**: ANTHROPIC_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY, openrouterapi (secret)
 
 ### Multi-Language SEO System
 - **DeepL API**: Automatic content translation to 17 languages
