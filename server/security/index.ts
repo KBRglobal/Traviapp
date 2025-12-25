@@ -45,7 +45,8 @@ function detectXss(input: string): boolean {
   if (!input) return false;
 
   const xssPatterns = [
-    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    // Match script tags with any whitespace before closing >
+    /<script\b[^<]*(?:(?!<\/script[\s>])<[^<]*)*<\/script[\s>]/gi,
     /javascript:/gi,
     /on\w+\s*=/gi, // Event handlers like onclick, onerror
     /<iframe/gi,
