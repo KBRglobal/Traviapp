@@ -34,11 +34,15 @@ export interface SeoInput {
   externalLinks: number;
 }
 
-const META_TITLE_MIN = 30;
-const META_TITLE_MAX = 60;
-const META_DESC_MIN = 120;
+const META_TITLE_MIN = 50;
+const META_TITLE_MAX = 65;
+const META_DESC_MIN = 150;
 const META_DESC_MAX = 160;
-const MIN_WORD_COUNT = 300;
+const MIN_WORD_COUNT = 1800;
+const MIN_H2_COUNT = 4;
+const MAX_H2_COUNT = 6;
+const MIN_INTERNAL_LINKS = 5;
+const MIN_EXTERNAL_LINKS = 2;
 const IDEAL_KEYWORD_DENSITY_MIN = 1;
 const IDEAL_KEYWORD_DENSITY_MAX = 3;
 
@@ -201,24 +205,23 @@ export function analyzeSeo(input: SeoInput): SeoAnalysis {
 
   if (wordCount < MIN_WORD_COUNT) {
     issues.push({
-      type: "warning",
+      type: "error",
       category: "Content Length",
-      message: `Content is short (${wordCount} words)`,
-      recommendation: `Aim for at least ${MIN_WORD_COUNT} words for better SEO`,
+      message: `Content is too short (${wordCount} words)`,
+      recommendation: `CRITICAL: Minimum ${MIN_WORD_COUNT} words required for SEO compliance`,
     });
-    score -= 10;
-  } else if (wordCount >= 1000) {
+    score -= 25;
+  } else if (wordCount >= 2500) {
+    issues.push({
+      type: "success",
+      category: "Content Length",
+      message: `Excellent content length (${wordCount} words)`,
+    });
+  } else {
     issues.push({
       type: "success",
       category: "Content Length",
       message: `Good content length (${wordCount} words)`,
-    });
-  } else {
-    issues.push({
-      type: "info",
-      category: "Content Length",
-      message: `Content has ${wordCount} words`,
-      recommendation: "Consider adding more content for comprehensive coverage",
     });
   }
 
@@ -248,19 +251,27 @@ export function analyzeSeo(input: SeoInput): SeoAnalysis {
   }
 
   const h2Count = input.headings.filter(h => h.level === 2).length;
-  if (h2Count === 0 && wordCount > 500) {
+  if (h2Count < MIN_H2_COUNT) {
     issues.push({
-      type: "info",
+      type: "error",
       category: "Headings",
-      message: "No H2 subheadings found",
-      recommendation: "Add H2 subheadings to structure your content",
+      message: `Not enough H2 headings (${h2Count} found, need ${MIN_H2_COUNT}-${MAX_H2_COUNT})`,
+      recommendation: `Add ${MIN_H2_COUNT - h2Count} more H2 subheadings to structure your content`,
     });
-    score -= 3;
-  } else if (h2Count > 0) {
+    score -= 15;
+  } else if (h2Count > MAX_H2_COUNT) {
+    issues.push({
+      type: "warning",
+      category: "Headings",
+      message: `Too many H2 headings (${h2Count} found, max ${MAX_H2_COUNT})`,
+      recommendation: "Consider consolidating some sections",
+    });
+    score -= 5;
+  } else {
     issues.push({
       type: "success",
       category: "Headings",
-      message: `${h2Count} H2 subheading(s) found`,
+      message: `Good H2 structure (${h2Count} headings)`,
     });
   }
 
@@ -271,19 +282,35 @@ export function analyzeSeo(input: SeoInput): SeoAnalysis {
     score -= imageAnalysis.deduction;
   }
 
-  if (input.internalLinks === 0) {
+  if (input.internalLinks < MIN_INTERNAL_LINKS) {
     issues.push({
-      type: "info",
-      category: "Links",
-      message: "No internal links found",
-      recommendation: "Add internal links to related content",
+      type: "error",
+      category: "Internal Links",
+      message: `Not enough internal links (${input.internalLinks} found, need ${MIN_INTERNAL_LINKS}-8)`,
+      recommendation: `Add ${MIN_INTERNAL_LINKS - input.internalLinks} more internal links to related content`,
     });
-    score -= 3;
+    score -= 10;
   } else {
     issues.push({
       type: "success",
-      category: "Links",
-      message: `${input.internalLinks} internal link(s) found`,
+      category: "Internal Links",
+      message: `Good internal linking (${input.internalLinks} links)`,
+    });
+  }
+
+  if (input.externalLinks < MIN_EXTERNAL_LINKS) {
+    issues.push({
+      type: "warning",
+      category: "External Links",
+      message: `Not enough external links (${input.externalLinks} found, need ${MIN_EXTERNAL_LINKS}-3)`,
+      recommendation: `Add ${MIN_EXTERNAL_LINKS - input.externalLinks} more external links to authoritative sources`,
+    });
+    score -= 5;
+  } else {
+    issues.push({
+      type: "success",
+      category: "External Links",
+      message: `Good external linking (${input.externalLinks} links)`,
     });
   }
 

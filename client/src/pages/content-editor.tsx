@@ -2075,20 +2075,6 @@ export default function ContentEditor() {
             <ReadingTimeCalculator wordCount={seoScore.totalWords} />
           </div>
 
-          {/* Live SEO Score Indicator */}
-          <div
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
-              seoScore.percentage >= 70
-                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                : seoScore.percentage >= 50
-                  ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                  : "bg-red-100 text-red-700 hover:bg-red-200"
-            }`}
-            title={`SEO Score: ${seoScore.percentage}%\n\nPassed:\n${seoScore.passed.map(p => '✓ ' + p).join('\n')}\n\nIssues:\n${seoScore.issues.map(i => '✗ ' + i).join('\n')}`}
-          >
-            {seoScore.percentage >= 70 ? <CheckCircle className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-            <span>SEO: {seoScore.percentage}%</span>
-          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setAiGenerateDialogOpen(true)} data-testid="button-generate-ai">
