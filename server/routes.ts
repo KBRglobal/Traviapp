@@ -5297,17 +5297,15 @@ Output format:
     }
   });
 
-  // AI Field Generation endpoint - for individual field assistance
+  // AI Field Generation endpoint - for individual field assistance (uses Claude Haiku for cost efficiency)
   app.post("/api/ai/generate-field", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const aiClient = getAIClient();
-      if (!aiClient) {
-        return res.status(503).json({ error: "AI service not configured" });
-      }
-      const { client: openai, provider } = aiClient;
+      // Use Anthropic Claude Haiku directly for cost efficiency
+      const Anthropic = (await import("@anthropic-ai/sdk")).default;
+      const anthropic = new Anthropic();
 
       const { fieldType, currentValue, title, contentType, primaryKeyword, maxLength } = req.body;
       
@@ -5379,22 +5377,24 @@ Format: Return ONLY a JSON array of 3 different sets. Each element is a string w
         return res.status(400).json({ error: `Invalid fieldType: ${fieldType}` });
       }
 
-      const response = await openai.chat.completions.create({
-        model: getModelForProvider(provider),
+      // Use Claude 3.5 Haiku for cost efficiency
+      const response = await anthropic.messages.create({
+        model: "claude-3-5-haiku-latest",
+        max_tokens: 1024,
+        system: "You are an expert SEO content writer specializing in Dubai travel content. Generate high-quality, optimized suggestions. Always return valid JSON arrays of strings.",
         messages: [
-          {
-            role: "system",
-            content: "You are an expert SEO content writer specializing in Dubai travel content. Generate high-quality, optimized suggestions. Always return valid JSON arrays of strings."
-          },
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.8,
       });
 
-      const content = response.choices[0].message.content || "[]";
+      // Extract text content from Anthropic response
+      const content = response.content
+        .filter((block) => block.type === 'text')
+        .map((block) => (block as { type: 'text'; text: string }).text)
+        .join('') || "[]";
       
       // Try to parse as JSON array
       let suggestions: string[];
