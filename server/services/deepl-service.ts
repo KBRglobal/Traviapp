@@ -1,5 +1,5 @@
 import { SUPPORTED_LOCALES, type Locale, type ContentBlock } from "@shared/schema";
-import crypto from "crypto";
+import { generateContentHash } from "./translation-service";
 
 const DEEPL_API_URL = "https://api-free.deepl.com/v2";
 const DEEPL_PRO_API_URL = "https://api.deepl.com/v2";
@@ -79,20 +79,7 @@ function isDeepLSupported(locale: Locale): boolean {
   return DEEPL_SUPPORTED_LANGUAGES.includes(deeplLang);
 }
 
-export function generateContentHash(content: {
-  title?: string;
-  metaTitle?: string;
-  metaDescription?: string;
-  blocks?: ContentBlock[];
-}): string {
-  const data = JSON.stringify({
-    title: content.title || "",
-    metaTitle: content.metaTitle || "",
-    metaDescription: content.metaDescription || "",
-    blocks: content.blocks || [],
-  });
-  return crypto.createHash("md5").update(data).digest("hex");
-}
+// generateContentHash is imported from translation-service.ts (single source of truth)
 
 export async function translateWithDeepL(
   texts: string[],
