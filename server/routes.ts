@@ -71,21 +71,13 @@ import {
 import * as fs from "fs";
 import * as path from "path";
 import sharp from "sharp";
+// Image generation functions from modular AI system
 import {
-  generateHotelContent,
-  generateAttractionContent,
-  generateArticleContent,
-  generateDiningContent,
-  generateDistrictContent,
-  generateTransportContent,
-  generateEventContent,
-  generateItineraryContent,
   generateContentImages,
-  generateImagePrompt,
   generateImage,
   type GeneratedImage,
   type ImageGenerationOptions
-} from "./ai-generator";
+} from "./ai";
 import { jobQueue, type TranslateJobData, type AiGenerateJobData } from "./job-queue";
 import {
   deviceFingerprint,
@@ -4676,112 +4668,35 @@ export async function registerRoutes(
 
   app.post("/api/ai/generate", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     try {
-      // Check if we should use the new AI Writers system (default: true)
-      const useWriters = req.body.useWriters !== false;
-      
-      if (useWriters) {
-        // 🆕 Use new AI Writers system (PREFERRED)
-        try {
-          const { aiWritersContentGenerator } = await import("./ai/writers/content-generator");
-          
-          const { type, topic, keywords, writerId, locale, length, tone } = req.body;
+      // AI Writers system - the ONLY content generation system
+      const { aiWritersContentGenerator } = await import("./ai/writers/content-generator");
 
-          if (!type || !topic) {
-            return res.status(400).json({ error: "Type and topic are required" });
-          }
-
-          const result = await aiWritersContentGenerator.generate({
-            writerId, // Optional - auto-assigns if not provided
-            contentType: type,
-            topic,
-            keywords: keywords || [],
-            locale: locale || 'en',
-            length: length || 'medium',
-            tone,
-          });
-
-          return res.json({
-            ...result,
-            _system: 'ai-writers', // Indicator that new system was used
-          });
-        } catch (writerError: any) {
-          console.error("AI Writers generation failed:", writerError);
-          // Fall through to legacy system on error
-          console.warn("Falling back to legacy content generator due to error:", writerError.message);
-        }
-      }
-      
-      // ⚠️ LEGACY SYSTEM (Fallback or explicit opt-out)
-      const aiClient = getAIClient();
-      if (!aiClient) {
-        return res.status(503).json({ error: "AI service not configured. Please add OPENAI_API_KEY, GEMINI, or openrouterapi." });
-      }
-      const { client: openai, provider } = aiClient;
-
-      // Check safe mode
-      if (safeMode.aiDisabled) {
-        return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
-      }
-
-      const { type, topic, keywords, tone = "informative" } = req.body;
+      const { type, topic, keywords, writerId, locale, length, tone, targetAudience, additionalContext } = req.body;
 
       if (!type || !topic) {
         return res.status(400).json({ error: "Type and topic are required" });
       }
 
-      let systemPrompt = "";
-      if (type === "attraction") {
-        systemPrompt = `You are a travel content writer specializing in Dubai attractions. Write compelling, SEO-optimized content that helps travelers plan their visit. Include practical information like visiting hours, ticket prices, and insider tips.`;
-      } else if (type === "hotel") {
-        systemPrompt = `You are a luxury hotel reviewer and travel writer. Write detailed, engaging hotel descriptions that highlight amenities, room types, dining options, and unique experiences. Focus on what makes each property special.`;
-      } else {
-        systemPrompt = `You are a Dubai travel expert and content writer. Create informative, engaging articles that help travelers make the most of their Dubai experience. Include practical tips, local insights, and up-to-date information.`;
-      }
-
-      const response = await openai.chat.completions.create({
-        model: provider === "openai" ? "gpt-4o" : getModelForProvider(provider),
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: `Write a draft for a ${type} page about "${topic}".
-${keywords ? `Target keywords: ${keywords.join(", ")}` : ""}
-Tone: ${tone}
-
-Please provide:
-1. A compelling title
-2. A meta description (under 160 characters)
-3. Main content with proper headings
-4. 3-5 FAQ items with questions and answers
-
-Format the response as JSON with the following structure:
-{
-  "title": "...",
-  "metaDescription": "...",
-  "blocks": [
-    { "type": "text", "data": { "heading": "...", "content": "..." } },
-    ...
-  ],
-  "faq": [
-    { "question": "...", "answer": "..." },
-    ...
-  ]
-}`,
-          },
-        ],
-        response_format: { type: "json_object" },
+      const result = await aiWritersContentGenerator.generate({
+        writerId, // Optional - auto-assigns if not provided
+        contentType: type,
+        topic,
+        keywords: keywords || [],
+        locale: locale || 'en',
+        length: length || 'medium',
+        tone,
+        targetAudience,
+        additionalContext,
       });
 
-      const generatedContent = JSON.parse(response.choices[0].message.content || "{}");
       res.json({
-        ...generatedContent,
-        _system: 'legacy', // Indicator that legacy system was used
-        _deprecated: true,
-        _message: 'This endpoint uses the deprecated content generation system. Consider using AI Writers system for better results.'
+        ...result,
+        _system: 'ai-writers',
       });
     } catch (error) {
       console.error("Error generating AI content:", error);
-      res.status(500).json({ error: "Failed to generate content" });
+      const message = error instanceof Error ? error.message : "Failed to generate content";
+      res.status(500).json({ error: message });
     }
   });
 
@@ -5080,23 +4995,26 @@ Return valid JSON-LD that can be embedded in a webpage.`,
     }
   });
 
-  // Full content generation endpoints
+  // Full content generation endpoints - Using AI Writers system
   app.post("/api/ai/generate-hotel", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const { name } = req.body;
+      const { name, keywords } = req.body;
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return res.status(400).json({ error: "Hotel name is required" });
       }
 
-      const result = await generateHotelContent(name.trim());
-      if (!result) {
-        return res.status(500).json({ error: "Failed to generate hotel content" });
-      }
+      const { aiWritersContentGenerator } = await import("./ai/writers/content-generator");
+      const result = await aiWritersContentGenerator.generate({
+        contentType: 'hotel',
+        topic: name.trim(),
+        keywords: keywords || [name.trim()],
+        length: 'long',
+      });
 
-      res.json(result);
+      res.json({ ...result, _system: 'ai-writers' });
     } catch (error) {
       console.error("Error generating hotel content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate hotel content";
@@ -5109,19 +5027,20 @@ Return valid JSON-LD that can be embedded in a webpage.`,
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const { name, primaryKeyword } = req.body;
+      const { name, primaryKeyword, keywords } = req.body;
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return res.status(400).json({ error: "Attraction name is required" });
       }
 
-      const result = await generateAttractionContent(name.trim(), {
-        primaryKeyword: primaryKeyword?.trim() || name.trim()
+      const { aiWritersContentGenerator } = await import("./ai/writers/content-generator");
+      const result = await aiWritersContentGenerator.generate({
+        contentType: 'attraction',
+        topic: name.trim(),
+        keywords: keywords || [primaryKeyword?.trim() || name.trim()],
+        length: 'long',
       });
-      if (!result) {
-        return res.status(500).json({ error: "Failed to generate attraction content" });
-      }
 
-      res.json(result);
+      res.json({ ...result, _system: 'ai-writers' });
     } catch (error) {
       console.error("Error generating attraction content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate attraction content";
@@ -5231,17 +5150,20 @@ Output format:
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const { name } = req.body;
+      const { name, keywords } = req.body;
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return res.status(400).json({ error: "Restaurant name is required" });
       }
 
-      const result = await generateDiningContent(name.trim());
-      if (!result) {
-        return res.status(500).json({ error: "Failed to generate dining content" });
-      }
+      const { aiWritersContentGenerator } = await import("./ai/writers/content-generator");
+      const result = await aiWritersContentGenerator.generate({
+        contentType: 'dining',
+        topic: name.trim(),
+        keywords: keywords || [name.trim()],
+        length: 'long',
+      });
 
-      res.json(result);
+      res.json({ ...result, _system: 'ai-writers' });
     } catch (error) {
       console.error("Error generating dining content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate dining content";
@@ -5254,17 +5176,20 @@ Output format:
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const { name } = req.body;
+      const { name, keywords } = req.body;
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return res.status(400).json({ error: "District name is required" });
       }
 
-      const result = await generateDistrictContent(name.trim());
-      if (!result) {
-        return res.status(500).json({ error: "Failed to generate district content" });
-      }
+      const { aiWritersContentGenerator } = await import("./ai/writers/content-generator");
+      const result = await aiWritersContentGenerator.generate({
+        contentType: 'district',
+        topic: name.trim(),
+        keywords: keywords || [name.trim()],
+        length: 'long',
+      });
 
-      res.json(result);
+      res.json({ ...result, _system: 'ai-writers' });
     } catch (error) {
       console.error("Error generating district content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate district content";
@@ -5453,26 +5378,21 @@ Format: Return ONLY a JSON array of 3 strings.`,
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      const { topic, category, fetchImages } = req.body;
+      const { topic, category, keywords } = req.body;
       if (!topic || typeof topic !== "string" || topic.trim().length === 0) {
         return res.status(400).json({ error: "Article topic is required" });
       }
 
-      const result = await generateArticleContent(topic.trim(), category);
-      if (!result) {
-        return res.status(500).json({ error: "Failed to generate article content" });
-      }
+      const { aiWritersContentGenerator } = await import("./ai/writers/content-generator");
+      const result = await aiWritersContentGenerator.generate({
+        contentType: 'article',
+        topic: topic.trim(),
+        keywords: keywords || [topic.trim()],
+        length: 'long',
+        additionalContext: category ? `Category: ${category}` : undefined,
+      });
 
-      // Process image blocks to fetch real images from Freepik/AI if requested
-      if (fetchImages !== false && result.content?.blocks) {
-        console.log(`[Article Generator] Processing image blocks for: ${topic}`);
-        result.content.blocks = await processImageBlocks(
-          result.content.blocks as ContentBlock[], 
-          result.article?.category || category || "general"
-        );
-      }
-
-      res.json(result);
+      res.json({ ...result, _system: 'ai-writers' });
     } catch (error) {
       console.error("Error generating article content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate article content";

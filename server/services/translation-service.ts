@@ -828,7 +828,7 @@ export const batchTranslation = {
       throw new Error("OpenAI client required for batch processing - OPENAI_API_KEY not configured");
     }
 
-    const jobId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const jobId = `batch_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
     // Create batch request file (JSONL format)
     const batchRequests = requests.map((req, index) => {

@@ -15,7 +15,7 @@ import type {
 
 // Helper functions
 function generateId(): string {
-  return `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `comp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
 function deepClone<T>(obj: T): T {

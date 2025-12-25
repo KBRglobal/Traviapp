@@ -97,7 +97,7 @@ class JobQueue {
     data: T,
     options?: { priority?: number; maxRetries?: number }
   ): string {
-    const id = `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
     // Insert async
     db.insert(backgroundJobs)
