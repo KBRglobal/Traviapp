@@ -1417,7 +1417,7 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
             messages,
             response_format: { type: "json_object" },
             temperature: attempts === 1 ? 0.7 : 0.5, // Lower temp on retries for more predictable output
-            max_tokens: 6000, // Increased for longer articles
+            max_tokens: 12000, // Increased for 1800+ word articles with JSON overhead
           });
 
           lastResponse = JSON.parse(completion.choices[0].message.content || "{}");
@@ -4710,10 +4710,10 @@ STRICT RULES:
 3. Always traveler-focused and SEO-clean
 4. Maximum 5 marketing vocabulary words per article
 5. No duplicate sentences or unnatural keyword stuffing
-6. Article length: 800-1800 words depending on complexity
+6. Article length: MINIMUM 1800-2500 words - this is STRICTLY ENFORCED
 7. Meta title: 50-65 characters
-8. Meta description: 150-160 characters
-9. Each FAQ answer: 100-150 words, SEO-rich, unique
+8. Meta description: 100-160 characters MAX (not more!)
+9. Each FAQ answer: 50-100 words MINIMUM (250+ characters each)
 
 OUTPUT FORMAT - Return valid JSON matching this exact structure:
 {
@@ -4785,8 +4785,13 @@ Follow ALL steps from the spec:
 4. Apply SEO optimization rules
 5. Provide editor suggestions (3 alternative headlines, 2 alternative intros, alternative CTA)
 
-Generate 4-8 FAQ items, each 100-150 words.
-Ensure article is 800-1800 words total.
+CRITICAL WORD COUNT REQUIREMENTS:
+- Article body MUST be AT LEAST 1800 words (9000 characters) - this is STRICTLY ENFORCED
+- Each FAQ answer MUST be at least 50 words (250 characters)
+- Generate 6-8 FAQ items with substantive, detailed answers
+- Meta description MUST be between 100-160 characters (NOT more than 160!)
+- The article will be REJECTED if it doesn't meet these minimums!
+
 Return valid JSON only.`;
 
       const response = await openai.chat.completions.create({
@@ -4796,7 +4801,7 @@ Return valid JSON only.`;
           { role: "user", content: userPrompt },
         ],
         ...(provider === "openai" ? { response_format: { type: "json_object" } } : {}),
-        max_tokens: 4096,
+        max_tokens: 8000,
       });
 
       const generatedArticle = JSON.parse(response.choices[0].message.content || "{}");
