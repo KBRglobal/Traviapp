@@ -148,89 +148,18 @@ function createAnthropicProvider(): UnifiedAIProvider | null {
 }
 
 // ============================================================================
-// Gemini Provider (using HTTP client for Replit AI Integrations)
+// Gemini Provider - TEMPORARILY DISABLED
+// The Replit AI Integrations for Gemini has compatibility issues with available SDKs.
+// The @replit/ai-modelfarm package is archived and non-functional.
+// The @google/genai SDK endpoints are not supported by the modelfarm proxy.
+// Until this is resolved, Anthropic/OpenRouter will be used as primary providers.
 // ============================================================================
 
 function createGeminiProvider(): UnifiedAIProvider | null {
-  const baseURL = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-  
-  if (!baseURL || !apiKey) return null;
-
-  return {
-    name: "gemini",
-    model: "gemini-2.5-flash",
-    generateCompletion: async (options) => {
-      const systemMessage = options.messages.find(m => m.role === "system");
-      const userMessages = options.messages.filter(m => m.role !== "system");
-      
-      // Build contents array in Gemini format
-      const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
-      
-      // Add system instruction as first user message if present
-      if (systemMessage) {
-        contents.push({
-          role: "user",
-          parts: [{ text: `[System Instructions]\n${systemMessage.content}` }],
-        });
-        contents.push({
-          role: "model",
-          parts: [{ text: "I understand and will follow these instructions." }],
-        });
-      }
-      
-      for (const msg of userMessages) {
-        contents.push({
-          role: msg.role === "assistant" ? "model" : "user",
-          parts: [{ text: msg.content }],
-        });
-      }
-
-      // Add JSON format instruction if needed
-      if (options.responseFormat?.type === "json_object" && contents.length > 0) {
-        const lastContent = contents[contents.length - 1];
-        if (lastContent.role === "user") {
-          lastContent.parts[0].text += "\n\nIMPORTANT: Respond with valid JSON only. No other text.";
-        }
-      }
-
-      const modelName = options.model || "gemini-2.5-flash";
-      const url = `${baseURL}/v1beta/models/${modelName}:generateContent`;
-      
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: options.temperature ?? 0.7,
-            maxOutputTokens: options.maxTokens ?? 8192,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gemini API error: ${response.status} ${errorText}`);
-      }
-
-      const data = await response.json();
-      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      
-      if (!content) {
-        throw new Error("Empty response from Gemini");
-      }
-      
-      return {
-        content,
-        provider: "gemini",
-        model: modelName,
-      };
-    },
-  };
+  // DISABLED: Gemini AI Integrations has compatibility issues
+  // The modelfarm endpoint at localhost:1106/modelfarm/gemini doesn't support
+  // standard Gemini SDK endpoints or OpenAI-compatible endpoints
+  return null;
 }
 
 // ============================================================================
@@ -331,19 +260,12 @@ function isProviderAvailable(provider: string): boolean {
 export function getAllUnifiedProviders(): UnifiedAIProvider[] {
   const providers: UnifiedAIProvider[] = [];
 
-  if (isProviderAvailable("openai")) {
-    const openai = createOpenAIProvider();
-    if (openai) providers.push(openai);
-  }
+  // Priority order: Anthropic first (most reliable), then OpenRouter, DeepSeek, OpenAI last (rate limited)
+  // Gemini is disabled due to compatibility issues with Replit AI Integrations modelfarm endpoint
 
   if (isProviderAvailable("anthropic")) {
     const anthropic = createAnthropicProvider();
     if (anthropic) providers.push(anthropic);
-  }
-
-  if (isProviderAvailable("gemini")) {
-    const gemini = createGeminiProvider();
-    if (gemini) providers.push(gemini);
   }
 
   if (isProviderAvailable("openrouter")) {
@@ -355,6 +277,17 @@ export function getAllUnifiedProviders(): UnifiedAIProvider[] {
     const deepseek = createDeepSeekProvider();
     if (deepseek) providers.push(deepseek);
   }
+
+  if (isProviderAvailable("openai")) {
+    const openai = createOpenAIProvider();
+    if (openai) providers.push(openai);
+  }
+
+  // Gemini disabled - modelfarm endpoint doesn't support standard SDK endpoints
+  // if (isProviderAvailable("gemini")) {
+  //   const gemini = createGeminiProvider();
+  //   if (gemini) providers.push(gemini);
+  // }
 
   return providers;
 }
@@ -453,7 +386,7 @@ export function getModelForProvider(provider: string, tier: ContentTier = "stand
     case "anthropic":
       return "claude-sonnet-4-5";
     case "gemini":
-      return tier === "premium" ? "gemini-2.5-pro" : "gemini-2.5-flash";
+      return tier === "premium" ? "gemini-2.0-flash" : "gemini-2.0-flash";
     case "openrouter":
       return tier === "premium" ? "anthropic/claude-3.5-sonnet" : "anthropic/claude-3.5-sonnet";
     case "deepseek":

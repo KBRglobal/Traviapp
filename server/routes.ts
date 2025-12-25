@@ -1364,7 +1364,17 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
       return result;
     }
     
-    console.log(`[RSS Auto-Process] Available AI providers: ${unifiedProviders.map(p => p.name).join(", ")}`);
+    // Prioritize Gemini for cost efficiency, then try other providers
+    const sortedProviders = [...unifiedProviders].sort((a, b) => {
+      if (a.name === 'gemini') return -1;
+      if (b.name === 'gemini') return 1;
+      // OpenAI is rate-limited, deprioritize it
+      if (a.name === 'openai') return 1;
+      if (b.name === 'openai') return -1;
+      return 0;
+    });
+    
+    console.log(`[RSS Auto-Process] Available AI providers: ${sortedProviders.map(p => p.name).join(", ")}`);
     console.log(`[RSS Auto-Process] Found ${pendingClusters.length} pending clusters to process`);
 
     for (const cluster of pendingClusters) {
@@ -1415,7 +1425,7 @@ export async function autoProcessRssFeeds(): Promise<AutoProcessResult> {
 
           // Try each unified provider in fallback chain until one succeeds
           let completionSuccess = false;
-          for (const provider of unifiedProviders) {
+          for (const provider of sortedProviders) {
             try {
               console.log(`[RSS Auto-Process] Trying provider: ${provider.name} with model: ${provider.model}`);
               

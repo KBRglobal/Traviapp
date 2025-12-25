@@ -79,11 +79,21 @@ export function AIFieldAssistant({
           variant: "destructive",
         });
       }
-    } catch (error: any) {
-      console.error("Error generating field suggestions:", error);
+    } catch (error: unknown) {
+      // Extract meaningful error message
+      let errorMessage = "Failed to generate suggestions";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === "string") {
+        errorMessage = error;
+      } else if (error && typeof error === "object" && "message" in error) {
+        errorMessage = String((error as { message: unknown }).message);
+      }
+      
+      console.error("Error generating field suggestions:", errorMessage, error);
       toast({
         title: "Generation failed",
-        description: error.message || "Failed to generate suggestions",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
