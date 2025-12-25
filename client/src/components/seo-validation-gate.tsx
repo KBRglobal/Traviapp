@@ -49,9 +49,16 @@ interface ValidationResult {
 }
 
 interface AutoFixResult {
-  fieldsFixed: string[];
-  fixedArticle: Record<string, unknown>;
-  summary: string;
+  // Old format
+  fieldsFixed?: string[];
+  fixedArticle?: Record<string, unknown>;
+  summary?: string;
+  // New format from backend
+  fixesApplied?: number;
+  fixesFailed?: number;
+  articleUpdated?: Record<string, unknown>;
+  fixDetails?: Array<{ field: string; originalValue: unknown; fixedValue: unknown; fixType: string; success: boolean; message: string }>;
+  remainingIssues?: string[];
 }
 
 interface SEOValidationGateProps {
@@ -305,11 +312,17 @@ export function SEOValidationGate({
       return res.json() as Promise<AutoFixResult>;
     },
     onSuccess: (result) => {
+      // Handle both old format (fieldsFixed) and new format (fixDetails)
+      const fieldsFixed = result.fieldsFixed || (result.fixDetails?.map((f: any) => f.field) ?? []);
+      const fixedArticle = result.fixedArticle || result.articleUpdated;
+      
       toast({
         title: "Auto-Fix Complete",
-        description: `Fixed ${result.fieldsFixed.length} field(s): ${result.fieldsFixed.join(", ")}`,
+        description: `Fixed ${result.fixesApplied || fieldsFixed.length} field(s): ${fieldsFixed.join(", ")}`,
       });
-      onAutoFix?.(result.fixedArticle);
+      if (fixedArticle) {
+        onAutoFix?.(fixedArticle);
+      }
       // Re-validate after fix
       setTimeout(() => validateMutation.mutate(), 500);
     },
