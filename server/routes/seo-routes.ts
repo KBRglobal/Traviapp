@@ -97,7 +97,8 @@ export function registerSEORoutes(app: Express) {
    */
   app.post("/api/seo/auto-fix", requirePermission("canEdit"), async (req: Request, res: Response) => {
     try {
-      const { content } = req.body;
+      // Accept both 'content' and 'article' parameter names for backward compatibility
+      const content = req.body.content || req.body.article;
 
       if (!content) {
         return res.status(400).json({ error: "Content is required" });
