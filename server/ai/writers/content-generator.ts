@@ -75,7 +75,7 @@ export async function generate(
     locale: request.locale || 'en',
     length: request.length || 'medium',
     tone: request.tone,
-    targetAudience: request.targetAudience?.join(', '),
+    targetAudience: Array.isArray(request.targetAudience) ? request.targetAudience.join(', ') : request.targetAudience,
     additionalContext: request.additionalContext
   });
 

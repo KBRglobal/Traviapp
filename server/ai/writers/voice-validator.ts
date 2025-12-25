@@ -6,7 +6,8 @@
  */
 
 import OpenAI from "openai";
-import { getWriterById, type AIWriter } from "./writer-registry";
+import { getWriterById } from "./writer-registry";
+import type { AIWriter } from "./writer-registry";
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
