@@ -342,77 +342,86 @@ export async function buildRetryPrompt(errors: string[], wordCount: number, cont
   const rules = await getActiveContentRules();
   const keywords = await getActiveKeywords(undefined, 20);
   const keywordList = keywords?.map(k => k.keyword).slice(0, 15) || [];
+  const minContentChars = rules.minWords * 5;
+  const faqAnswerMinChars = rules.faqAnswerWordsMin * 5;
 
-  const strictErrors = errors.filter(e => e.includes('STRICT VIOLATION'));
-  const warnings = errors.filter(e => !e.includes('STRICT VIOLATION'));
+  // Categorize errors for better guidance
+  const typeErrors = errors.filter(e => e.includes('Expected') || e.includes('Invalid enum'));
+  const lengthErrors = errors.filter(e => e.includes('character') || e.includes('element'));
+  const requiredErrors = errors.filter(e => e.includes('Required'));
 
-  return `🚨 YOUR RESPONSE WAS REJECTED - STRICT RULES VIOLATED 🚨
-
-Current word count: ${wordCount} words
-Required minimum: ${rules.minWords} words
-Required maximum: ${rules.maxWords} words
-Optimal range: ${rules.optimalMinWords}-${rules.optimalMaxWords} words
+  return `🚨 YOUR RESPONSE WAS REJECTED - FIX THESE ERRORS 🚨
 
 ==================================================
-CRITICAL ERRORS (MUST FIX):
+VALIDATION ERRORS FOUND:
 ==================================================
-${strictErrors.map(e => e.replace('❌ STRICT VIOLATION: ', '• ')).join('\n')}
+${errors.map(e => `• ${e}`).join('\n')}
 
-${warnings.length > 0 ? `
 ==================================================
-WARNINGS (Recommended to fix):
+COMMON MISTAKES TO AVOID:
 ==================================================
-${warnings.map(e => e.replace('⚠️ ', '• ')).join('\n')}
+
+${typeErrors.length > 0 ? `❌ TYPE ERRORS DETECTED:
+   - "targetAudience" must be an ARRAY: ["tourists", "families"] NOT a string
+   - "urgencyLevel" must be EXACTLY: "urgent" | "relevant" | "evergreen"
+     (NOT "High", "Medium", "Low", "Standard", etc.)
+   - "faqs" must be an array of objects with "question" and "answer" keys
+` : ''}
+
+${lengthErrors.length > 0 ? `❌ LENGTH ERRORS DETECTED:
+   - "content" must be at least ${minContentChars} characters (${rules.minWords} words)
+     You provided ${wordCount} words - need ${Math.max(0, rules.minWords - wordCount)} more!
+   - Each FAQ "answer" must be at least ${faqAnswerMinChars} characters (${rules.faqAnswerWordsMin} words)
+     Write full paragraph answers, not short sentences!
+   - "metaDescription" must be 100-160 characters (NOT more!)
+` : ''}
+
+${requiredErrors.length > 0 ? `❌ MISSING REQUIRED FIELDS:
+   Make sure you include ALL of these fields:
+   - title, metaDescription, category, urgencyLevel, targetAudience
+   - content, quickFacts, proTips, faqs
+   - primaryKeyword, secondaryKeywords, imageSearchTerms
 ` : ''}
 
 ==================================================
-STRICT REQUIREMENTS - CANNOT BE BYPASSED:
+CORRECT JSON STRUCTURE (FOLLOW EXACTLY):
 ==================================================
 
-📝 ARTICLE STRUCTURE (Total: ${rules.minWords}-${rules.maxWords} words):
+{
+  "title": "Your SEO Title Here - 20 to 100 characters",
+  "metaDescription": "Compelling meta description between 100-160 characters only",
+  "category": "attractions",
+  "urgencyLevel": "evergreen",
+  "targetAudience": ["tourists", "families", "couples"],
+  "content": "<p>Your FULL article HTML here with at least ${rules.minWords} words...</p><h2>Section 1</h2><p>...</p>",
+  "quickFacts": ["Fact 1 about the topic", "Fact 2", "Fact 3", "Fact 4", "Fact 5"],
+  "proTips": ["Pro tip 1 with 20-35 words of actionable advice", "Pro tip 2", "Pro tip 3", "Pro tip 4", "Pro tip 5"],
+  "warnings": [],
+  "faqs": [
+    {"question": "What is the best time to visit?", "answer": "The best time to visit is during... [MINIMUM ${rules.faqAnswerWordsMin} words / ${faqAnswerMinChars} characters - write a FULL paragraph!]"},
+    {"question": "How much does it cost?", "answer": "Pricing varies depending on... [MINIMUM ${rules.faqAnswerWordsMin} words / ${faqAnswerMinChars} characters]"},
+    {"question": "Question 3?", "answer": "Full paragraph answer..."},
+    {"question": "Question 4?", "answer": "Full paragraph answer..."},
+    {"question": "Question 5?", "answer": "Full paragraph answer..."},
+    {"question": "Question 6?", "answer": "Full paragraph answer..."}
+  ],
+  "sources": [],
+  "primaryKeyword": "main keyword here",
+  "secondaryKeywords": ["keyword 1", "keyword 2", "keyword 3"],
+  "imageSearchTerms": ["dubai", "tourism", "attraction"]
+}
 
-1. INTRODUCTION: ${rules.introMinWords}-${rules.introMaxWords} words
-   - Hook the reader immediately
-   - Include primary keyword in first sentence
-   - Summarize what reader will learn
+==================================================
+WORD COUNT REMINDER:
+==================================================
+Current: ${wordCount} words
+Required: ${rules.minWords}-${rules.maxWords} words
+${wordCount < rules.minWords ? `⚠️ You need ${rules.minWords - wordCount} MORE words!` : '✓ Word count OK'}
 
-2. QUICK FACTS BOX: ${rules.quickFactsMin}-${rules.quickFactsMax} items
-   - Duration, Price, Location, Best Time, etc.
-   - Use emojis for visual appeal
-   - Each fact: ${rules.quickFactsWordsMin / rules.quickFactsMin}-${rules.quickFactsWordsMax / rules.quickFactsMax} words
+🔑 KEYWORDS to include:
+${keywordList.length > 0 ? keywordList.slice(0, 10).map(k => `• ${k}`).join('\n') : '• dubai tourism\n• things to do in dubai'}
 
-3. MAIN CONTENT: ${rules.mainSectionsMin}-${rules.mainSectionsMax} sections (H2)
-   - Each section: ${rules.mainSectionWordsMin}-${rules.mainSectionWordsMax} words
-   - Total: ${rules.mainSectionsMin * rules.mainSectionWordsMin}-${rules.mainSectionsMax * rules.mainSectionWordsMax} words
-   - Include practical, actionable information
-
-4. FAQ SECTION: ${rules.faqsMin}-${rules.faqsMax} questions
-   - Each answer: ${rules.faqAnswerWordsMin}-${rules.faqAnswerWordsMax} words
-   - Use FAQPage schema-friendly format
-   - Real questions tourists ask
-
-5. PRO TIPS: ${rules.proTipsMin}-${rules.proTipsMax} tips
-   - Each tip: ${rules.proTipWordsMin}-${rules.proTipWordsMax} words
-   - Insider knowledge only
-   - Actionable advice
-
-6. CONCLUSION: ${rules.conclusionMinWords}-${rules.conclusionMaxWords} words
-   - Summarize key points
-   - Clear call to action
-
-📍 SEO REQUIREMENTS:
-- Mention "Dubai" or "UAE": Minimum ${rules.dubaiMentionsMin} times
-- Internal links: ${rules.internalLinksMin}-${rules.internalLinksMax} links
-- Primary keyword: 2-3 times naturally
-- Secondary keywords: 3-5 times each
-
-🔑 REQUIRED KEYWORDS (from SEO Bible - use at least 5):
-${keywordList.length > 0 ? keywordList.map(k => `• ${k}`).join('\n') : '• dubai tourism\n• things to do in dubai\n• dubai attractions\n• visit dubai\n• dubai guide'}
-
-⚠️ THIS IS YOUR ${errors.length > 3 ? 'FINAL' : 'SECOND'} ATTEMPT
-   If you fail again, the article will be rejected entirely.
-
-Please provide the COMPLETE article meeting ALL requirements.`;
+⚠️ THIS IS ATTEMPT ${errors.length > 5 ? 'FINAL' : '2/3'}. Respond ONLY with valid JSON.`;
 }
 
 // ============================================================================
@@ -487,44 +496,65 @@ export async function getContentWriterSystemPrompt(category: string): Promise<st
   const keywordList = keywords?.map(k => k.keyword).slice(0, 15) || [];
   const personalityKey = CATEGORY_PERSONALITY_MAPPING[category] || "A";
   const personality = CONTENT_WRITER_PERSONALITIES[personalityKey];
+  const minContentChars = rules.minWords * 5;
+  const faqAnswerMinChars = rules.faqAnswerWordsMin * 5;
 
   return `You are "${personality.name}" - a professional content writer for Dubai tourism.
+You MUST respond with VALID JSON only. No markdown, no explanation, just the JSON object.
 
 YOUR STYLE: ${personality.style}
 YOUR TONE: ${personality.tone}
 YOUR STRENGTHS: ${personality.strengths.join(", ")}
 
-🚨 CRITICAL: You MUST follow these STRICT rules that CANNOT be bypassed:
+==============================================================================
+CRITICAL: OUTPUT FORMAT - YOU MUST RETURN THIS EXACT JSON STRUCTURE
+==============================================================================
 
-WORD COUNT REQUIREMENTS:
-- Minimum: ${rules.minWords} words (STRICT - content will be REJECTED if below this)
-- Maximum: ${rules.maxWords} words
-- Optimal: ${rules.optimalMinWords}-${rules.optimalMaxWords} words
+{
+  "title": "string (20-100 chars)",
+  "metaDescription": "string (100-160 chars MAX)",
+  "category": "string (attractions|hotels|food|transport|events|shopping|news|tips)",
+  "urgencyLevel": "urgent" | "relevant" | "evergreen",
+  "targetAudience": ["array", "of", "strings"],
+  "content": "string (HTML article, ${minContentChars}+ chars / ${rules.minWords}+ words)",
+  "quickFacts": ["array of ${rules.quickFactsMin}-${rules.quickFactsMax} facts"],
+  "proTips": ["array of ${rules.proTipsMin}-${rules.proTipsMax} tips"],
+  "warnings": [],
+  "faqs": [
+    {"question": "string", "answer": "string (${faqAnswerMinChars}+ chars each!)"},
+    ... ${rules.faqsMin}-${rules.faqsMax} items
+  ],
+  "sources": [],
+  "primaryKeyword": "string",
+  "secondaryKeywords": ["array of 2-10 keywords"],
+  "imageSearchTerms": ["array of 2-5 search terms"]
+}
 
-STRUCTURE REQUIREMENTS:
-- Introduction: ${rules.introMinWords}-${rules.introMaxWords} words
-- Quick Facts: ${rules.quickFactsMin}-${rules.quickFactsMax} items
-- Main Sections: ${rules.mainSectionsMin}-${rules.mainSectionsMax} H2 sections, each ${rules.mainSectionWordsMin}-${rules.mainSectionWordsMax} words
-- FAQ: ${rules.faqsMin}-${rules.faqsMax} questions, each answer ${rules.faqAnswerWordsMin}-${rules.faqAnswerWordsMax} words
-- Pro Tips: ${rules.proTipsMin}-${rules.proTipsMax} tips
-- Conclusion: ${rules.conclusionMinWords}-${rules.conclusionMaxWords} words
+==============================================================================
+STRICT VALIDATION RULES (Content REJECTED if violated):
+==============================================================================
 
-SEO REQUIREMENTS:
-- Mention "Dubai" or "UAE" at least ${rules.dubaiMentionsMin} times
-- Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal links
-- Primary keyword in title, first paragraph, and H2s
-- Use LSI keywords naturally throughout
+1. CONTENT LENGTH: ${rules.minWords}-${rules.maxWords} words (${minContentChars}+ characters)
+   - This is enforced strictly - short content will fail!
 
-🔑 REQUIRED KEYWORDS (from SEO Bible - use at least 5 naturally):
-${keywordList.length > 0 ? keywordList.map(k => `• ${k}`).join('\n') : '• dubai tourism\n• things to do in dubai\n• dubai attractions\n• visit dubai\n• dubai guide'}
+2. FAQ ANSWERS: Each answer MUST be ${rules.faqAnswerWordsMin}-${rules.faqAnswerWordsMax} words
+   - That's ${faqAnswerMinChars}+ characters per answer
+   - One-sentence answers will be REJECTED!
 
-FORMAT:
-- Use proper HTML with semantic tags (h2, h3, p, ul, ol)
-- Include schema-friendly FAQ format
-- Add emojis where appropriate for visual appeal
-- Break up text with subheadings every 200-300 words
+3. FIELD TYPES (CRITICAL):
+   - "targetAudience": MUST be array ["tourists", "families"] NOT string
+   - "urgencyLevel": MUST be EXACTLY "urgent", "relevant", or "evergreen"
+     (NOT "High", "Medium", "Low", "Standard", etc.)
+   - "faqs": MUST be array of objects with "question" and "answer" keys
 
-REMEMBER: If your content doesn't meet these requirements, it will be REJECTED and you will be asked to rewrite.`;
+4. SEO:
+   - Mention "Dubai" or "UAE" at least ${rules.dubaiMentionsMin} times
+   - Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal <a> links
+
+🔑 KEYWORDS TO USE:
+${keywordList.length > 0 ? keywordList.map(k => `• ${k}`).join('\n') : '• dubai tourism\n• things to do in dubai\n• dubai attractions'}
+
+REMEMBER: Return ONLY valid JSON. No markdown code fences. No explanations.`;
 }
 
 // Determine content category from topic/title
@@ -552,6 +582,8 @@ export async function buildArticleGenerationPrompt(
   const category = determineContentCategory(topic);
   const keywords = await getActiveKeywords(category, 20);
   const keywordList = keywords?.map(k => k.keyword).slice(0, 15) || [];
+  const minContentChars = rules.minWords * 5; // ~5 chars per word
+  const faqAnswerMinChars = rules.faqAnswerWordsMin * 5;
 
   return `Write a comprehensive article about: "${topic}"
 
@@ -563,24 +595,66 @@ ${additionalContext ? `ADDITIONAL CONTEXT:
 ${additionalContext}
 ` : ''}
 
-REQUIREMENTS (STRICT - Your response will be REJECTED if not met):
+==============================================================================
+CRITICAL: YOUR RESPONSE MUST BE VALID JSON WITH EXACT STRUCTURE BELOW
+==============================================================================
 
-1. WORD COUNT: ${rules.minWords}-${rules.maxWords} words (optimal: ${rules.optimalMinWords}-${rules.optimalMaxWords})
+{
+  "title": "string (20-100 chars, SEO headline with primary keyword)",
+  "metaDescription": "string (100-160 chars MAXIMUM, compelling meta description)",
+  "category": "string (one of: attractions, hotels, food, transport, events, shopping, news, tips)",
+  "urgencyLevel": "string (MUST be exactly one of: urgent | relevant | evergreen)",
+  "targetAudience": ["array", "of", "strings", "like", "tourists", "families", "business travelers"],
+  
+  "content": "string (FULL HTML article, MINIMUM ${minContentChars} characters / ${rules.minWords} words)",
+  
+  "quickFacts": ["fact 1", "fact 2", ... ${rules.quickFactsMin}-${rules.quickFactsMax} items total],
+  
+  "proTips": ["tip 1", "tip 2", ... ${rules.proTipsMin}-${rules.proTipsMax} tips, each 20-35 words],
+  
+  "warnings": ["optional array of warnings"],
+  
+  "faqs": [
+    {"question": "string (10+ chars)", "answer": "string (MINIMUM ${faqAnswerMinChars} chars / ${rules.faqAnswerWordsMin} words each!)"},
+    {"question": "string", "answer": "string (MINIMUM ${faqAnswerMinChars} chars each!)"},
+    ... ${rules.faqsMin}-${rules.faqsMax} FAQ items total
+  ],
+  
+  "sources": ["optional array of source URLs"],
+  "primaryKeyword": "string (main SEO keyword, 3+ chars)",
+  "secondaryKeywords": ["keyword1", "keyword2", ... 2-10 items],
+  "imageSearchTerms": ["term1", "term2", ... 2-5 terms for image search]
+}
 
-2. STRUCTURE:
+==============================================================================
+STRICT REQUIREMENTS (Your response will be REJECTED if not met):
+==============================================================================
+
+1. CONTENT LENGTH: The "content" field MUST contain ${rules.minWords}-${rules.maxWords} words
+   - That's approximately ${minContentChars}-${rules.maxWords * 5} characters
+   - This is the most common failure - make sure content is LONG ENOUGH!
+
+2. FAQ ANSWERS: Each FAQ answer MUST be ${rules.faqAnswerWordsMin}-${rules.faqAnswerWordsMax} words (${faqAnswerMinChars}+ chars)
+   - Short 1-2 sentence answers will be REJECTED
+   - Each answer should be a full paragraph with helpful details
+
+3. STRUCTURE in the "content" field:
    - Introduction: ${rules.introMinWords}-${rules.introMaxWords} words
-   - Quick Facts box with ${rules.quickFactsMin}-${rules.quickFactsMax} items
-   - ${rules.mainSectionsMin}-${rules.mainSectionsMax} main sections (H2), each ${rules.mainSectionWordsMin}-${rules.mainSectionWordsMax} words
-   - FAQ section with ${rules.faqsMin}-${rules.faqsMax} questions
-   - ${rules.proTipsMin}-${rules.proTipsMax} Pro Tips
+   - ${rules.mainSectionsMin}-${rules.mainSectionsMax} main sections with <h2> tags
+   - Each section: ${rules.mainSectionWordsMin}-${rules.mainSectionWordsMax} words
    - Conclusion: ${rules.conclusionMinWords}-${rules.conclusionMaxWords} words
 
-3. SEO:
-   - Mention "Dubai" or "UAE" at least ${rules.dubaiMentionsMin} times
-   - Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal links
+4. FIELD TYPES - CRITICAL:
+   - targetAudience: MUST be an array like ["tourists", "families"] NOT a string
+   - urgencyLevel: MUST be exactly "urgent", "relevant", or "evergreen" (NOT "High", "Medium", etc.)
+   - faqs: MUST be array of objects with "question" and "answer" keys
 
-4. REQUIRED KEYWORDS (from SEO Bible - use at least 5 naturally):
+5. SEO in "content":
+   - Mention "Dubai" or "UAE" at least ${rules.dubaiMentionsMin} times
+   - Include ${rules.internalLinksMin}-${rules.internalLinksMax} internal <a href="..."> links
+
+6. KEYWORDS to use naturally:
 ${keywordList.length > 0 ? keywordList.map(k => `   • ${k}`).join('\n') : '   • dubai tourism\n   • things to do in dubai\n   • dubai attractions\n   • visit dubai\n   • dubai guide'}
 
-Respond with a JSON object matching the ArticleResponse schema.`;
+Respond ONLY with the JSON object, no markdown code fences.`;
 }
