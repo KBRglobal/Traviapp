@@ -1019,7 +1019,12 @@ export default function ContentEditor() {
         const generatedBlocks = generateBlocksFromExtensionData(content);
         initialBlocks = generatedBlocks.length > 0 ? generatedBlocks : [];
       } else {
-        initialBlocks = existingBlocks;
+        // Ensure all loaded blocks have IDs (blocks saved before ID support might not have them)
+        initialBlocks = existingBlocks.map((block, index) => ({
+          ...block,
+          id: block.id || generateId(),
+          order: block.order ?? index,
+        }));
       }
       setBlocks(initialBlocks);
       // Initialize history with loaded blocks
@@ -1703,7 +1708,13 @@ export default function ContentEditor() {
         setPrimaryKeyword(result.primaryKeyword || "");
         setHeroImage(result.heroImage || "");
         setHeroImageAlt(result.heroImageAlt || "");
-        setBlocks(result.blocks || []);
+        // Ensure all restored blocks have IDs
+        const restoredBlocks = (result.blocks || []).map((block: ContentBlock, index: number) => ({
+          ...block,
+          id: block.id || generateId(),
+          order: block.order ?? index,
+        }));
+        setBlocks(restoredBlocks);
         setStatus(result.status || "draft");
       }
       toast({ title: "Restored", description: "Content restored from previous version." });
@@ -2326,7 +2337,7 @@ export default function ContentEditor() {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={blocks.map(b => b.id ?? '')}
+                items={blocks.map(b => b.id).filter(Boolean) as string[]}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-4">
