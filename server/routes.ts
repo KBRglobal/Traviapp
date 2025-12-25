@@ -5297,15 +5297,26 @@ Output format:
     }
   });
 
-  // AI Field Generation endpoint - for individual field assistance (uses Claude Haiku for cost efficiency)
+  // AI Field Generation endpoint - for individual field assistance (uses unified AI providers with failover)
   app.post("/api/ai/generate-field", requirePermission("canCreate"), rateLimiters.ai, checkAiUsageLimit, async (req, res) => {
     if (safeMode.aiDisabled) {
       return res.status(503).json({ error: "AI features are temporarily disabled", code: "AI_DISABLED" });
     }
     try {
-      // Use Anthropic Claude Haiku directly for cost efficiency
-      const Anthropic = (await import("@anthropic-ai/sdk")).default;
-      const anthropic = new Anthropic();
+      // Use unified AI providers with automatic failover (prioritizes Gemini for cost efficiency)
+      const { getAllUnifiedProviders, markProviderFailed } = await import("./ai/providers");
+      const providers = getAllUnifiedProviders();
+      
+      // Prioritize Gemini as it's cost-efficient
+      const sortedProviders = [...providers].sort((a, b) => {
+        if (a.name === 'gemini') return -1;
+        if (b.name === 'gemini') return 1;
+        return 0;
+      });
+
+      if (sortedProviders.length === 0) {
+        return res.status(503).json({ error: "No AI providers available" });
+      }
 
       const { fieldType, currentValue, title, contentType, primaryKeyword, maxLength } = req.body;
       
@@ -5377,24 +5388,40 @@ Format: Return ONLY a JSON array of 3 different sets. Each element is a string w
         return res.status(400).json({ error: `Invalid fieldType: ${fieldType}` });
       }
 
-      // Use Claude 3.5 Haiku for cost efficiency
-      const response = await anthropic.messages.create({
-        model: "claude-3-5-haiku-latest",
-        max_tokens: 1024,
-        system: "You are an expert SEO content writer specializing in Dubai travel content. Generate high-quality, optimized suggestions. Always return valid JSON arrays of strings.",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-      });
+      // Try providers with failover
+      let content = "[]";
+      let lastError: Error | null = null;
+      
+      for (const provider of sortedProviders) {
+        try {
+          console.log(`[AI Field] Trying provider: ${provider.name}`);
+          const result = await provider.generateCompletion({
+            messages: [
+              {
+                role: "system",
+                content: "You are an expert SEO content writer specializing in Dubai travel content. Generate high-quality, optimized suggestions. Always return valid JSON arrays of strings."
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            temperature: 0.8,
+            maxTokens: 1024,
+          });
+          content = result.content;
+          console.log(`[AI Field] Success with provider: ${provider.name}`);
+          break;
+        } catch (providerError) {
+          console.error(`[AI Field] Provider ${provider.name} failed:`, providerError);
+          lastError = providerError instanceof Error ? providerError : new Error(String(providerError));
+          markProviderFailed(provider.name);
+        }
+      }
 
-      // Extract text content from Anthropic response
-      const content = response.content
-        .filter((block) => block.type === 'text')
-        .map((block) => (block as { type: 'text'; text: string }).text)
-        .join('') || "[]";
+      if (content === "[]" && lastError) {
+        throw lastError;
+      }
       
       // Try to parse as JSON array
       let suggestions: string[];
