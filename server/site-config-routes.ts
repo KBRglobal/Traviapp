@@ -526,6 +526,23 @@ router.get("/public/footer", async (_req: Request, res: Response) => {
   }
 });
 
+// Public endpoint for static pages (About, Privacy, Terms, etc.)
+router.get("/public/pages/:slug", async (req: Request, res: Response) => {
+  try {
+    const [page] = await db.select().from(staticPages)
+      .where(eq(staticPages.slug, req.params.slug));
+    
+    if (!page || !page.isActive) {
+      return res.status(404).json({ error: "Page not found" });
+    }
+    
+    res.json(page);
+  } catch (error) {
+    console.error("Error fetching public page:", error);
+    res.status(500).json({ error: "Failed to fetch page" });
+  }
+});
+
 export function registerSiteConfigRoutes(app: Router) {
   app.use("/api/site-config", router);
   console.log("[SiteConfig] Routes registered at /api/site-config/*");
