@@ -41,6 +41,7 @@ interface DataTableProps<T> {
   pageSize?: number;
   emptyMessage?: string;
   onRowClick?: (item: T) => void;
+  showSelectAllBanner?: boolean;
 }
 
 export function DataTable<T>({
@@ -54,6 +55,7 @@ export function DataTable<T>({
   pageSize = 10,
   emptyMessage = "No items found",
   onRowClick,
+  showSelectAllBanner = true,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -61,8 +63,13 @@ export function DataTable<T>({
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedData = data.slice(startIndex, startIndex + pageSize);
 
-  const allSelected = paginatedData.length > 0 && 
+  const allPageSelected = paginatedData.length > 0 && 
     paginatedData.every(item => selectedIds.includes(getItemId(item)));
+  
+  const allDataSelected = data.length > 0 && 
+    data.every(item => selectedIds.includes(getItemId(item)));
+
+  const someSelected = selectedIds.length > 0 && selectedIds.length < data.length;
   
   const handleSelectAll = (checked: boolean) => {
     if (!onSelectionChange) return;
@@ -73,6 +80,16 @@ export function DataTable<T>({
       const pageIds = paginatedData.map(getItemId);
       onSelectionChange(selectedIds.filter(id => !pageIds.includes(id)));
     }
+  };
+
+  const handleSelectAllData = () => {
+    if (!onSelectionChange) return;
+    onSelectionChange(data.map(getItemId));
+  };
+
+  const handleClearSelection = () => {
+    if (!onSelectionChange) return;
+    onSelectionChange([]);
   };
 
   const handleSelectOne = (id: string, checked: boolean) => {
@@ -94,6 +111,36 @@ export function DataTable<T>({
 
   return (
     <div className="space-y-4">
+      {selectable && showSelectAllBanner && allPageSelected && !allDataSelected && data.length > pageSize && (
+        <div className="flex items-center justify-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md text-sm" data-testid="select-all-banner">
+          <span className="text-blue-700 dark:text-blue-300">
+            {paginatedData.length} of {data.length} items selected (this page only).
+          </span>
+          <button
+            type="button"
+            onClick={handleSelectAllData}
+            className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+            data-testid="button-select-all-items"
+          >
+            Select all {data.length} items across all pages
+          </button>
+        </div>
+      )}
+      {selectable && showSelectAllBanner && allDataSelected && data.length > pageSize && (
+        <div className="flex items-center justify-center gap-2 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm" data-testid="all-selected-banner">
+          <span className="text-amber-700 dark:text-amber-300 font-medium">
+            All {data.length} items are selected across all pages.
+          </span>
+          <button
+            type="button"
+            onClick={handleClearSelection}
+            className="text-amber-600 dark:text-amber-400 hover:underline font-medium"
+            data-testid="button-clear-all-items"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -101,7 +148,7 @@ export function DataTable<T>({
               {selectable && (
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={allSelected}
+                    checked={allPageSelected}
                     onCheckedChange={handleSelectAll}
                     data-testid="checkbox-select-all"
                   />

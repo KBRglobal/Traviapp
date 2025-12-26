@@ -8791,10 +8791,14 @@ IMPORTANT: Include 5-8 internal links and 2-3 external links in your text sectio
   app.post("/api/contents/bulk-delete", requirePermission("canDelete"), async (req, res) => {
     try {
       const { ids } = req.body;
+      console.log("[BulkDelete] Request body:", JSON.stringify(req.body));
+      console.log("[BulkDelete] IDs received:", ids);
+      console.log("[BulkDelete] Number of IDs:", Array.isArray(ids) ? ids.length : 0);
       if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ error: "ids array is required" });
       }
       const count = await storage.bulkDeleteContents(ids);
+      console.log("[BulkDelete] Deleted count:", count);
       res.json({ success: true, count });
     } catch (error) {
       console.error("Error bulk deleting:", error);
