@@ -218,7 +218,8 @@ export async function checkAiUsageLimit(req: Request, res: Response, next: NextF
 // AUTHENTICATION MIDDLEWARE
 // ============================================================================
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.isAuthenticated() || !getUserId(req)) {
+  const isAuthenticated = typeof req.isAuthenticated === 'function' ? req.isAuthenticated() : false;
+  if (!isAuthenticated || !getUserId(req)) {
     return res.status(401).json({ error: "Not authenticated" });
   }
   next();
@@ -250,7 +251,8 @@ function hasPermission(role: UserRole, permission: PermissionKey): boolean {
 export function requirePermission(permission: PermissionKey) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const userId = getUserId(req);
-    if (!req.isAuthenticated() || !userId) {
+    const isAuthenticated = typeof req.isAuthenticated === 'function' ? req.isAuthenticated() : false;
+    if (!isAuthenticated || !userId) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
@@ -277,7 +279,8 @@ export function requirePermission(permission: PermissionKey) {
 export function requireOwnContentOrPermission(permission: PermissionKey) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user as any;
-    if (!req.isAuthenticated() || !user?.claims?.sub) {
+    const isAuthenticated = typeof req.isAuthenticated === 'function' ? req.isAuthenticated() : false;
+    if (!isAuthenticated || !user?.claims?.sub) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
