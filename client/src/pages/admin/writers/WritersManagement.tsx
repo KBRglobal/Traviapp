@@ -60,8 +60,8 @@ export default function WritersManagement() {
   const { data: writersData, isLoading } = useQuery({
     queryKey: ['writers'],
     queryFn: async () => {
-      const response = await apiRequest('/api/writers');
-      return response as { writers: AIWriter[]; total: number };
+      const response = await apiRequest('GET', '/api/writers');
+      return response.json() as Promise<{ writers: AIWriter[]; total: number }>;
     },
   });
 
@@ -69,8 +69,8 @@ export default function WritersManagement() {
   const { data: statsData } = useQuery({
     queryKey: ['writer-stats'],
     queryFn: async () => {
-      const response = await apiRequest('/api/writers/stats');
-      return response as { stats: WriterStats[] };
+      const response = await apiRequest('GET', '/api/writers/stats');
+      return response.json() as Promise<{ stats: WriterStats[] }>;
     },
   });
 

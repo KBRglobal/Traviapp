@@ -914,6 +914,27 @@ export default function ContentEditor() {
     enabled: !!contentId,
   });
 
+  // Fetch assigned writer details
+  interface AIWriterInfo {
+    id: string;
+    name: string;
+    slug: string;
+    avatar: string;
+    nationality: string;
+    expertise: string[];
+    writingStyle: string;
+  }
+  const { data: assignedWriter } = useQuery<AIWriterInfo>({
+    queryKey: ['/api/writers', selectedWriterId],
+    queryFn: async () => {
+      if (!selectedWriterId) return null;
+      const response = await fetch(`/api/writers/${selectedWriterId}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!selectedWriterId,
+  });
+
   useEffect(() => {
     if (content) {
       setTitle(content.title || "");
@@ -924,6 +945,11 @@ export default function ContentEditor() {
       setHeroImage(content.heroImage || "");
       setHeroImageAlt(content.heroImageAlt || "");
       setStatus(content.status || "draft");
+      
+      // Load writer ID if content has an assigned writer
+      if (content.writerId) {
+        setSelectedWriterId(content.writerId);
+      }
 
       // Load attraction-specific SEO data if it exists
       if (content.attraction) {
@@ -2086,6 +2112,29 @@ export default function ContentEditor() {
           <div className="flex items-center gap-2">
             <StatusBadge status={status as "draft" | "in_review" | "approved" | "scheduled" | "published"} />
           </div>
+
+          {/* Assigned Writer Display */}
+          {assignedWriter && (
+            <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded-md" data-testid="assigned-writer-badge">
+              <div className="flex items-center gap-2">
+                {assignedWriter.avatar ? (
+                  <img 
+                    src={assignedWriter.avatar} 
+                    alt={assignedWriter.name}
+                    className="h-6 w-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium">
+                    {assignedWriter.name.charAt(0)}
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium">{assignedWriter.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{assignedWriter.writingStyle}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
         <div className="flex items-center gap-2">
