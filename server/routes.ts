@@ -118,6 +118,7 @@ import translateRouter from "./routes/translate";
 // Agent B Routes disabled - modules not yet implemented
 // import { registerAgentBRoutes } from "./agent-b-routes";
 import { registerWriterRoutes } from "./ai/writers/routes";
+import { registerPageBuilderRoutes } from "./page-builder-routes";
 import { getStorageManager } from "./services/storage-adapter";
 import { uploadImage, uploadImageFromUrl } from "./services/image-service";
 import { cache, cacheKeys } from "./cache";
@@ -9623,6 +9624,11 @@ IMPORTANT: Include 5-8 internal links and 2-3 external links in your text sectio
   // AI WRITERS ROUTES - Virtual Newsroom with 10 AI writers
   // ============================================================================
   registerWriterRoutes(app);
+
+  // ============================================================================
+  // PAGE BUILDER ROUTES (Universal section editor with version history)
+  // ============================================================================
+  registerPageBuilderRoutes(app);
 
   // ============================================================================
   // TRANSLATION ROUTES (Multi-provider translation: Claude, GPT, DeepL)
