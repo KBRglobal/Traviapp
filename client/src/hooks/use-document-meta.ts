@@ -7,11 +7,12 @@ interface DocumentMetaOptions {
   ogDescription?: string;
   ogImage?: string;
   ogType?: string;
+  canonicalUrl?: string;
 }
 
 export function useDocumentMeta(options: DocumentMetaOptions) {
   useEffect(() => {
-    const { title, description, ogTitle, ogDescription, ogImage, ogType } = options;
+    const { title, description, ogTitle, ogDescription, ogImage, ogType, canonicalUrl } = options;
     
     document.title = title;
 
@@ -27,14 +28,30 @@ export function useDocumentMeta(options: DocumentMetaOptions) {
       meta.content = content;
     };
 
+    const updateLink = (rel: string, href: string | undefined) => {
+      if (!href) return;
+      let link = document.querySelector(`link[rel="${rel}"]`) as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = rel;
+        document.head.appendChild(link);
+      }
+      link.href = href;
+    };
+
     updateMeta("description", description);
     updateMeta("og:title", ogTitle || title, true);
     updateMeta("og:description", ogDescription || description, true);
     updateMeta("og:type", ogType || "website", true);
+    updateMeta("og:url", canonicalUrl, true);
+    updateMeta("twitter:title", ogTitle || title, true);
+    updateMeta("twitter:description", ogDescription || description, true);
     if (ogImage) {
       updateMeta("og:image", ogImage, true);
+      updateMeta("twitter:image", ogImage, true);
     }
+    updateLink("canonical", canonicalUrl);
 
     return () => {};
-  }, [options.title, options.description, options.ogTitle, options.ogDescription, options.ogImage, options.ogType]);
+  }, [options.title, options.description, options.ogTitle, options.ogDescription, options.ogImage, options.ogType, options.canonicalUrl]);
 }

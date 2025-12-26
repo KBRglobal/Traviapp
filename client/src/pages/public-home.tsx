@@ -114,7 +114,7 @@ export default function PublicHome() {
   const [email, setEmail] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [, setLocation] = useLocation();
-  const { t, localePath, isRTL } = useLocale();
+  const { t, localePath, isRTL, locale } = useLocale();
   
   const heroRef = useRef<HTMLElement>(null);
   const traviTextRef = useRef<HTMLSpanElement>(null);
@@ -187,6 +187,7 @@ export default function PublicHome() {
     ogTitle: "Travi - Discover the World Like a Local",
     ogDescription: "The most comprehensive guide to Dubai's attractions, hotels & hidden gems.",
     ogType: "website",
+    canonicalUrl: locale === "en" ? "https://travi.world/" : `https://travi.world/${locale}/`,
   });
 
   const { data: attractionsData = [] } = useQuery<ContentWithRelations[]>({

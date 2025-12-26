@@ -608,6 +608,11 @@ export default function CategoryTemplate({
   };
 
   const heroSection = sections.find((s) => s.sectionType === "hero");
+  const canonicalPath = `/${categoryType}`;
+  const canonicalUrl = locale === "en" 
+    ? `https://travi.world${canonicalPath}` 
+    : `https://travi.world/${locale}${canonicalPath}`;
+
   const seo = {
     title:
       seoConfig?.title ||
@@ -626,6 +631,7 @@ export default function CategoryTemplate({
       (heroSection && (locale === "he" ? heroSection.subtitleHe : heroSection.subtitle)) ||
       defaultSeo.ogDescription,
     ogType: "website" as const,
+    canonicalUrl,
   };
 
   useDocumentMeta(seo);
