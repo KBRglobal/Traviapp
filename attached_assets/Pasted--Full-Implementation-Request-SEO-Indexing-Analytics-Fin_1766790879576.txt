@@ -1,0 +1,101 @@
+
+
+🔧 Full Implementation Request – SEO, Indexing & Analytics (Final)
+
+Critical SEO, Indexing & Analytics Implementation
+
+Please implement the following items exactly as specified:
+
+⸻
+
+1. Google Tag Manager – Required Implementation
+
+Google Tag Manager is not currently implemented on the site and must be added manually.
+
+GTM Container ID: GTM-WVXXVS6L
+
+Please embed the following script exactly as provided:
+
+Placement requirements:
+	•	The <script> snippet must be placed immediately after the opening <head> tag.
+	•	The <noscript> iframe must be placed immediately after the opening <body> tag.
+	•	Ensure it loads on all public pages and routes (including SPA routes if applicable).
+
+Exact script to implement:
+
+<!-- Google Tag Manager -->
+<script>
+(function(w,d,s,l,i){
+  w[l]=w[l]||[];
+  w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});
+  var f=d.getElementsByTagName(s)[0],
+      j=d.createElement(s),
+      dl=l!='dataLayer'?'&l='+l:'';
+  j.async=true;
+  j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+  f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-WVXXVS6L');
+</script>
+<!-- End Google Tag Manager -->
+
+<!-- Google Tag Manager (noscript) -->
+<noscript>
+<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WVXXVS6L"
+height="0" width="0" style="display:none;visibility:hidden"></iframe>
+</noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+
+⸻
+
+2. Google Analytics 4 – via GTM only
+	•	Implement Google Analytics 4 exclusively through Google Tag Manager.
+	•	Create a GA4 Configuration tag inside GTM using the existing Measurement ID.
+	•	Trigger: All Pages.
+	•	Ensure GA4 fires once per page load (no duplicate events).
+	•	Do not add GA / gtag code directly to the site.
+
+⸻
+
+3. Sitemap – Critical (Currently Blocking Indexing)
+	•	Fix /sitemap.xml so it returns a valid XML sitemap (currently returns HTML).
+	•	The sitemap must:
+	•	Be generated server-side (not client-side / React routing).
+	•	Return Content-Type: application/xml.
+	•	Use the standard sitemap protocol:
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	•	Include all indexable public routes.
+	•	Return HTTP 200 with raw XML only (no HTML, no JS).
+
+⸻
+
+4. SEO Rendering
+	•	Ensure all SEO-critical content is present in the initial HTML response:
+	•	H1 / H2
+	•	Body copy
+	•	Internal links
+	•	Do not rely on client-side JavaScript for indexable content.
+
+⸻
+
+5. Meta & Canonical
+	•	Each public page must output:
+	•	Unique <title>
+	•	<meta name="description">
+	•	<link rel="canonical">
+	•	Enforce a single canonical domain (www or non-www) using proper 301 redirects.
+
+⸻
+
+6. Validation (Required)
+
+Please confirm completion by validating:
+	•	Google Tag Manager loads correctly on the site.
+	•	GA4 fires in GTM Preview mode.
+	•	GA events appear in Google Analytics Realtime.
+	•	/sitemap.xml displays raw XML in the browser.
+	•	No unintended noindex directives exist.
+
+Please confirm once all items are implemented so I can validate in Google Search Console and Google Analytics.
+
+
