@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { useCookieConsent } from "@/contexts/cookie-consent-context";
 
 const lucideIconMap: Record<string, LucideIcon> = {
   Camera, Building2, MapPin, Utensils, Compass, Gift, Coffee, Crown, Scale
@@ -103,6 +104,7 @@ const fallbackSections: FooterSection[] = [
 export function PublicFooter() {
   const { t, isRTL, localePath, locale } = useLocale();
   const { toast } = useToast();
+  const { openSettings: openCookieSettings } = useCookieConsent();
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -369,6 +371,15 @@ export function PublicFooter() {
                     >
                       {t('footer.termsOfService')}
                     </Link>
+                  </li>
+                  <li>
+                    <button 
+                      onClick={openCookieSettings}
+                      className="text-muted-foreground hover:text-travi-purple transition-colors text-sm text-left"
+                      data-testid="button-cookie-settings"
+                    >
+                      {locale === 'he' ? 'הגדרות עוגיות' : 'Cookie Settings'}
+                    </button>
                   </li>
                 </ul>
               </div>
