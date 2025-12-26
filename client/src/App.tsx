@@ -275,6 +275,13 @@ function AdminLayout() {
     "--sidebar-width-icon": "3rem",
   };
 
+  // Force English language for admin panel
+  useEffect(() => {
+    import('@/lib/i18n/config').then(({ changeLanguage }) => {
+      changeLanguage('en');
+    });
+  }, []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
