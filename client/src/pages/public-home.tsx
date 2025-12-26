@@ -1,8 +1,8 @@
 import { Search, Star, MapPin, ChevronRight, Mail, BookOpen, Globe, Building, UtensilsCrossed, Calendar, Clock, DollarSign, ArrowRight, Check, TrendingUp } from "lucide-react";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
-import type { Content, ContentWithRelations } from "@shared/schema";
+import type { Content, ContentWithRelations, PageSection, EditablePage } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -11,8 +11,14 @@ import { PublicFooter } from "@/components/public-footer";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
 import { LiveEditToggle } from "@/components/live-edit";
+import { PageBuilderLiveEditProvider, useIsPageBuilderEditMode } from "@/components/page-builder/live-edit-provider";
+import { PageBuilderEditableWrapper } from "@/components/page-builder/editable-wrapper";
 import mascotImage from "@assets/Mascot_for_Dark_Background_1765497703861.png";
 import skyBackground from "@assets/blue-sky-clouds-background_1766314952453.jpg";
+
+interface PageBuilderPage extends EditablePage {
+  sections: PageSection[];
+}
 
 interface HomepagePromotion {
   id: string;
@@ -217,6 +223,24 @@ export default function PublicHome() {
     queryKey: ["/api/homepage-promotions/featured"],
   });
 
+  const { data: pageData } = useQuery<PageBuilderPage>({
+    queryKey: ["/api/page-builder/public", "home"],
+    queryFn: () => fetch("/api/page-builder/public/home").then(r => r.ok ? r.json() : null),
+  });
+
+  const sections = pageData?.sections || [];
+  
+  const getSectionByKey = useCallback((key: string): PageSection | undefined => {
+    return sections.find(s => s.sectionKey === key);
+  }, [sections]);
+
+  const getSectionText = useCallback((section: PageSection | undefined, field: "title" | "subtitle" | "description" | "buttonText", fallback: string): string => {
+    if (!section) return fallback;
+    const heField = `${field}He` as keyof PageSection;
+    const value = isRTL ? (section[heField] as string || section[field]) : section[field];
+    return (value as string) || fallback;
+  }, [isRTL]);
+
   const contentCounts: Record<string, number> = {
     attraction: attractionsData.length,
     hotel: hotelsData.length,
@@ -241,7 +265,17 @@ export default function PublicHome() {
   const articlesContent = articlesData.slice(0, 5);
   const eventsContent = eventsData.slice(0, 4);
 
-  return (
+  const heroSection = getSectionByKey("hero");
+  const trustSection = getSectionByKey("trust");
+  const attractionsSection = getSectionByKey("attractions");
+  const districtsSection = getSectionByKey("districts");
+  const hotelsSection = getSectionByKey("hotels");
+  const diningSection = getSectionByKey("dining");
+  const articlesSection = getSectionByKey("articles");
+  const eventsSection = getSectionByKey("events");
+  const newsletterSection = getSectionByKey("newsletter");
+
+  const pageContent = (
     <div className="min-h-screen bg-background">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md">
         {t("home.skipToMain")}
@@ -942,4 +976,17 @@ export default function PublicHome() {
       <LiveEditToggle pageSlug="home" />
     </div>
   );
+
+  if (pageData?.id && sections.length > 0) {
+    return (
+      <PageBuilderLiveEditProvider
+        pageId={pageData.id}
+        sections={sections}
+      >
+        {pageContent}
+      </PageBuilderLiveEditProvider>
+    );
+  }
+
+  return pageContent;
 }

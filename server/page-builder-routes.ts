@@ -534,6 +534,77 @@ router.get("/public/:slug", async (req: Request, res: Response) => {
 });
 
 // ============================================================================
+// SEED ENDPOINTS - For initial data population
+// ============================================================================
+
+// POST /api/page-builder/seed/homepage - Seed the homepage with sections
+router.post("/seed/homepage", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { seedHomepage } = await import("./seeds/seed-homepage");
+    const result = await seedHomepage();
+    
+    if (result.success) {
+      res.json({ 
+        ...result,
+        heGuide: "איך זה עובד: דף הבית נוצר עם כל הסקציות הדרושות"
+      });
+    } else {
+      res.status(400).json({ 
+        ...result,
+        heGuide: "איך זה עובד: אירעה שגיאה ביצירת דף הבית"
+      });
+    }
+  } catch (error) {
+    console.error("Error seeding homepage:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to seed homepage",
+      message: error instanceof Error ? error.message : "Unknown error",
+      heGuide: "איך זה עובד: אירעה שגיאה ביצירת דף הבית"
+    });
+  }
+});
+
+// POST /api/page-builder/seed/category/:type - Seed category pages
+router.post("/seed/category/:type", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const validTypes = ["hotels", "dining", "districts", "shopping"];
+    const type = req.params.type;
+    
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({ 
+        success: false,
+        error: `Invalid category type. Must be one of: ${validTypes.join(", ")}`,
+        heGuide: "איך זה עובד: סוג הקטגוריה אינו חוקי"
+      });
+    }
+    
+    const { seedCategoryPage } = await import("./seeds/seed-homepage");
+    const result = await seedCategoryPage(type as "hotels" | "dining" | "districts" | "shopping");
+    
+    if (result.success) {
+      res.json({ 
+        ...result,
+        heGuide: `איך זה עובד: דף ${type} נוצר בהצלחה`
+      });
+    } else {
+      res.status(400).json({ 
+        ...result,
+        heGuide: `איך זה עובד: אירעה שגיאה ביצירת דף ${type}`
+      });
+    }
+  } catch (error) {
+    console.error("Error seeding category page:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to seed category page",
+      message: error instanceof Error ? error.message : "Unknown error",
+      heGuide: "איך זה עובד: אירעה שגיאה ביצירת דף הקטגוריה"
+    });
+  }
+});
+
+// ============================================================================
 // REGISTER ROUTES
 // ============================================================================
 
