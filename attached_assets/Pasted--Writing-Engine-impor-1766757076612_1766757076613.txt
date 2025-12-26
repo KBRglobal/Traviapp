@@ -1,0 +1,422 @@
+/**
+ * מנוע הכתיבה - Writing Engine
+ * מקצה כתבים למשימות ומייצר תוכן בסגנון הייחודי שלהם
+ */
+
+import { 
+  WriterPersonality, 
+  WriterCategory, 
+  WRITERS, 
+  ASSIGNMENT_RULES,
+  EDITOR_IN_CHIEF,
+  getWriterById,
+  getWriterByCategory,
+  getWriterPrompt
+} from './writers.config';
+
+// ============================================
+// טיפוסים
+// ============================================
+
+export interface ContentRequest {
+  id: string;
+  type: 'article' | 'review' | 'guide' | 'listicle' | 'news';
+  topic: string;
+  keywords: string[];
+  targetLength: number;
+  targetLanguage: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  deadline?: Date;
+  preferredWriter?: string;
+  collaborators?: string[];
+  seoRequirements?: SEORequirements;
+  metadata?: Record<string, any>;
+}
+
+export interface SEORequirements {
+  primaryKeyword: string;
+  secondaryKeywords: string[];
+  minKeywordDensity: number;
+  maxKeywordDensity: number;
+  requiredHeadings: string[];
+  metaDescriptionLength: number;
+}
+
+export interface WriterAssignment {
+  requestId: string;
+  primaryWriter: WriterPersonality;
+  supportingWriters?: WriterPersonality[];
+  assignedAt: Date;
+  dueAt?: Date;
+  matchScore: number;
+  matchReasons: string[];
+}
+
+export interface ContentDraft {
+  id: string;
+  requestId: string;
+  writer: WriterPersonality;
+  title: string;
+  content: string;
+  wordCount: number;
+  createdAt: Date;
+  status: 'draft' | 'review' | 'approved' | 'published';
+  editorNotes?: string[];
+  revisionNumber: number;
+  seoScore?: number;
+  readabilityScore?: number;
+}
+
+// ============================================
+// מחלקת מנוע הכתיבה
+// ============================================
+
+export class WritingEngine {
+  private assignments: Map<string, WriterAssignment> = new Map();
+  private drafts: Map<string, ContentDraft[]> = new Map();
+  private writerWorkload: Map<string, number> = new Map();
+
+  constructor() {
+    WRITERS.forEach(w => this.writerWorkload.set(w.id, 0));
+  }
+
+  /**
+   * הקצאת כתב למשימה
+   */
+  assignWriter(request: ContentRequest): WriterAssignment {
+    if (request.preferredWriter) {
+      const preferred = getWriterById(request.preferredWriter);
+      if (preferred) {
+        return this.createAssignment(request, preferred, 100, ['Preferred writer selected']);
+      }
+    }
+
+    const scores = WRITERS.map(writer => ({
+      writer,
+      score: this.calculateMatchScore(writer, request),
+      reasons: this.getMatchReasons(writer, request)
+    }));
+
+    scores.sort((a, b) => b.score - a.score);
+    const best = scores[0];
+    
+    let supportingWriters: WriterPersonality[] | undefined;
+    if (request.collaborators && request.collaborators.length > 0) {
+      supportingWriters = request.collaborators
+        .map(id => getWriterById(id))
+        .filter((w): w is WriterPersonality => w !== undefined);
+    }
+
+    return this.createAssignment(request, best.writer, best.score, best.reasons, supportingWriters);
+  }
+
+  private calculateMatchScore(writer: WriterPersonality, request: ContentRequest): number {
+    let score = 0;
+
+    const categoryKeywords = ASSIGNMENT_RULES.keywords[writer.category] || [];
+    const matchingKeywords = request.keywords.filter(kw => 
+      categoryKeywords.some(ck => kw.toLowerCase().includes(ck.toLowerCase()))
+    );
+    score += matchingKeywords.length * 20;
+
+    const topicWords = request.topic.toLowerCase().split(' ');
+    const topicMatches = topicWords.filter(tw =>
+      categoryKeywords.some(ck => tw.includes(ck.toLowerCase()))
+    );
+    score += topicMatches.length * 15;
+
+    const expertiseMatch = writer.expertise.some(exp =>
+      request.topic.toLowerCase().includes(exp.toLowerCase()) ||
+      request.keywords.some(kw => kw.toLowerCase().includes(exp.toLowerCase()))
+    );
+    if (expertiseMatch) score += 25;
+
+    const workload = this.writerWorkload.get(writer.id) || 0;
+    score -= workload * 5;
+
+    if (request.targetLength > 2000 && writer.writingStyle.paragraphStyle === 'detailed') {
+      score += 10;
+    }
+    if (request.targetLength < 800 && writer.writingStyle.paragraphStyle === 'concise') {
+      score += 10;
+    }
+
+    return Math.max(0, score);
+  }
+
+  private getMatchReasons(writer: WriterPersonality, request: ContentRequest): string[] {
+    const reasons: string[] = [];
+
+    const categoryKeywords = ASSIGNMENT_RULES.keywords[writer.category] || [];
+    const matchingKeywords = request.keywords.filter(kw => 
+      categoryKeywords.some(ck => kw.toLowerCase().includes(ck.toLowerCase()))
+    );
+    
+    if (matchingKeywords.length > 0) {
+      reasons.push(`Keywords match: ${matchingKeywords.join(', ')}`);
+    }
+
+    const expertiseMatch = writer.expertise.filter(exp =>
+      request.topic.toLowerCase().includes(exp.toLowerCase())
+    );
+    if (expertiseMatch.length > 0) {
+      reasons.push(`Expertise match: ${expertiseMatch.join(', ')}`);
+    }
+
+    reasons.push(`Category: ${writer.category}`);
+    reasons.push(`Style: ${writer.writingStyle.tone}`);
+
+    return reasons;
+  }
+
+  private createAssignment(
+    request: ContentRequest,
+    writer: WriterPersonality,
+    score: number,
+    reasons: string[],
+    supportingWriters?: WriterPersonality[]
+  ): WriterAssignment {
+    const assignment: WriterAssignment = {
+      requestId: request.id,
+      primaryWriter: writer,
+      supportingWriters,
+      assignedAt: new Date(),
+      dueAt: request.deadline,
+      matchScore: score,
+      matchReasons: reasons
+    };
+
+    this.assignments.set(request.id, assignment);
+    this.writerWorkload.set(writer.id, (this.writerWorkload.get(writer.id) || 0) + 1);
+
+    return assignment;
+  }
+
+  /**
+   * יצירת פרומפט לכתיבה
+   */
+  generateWritingPrompt(request: ContentRequest, assignment: WriterAssignment): string {
+    const writer = assignment.primaryWriter;
+    const basePrompt = getWriterPrompt(writer);
+
+    const taskPrompt = `
+${basePrompt}
+
+=== CURRENT ASSIGNMENT ===
+
+TASK TYPE: ${request.type}
+TOPIC: ${request.topic}
+TARGET LENGTH: ${request.targetLength} words
+LANGUAGE: ${request.targetLanguage}
+PRIORITY: ${request.priority}
+
+KEYWORDS TO INCLUDE:
+${request.keywords.map(k => `- ${k}`).join('\n')}
+
+${request.seoRequirements ? `
+SEO REQUIREMENTS:
+- Primary keyword: ${request.seoRequirements.primaryKeyword}
+- Secondary keywords: ${request.seoRequirements.secondaryKeywords.join(', ')}
+- Keyword density: ${request.seoRequirements.minKeywordDensity}% - ${request.seoRequirements.maxKeywordDensity}%
+` : ''}
+
+INSTRUCTIONS:
+1. Write in YOUR unique voice and style as ${writer.name}
+2. Use your signature opening and closing phrases naturally
+3. Include your typical expressions and vocabulary
+4. Maintain your characteristic ${writer.writingStyle.tone} tone
+5. ${writer.writingStyle.useEmojis ? 'Include emojis as you naturally would' : 'Do not use emojis'}
+6. Write from ${writer.voice.perspective} perspective
+7. Apply your quirks: ${writer.quirks.join('; ')}
+
+AVOID: ${writer.signatureElements.avoidWords.join(', ')}
+
+BEGIN WRITING:
+`;
+
+    return taskPrompt;
+  }
+
+  /**
+   * בדיקת עקביות סגנון
+   */
+  validateStyle(content: string, writer: WriterPersonality): StyleValidation {
+    const issues: StyleIssue[] = [];
+    let score = 100;
+
+    // בדיקת מילים אסורות
+    const avoidWords = writer.signatureElements.avoidWords;
+    avoidWords.forEach(word => {
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      const matches = content.match(regex);
+      if (matches) {
+        issues.push({
+          type: 'vocabulary',
+          severity: 'warning',
+          message: `Found forbidden word "${word}" ${matches.length} times`,
+          suggestion: `Replace with: ${writer.signatureElements.vocabularyStyle.slice(0, 3).join(', ')}`
+        });
+        score -= matches.length * 2;
+      }
+    });
+
+    // בדיקת אימוג'ים
+    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+    const emojis = content.match(emojiRegex) || [];
+    
+    if (!writer.writingStyle.useEmojis && emojis.length > 0) {
+      issues.push({
+        type: 'emoji',
+        severity: 'error',
+        message: `Writer ${writer.name} should not use emojis, found ${emojis.length}`,
+        suggestion: 'Remove all emojis'
+      });
+      score -= 10;
+    }
+
+    if (writer.writingStyle.useEmojis && writer.writingStyle.emojiFrequency === 'frequent' && emojis.length < 3) {
+      issues.push({
+        type: 'emoji',
+        severity: 'warning',
+        message: `Writer ${writer.name} typically uses frequent emojis`,
+        suggestion: 'Add more emojis to match style'
+      });
+      score -= 5;
+    }
+
+    // בדיקת רמת פורמליות
+    const informalWords = ['gonna', 'wanna', 'gotta', 'kinda', 'sorta', 'yeah', 'nope', 'yep'];
+    if (writer.writingStyle.formality >= 4) {
+      informalWords.forEach(word => {
+        if (content.toLowerCase().includes(word)) {
+          issues.push({
+            type: 'formality',
+            severity: 'warning',
+            message: `Informal word "${word}" doesn't match formal style`,
+            suggestion: 'Use more formal language'
+          });
+          score -= 3;
+        }
+      });
+    }
+
+    // בדיקת אורך משפטים
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const avgWordsPerSentence = sentences.reduce((sum, s) => sum + s.split(' ').length, 0) / sentences.length;
+
+    if (writer.writingStyle.sentenceLength === 'short' && avgWordsPerSentence > 15) {
+      issues.push({
+        type: 'structure',
+        severity: 'info',
+        message: `Average sentence length (${avgWordsPerSentence.toFixed(1)} words) may be too long`,
+        suggestion: 'Consider breaking into shorter sentences'
+      });
+      score -= 5;
+    }
+
+    if (writer.writingStyle.sentenceLength === 'long' && avgWordsPerSentence < 12) {
+      issues.push({
+        type: 'structure',
+        severity: 'info',
+        message: `Average sentence length (${avgWordsPerSentence.toFixed(1)} words) may be too short`,
+        suggestion: 'Consider more elaborate sentences'
+      });
+      score -= 5;
+    }
+
+    return {
+      isValid: score >= 70,
+      score: Math.max(0, score),
+      issues,
+      writer: writer.name
+    };
+  }
+
+  /**
+   * קבלת סטטיסטיקות צוות
+   */
+  getTeamStats(): TeamStats {
+    const stats: TeamStats = {
+      totalWriters: WRITERS.length,
+      writersByCategory: {},
+      workloadDistribution: {},
+      totalAssignments: this.assignments.size
+    };
+
+    WRITERS.forEach(writer => {
+      stats.writersByCategory[writer.category] = 
+        (stats.writersByCategory[writer.category] || 0) + 1;
+      stats.workloadDistribution[writer.id] = this.writerWorkload.get(writer.id) || 0;
+    });
+
+    return stats;
+  }
+
+  /**
+   * המלצה על כתב לנושא
+   */
+  recommendWriter(topic: string): WriterRecommendation[] {
+    const request: ContentRequest = {
+      id: 'temp',
+      type: 'article',
+      topic,
+      keywords: topic.split(' '),
+      targetLength: 1500,
+      targetLanguage: 'en',
+      priority: 'medium'
+    };
+
+    const scores = WRITERS.map(writer => ({
+      writer,
+      score: this.calculateMatchScore(writer, request),
+      reasons: this.getMatchReasons(writer, request)
+    }));
+
+    scores.sort((a, b) => b.score - a.score);
+
+    return scores.slice(0, 3).map(s => ({
+      writer: s.writer,
+      matchScore: s.score,
+      reasons: s.reasons,
+      sampleOpening: s.writer.signatureElements.openingPhrases[0]
+    }));
+  }
+}
+
+// ============================================
+// טיפוסי עזר
+// ============================================
+
+export interface StyleValidation {
+  isValid: boolean;
+  score: number;
+  issues: StyleIssue[];
+  writer: string;
+}
+
+export interface StyleIssue {
+  type: 'vocabulary' | 'emoji' | 'formality' | 'structure' | 'tone';
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+  suggestion: string;
+}
+
+export interface TeamStats {
+  totalWriters: number;
+  writersByCategory: Record<string, number>;
+  workloadDistribution: Record<string, number>;
+  totalAssignments: number;
+}
+
+export interface WriterRecommendation {
+  writer: WriterPersonality;
+  matchScore: number;
+  reasons: string[];
+  sampleOpening: string;
+}
+
+// ============================================
+// יצוא ברירת מחדל
+// ============================================
+
+export const writingEngine = new WritingEngine();

@@ -1,0 +1,516 @@
+/**
+ * מערכת העורך - Editor System
+ * בקרת איכות, אישור תוכן ותיאום בין כתבים
+ */
+
+import { 
+  WriterPersonality, 
+  WRITERS, 
+  EDITOR_IN_CHIEF,
+  getWriterById 
+} from './writers.config';
+import { ContentDraft, StyleValidation, StyleIssue } from './writing-engine';
+
+// ============================================
+// טיפוסים
+// ============================================
+
+export interface EditorReview {
+  id: string;
+  draftId: string;
+  reviewedAt: Date;
+  reviewedBy: string;
+  decision: 'approved' | 'revise' | 'rejected';
+  overallScore: number;
+  scores: ReviewScores;
+  feedback: EditorFeedback[];
+  suggestedChanges: SuggestedChange[];
+  styleConsistencyCheck: StyleValidation;
+}
+
+export interface ReviewScores {
+  content: number;        // 0-100: איכות התוכן
+  style: number;          // 0-100: עקביות סגנון
+  seo: number;            // 0-100: עמידה בדרישות SEO
+  accuracy: number;       // 0-100: דיוק עובדתי
+  readability: number;    // 0-100: קריאות
+  engagement: number;     // 0-100: רמת עניין
+}
+
+export interface EditorFeedback {
+  type: 'praise' | 'suggestion' | 'requirement' | 'question';
+  category: 'content' | 'style' | 'seo' | 'structure' | 'facts';
+  message: string;
+  priority: 'low' | 'medium' | 'high';
+  location?: string;
+}
+
+export interface SuggestedChange {
+  id: string;
+  type: 'replace' | 'delete' | 'add' | 'restructure';
+  location: string;
+  original?: string;
+  suggested: string;
+  reason: string;
+  isRequired: boolean;
+}
+
+export interface PublicationQueue {
+  id: string;
+  draftId: string;
+  scheduledFor?: Date;
+  platforms: string[];
+  status: 'pending' | 'scheduled' | 'published' | 'failed';
+  publishedAt?: Date;
+  urls?: string[];
+}
+
+// ============================================
+// מחלקת העורך
+// ============================================
+
+export class EditorSystem {
+  private reviews: Map<string, EditorReview[]> = new Map();
+  private publicationQueue: Map<string, PublicationQueue> = new Map();
+  private qualityThreshold = EDITOR_IN_CHIEF.editingStyle.qualityThreshold * 100;
+
+  /**
+   * בדיקת טיוטה
+   */
+  reviewDraft(draft: ContentDraft): EditorReview {
+    const writer = draft.writer;
+    
+    // חישוב ציונים
+    const scores = this.calculateScores(draft);
+    
+    // בדיקת עקביות סגנון
+    const styleCheck = this.checkStyleConsistency(draft.content, writer);
+    
+    // יצירת משוב
+    const feedback = this.generateFeedback(draft, scores, styleCheck);
+    
+    // הצעות לשינויים
+    const suggestedChanges = this.generateSuggestions(draft, styleCheck);
+    
+    // חישוב ציון כללי
+    const overallScore = this.calculateOverallScore(scores);
+    
+    // החלטה
+    const decision = this.makeDecision(overallScore, scores, styleCheck);
+
+    const review: EditorReview = {
+      id: `review-${Date.now()}`,
+      draftId: draft.id,
+      reviewedAt: new Date(),
+      reviewedBy: EDITOR_IN_CHIEF.name,
+      decision,
+      overallScore,
+      scores,
+      feedback,
+      suggestedChanges,
+      styleConsistencyCheck: styleCheck
+    };
+
+    // שמירת הסקירה
+    const draftReviews = this.reviews.get(draft.id) || [];
+    draftReviews.push(review);
+    this.reviews.set(draft.id, draftReviews);
+
+    return review;
+  }
+
+  private calculateScores(draft: ContentDraft): ReviewScores {
+    const content = draft.content;
+    
+    // ציון תוכן - מבוסס על אורך ומבנה
+    const wordCount = content.split(/\s+/).length;
+    const hasIntro = content.length > 200;
+    const hasConclusion = content.includes('.') && content.lastIndexOf('.') > content.length - 500;
+    const contentScore = Math.min(100, 
+      50 + 
+      (wordCount >= 500 ? 20 : wordCount / 25) +
+      (hasIntro ? 15 : 0) +
+      (hasConclusion ? 15 : 0)
+    );
+
+    // ציון סגנון - נבדק בנפרד
+    const styleScore = 85; // placeholder - מחושב בבדיקת סגנון
+
+    // ציון SEO
+    const headingCount = (content.match(/^#{1,3}\s/gm) || []).length;
+    const hasLinks = content.includes('http') || content.includes('[');
+    const seoScore = Math.min(100,
+      40 +
+      (headingCount >= 3 ? 30 : headingCount * 10) +
+      (hasLinks ? 15 : 0) +
+      (wordCount >= 1000 ? 15 : wordCount / 66)
+    );
+
+    // ציון דיוק - placeholder
+    const accuracyScore = 90;
+
+    // ציון קריאות
+    const avgSentenceLength = content.split(/[.!?]+/).filter(s => s.trim()).length;
+    const paragraphCount = content.split(/\n\n+/).length;
+    const readabilityScore = Math.min(100,
+      50 +
+      (avgSentenceLength < 25 ? 25 : 50 - avgSentenceLength) +
+      (paragraphCount >= 4 ? 25 : paragraphCount * 6)
+    );
+
+    // ציון מעורבות
+    const hasQuestions = content.includes('?');
+    const hasEmotionalWords = /amazing|incredible|exciting|beautiful|stunning/i.test(content);
+    const engagementScore = Math.min(100,
+      60 +
+      (hasQuestions ? 20 : 0) +
+      (hasEmotionalWords ? 20 : 0)
+    );
+
+    return {
+      content: Math.round(contentScore),
+      style: styleScore,
+      seo: Math.round(seoScore),
+      accuracy: accuracyScore,
+      readability: Math.round(readabilityScore),
+      engagement: Math.round(engagementScore)
+    };
+  }
+
+  private checkStyleConsistency(content: string, writer: WriterPersonality): StyleValidation {
+    const issues: StyleIssue[] = [];
+    let score = 100;
+
+    // בדיקת מילים אסורות
+    writer.signatureElements.avoidWords.forEach(word => {
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      const matches = content.match(regex);
+      if (matches) {
+        issues.push({
+          type: 'vocabulary',
+          severity: 'warning',
+          message: `Found "${word}" ${matches.length} time(s) - not typical for ${writer.name}`,
+          suggestion: `Consider using: ${writer.signatureElements.vocabularyStyle.slice(0, 2).join(' or ')}`
+        });
+        score -= matches.length * 3;
+      }
+    });
+
+    // בדיקת אימוג'ים
+    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}]/gu;
+    const emojis = content.match(emojiRegex) || [];
+    
+    if (!writer.writingStyle.useEmojis && emojis.length > 0) {
+      issues.push({
+        type: 'emoji',
+        severity: 'error',
+        message: `${writer.name} doesn't use emojis (found ${emojis.length})`,
+        suggestion: 'Remove all emojis'
+      });
+      score -= 15;
+    } else if (writer.writingStyle.useEmojis) {
+      if (writer.writingStyle.emojiFrequency === 'frequent' && emojis.length < 5) {
+        issues.push({
+          type: 'emoji',
+          severity: 'info',
+          message: `${writer.name} typically uses more emojis`,
+          suggestion: 'Add relevant emojis'
+        });
+        score -= 5;
+      }
+    }
+
+    // בדיקת פורמליות
+    const formalityIndicators = {
+      formal: ['Furthermore', 'Moreover', 'Nevertheless', 'Consequently', 'Indeed'],
+      informal: ['gonna', 'wanna', 'kinda', 'OMG', 'LOL', 'BTW']
+    };
+
+    if (writer.writingStyle.formality >= 4) {
+      formalityIndicators.informal.forEach(word => {
+        if (content.toLowerCase().includes(word.toLowerCase())) {
+          issues.push({
+            type: 'formality',
+            severity: 'warning',
+            message: `Informal "${word}" doesn't match ${writer.name}'s formal style`,
+            suggestion: 'Use more formal language'
+          });
+          score -= 5;
+        }
+      });
+    }
+
+    if (writer.writingStyle.formality <= 2) {
+      let formalCount = 0;
+      formalityIndicators.formal.forEach(word => {
+        if (content.includes(word)) formalCount++;
+      });
+      if (formalCount >= 3) {
+        issues.push({
+          type: 'formality',
+          severity: 'info',
+          message: `Content may be too formal for ${writer.name}'s casual style`,
+          suggestion: 'Use more conversational language'
+        });
+        score -= 5;
+      }
+    }
+
+    // בדיקת שימוש בביטויים אופייניים
+    const signatureUsed = writer.signatureElements.favoriteExpressions.some(exp =>
+      content.toLowerCase().includes(exp.toLowerCase())
+    );
+    if (!signatureUsed) {
+      issues.push({
+        type: 'vocabulary',
+        severity: 'info',
+        message: `No signature expressions found for ${writer.name}`,
+        suggestion: `Consider using: "${writer.signatureElements.favoriteExpressions[0]}"`
+      });
+      score -= 5;
+    }
+
+    return {
+      isValid: score >= 70,
+      score: Math.max(0, score),
+      issues,
+      writer: writer.name
+    };
+  }
+
+  private generateFeedback(
+    draft: ContentDraft, 
+    scores: ReviewScores, 
+    styleCheck: StyleValidation
+  ): EditorFeedback[] {
+    const feedback: EditorFeedback[] = [];
+
+    // משוב חיובי
+    if (scores.content >= 80) {
+      feedback.push({
+        type: 'praise',
+        category: 'content',
+        message: 'Excellent content quality and depth',
+        priority: 'low'
+      });
+    }
+
+    if (styleCheck.score >= 90) {
+      feedback.push({
+        type: 'praise',
+        category: 'style',
+        message: `Perfect voice consistency for ${draft.writer.name}`,
+        priority: 'low'
+      });
+    }
+
+    // הצעות לשיפור
+    if (scores.seo < 70) {
+      feedback.push({
+        type: 'suggestion',
+        category: 'seo',
+        message: 'Consider adding more headings and internal links for better SEO',
+        priority: 'medium'
+      });
+    }
+
+    if (scores.readability < 70) {
+      feedback.push({
+        type: 'suggestion',
+        category: 'structure',
+        message: 'Break long paragraphs into smaller chunks for better readability',
+        priority: 'medium'
+      });
+    }
+
+    if (scores.engagement < 70) {
+      feedback.push({
+        type: 'suggestion',
+        category: 'content',
+        message: 'Add questions or calls-to-action to increase engagement',
+        priority: 'medium'
+      });
+    }
+
+    // דרישות חובה
+    styleCheck.issues
+      .filter(issue => issue.severity === 'error')
+      .forEach(issue => {
+        feedback.push({
+          type: 'requirement',
+          category: 'style',
+          message: issue.message,
+          priority: 'high'
+        });
+      });
+
+    return feedback;
+  }
+
+  private generateSuggestions(
+    draft: ContentDraft, 
+    styleCheck: StyleValidation
+  ): SuggestedChange[] {
+    const suggestions: SuggestedChange[] = [];
+    let suggestionId = 1;
+
+    // הצעות מבוססות על בדיקת סגנון
+    styleCheck.issues.forEach(issue => {
+      if (issue.type === 'vocabulary') {
+        suggestions.push({
+          id: `sug-${suggestionId++}`,
+          type: 'replace',
+          location: 'Throughout document',
+          original: issue.message.match(/"([^"]+)"/)?.[1],
+          suggested: issue.suggestion,
+          reason: issue.message,
+          isRequired: issue.severity === 'error'
+        });
+      }
+    });
+
+    // הצעות לפתיחה וסגירה
+    const writer = draft.writer;
+    const content = draft.content;
+    
+    const hasGoodOpening = writer.signatureElements.openingPhrases.some(phrase =>
+      content.substring(0, 200).includes(phrase.substring(0, 20))
+    );
+    
+    if (!hasGoodOpening) {
+      suggestions.push({
+        id: `sug-${suggestionId++}`,
+        type: 'add',
+        location: 'Opening paragraph',
+        suggested: `Consider starting with: "${writer.signatureElements.openingPhrases[0]}"`,
+        reason: `Signature opening for ${writer.name}`,
+        isRequired: false
+      });
+    }
+
+    return suggestions;
+  }
+
+  private calculateOverallScore(scores: ReviewScores): number {
+    const weights = {
+      content: 0.25,
+      style: 0.20,
+      seo: 0.15,
+      accuracy: 0.20,
+      readability: 0.10,
+      engagement: 0.10
+    };
+
+    return Math.round(
+      scores.content * weights.content +
+      scores.style * weights.style +
+      scores.seo * weights.seo +
+      scores.accuracy * weights.accuracy +
+      scores.readability * weights.readability +
+      scores.engagement * weights.engagement
+    );
+  }
+
+  private makeDecision(
+    overallScore: number, 
+    scores: ReviewScores, 
+    styleCheck: StyleValidation
+  ): 'approved' | 'revise' | 'rejected' {
+    // דחייה אם יש בעיות קריטיות
+    if (styleCheck.issues.some(i => i.severity === 'error')) {
+      return 'revise';
+    }
+
+    // דחייה אם ציון מתחת לסף
+    if (overallScore < this.qualityThreshold) {
+      return overallScore < 50 ? 'rejected' : 'revise';
+    }
+
+    // דחייה אם יש ציון קטגוריה נמוך מאוד
+    const criticalScores = [scores.content, scores.accuracy, scores.style];
+    if (criticalScores.some(s => s < 60)) {
+      return 'revise';
+    }
+
+    return 'approved';
+  }
+
+  /**
+   * הוספה לתור פרסום
+   */
+  schedulePublication(
+    draftId: string, 
+    platforms: string[], 
+    scheduledFor?: Date
+  ): PublicationQueue {
+    const publication: PublicationQueue = {
+      id: `pub-${Date.now()}`,
+      draftId,
+      scheduledFor,
+      platforms,
+      status: scheduledFor ? 'scheduled' : 'pending'
+    };
+
+    this.publicationQueue.set(publication.id, publication);
+    return publication;
+  }
+
+  /**
+   * קבלת סטטיסטיקות עריכה
+   */
+  getEditorStats(): EditorStats {
+    let totalReviews = 0;
+    let approvedCount = 0;
+    let reviseCount = 0;
+    let rejectedCount = 0;
+    let totalScore = 0;
+
+    this.reviews.forEach(reviewList => {
+      reviewList.forEach(review => {
+        totalReviews++;
+        totalScore += review.overallScore;
+        switch (review.decision) {
+          case 'approved': approvedCount++; break;
+          case 'revise': reviseCount++; break;
+          case 'rejected': rejectedCount++; break;
+        }
+      });
+    });
+
+    return {
+      totalReviews,
+      approvalRate: totalReviews > 0 ? (approvedCount / totalReviews) * 100 : 0,
+      revisionRate: totalReviews > 0 ? (reviseCount / totalReviews) * 100 : 0,
+      rejectionRate: totalReviews > 0 ? (rejectedCount / totalReviews) * 100 : 0,
+      averageScore: totalReviews > 0 ? totalScore / totalReviews : 0,
+      pendingPublications: Array.from(this.publicationQueue.values())
+        .filter(p => p.status === 'pending' || p.status === 'scheduled').length
+    };
+  }
+
+  /**
+   * קבלת היסטוריית סקירות לטיוטה
+   */
+  getReviewHistory(draftId: string): EditorReview[] {
+    return this.reviews.get(draftId) || [];
+  }
+}
+
+// ============================================
+// טיפוסי עזר
+// ============================================
+
+export interface EditorStats {
+  totalReviews: number;
+  approvalRate: number;
+  revisionRate: number;
+  rejectionRate: number;
+  averageScore: number;
+  pendingPublications: number;
+}
+
+// ============================================
+// יצוא
+// ============================================
+
+export const editorSystem = new EditorSystem();

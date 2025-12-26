@@ -6969,6 +6969,93 @@ IMPORTANT: Include 5-8 internal links and 2-3 external links in your text sectio
     }
   });
 
+  // ==========================================
+  // AI Writers Routes
+  // ==========================================
+
+  // Get all writers
+  app.get("/api/writers", async (req, res) => {
+    try {
+      const writers = await storage.getAllWriters();
+      res.json({ writers, total: writers.length });
+    } catch (error) {
+      console.error("Error fetching writers:", error);
+      res.status(500).json({ error: "Failed to fetch writers" });
+    }
+  });
+
+  // Get writer stats
+  app.get("/api/writers/stats", async (req, res) => {
+    try {
+      const stats = await storage.getWriterStats();
+      res.json({ stats });
+    } catch (error) {
+      console.error("Error fetching writer stats:", error);
+      res.status(500).json({ error: "Failed to fetch writer stats" });
+    }
+  });
+
+  // Get single writer by slug
+  app.get("/api/writers/:slug", async (req, res) => {
+    try {
+      const writer = await storage.getWriterBySlug(req.params.slug);
+      if (!writer) {
+        return res.status(404).json({ error: "Writer not found" });
+      }
+      res.json(writer);
+    } catch (error) {
+      console.error("Error fetching writer:", error);
+      res.status(500).json({ error: "Failed to fetch writer" });
+    }
+  });
+
+  // Seed writers from config
+  app.post("/api/writers/seed", requirePermission("canManageSettings"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const count = await storage.seedWritersFromConfig();
+      res.json({ success: true, message: `Seeded ${count} writers` });
+    } catch (error) {
+      console.error("Error seeding writers:", error);
+      res.status(500).json({ error: "Failed to seed writers" });
+    }
+  });
+
+  // Update writer with Zod validation
+  const updateWriterSchema = z.object({
+    isActive: z.boolean().optional(),
+    name: z.string().min(1).max(100).optional(),
+    avatar: z.string().url().optional().or(z.literal('')),
+    bio: z.string().max(5000).optional(),
+    shortBio: z.string().max(500).optional(),
+  }).strict();
+
+  app.patch("/api/writers/:id", requirePermission("canManageSettings"), checkReadOnlyMode, async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const parsed = updateWriterSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid request body", 
+          details: parsed.error.errors 
+        });
+      }
+      
+      // Reject empty updates
+      if (Object.keys(parsed.data).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+      
+      const updated = await storage.updateWriter(req.params.id, parsed.data);
+      if (!updated) {
+        return res.status(404).json({ error: "Writer not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating writer:", error);
+      res.status(500).json({ error: "Failed to update writer" });
+    }
+  });
+
   // Homepage Promotions Routes
   app.get("/api/homepage-promotions/:section", async (req, res) => {
     try {
