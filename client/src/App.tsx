@@ -142,6 +142,7 @@ const OffPlanManagement = lazy(() => import("@/pages/admin/off-plan-management")
 const LandingPagesManagement = lazy(() => import("@/pages/admin/landing-pages-management"));
 const DistrictsManagement = lazy(() => import("@/pages/admin/districts-management"));
 const RealEstateManagement = lazy(() => import("@/pages/admin/real-estate-management"));
+const RealEstateEditor = lazy(() => import("@/pages/admin/real-estate-editor"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Login = lazy(() => import("@/pages/login"));
 const AccessDenied = lazy(() => import("@/pages/access-denied"));
@@ -235,6 +236,7 @@ function AdminRouter() {
         <Route path="/admin/off-plan/new" component={ContentEditor} />
         <Route path="/admin/off-plan/:id" component={ContentEditor} />
         <Route path="/admin/real-estate" component={RealEstateManagement} />
+        <Route path="/admin/real-estate/:pageKey" component={RealEstateEditor} />
         <Route path="/admin/rss-feeds" component={RssFeeds} />
         <Route path="/admin/ai-generator" component={AIArticleGenerator} />
         <Route path="/admin/topic-bank" component={TopicBankPage} />
