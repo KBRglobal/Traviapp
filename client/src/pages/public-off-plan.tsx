@@ -13,6 +13,7 @@ import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { LiveEditToggle } from "@/components/live-edit";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -2224,6 +2225,7 @@ export default function PublicOffPlan() {
       </main>
 
       <PublicFooter />
+      <LiveEditToggle pageSlug="off-plan" />
     </div>
   );
 }

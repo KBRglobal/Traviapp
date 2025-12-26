@@ -94,11 +94,11 @@ export function LiveEditToggle({ pageSlug, className }: LiveEditToggleProps) {
     );
   }
 
-  // Show full toolbar when in edit mode
+  // Show full toolbar when in edit mode - positioned bottom-right to avoid overlapping footer CTAs
   return (
     <div
       className={cn(
-        "fixed bottom-6 left-1/2 -translate-x-1/2 z-50",
+        "fixed bottom-6 right-6 z-50",
         "flex items-center gap-2 p-2 rounded-full",
         "bg-background/95 backdrop-blur-md border shadow-xl",
         className

@@ -10,6 +10,7 @@ import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { useDocumentMeta } from "@/hooks/use-document-meta";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { LiveEditToggle } from "@/components/live-edit";
 import mascotImage from "@assets/Mascot_for_Dark_Background_1765497703861.png";
 import skyBackground from "@assets/blue-sky-clouds-background_1766314952453.jpg";
 
@@ -938,6 +939,7 @@ export default function PublicHome() {
       </main>
 
       <PublicFooter />
+      <LiveEditToggle pageSlug="home" />
     </div>
   );
 }
