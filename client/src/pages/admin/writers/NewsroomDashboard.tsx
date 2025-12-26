@@ -4,6 +4,7 @@
  * Overview of the entire writing operation
  */
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,8 +21,10 @@ import {
   Users,
   FileText,
   Calendar,
+  Plus,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { AssignmentDialog } from "@/components/writers/AssignmentDialog";
 
 interface Assignment {
   id: string;
@@ -44,6 +47,8 @@ interface WriterStats {
 }
 
 export default function NewsroomDashboard() {
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+
   // Fetch writer stats
   const { data: statsData } = useQuery({
     queryKey: ['writer-stats'],
@@ -109,11 +114,9 @@ export default function NewsroomDashboard() {
             </p>
           </div>
         </div>
-        <Button asChild>
-          <Link href="/admin/contents?filter=unassigned">
-            <FileText className="mr-2 h-4 w-4" />
-            Assign Content
-          </Link>
+        <Button onClick={() => setAssignmentDialogOpen(true)} data-testid="button-create-assignment">
+          <Plus className="mr-2 h-4 w-4" />
+          Create Assignment
         </Button>
       </div>
 
@@ -313,6 +316,12 @@ export default function NewsroomDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Assignment Dialog */}
+      <AssignmentDialog 
+        open={assignmentDialogOpen} 
+        onOpenChange={setAssignmentDialogOpen} 
+      />
     </div>
   );
 }
