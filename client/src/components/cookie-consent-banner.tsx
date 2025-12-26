@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCookieConsent } from "@/contexts/cookie-consent-context";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -13,6 +13,16 @@ export function CookieConsentBanner() {
     analytics: preferences.analytics,
     marketing: preferences.marketing,
   });
+
+  // Sync local preferences with context preferences when banner opens or preferences change
+  useEffect(() => {
+    if (showBanner) {
+      setLocalPrefs({
+        analytics: preferences.analytics,
+        marketing: preferences.marketing,
+      });
+    }
+  }, [showBanner, preferences.analytics, preferences.marketing]);
 
   if (!showBanner) return null;
 

@@ -73,10 +73,12 @@ export function CookieConsentProvider({ children }: { children: React.ReactNode 
     if (savedConsent && savedConsent !== "pending") {
       setConsent(savedConsent);
       if (savedPrefs) {
-        setPreferences(JSON.parse(savedPrefs));
-      }
-      if (savedConsent === "all" || (savedPrefs && JSON.parse(savedPrefs).analytics)) {
-        loadGTM();
+        const parsedPrefs = JSON.parse(savedPrefs) as CookiePreferences;
+        setPreferences(parsedPrefs);
+        // Only load GTM if analytics is explicitly enabled
+        if (parsedPrefs.analytics) {
+          loadGTM();
+        }
       }
     } else {
       setShowBanner(true);
