@@ -136,6 +136,10 @@ const SEOAuditPage = lazy(() => import("@/pages/seo-audit"));
 const AutoPilotPage = lazy(() => import("@/pages/admin/auto-pilot"));
 const ContentIntelligencePage = lazy(() => import("@/pages/admin/content-intelligence"));
 const SecurityPage = lazy(() => import("@/pages/admin/security"));
+const SiteSettingsPage = lazy(() => import("@/pages/admin/site-settings"));
+const NavigationManagerPage = lazy(() => import("@/pages/admin/navigation-manager"));
+const FooterManagerPage = lazy(() => import("@/pages/admin/footer-manager"));
+const StaticPagesPage = lazy(() => import("@/pages/admin/static-pages"));
 const WritersManagement = lazy(() => import("@/pages/admin/writers/WritersManagement"));
 const NewsroomDashboard = lazy(() => import("@/pages/admin/writers/NewsroomDashboard"));
 const OffPlanManagement = lazy(() => import("@/pages/admin/off-plan-management"));
@@ -281,6 +285,10 @@ function AdminRouter() {
         <Route path="/admin/auto-pilot" component={AutoPilotPage} />
         <Route path="/admin/content-intelligence" component={ContentIntelligencePage} />
         <Route path="/admin/security" component={SecurityPage} />
+        <Route path="/admin/site-settings" component={SiteSettingsPage} />
+        <Route path="/admin/navigation" component={NavigationManagerPage} />
+        <Route path="/admin/footer" component={FooterManagerPage} />
+        <Route path="/admin/static-pages" component={StaticPagesPage} />
         <Route path="/admin/writers" component={WritersManagement} />
         <Route path="/admin/writers/newsroom" component={NewsroomDashboard} />
         

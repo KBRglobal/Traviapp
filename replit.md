@@ -138,6 +138,14 @@ The public homepage features a playful, inviting design:
 ### Core Content Management
 - Dashboard, Attractions, Hotels, Dining, Districts, Transport, Articles, Events, Landing Pages, Case Studies, Off-Plan, Real Estate
 
+### Site Configuration Section
+- **Site Settings** (`/admin/site-settings`): Branding (name, tagline, description), contact info, default SEO settings, social media links, custom scripts, maintenance mode
+- **Navigation Manager** (`/admin/navigation`): Manage header navigation menus with Hebrew translations, icons, highlight styles, open-in-new-tab options
+- **Footer Manager** (`/admin/footer`): Organize footer sections and links with Hebrew translations
+- **Static Pages** (`/admin/static-pages`): Create/edit static pages like Terms of Service, Privacy Policy, About, Contact with Hebrew translations and SEO metadata
+
+All site configuration pages include bilingual Hebrew/English "How It Works" guidance sections (dir="rtl" for Hebrew).
+
 ### Automation Section
 - **Auto-Pilot**: Automated content scheduling and publishing, RSS feed processing, AI article generation
 - **Content Intelligence**: Content clustering, gap analysis, topic recommendations

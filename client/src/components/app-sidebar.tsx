@@ -65,6 +65,8 @@ import {
   MessageSquare,
   Workflow,
   Eye,
+  Menu,
+  PanelBottom,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -405,6 +407,30 @@ const systemItems: Array<{
     title: "Security",
     url: "/admin/security",
     icon: Lock,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Site Settings",
+    url: "/admin/site-settings",
+    icon: Settings,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Navigation",
+    url: "/admin/navigation",
+    icon: Menu,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Footer",
+    url: "/admin/footer",
+    icon: PanelBottom,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Static Pages",
+    url: "/admin/static-pages",
+    icon: FileText,
     requiredPermission: "canManageSettings",
   },
   {

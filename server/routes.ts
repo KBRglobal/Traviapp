@@ -100,6 +100,7 @@ import {
   threatIntelligence,
 } from "./enterprise-security";
 import { registerEnterpriseRoutes } from "./enterprise-routes";
+import { registerSiteConfigRoutes } from "./site-config-routes";
 import { enterprise } from "./enterprise";
 import { registerImageRoutes } from "./routes/image-routes";
 import { registerLogRoutes } from "./routes/log-routes";
@@ -9565,6 +9566,7 @@ IMPORTANT: Include 5-8 internal links and 2-3 external links in your text sectio
   // ENTERPRISE ROUTES (Teams, Workflows, Notifications, etc.)
   // ============================================================================
   registerEnterpriseRoutes(app);
+  registerSiteConfigRoutes(app);
 
   // ============================================================================
   // IMAGE ROUTES (Smart image selection + SEO + processing)

@@ -3165,3 +3165,166 @@ export const insertRealEstatePageSchema = createInsertSchema(realEstatePages).om
 export type RealEstatePage = typeof realEstatePages.$inferSelect;
 export type InsertRealEstatePage = z.infer<typeof insertRealEstatePageSchema>;
 
+
+// ============================================================================
+// SITE CONFIGURATION - FULLY EDITABLE CMS NAVIGATION & FOOTER
+// ============================================================================
+
+// Navigation Menus
+export const navigationMenus = pgTable("navigation_menus", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: varchar("slug").notNull().unique(),
+  location: text("location").notNull().default("header"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertNavigationMenuSchema = createInsertSchema(navigationMenus).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type NavigationMenu = typeof navigationMenus.$inferSelect;
+export type InsertNavigationMenu = z.infer<typeof insertNavigationMenuSchema>;
+
+// Navigation Menu Items
+export const navigationMenuItems = pgTable("navigation_menu_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  menuId: varchar("menu_id").references(() => navigationMenus.id, { onDelete: "cascade" }).notNull(),
+  parentId: varchar("parent_id"),
+  label: text("label").notNull(),
+  labelHe: text("label_he"),
+  href: text("href").notNull(),
+  icon: text("icon"),
+  openInNewTab: boolean("open_in_new_tab").default(false),
+  isHighlighted: boolean("is_highlighted").default(false),
+  highlightStyle: text("highlight_style"),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_nav_menu_items_menu").on(table.menuId),
+  index("IDX_nav_menu_items_parent").on(table.parentId),
+  index("IDX_nav_menu_items_order").on(table.sortOrder),
+]);
+
+export const insertNavigationMenuItemSchema = createInsertSchema(navigationMenuItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type NavigationMenuItem = typeof navigationMenuItems.$inferSelect;
+export type InsertNavigationMenuItem = z.infer<typeof insertNavigationMenuItemSchema>;
+
+// Footer Sections
+export const footerSections = pgTable("footer_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  titleHe: text("title_he"),
+  slug: varchar("slug").notNull().unique(),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_footer_sections_order").on(table.sortOrder),
+]);
+
+export const insertFooterSectionSchema = createInsertSchema(footerSections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type FooterSection = typeof footerSections.$inferSelect;
+export type InsertFooterSection = z.infer<typeof insertFooterSectionSchema>;
+
+// Footer Links
+export const footerLinks = pgTable("footer_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sectionId: varchar("section_id").references(() => footerSections.id, { onDelete: "cascade" }).notNull(),
+  label: text("label").notNull(),
+  labelHe: text("label_he"),
+  href: text("href").notNull(),
+  icon: text("icon"),
+  openInNewTab: boolean("open_in_new_tab").default(false),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_footer_links_section").on(table.sectionId),
+  index("IDX_footer_links_order").on(table.sortOrder),
+]);
+
+export const insertFooterLinkSchema = createInsertSchema(footerLinks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type FooterLink = typeof footerLinks.$inferSelect;
+export type InsertFooterLink = z.infer<typeof insertFooterLinkSchema>;
+
+// Static Pages (Terms, Privacy, About, Contact, etc.)
+export const staticPages = pgTable("static_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug").notNull().unique(),
+  title: text("title").notNull(),
+  titleHe: text("title_he"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  content: text("content"),
+  contentHe: text("content_he"),
+  blocks: jsonb("blocks").$type<Array<{
+    id: string;
+    type: string;
+    data: unknown;
+  }>>().default([]),
+  isActive: boolean("is_active").default(true),
+  showInFooter: boolean("show_in_footer").default(false),
+  lastEditedBy: varchar("last_edited_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_static_pages_slug").on(table.slug),
+  index("IDX_static_pages_active").on(table.isActive),
+]);
+
+export const insertStaticPageSchema = createInsertSchema(staticPages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type StaticPage = typeof staticPages.$inferSelect;
+export type InsertStaticPage = z.infer<typeof insertStaticPageSchema>;
+
+// Homepage Sections (editable hero, category cards, promos)
+export const homepageSections = pgTable("homepage_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sectionType: text("section_type").notNull(),
+  title: text("title"),
+  titleHe: text("title_he"),
+  subtitle: text("subtitle"),
+  subtitleHe: text("subtitle_he"),
+  content: jsonb("content").$type<Record<string, unknown>>().default({}),
+  backgroundImage: text("background_image"),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_homepage_sections_type").on(table.sectionType),
+  index("IDX_homepage_sections_order").on(table.sortOrder),
+]);
+
+export const insertHomepageSectionSchema = createInsertSchema(homepageSections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type HomepageSectionEntry = typeof homepageSections.$inferSelect;
+export type InsertHomepageSectionEntry = z.infer<typeof insertHomepageSectionSchema>;
