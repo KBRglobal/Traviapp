@@ -321,7 +321,7 @@ function PriceLevel({ level }: { level: number }) {
           key={i}
           className={cn(
             "w-3.5 h-3.5",
-            i <= level ? "text-amber-400" : "text-white/20"
+            i <= level ? "text-[hsl(var(--orange))]" : "text-muted-foreground/30"
           )}
         />
       ))}
@@ -729,23 +729,138 @@ export default function PublicDining() {
         id="unique-experiences"
         title="Unforgettable Dining Experiences"
         subtitle="Dine 50 meters in the sky, underwater with sharks, or at the world's highest restaurant"
-        className="bg-[hsl(var(--gray-100))] dark:bg-[hsl(var(--gray-100))]"
+        variant="alternate"
       >
         <div className="flex items-center gap-2 mb-8 flex-wrap">
           <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0">
             <Sparkles className="w-4 h-4 me-2" />
             Only in Dubai
           </Badge>
-          <Badge className="bg-white/10 text-white/80 border-white/20">
+          <Badge className="bg-muted text-muted-foreground border-border">
             <Clock className="w-4 h-4 me-2" />
             Book 2 weeks ahead
           </Badge>
         </div>
+        
+        {/* Loading State */}
+        {isLoadingDining && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <span className="ml-3 text-muted-foreground">Loading dining experiences...</span>
+          </div>
+        )}
+        
         <CategoryGrid columns={3}>
           {/* Show database restaurants first, then static ones */}
           {[...dbRestaurants, ...uniqueExperiences].map((experience) => {
             const IconComponent = experience.icon || Utensils;
             const isHovered = hoveredCard === experience.name;
+            const hasSlug = 'slug' in experience && experience.slug;
+            
+            const cardContent = (
+              <Card 
+                className="group overflow-visible bg-card rounded-[16px] shadow-[var(--shadow-level-1)] hover-elevate transition-all duration-300"
+                data-testid={`card-experience-${experience.name.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <div className="relative h-52 overflow-hidden rounded-t-[16px]">
+                  <img 
+                    src={experience.image}
+                    alt={experience.name}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                  
+                  {/* Animated Badges */}
+                  <div className={cn("absolute top-4 flex flex-col gap-2", isRTL ? "right-4" : "left-4")}>
+                    {experience.isTrending && <AnimatedBadge type="trending" />}
+                    {experience.isChefsPick && <AnimatedBadge type="chefsPick" />}
+                  </div>
+                  
+                  {/* Icon */}
+                  <div className={cn("absolute", isRTL ? "left-4" : "right-4", "top-4")}>
+                    <motion.div
+                      animate={isHovered ? { rotate: [0, -10, 10, 0] } : {}}
+                      transition={{ duration: 0.5 }}
+                      className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg"
+                    >
+                      <IconComponent className="w-5 h-5 text-white" />
+                    </motion.div>
+                  </div>
+                  
+                  {/* Signature Dish Preview on Hover */}
+                  <AnimatePresence>
+                    {isHovered && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute inset-x-4 bottom-4 p-3 bg-black/70 backdrop-blur-md rounded-xl border border-white/20"
+                      >
+                        <div className="flex items-center gap-2 text-amber-300 text-xs font-semibold mb-1">
+                          <Star className="w-3.5 h-3.5" />
+                          SIGNATURE DISH
+                        </div>
+                        <p className="text-white text-sm font-medium">{experience.signatureDish}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="text-lg font-semibold text-foreground group-hover:text-[hsl(var(--orange))] transition-colors">
+                      {experience.name}
+                    </h3>
+                    <PriceLevel level={experience.priceLevel} />
+                  </div>
+                  
+                  <p className="text-muted-foreground text-sm mb-2 flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    {experience.location}
+                  </p>
+                  
+                  {/* Cuisine Badge */}
+                  <Badge 
+                    className="mb-3 text-xs"
+                    data-testid={`badge-cuisine-${experience.cuisine.toLowerCase()}`}
+                  >
+                    {experience.cuisine}
+                  </Badge>
+                  
+                  <p className="text-muted-foreground text-sm leading-relaxed line-clamp-2">
+                    {experience.description}
+                  </p>
+                  
+                  {/* Quick Reserve / View Details Button */}
+                  <motion.div
+                    className="mt-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      data-testid={`button-reserve-${experience.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      {hasSlug ? (
+                        <>
+                          <ArrowRight className={cn("w-3.5 h-3.5 me-2", isRTL && "rotate-180")} />
+                          View Details
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="w-3.5 h-3.5 me-2" />
+                          Reserve Now
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
+                </div>
+              </Card>
+            );
             
             return (
               <motion.div
@@ -755,99 +870,17 @@ export default function PublicDining() {
                 whileHover={{ y: -8 }}
                 transition={{ duration: 0.3 }}
               >
-                <Card 
-                  className="group overflow-visible bg-white/5 backdrop-blur-sm rounded-[16px] border-0 hover-elevate transition-all duration-300"
-                  data-testid={`card-experience-${experience.name.toLowerCase().replace(/\s+/g, '-')}`}
-                >
-                  <div className="relative h-52 overflow-hidden rounded-t-[16px]">
-                    <img 
-                      src={experience.image}
-                      alt={experience.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                    
-                    {/* Animated Badges */}
-                    <div className={cn("absolute top-4 flex flex-col gap-2", isRTL ? "right-4" : "left-4")}>
-                      {experience.isTrending && <AnimatedBadge type="trending" />}
-                      {experience.isChefsPick && <AnimatedBadge type="chefsPick" />}
-                    </div>
-                    
-                    {/* Icon */}
-                    <div className={cn("absolute", isRTL ? "left-4" : "right-4", "top-4")}>
-                      <motion.div
-                        animate={isHovered ? { rotate: [0, -10, 10, 0] } : {}}
-                        transition={{ duration: 0.5 }}
-                        className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg"
-                      >
-                        <IconComponent className="w-5 h-5 text-white" />
-                      </motion.div>
-                    </div>
-                    
-                    {/* Signature Dish Preview on Hover */}
-                    <AnimatePresence>
-                      {isHovered && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          className="absolute inset-x-4 bottom-4 p-3 bg-black/70 backdrop-blur-md rounded-xl border border-white/20"
-                        >
-                          <div className="flex items-center gap-2 text-amber-300 text-xs font-semibold mb-1">
-                            <Star className="w-3.5 h-3.5" />
-                            SIGNATURE DISH
-                          </div>
-                          <p className="text-white text-sm font-medium">{experience.signatureDish}</p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                  
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="text-lg font-semibold text-white group-hover:text-amber-300 transition-colors">
-                        {experience.name}
-                      </h3>
-                      <PriceLevel level={experience.priceLevel} />
-                    </div>
-                    
-                    <p className="text-white/50 text-sm mb-2 flex items-center gap-2">
-                      <MapPin className="w-3.5 h-3.5 shrink-0" />
-                      {experience.location}
-                    </p>
-                    
-                    {/* Cuisine Badge */}
-                    <Badge 
-                      className="mb-3 bg-white/10 text-white/80 border-white/20 text-xs"
-                      data-testid={`badge-cuisine-${experience.cuisine.toLowerCase()}`}
-                    >
-                      {experience.cuisine}
-                    </Badge>
-                    
-                    <p className="text-white/70 text-sm leading-relaxed line-clamp-2">
-                      {experience.description}
-                    </p>
-                    
-                    {/* Quick Reserve Button */}
-                    <motion.div
-                      className="mt-4"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full border-amber-500/50 text-amber-300 bg-amber-500/10"
-                        data-testid={`button-reserve-${experience.name.toLowerCase().replace(/\s+/g, '-')}`}
-                      >
-                        <Phone className="w-3.5 h-3.5 me-2" />
-                        Reserve Now
-                      </Button>
-                    </motion.div>
-                  </div>
-                </Card>
+                {hasSlug ? (
+                  <Link 
+                    href={localePath(`/dining/${experience.slug}`)}
+                    className="block"
+                    data-testid={`link-dining-${experience.slug}`}
+                  >
+                    {cardContent}
+                  </Link>
+                ) : (
+                  cardContent
+                )}
               </motion.div>
             );
           })}

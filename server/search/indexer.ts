@@ -13,7 +13,7 @@ export const searchIndexer = {
   /**
    * Generate proper URL for content type
    */
-  getContentUrl(type: string, contentId: string): string {
+  getContentUrl(type: string, slug: string): string {
     // Map content types to their URL paths
     const urlMap: Record<string, string> = {
       'attraction': '/attractions/',
@@ -29,7 +29,7 @@ export const searchIndexer = {
       'off_plan': '/off-plan/',
     };
     
-    return (urlMap[type] || `/${type}s/`) + contentId;
+    return (urlMap[type] || `/${type}s/`) + slug;
   },
 
   /**
@@ -82,7 +82,7 @@ export const searchIndexer = {
         ${content.type},
         ${content.metaDescription || null},
         ${searchableText},
-        ${this.getContentUrl(content.type, contentId)},
+        ${this.getContentUrl(content.type, content.slug)},
         ${content.heroImage || null},
         ${'en'},
         ${null},

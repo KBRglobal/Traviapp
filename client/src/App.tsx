@@ -108,6 +108,8 @@ const PublicContentViewer = lazy(() => import("@/pages/public-content-viewer"));
 const PublicDocs = lazy(() => import("@/pages/public-docs"));
 const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
 const TermsConditions = lazy(() => import("@/pages/terms-conditions"));
+const PublicAbout = lazy(() => import("@/pages/public-about"));
+const PublicContact = lazy(() => import("@/pages/public-contact"));
 
 const RssFeeds = lazy(() => import("@/pages/rss-feeds"));
 const AffiliateLinks = lazy(() => import("@/pages/affiliate-links"));
@@ -131,6 +133,11 @@ const TranslationsPage = lazy(() => import("@/pages/translations"));
 const ContentCalendarPage = lazy(() => import("@/pages/content-calendar"));
 const ContentTemplatesPage = lazy(() => import("@/pages/content-templates"));
 const SEOAuditPage = lazy(() => import("@/pages/seo-audit"));
+const AutoPilotPage = lazy(() => import("@/pages/admin/auto-pilot"));
+const ContentIntelligencePage = lazy(() => import("@/pages/admin/content-intelligence"));
+const SecurityPage = lazy(() => import("@/pages/admin/security"));
+const WritersManagement = lazy(() => import("@/pages/admin/writers/WritersManagement"));
+const NewsroomDashboard = lazy(() => import("@/pages/admin/writers/NewsroomDashboard"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Login = lazy(() => import("@/pages/login"));
 const AccessDenied = lazy(() => import("@/pages/access-denied"));
@@ -248,6 +255,11 @@ function AdminRouter() {
         <Route path="/admin/calendar" component={ContentCalendarPage} />
         <Route path="/admin/templates" component={ContentTemplatesPage} />
         <Route path="/admin/seo-audit" component={SEOAuditPage} />
+        <Route path="/admin/auto-pilot" component={AutoPilotPage} />
+        <Route path="/admin/content-intelligence" component={ContentIntelligencePage} />
+        <Route path="/admin/security" component={SecurityPage} />
+        <Route path="/admin/writers" component={WritersManagement} />
+        <Route path="/admin/writers/newsroom" component={NewsroomDashboard} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -396,6 +408,9 @@ const publicRoutes = [
   // Legal pages
   { path: "/privacy", component: PrivacyPolicy },
   { path: "/terms", component: TermsConditions },
+  // About and Contact pages
+  { path: "/about", component: PublicAbout },
+  { path: "/contact", component: PublicContact },
   // District pages
   { path: "/districts", component: DistrictsGateway },
   { path: "/districts/downtown-dubai", component: DistrictDowntownDubai },

@@ -46,6 +46,10 @@ import {
   LayoutTemplate,
   SearchCheck,
   ScrollText,
+  Zap,
+  Brain,
+  PenTool,
+  Lock,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -242,6 +246,32 @@ const managementItems: Array<{
   },
 ];
 
+const automationItems: Array<{
+  title: string;
+  url: string;
+  icon: typeof Settings;
+  requiredPermission?: PermissionKey;
+}> = [
+  {
+    title: "Auto-Pilot",
+    url: "/admin/auto-pilot",
+    icon: Zap,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Content Intelligence",
+    url: "/admin/content-intelligence",
+    icon: Brain,
+    requiredPermission: "canViewAnalytics",
+  },
+  {
+    title: "AI Writers",
+    url: "/admin/writers",
+    icon: PenTool,
+    requiredPermission: "canCreate",
+  },
+];
+
 const systemItems: Array<{
   title: string;
   url: string;
@@ -252,6 +282,12 @@ const systemItems: Array<{
     title: "Settings",
     url: "/admin/settings",
     icon: Settings,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Security",
+    url: "/admin/security",
+    icon: Lock,
     requiredPermission: "canManageSettings",
   },
   {
@@ -302,6 +338,14 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const visibleManagementItems = permissionsLoading 
     ? managementItems.filter((item) => !item.requiredPermission) // Only show items without permission requirements while loading
     : managementItems.filter((item) => {
+        if (!item.requiredPermission) return true;
+        return hasPermission(item.requiredPermission);
+      });
+
+  // Filter automation items based on permissions
+  const visibleAutomationItems = permissionsLoading
+    ? automationItems.filter((item) => !item.requiredPermission)
+    : automationItems.filter((item) => {
         if (!item.requiredPermission) return true;
         return hasPermission(item.requiredPermission);
       });
@@ -377,6 +421,30 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleManagementItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      data-testid={`nav-${item.title.toLowerCase().replace(" ", "-")}`}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {visibleAutomationItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Automation</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleAutomationItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
