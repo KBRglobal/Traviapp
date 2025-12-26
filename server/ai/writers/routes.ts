@@ -165,7 +165,49 @@ export function registerWriterRoutes(app: Express) {
     }
   );
 
-  // POST /api/writers/assign - Auto-assign best writer for topic
+  // POST /api/writers/optimal - Get optimal writer without persisting assignment
+  app.post(
+    "/api/writers/optimal",
+    requireAuth,
+    async (req: Request, res: Response) => {
+      try {
+        const schema = z.object({
+          contentType: z.string(),
+          topic: z.string(),
+          keywords: z.array(z.string()).optional(),
+        });
+        const validatedData = schema.parse(req.body);
+
+        const optimalWriter = await assignmentSystem.getOptimalWriter(
+          validatedData.contentType,
+          validatedData.topic
+        );
+
+        if (!optimalWriter) {
+          return res.status(404).json({ 
+            error: "No suitable writer found",
+            message: "Could not find a writer matching the content type and topic",
+          });
+        }
+
+        // Build explanation from writer's expertise
+        const expertiseList = optimalWriter.expertise?.slice(0, 3).join(", ") || "travel content";
+        
+        res.json({
+          writer: optimalWriter,
+          reason: `${optimalWriter.name} specializes in ${expertiseList}`,
+        });
+      } catch (error) {
+        console.error("Error finding optimal writer:", error);
+        res.status(500).json({ 
+          error: "Failed to find optimal writer",
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+  );
+
+  // POST /api/writers/assign - Auto-assign best writer for topic (persists to DB)
   app.post(
     "/api/writers/assign",
     requireAuth,

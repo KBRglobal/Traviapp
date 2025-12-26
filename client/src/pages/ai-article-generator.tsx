@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,9 @@ import {
   Link,
   Image,
   ChevronRight,
+  UserCircle,
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface GeneratedArticle {
   meta: {
@@ -102,6 +104,16 @@ const inputTypeOptions = [
   { value: "manual_override", label: "Manual Input", description: "Full custom source text" },
 ];
 
+interface Writer {
+  id: string;
+  name: string;
+  avatar?: string;
+  category?: string;
+  expertise?: string[];
+  nationality?: string;
+  bio?: string;
+}
+
 export default function AIArticleGenerator() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -111,9 +123,15 @@ export default function AIArticleGenerator() {
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceText, setSourceText] = useState("");
   const [inputType, setInputType] = useState("title_only");
+  const [selectedWriterId, setSelectedWriterId] = useState<string>("auto");
   const [generatedData, setGeneratedData] = useState<GeneratedArticle | null>(null);
   const [editedData, setEditedData] = useState<GeneratedArticle | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  
+  // Fetch available writers
+  const { data: writersData, isLoading: writersLoading } = useQuery<{ writers: Writer[] }>({
+    queryKey: ["/api/writers"],
+  });
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -220,6 +238,27 @@ export default function AIArticleGenerator() {
       const categoryCode = editedData.analysis.category?.charAt(0) || "F";
       const mappedCategory = categoryMap[categoryCode] || "tips";
 
+      // Get the selected writer - if "auto", call server to find optimal writer
+      let resolvedWriterId: string | null = null;
+      if (selectedWriterId !== "auto") {
+        resolvedWriterId = selectedWriterId;
+      } else {
+        // Use server-side assignment system for optimal writer selection
+        try {
+          const optimalResponse = await apiRequest("POST", "/api/writers/optimal", {
+            contentType: "article",
+            topic: editedData.article.h1,
+            keywords: editedData.meta.keywords || [],
+          });
+          const optimalData = await optimalResponse.json();
+          resolvedWriterId = optimalData.writer?.id || null;
+        } catch (err) {
+          // Fall back to first available writer if optimal endpoint fails
+          console.warn("Failed to get optimal writer, using fallback:", err);
+          resolvedWriterId = writersData?.writers?.[0]?.id || null;
+        }
+      }
+      
       const response = await apiRequest("POST", "/api/contents", {
         title: editedData.article.h1,
         slug,
@@ -235,6 +274,8 @@ export default function AIArticleGenerator() {
         heroImage: editedData.heroImage?.url || null,
         heroImageAlt: editedData.heroImage?.alt || editedData.article.h1,
         blocks,
+        writerId: resolvedWriterId || null,
+        generatedByAI: true,
         article: {
           category: mappedCategory,
           tone: editedData.analysis.tone,
@@ -400,6 +441,49 @@ export default function AIArticleGenerator() {
                   />
                 </div>
               )}
+
+              <div className="space-y-2">
+                <Label htmlFor="writer" className="flex items-center gap-2">
+                  <UserCircle className="h-4 w-4" />
+                  Assign Writer
+                </Label>
+                <Select 
+                  value={selectedWriterId} 
+                  onValueChange={setSelectedWriterId}
+                  disabled={writersLoading}
+                >
+                  <SelectTrigger data-testid="select-writer">
+                    <SelectValue placeholder={writersLoading ? "Loading writers..." : "Select a writer"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-primary" />
+                        <span>Auto-select based on category</span>
+                      </div>
+                    </SelectItem>
+                    {writersData?.writers?.map((writer) => (
+                      <SelectItem key={writer.id} value={writer.id}>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5">
+                            {writer.avatar && <AvatarImage src={writer.avatar} alt={writer.name} />}
+                            <AvatarFallback>{writer.name?.[0] || "W"}</AvatarFallback>
+                          </Avatar>
+                          <span>{writer.name}</span>
+                          {writer.category && (
+                            <span className="text-xs text-muted-foreground">({writer.category})</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {selectedWriterId === "auto" 
+                    ? "Writer matched to article category (hotels, food, culture, etc.)" 
+                    : `Selected: ${writersData?.writers?.find(w => w.id === selectedWriterId)?.name || selectedWriterId}`}
+                </p>
+              </div>
 
               <Button 
                 type="submit" 
