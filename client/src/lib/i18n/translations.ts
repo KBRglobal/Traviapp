@@ -170,6 +170,7 @@ export const translations = {
     // Footer
     footer: {
       aboutUs: "About Us",
+      aboutTravi: "About Travi",
       contactUs: "Contact Us",
       privacyPolicy: "Privacy Policy",
       termsOfService: "Terms of Service",
@@ -188,6 +189,10 @@ export const translations = {
       open24Hours: "Open 24 Hours",
       tributeToSheikh: "Tribute to HH Sheikh Mohammed",
       lawsForTourists: "Laws for Tourists",
+      newsletter: "Subscribe to our newsletter",
+      newsletterDescription: "Get the latest Dubai travel tips and updates.",
+      emailPlaceholder: "Enter your email",
+      subscribe: "Subscribe",
     },
     // Attractions
     attractions: {
@@ -548,6 +553,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "من نحن",
+      aboutTravi: "حول ترافي",
       contactUs: "اتصل بنا",
       privacyPolicy: "سياسة الخصوصية",
       termsOfService: "شروط الخدمة",
@@ -566,6 +572,10 @@ export const translations = {
       open24Hours: "مفتوح 24 ساعة",
       tributeToSheikh: "تحية لصاحب السمو الشيخ محمد",
       lawsForTourists: "قوانين للسياح",
+      newsletter: "اشترك في نشرتنا الإخبارية",
+      newsletterDescription: "احصل على أحدث نصائح السفر إلى دبي والتحديثات.",
+      emailPlaceholder: "أدخل بريدك الإلكتروني",
+      subscribe: "اشترك",
     },
     // Attractions
     attractions: {
@@ -949,6 +959,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "हमारे बारे में",
+      aboutTravi: "ट्रैवी के बारे में",
       contactUs: "संपर्क करें",
       privacyPolicy: "गोपनीयता नीति",
       termsOfService: "सेवा की शर्तें",
@@ -967,6 +978,10 @@ export const translations = {
       open24Hours: "24 घंटे खुला",
       tributeToSheikh: "महामहिम शेख मोहम्मद को श्रद्धांजलि",
       lawsForTourists: "पर्यटकों के लिए नियम",
+      newsletter: "हमारे न्यूज़लेटर की सदस्यता लें",
+      newsletterDescription: "दुबई यात्रा के नवीनतम सुझाव और अपडेट प्राप्त करें।",
+      emailPlaceholder: "अपना ईमेल दर्ज करें",
+      subscribe: "सदस्यता लें",
     },
     // Attractions
     attractions: {
@@ -1300,6 +1315,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "ہمارے بارے میں",
+      aboutTravi: "ٹراوی کے بارے میں",
       contactUs: "ہم سے رابطہ کریں",
       privacyPolicy: "رازداری کی پالیسی",
       termsOfService: "سروس کی شرائط",
@@ -1318,6 +1334,10 @@ export const translations = {
       open24Hours: "24 گھنٹے کھلا",
       tributeToSheikh: "معزز شیخ محمد کو خراج تحسین",
       lawsForTourists: "سیاحوں کے لیے قوانین",
+      newsletter: "ہمارے نیوز لیٹر کی سبسکرائب کریں",
+      newsletterDescription: "دبئی سفر کے تازہ ترین مشورے اور اپڈیٹس حاصل کریں۔",
+      emailPlaceholder: "اپنا ای میل درج کریں",
+      subscribe: "سبسکرائب کریں",
     },
     // Attractions
     attractions: {
@@ -1650,6 +1670,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "О нас",
+      aboutTravi: "О Travi",
       contactUs: "Связаться с нами",
       privacyPolicy: "Политика конфиденциальности",
       termsOfService: "Условия использования",
@@ -1668,6 +1689,10 @@ export const translations = {
       open24Hours: "Открыто 24 часа",
       tributeToSheikh: "Дань уважения Его Высочеству Шейху Мохаммеду",
       lawsForTourists: "Законы для туристов",
+      newsletter: "Подпишитесь на нашу рассылку",
+      newsletterDescription: "Получайте актуальные советы и новости о путешествиях в Дубай.",
+      emailPlaceholder: "Введите ваш email",
+      subscribe: "Подписаться",
     },
     // Attractions
     attractions: {
@@ -2000,6 +2025,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "درباره ما",
+      aboutTravi: "درباره تراوی",
       contactUs: "تماس با ما",
       privacyPolicy: "سیاست حفظ حریم خصوصی",
       termsOfService: "شرایط خدمات",
@@ -2018,6 +2044,10 @@ export const translations = {
       open24Hours: "24 ساعته باز",
       tributeToSheikh: "ادای احترام به حضرت شیخ محمد",
       lawsForTourists: "قوانین برای گردشگران",
+      newsletter: "در خبرنامه ما عضو شوید",
+      newsletterDescription: "آخرین نکات و به‌روزرسانی‌های سفر به دبی را دریافت کنید.",
+      emailPlaceholder: "ایمیل خود را وارد کنید",
+      subscribe: "عضویت",
     },
     // Attractions
     attractions: {
@@ -2350,6 +2380,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "关于我们",
+      aboutTravi: "关于Travi",
       contactUs: "联系我们",
       privacyPolicy: "隐私政策",
       termsOfService: "服务条款",
@@ -2368,6 +2399,10 @@ export const translations = {
       open24Hours: "24小时营业",
       tributeToSheikh: "致敬谢赫穆罕默德殿下",
       lawsForTourists: "游客须知法规",
+      newsletter: "订阅我们的通讯",
+      newsletterDescription: "获取迪拜旅行的最新提示和更新。",
+      emailPlaceholder: "输入您的邮箱",
+      subscribe: "订阅",
     },
     // Attractions
     attractions: {
@@ -2701,6 +2736,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "À propos",
+      aboutTravi: "À propos de Travi",
       contactUs: "Nous contacter",
       privacyPolicy: "Politique de confidentialité",
       termsOfService: "Conditions d'utilisation",
@@ -2719,6 +2755,10 @@ export const translations = {
       open24Hours: "Ouvert 24h/24",
       tributeToSheikh: "Hommage à Son Altesse Cheikh Mohammed",
       lawsForTourists: "Lois pour les touristes",
+      newsletter: "Inscrivez-vous à notre newsletter",
+      newsletterDescription: "Recevez les derniers conseils et actualités de voyage à Dubaï.",
+      emailPlaceholder: "Entrez votre email",
+      subscribe: "S'inscrire",
     },
     // Attractions
     attractions: {
@@ -3051,6 +3091,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "Über uns",
+      aboutTravi: "Über Travi",
       contactUs: "Kontakt",
       privacyPolicy: "Datenschutz",
       termsOfService: "Nutzungsbedingungen",
@@ -3069,6 +3110,10 @@ export const translations = {
       open24Hours: "24 Stunden geöffnet",
       tributeToSheikh: "Ehrung für Seine Hoheit Scheich Mohammed",
       lawsForTourists: "Gesetze für Touristen",
+      newsletter: "Abonnieren Sie unseren Newsletter",
+      newsletterDescription: "Erhalten Sie die neuesten Reisetipps und Updates für Dubai.",
+      emailPlaceholder: "Geben Sie Ihre E-Mail ein",
+      subscribe: "Abonnieren",
     },
     // Attractions
     attractions: {
@@ -3400,6 +3445,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "Chi siamo",
+      aboutTravi: "Chi è Travi",
       contactUs: "Contattaci",
       privacyPolicy: "Privacy Policy",
       termsOfService: "Termini di servizio",
@@ -3418,6 +3464,10 @@ export const translations = {
       open24Hours: "Aperto 24 ore",
       tributeToSheikh: "Omaggio a Sua Altezza Sceicco Mohammed",
       lawsForTourists: "Leggi per i turisti",
+      newsletter: "Iscriviti alla nostra newsletter",
+      newsletterDescription: "Ricevi gli ultimi consigli di viaggio e aggiornamenti su Dubai.",
+      emailPlaceholder: "Inserisci la tua email",
+      subscribe: "Iscriviti",
     },
     // Attractions
     attractions: {
@@ -3750,6 +3800,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "Sobre nosotros",
+      aboutTravi: "Acerca de Travi",
       contactUs: "Contáctanos",
       privacyPolicy: "Política de privacidad",
       termsOfService: "Términos de servicio",
@@ -3768,6 +3819,10 @@ export const translations = {
       open24Hours: "Abierto 24 horas",
       tributeToSheikh: "Homenaje a Su Alteza el Jeque Mohammed",
       lawsForTourists: "Leyes para turistas",
+      newsletter: "Suscríbete a nuestro boletín",
+      newsletterDescription: "Recibe los últimos consejos y novedades de viaje a Dubái.",
+      emailPlaceholder: "Ingresa tu email",
+      subscribe: "Suscribirse",
     },
     // Attractions
     attractions: {
@@ -4099,6 +4154,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "Hakkımızda",
+      aboutTravi: "Travi Hakkında",
       contactUs: "Bize ulaşın",
       privacyPolicy: "Gizlilik politikası",
       termsOfService: "Kullanım şartları",
@@ -4117,6 +4173,10 @@ export const translations = {
       open24Hours: "24 Saat Açık",
       tributeToSheikh: "Ekselansları Şeyh Mohammed'e Saygı",
       lawsForTourists: "Turistler için Yasalar",
+      newsletter: "Bültenimize abone olun",
+      newsletterDescription: "Dubai seyahati hakkında en son ipuçlarını ve güncellemeleri alın.",
+      emailPlaceholder: "E-postanızı girin",
+      subscribe: "Abone ol",
     },
     // Attractions
     attractions: {
@@ -4449,6 +4509,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "আমাদের সম্পর্কে",
+      aboutTravi: "ট্র্যাভি সম্পর্কে",
       contactUs: "যোগাযোগ করুন",
       privacyPolicy: "গোপনীয়তা নীতি",
       termsOfService: "সেবার শর্তাবলী",
@@ -4467,6 +4528,10 @@ export const translations = {
       open24Hours: "24 ঘণ্টা খোলা",
       tributeToSheikh: "মাননীয় শেখ মোহাম্মদকে শ্রদ্ধা",
       lawsForTourists: "পর্যটকদের জন্য আইন",
+      newsletter: "আমাদের নিউজলেটারে সাবস্ক্রাইব করুন",
+      newsletterDescription: "দুবাই ভ্রমণের সর্বশেষ টিপস এবং আপডেট পান।",
+      emailPlaceholder: "আপনার ইমেল লিখুন",
+      subscribe: "সাবস্ক্রাইব করুন",
     },
     // Attractions
     attractions: {
@@ -4799,6 +4864,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "Tungkol sa amin",
+      aboutTravi: "Tungkol sa Travi",
       contactUs: "Makipag-ugnayan",
       privacyPolicy: "Patakaran sa privacy",
       termsOfService: "Mga tuntunin ng serbisyo",
@@ -4817,6 +4883,10 @@ export const translations = {
       open24Hours: "Bukas 24 Oras",
       tributeToSheikh: "Pagpupugay kay HH Sheikh Mohammed",
       lawsForTourists: "Mga Batas para sa mga Turista",
+      newsletter: "Mag-subscribe sa aming newsletter",
+      newsletterDescription: "Kunin ang mga pinakabagong tip at update sa paglalakbay sa Dubai.",
+      emailPlaceholder: "Ilagay ang iyong email",
+      subscribe: "Mag-subscribe",
     },
     // Attractions
     attractions: {
@@ -5150,6 +5220,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "私たちについて",
+      aboutTravi: "Traviについて",
       contactUs: "お問い合わせ",
       privacyPolicy: "プライバシーポリシー",
       termsOfService: "利用規約",
@@ -5168,6 +5239,10 @@ export const translations = {
       open24Hours: "24時間営業",
       tributeToSheikh: "シェイク・モハメッド殿下への敬意",
       lawsForTourists: "観光客向けの法律",
+      newsletter: "ニュースレターを購読",
+      newsletterDescription: "ドバイ旅行の最新情報とヒントをお届けします。",
+      emailPlaceholder: "メールアドレスを入力",
+      subscribe: "購読する",
     },
     // Attractions
     attractions: {
@@ -5501,6 +5576,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "회사 소개",
+      aboutTravi: "Travi 소개",
       contactUs: "문의하기",
       privacyPolicy: "개인정보처리방침",
       termsOfService: "이용약관",
@@ -5519,6 +5595,10 @@ export const translations = {
       open24Hours: "24시간 영업",
       tributeToSheikh: "셰이크 모하메드 전하께 경의",
       lawsForTourists: "관광객을 위한 법률",
+      newsletter: "뉴스레터 구독",
+      newsletterDescription: "두바이 여행에 대한 최신 팁과 업데이트를 받으세요.",
+      emailPlaceholder: "이메일을 입력하세요",
+      subscribe: "구독하기",
     },
     // Attractions
     attractions: {
@@ -5828,6 +5908,7 @@ export const translations = {
     },
     footer: {
       aboutUs: "אודותינו",
+      aboutTravi: "אודות Travi",
       contactUs: "צור קשר",
       privacyPolicy: "מדיניות פרטיות",
       termsOfService: "תנאי שימוש",
@@ -5846,6 +5927,10 @@ export const translations = {
       open24Hours: "פתוח 24 שעות",
       tributeToSheikh: "מחווה להוד מעלתו השייח' מוחמד",
       lawsForTourists: "חוקים לתיירים",
+      newsletter: "הירשמו לניוזלטר שלנו",
+      newsletterDescription: "קבלו את הטיפים והעדכונים האחרונים על טיולים בדובאי.",
+      emailPlaceholder: "הזינו את האימייל שלכם",
+      subscribe: "הירשמו",
     },
     // Attractions
     attractions: {
