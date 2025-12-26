@@ -1,16 +1,49 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Search, ChevronDown, MapPin, Camera, Building2, Utensils, Sparkles, Compass, ShoppingBag } from "lucide-react";
+import { Menu, X, Search, ChevronDown, MapPin, Camera, Building2, Utensils, Sparkles, Compass, ShoppingBag, LucideIcon, Circle } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher, LanguageSelectorMobile } from "./language-switcher";
 import { useLocale } from "@/lib/i18n/LocaleRouter";
+import { useQuery } from "@tanstack/react-query";
 import mascotImage from "@assets/Mascot_for_Dark_Background_1765497703861.png";
+
+const iconMap: Record<string, LucideIcon> = {
+  Camera, Building2, MapPin, Utensils, ShoppingBag, Compass, Sparkles, Menu, Search
+};
+
+function getIcon(iconName?: string | null): LucideIcon {
+  if (!iconName) return Circle;
+  return iconMap[iconName] || Circle;
+}
+
+interface NavItem {
+  id: string;
+  label: string;
+  labelHe?: string | null;
+  href: string;
+  icon?: string | null;
+  isHighlighted?: boolean;
+  highlightStyle?: string | null;
+  sortOrder: number;
+}
+
+interface NavMenu {
+  items: NavItem[];
+}
+
+const fallbackNavLinks = [
+  { href: "/attractions", label: "Attractions", labelHe: "אטרקציות", icon: "Camera" },
+  { href: "/hotels", label: "Hotels", labelHe: "מלונות", icon: "Building2" },
+  { href: "/districts", label: "Districts", labelHe: "שכונות", icon: "MapPin" },
+  { href: "/dining", label: "Dining", labelHe: "מסעדות", icon: "Utensils" },
+  { href: "/shopping", label: "Shopping", labelHe: "קניות", icon: "ShoppingBag" },
+  { href: "/news", label: "News", labelHe: "חדשות", icon: "Compass" },
+];
 
 interface PublicNavProps {
   className?: string;
   variant?: "default" | "transparent";
-  /** When variant is "transparent", specify if hero background is light or dark */
   transparentTone?: "light" | "dark";
   hideOnMobile?: boolean;
   onMobileMenuToggle?: (isOpen: boolean) => void;
@@ -27,7 +60,6 @@ export function PublicNav({
 }: PublicNavProps) {
   const [internalMobileMenuOpen, setInternalMobileMenuOpen] = useState(false);
   
-  // Use external state if provided, otherwise use internal
   const mobileMenuOpen = externalMobileMenuOpen !== undefined ? externalMobileMenuOpen : internalMobileMenuOpen;
   const setMobileMenuOpen = (value: boolean) => {
     setInternalMobileMenuOpen(value);
@@ -35,7 +67,22 @@ export function PublicNav({
   };
   const [scrolled, setScrolled] = useState(false);
   const [location] = useLocation();
-  const { t, localePath, isRTL } = useLocale();
+  const { t, localePath, isRTL, locale } = useLocale();
+
+  const { data: navMenu } = useQuery<NavMenu>({
+    queryKey: ['/api/site-config/public/navigation/main'],
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
+  });
+
+  const navItems = navMenu?.items || [];
+  const regularNavLinks = navItems.filter(item => !item.isHighlighted);
+  const highlightedLinks = navItems.filter(item => item.isHighlighted);
+
+  const displayNavLinks = regularNavLinks.length > 0 ? regularNavLinks : fallbackNavLinks;
+  const displayHighlightedLinks = highlightedLinks.length > 0 ? highlightedLinks : [
+    { href: "/dubai-off-plan-properties", label: "Real Estate", labelHe: "נדל\"ן", icon: "Sparkles", isHighlighted: true }
+  ];
 
   useEffect(() => {
     const handleScroll = () => {
@@ -45,14 +92,10 @@ export function PublicNav({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navLinks = [
-    { href: "/attractions", labelKey: "nav.attractions", icon: Camera },
-    { href: "/hotels", labelKey: "nav.hotels", icon: Building2 },
-    { href: "/districts", labelKey: "nav.districts", icon: MapPin },
-    { href: "/dining", labelKey: "nav.dining", icon: Utensils },
-    { href: "/shopping", labelKey: "nav.shopping", icon: ShoppingBag },
-    { href: "/news", labelKey: "nav.news", icon: Compass },
-  ];
+  const getLabel = (item: { label: string; labelHe?: string | null }) => {
+    if (locale === 'he' && item.labelHe) return item.labelHe;
+    return item.label;
+  };
 
   const isTransparent = variant === "transparent";
   const showGlassEffect = isTransparent && scrolled;
@@ -92,8 +135,8 @@ export function PublicNav({
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-1" role="navigation" aria-label="Primary">
-              {navLinks.map((link) => {
-                const IconComponent = link.icon;
+              {displayNavLinks.map((link) => {
+                const IconComponent = getIcon(link.icon);
                 const active = isActive(link.href) || isActive(localePath(link.href));
                 return (
                   <Link
@@ -113,22 +156,28 @@ export function PublicNav({
                     data-testid={`link-${link.href.slice(1)}`}
                   >
                     <IconComponent className="w-4 h-4" />
-                    {t(link.labelKey)}
+                    {getLabel(link)}
                   </Link>
                 );
               })}
               
-              {/* Real Estate Link - Highlighted */}
-              <Link
-                href={localePath("/dubai-off-plan-properties")}
-                className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 bg-gradient-to-r from-travi-purple to-travi-pink text-white shadow-md shadow-travi-purple/25 hover:shadow-lg hover:shadow-travi-purple/30"
-                data-testid="link-off-plan"
-              >
-                <span className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  {t("nav.realEstate")}
-                </span>
-              </Link>
+              {/* Highlighted Links (e.g., Real Estate) */}
+              {displayHighlightedLinks.map((link) => {
+                const IconComponent = getIcon(link.icon);
+                return (
+                  <Link
+                    key={link.href}
+                    href={localePath(link.href)}
+                    className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 bg-gradient-to-r from-travi-purple to-travi-pink text-white shadow-md shadow-travi-purple/25 hover:shadow-lg hover:shadow-travi-purple/30"
+                    data-testid={`link-${link.href.slice(1).replace('/', '-')}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <IconComponent className="w-4 h-4" />
+                      {getLabel(link)}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
 
             {/* Right Side Actions */}
@@ -228,8 +277,8 @@ export function PublicNav({
         {/* Navigation Links */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className="flex flex-col gap-1">
-            {navLinks.map((link) => {
-              const IconComponent = link.icon;
+            {displayNavLinks.map((link) => {
+              const IconComponent = getIcon(link.icon);
               const active = isActive(link.href) || isActive(localePath(link.href));
               return (
                 <Link
@@ -250,23 +299,29 @@ export function PublicNav({
                   }`}>
                     <IconComponent className="w-5 h-5" />
                   </div>
-                  <span>{t(link.labelKey)}</span>
+                  <span>{getLabel(link)}</span>
                 </Link>
               );
             })}
             
-            {/* Real Estate - Mobile (Highlighted) */}
-            <Link
-              href={localePath("/dubai-off-plan-properties")}
-              className="mt-2 py-3.5 px-4 rounded-xl text-base font-medium bg-gradient-to-r from-travi-purple to-travi-pink text-white flex items-center gap-3 shadow-lg shadow-travi-purple/25"
-              data-testid="link-off-plan-mobile"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/20">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <span>{t("nav.realEstate")}</span>
-            </Link>
+            {/* Highlighted Links - Mobile */}
+            {displayHighlightedLinks.map((link) => {
+              const IconComponent = getIcon(link.icon);
+              return (
+                <Link
+                  key={link.href}
+                  href={localePath(link.href)}
+                  className="mt-2 py-3.5 px-4 rounded-xl text-base font-medium bg-gradient-to-r from-travi-purple to-travi-pink text-white flex items-center gap-3 shadow-lg shadow-travi-purple/25"
+                  data-testid={`link-${link.href.slice(1).replace('/', '-')}-mobile`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/20">
+                    <IconComponent className="w-5 h-5" />
+                  </div>
+                  <span>{getLabel(link)}</span>
+                </Link>
+              );
+            })}
           </div>
 
           {/* Language Section */}
