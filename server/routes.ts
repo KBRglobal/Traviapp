@@ -1918,56 +1918,52 @@ export async function registerRoutes(
     details?: Record<string, unknown>;
   }
 
-  // In-memory log storage (last 1000 entries)
-  const systemLogs: LogEntry[] = [];
-  const MAX_LOGS = 1000;
+  // Import console logger for real-time log streaming
+  const { consoleLogger } = await import("./console-logger");
 
-  // Helper to add a log entry
-  function addSystemLog(level: LogLevel, category: LogCategory, message: string, details?: Record<string, unknown>) {
-    const entry: LogEntry = {
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      level,
-      category,
-      message,
-      details,
-    };
-    systemLogs.unshift(entry);
-    if (systemLogs.length > MAX_LOGS) {
-      systemLogs.pop();
-    }
-    // Also log to console
-    const emoji = level === "error" ? "❌" : level === "warning" ? "⚠️" : level === "info" ? "ℹ️" : "🔍";
-    console.log(`${emoji} [${category.toUpperCase()}] ${message}`);
+  // Helper function for structured logging (backwards compatibility)
+  function addSystemLog(level: LogLevel, category: LogCategory, message: string, _details?: Record<string, unknown>) {
+    const normalizedLevel = level === "warning" ? "warn" : level;
+    consoleLogger.addManualLog(normalizedLevel as any, category, message);
   }
 
   // Expose for use in other parts of the app
   (global as any).addSystemLog = addSystemLog;
 
-  // Get logs
+  // Get logs - now returns actual console output with human-readable messages
   app.get("/api/admin/logs", requirePermission("canManageSettings"), async (req: Request, res: Response) => {
     try {
       const { category, level, search, limit = "200" } = req.query;
 
-      let filtered = [...systemLogs];
+      let logs = consoleLogger.getLogs(parseInt(limit as string, 10) || 200);
 
       if (category && category !== "all") {
-        filtered = filtered.filter(log => log.category === category);
+        logs = logs.filter(log => log.category === category);
       }
       if (level && level !== "all") {
-        filtered = filtered.filter(log => log.level === level);
+        logs = logs.filter(log => log.level === level);
       }
       if (search && typeof search === "string") {
         const searchLower = search.toLowerCase();
-        filtered = filtered.filter(log =>
-          log.message.toLowerCase().includes(searchLower) ||
-          JSON.stringify(log.details || {}).toLowerCase().includes(searchLower)
+        logs = logs.filter(log =>
+          log.humanMessage.toLowerCase().includes(searchLower) ||
+          log.rawMessage.toLowerCase().includes(searchLower)
         );
       }
 
+      // Transform to the expected format for the frontend
+      const transformedLogs = logs.map(log => ({
+        id: log.id,
+        timestamp: log.timestamp,
+        level: log.level,
+        category: log.category,
+        message: log.humanMessage,
+        rawMessage: log.rawMessage,
+      }));
+
       res.json({
-        logs: filtered.slice(0, parseInt(limit as string, 10)),
-        total: filtered.length,
+        logs: transformedLogs.reverse(), // Most recent first
+        total: transformedLogs.length,
       });
     } catch (error) {
       console.error("Error fetching logs:", error);
@@ -1975,32 +1971,59 @@ export async function registerRoutes(
     }
   });
 
+  // Server-Sent Events endpoint for real-time log streaming
+  app.get("/api/admin/logs/stream", requirePermission("canManageSettings"), (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const onLog = (log: any) => {
+      const data = JSON.stringify({
+        id: log.id,
+        timestamp: log.timestamp,
+        level: log.level,
+        category: log.category,
+        message: log.humanMessage,
+        rawMessage: log.rawMessage,
+      });
+      res.write(`data: ${data}\n\n`);
+    };
+
+    consoleLogger.on('log', onLog);
+
+    req.on('close', () => {
+      consoleLogger.off('log', onLog);
+    });
+  });
+
   // Get log stats
   app.get("/api/admin/logs/stats", requirePermission("canManageSettings"), async (_req: Request, res: Response) => {
     try {
+      const logs = consoleLogger.getLogs();
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
       const stats = {
-        total: systemLogs.length,
+        total: logs.length,
         byLevel: {
-          error: systemLogs.filter(l => l.level === "error").length,
-          warning: systemLogs.filter(l => l.level === "warning").length,
-          info: systemLogs.filter(l => l.level === "info").length,
-          debug: systemLogs.filter(l => l.level === "debug").length,
+          error: logs.filter(l => l.level === "error").length,
+          warning: logs.filter(l => l.level === "warn").length,
+          info: logs.filter(l => l.level === "info").length,
+          debug: logs.filter(l => l.level === "debug").length,
         },
         byCategory: {
-          system: systemLogs.filter(l => l.category === "system").length,
-          ai: systemLogs.filter(l => l.category === "ai").length,
-          images: systemLogs.filter(l => l.category === "images").length,
-          storage: systemLogs.filter(l => l.category === "storage").length,
-          rss: systemLogs.filter(l => l.category === "rss").length,
-          content: systemLogs.filter(l => l.category === "content").length,
-          auth: systemLogs.filter(l => l.category === "auth").length,
-          api: systemLogs.filter(l => l.category === "api").length,
-          seo: systemLogs.filter(l => l.category === "seo").length,
-          publishing: systemLogs.filter(l => l.category === "publishing").length,
+          system: logs.filter(l => l.category === "system").length,
+          ai: logs.filter(l => l.category === "ai").length,
+          images: logs.filter(l => l.category === "images").length,
+          storage: logs.filter(l => l.category === "storage").length,
+          rss: logs.filter(l => l.category === "rss").length,
+          content: logs.filter(l => l.category === "content").length,
+          auth: logs.filter(l => l.category === "auth").length,
+          http: logs.filter(l => l.category === "http").length,
+          autopilot: logs.filter(l => l.category === "autopilot").length,
+          dev: logs.filter(l => l.category === "dev").length,
         },
-        recentErrors: systemLogs.filter(l => l.level === "error" && l.timestamp >= oneHourAgo).length,
+        recentErrors: logs.filter(l => l.level === "error" && l.timestamp >= oneHourAgo).length,
       };
 
       res.json(stats);
@@ -2013,8 +2036,8 @@ export async function registerRoutes(
   // Clear logs
   app.delete("/api/admin/logs", requirePermission("canManageSettings"), async (_req: Request, res: Response) => {
     try {
-      systemLogs.length = 0;
-      addSystemLog("info", "system", "Logs cleared by admin");
+      consoleLogger.clear();
+      consoleLogger.addManualLog("info", "system", "Logs cleared by admin");
       res.json({ success: true, message: "Logs cleared" });
     } catch (error) {
       console.error("Error clearing logs:", error);
@@ -2027,28 +2050,25 @@ export async function registerRoutes(
     try {
       const { category, level } = req.query;
 
-      let filtered = [...systemLogs];
+      let logs = consoleLogger.getLogs();
       if (category && category !== "all") {
-        filtered = filtered.filter(log => log.category === category);
+        logs = logs.filter(log => log.category === category);
       }
       if (level && level !== "all") {
-        filtered = filtered.filter(log => log.level === level);
+        logs = logs.filter(log => log.level === level);
       }
 
       res.setHeader("Content-Type", "application/json");
       res.setHeader("Content-Disposition", `attachment; filename="logs-${new Date().toISOString().split('T')[0]}.json"`);
-      res.json(filtered);
+      res.json(logs);
     } catch (error) {
       console.error("Error exporting logs:", error);
       res.status(500).json({ error: "Failed to export logs" });
     }
   });
 
-  // Add initial system log
-  addSystemLog("info", "system", "Server started", {
-    nodeVersion: process.version,
-    platform: process.platform,
-  });
+  // Log server startup
+  consoleLogger.addManualLog("info", "server", "CMS Server started successfully");
 
   // Serve AI-generated images from storage
   app.get("/api/ai-images/:filename", async (req: Request, res: Response) => {

@@ -38,8 +38,8 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 
-type LogLevel = "error" | "warning" | "info" | "debug";
-type LogCategory = "system" | "ai" | "images" | "storage" | "rss" | "content" | "auth" | "api" | "seo" | "publishing";
+type LogLevel = "error" | "warn" | "info" | "debug";
+type LogCategory = "system" | "ai" | "images" | "storage" | "rss" | "content" | "auth" | "http" | "autopilot" | "dev" | "server" | "database";
 
 interface LogEntry {
   id: string;
@@ -47,7 +47,7 @@ interface LogEntry {
   level: LogLevel;
   category: LogCategory;
   message: string;
-  details?: Record<string, unknown>;
+  rawMessage?: string;
 }
 
 interface LogStats {
@@ -65,9 +65,11 @@ const categoryIcons: Record<LogCategory, typeof Server> = {
   rss: Rss,
   content: FileText,
   auth: Shield,
-  api: BarChart3,
-  seo: BarChart3,
-  publishing: CheckCircle,
+  http: BarChart3,
+  autopilot: Clock,
+  dev: Bug,
+  server: Server,
+  database: Database,
 };
 
 const categoryLabels: Record<LogCategory, string> = {
@@ -78,28 +80,30 @@ const categoryLabels: Record<LogCategory, string> = {
   rss: "RSS",
   content: "Content",
   auth: "Auth",
-  api: "API",
-  seo: "SEO",
-  publishing: "Publishing",
+  http: "HTTP",
+  autopilot: "AutoPilot",
+  dev: "Dev",
+  server: "Server",
+  database: "Database",
 };
 
 const levelColors: Record<LogLevel, string> = {
   error: "text-red-400",
-  warning: "text-yellow-400",
+  warn: "text-yellow-400",
   info: "text-cyan-400",
   debug: "text-gray-400",
 };
 
 const levelLabels: Record<LogLevel, string> = {
   error: "ERROR",
-  warning: "WARN",
+  warn: "WARN",
   info: "INFO",
   debug: "DEBUG",
 };
 
 const levelIcons: Record<LogLevel, typeof AlertCircle> = {
   error: AlertCircle,
-  warning: AlertTriangle,
+  warn: AlertTriangle,
   info: Info,
   debug: Bug,
 };
@@ -227,15 +231,17 @@ export default function AdminLogs() {
   const categories: (LogCategory | "all")[] = [
     "all",
     "system",
+    "server",
+    "http",
+    "autopilot",
     "ai",
-    "images",
-    "storage",
     "rss",
     "content",
     "auth",
-    "api",
-    "seo",
-    "publishing",
+    "images",
+    "storage",
+    "database",
+    "dev",
   ];
 
   return (

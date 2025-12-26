@@ -5,6 +5,10 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { securityHeaders, corsMiddleware, sanitizeInput } from "./security";
 import { setupSecurityMiddleware } from "./security/index";
+import { consoleLogger } from "./console-logger";
+
+// Start capturing console output for the admin logs panel
+consoleLogger.start();
 
 const app = express();
 
