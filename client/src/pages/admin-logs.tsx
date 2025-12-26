@@ -84,10 +84,17 @@ const categoryLabels: Record<LogCategory, string> = {
 };
 
 const levelColors: Record<LogLevel, string> = {
-  error: "bg-red-500/10 text-red-500 border-red-500/20",
-  warning: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  info: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  debug: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+  error: "text-red-400",
+  warning: "text-yellow-400",
+  info: "text-cyan-400",
+  debug: "text-gray-400",
+};
+
+const levelLabels: Record<LogLevel, string> = {
+  error: "ERROR",
+  warning: "WARN",
+  info: "INFO",
+  debug: "DEBUG",
 };
 
 const levelIcons: Record<LogLevel, typeof AlertCircle> = {
@@ -99,35 +106,38 @@ const levelIcons: Record<LogLevel, typeof AlertCircle> = {
 
 function LogEntryItem({ log }: { log: LogEntry }) {
   const [expanded, setExpanded] = useState(false);
-  const Icon = levelIcons[log.level];
-  const CategoryIcon = categoryIcons[log.category];
+  const timestamp = new Date(log.timestamp);
+  const timeStr = timestamp.toLocaleTimeString('en-US', { 
+    hour12: false, 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit' 
+  });
+  const dateStr = timestamp.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: '2-digit' 
+  });
 
   return (
     <div
-      className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-sm ${levelColors[log.level]}`}
+      className="font-mono text-sm cursor-pointer hover:bg-white/5 px-2 py-1 rounded transition-colors"
       onClick={() => setExpanded(!expanded)}
     >
-      <div className="flex items-start gap-3">
-        <Icon className="h-4 w-4 mt-0.5 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <Badge variant="outline" className="text-xs gap-1">
-              <CategoryIcon className="h-3 w-3" />
-              {categoryLabels[log.category]}
-            </Badge>
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
-            </span>
-          </div>
-          <p className="text-sm font-medium break-words">{log.message}</p>
-          {expanded && log.details && (
-            <pre className="mt-2 p-2 bg-black/10 rounded text-xs overflow-auto max-h-40">
-              {JSON.stringify(log.details, null, 2)}
-            </pre>
-          )}
-        </div>
+      <div className="flex items-start gap-2">
+        <span className="text-gray-500 shrink-0">{dateStr} {timeStr}</span>
+        <span className={`shrink-0 font-bold w-14 ${levelColors[log.level]}`}>
+          [{levelLabels[log.level]}]
+        </span>
+        <span className="text-purple-400 shrink-0 w-24">
+          [{categoryLabels[log.category].toUpperCase()}]
+        </span>
+        <span className="text-gray-200 break-words flex-1">{log.message}</span>
       </div>
+      {expanded && log.details && (
+        <pre className="mt-1 ml-[168px] pl-2 border-l-2 border-gray-600 text-gray-400 text-xs overflow-auto max-h-40">
+          {JSON.stringify(log.details, null, 2)}
+        </pre>
+      )}
     </div>
   );
 }
@@ -346,49 +356,43 @@ export default function AdminLogs() {
         </TabsList>
 
         <TabsContent value={selectedCategory} className="mt-0">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                {selectedCategory === "all" ? (
-                  <>
-                    <Server className="h-5 w-5" />
-                    All Logs
-                  </>
-                ) : (
-                  <>
-                    {(() => {
-                      const Icon = categoryIcons[selectedCategory as LogCategory];
-                      return <Icon className="h-5 w-5" />;
-                    })()}
-                    {categoryLabels[selectedCategory as LogCategory]} Logs
-                  </>
-                )}
-              </CardTitle>
-              <CardDescription>
-                {filteredLogs.length} log entries
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <div className="rounded-lg border bg-[#1a1a2e] text-gray-100 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 bg-[#16162a] border-b border-gray-700">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                </div>
+                <span className="font-mono text-sm text-gray-400 ml-2">
+                  {selectedCategory === "all" ? "system-logs" : `${selectedCategory}-logs`} — {filteredLogs.length} entries
+                </span>
+              </div>
+              <span className="font-mono text-xs text-gray-500">
+                {autoRefresh ? "LIVE" : "PAUSED"}
+              </span>
+            </div>
+            <div className="p-2">
               {logsLoading ? (
                 <div className="flex items-center justify-center py-10">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
               ) : filteredLogs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                  <Info className="h-8 w-8 mb-2" />
-                  <p>No logs found</p>
+                <div className="flex flex-col items-center justify-center py-10 text-gray-500 font-mono">
+                  <span className="text-cyan-400">$</span>
+                  <p className="mt-2">No logs found</p>
                 </div>
               ) : (
                 <ScrollArea className="h-[500px]">
-                  <div className="space-y-2 pr-4">
+                  <div className="space-y-0.5 pr-4">
                     {filteredLogs.map((log: LogEntry) => (
                       <LogEntryItem key={log.id} log={log} />
                     ))}
                   </div>
                 </ScrollArea>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
