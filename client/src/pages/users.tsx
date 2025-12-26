@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -44,7 +45,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Loader2, Users, Trash2, Edit2, Eye, EyeOff } from "lucide-react";
+import { Plus, Loader2, Users, Trash2, Edit2, Eye, EyeOff, X } from "lucide-react";
 import { Redirect } from "wouter";
 
 type User = {
@@ -86,6 +87,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -191,6 +193,28 @@ export default function UsersPage() {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const response = await apiRequest("POST", "/api/users/bulk-delete", { ids });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setSelectedIds([]);
+      toast({
+        title: "Users deleted",
+        description: `${data.deletedCount} user(s) deleted successfully`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete users",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEditClick = (user: User) => {
     setEditingUser(user);
     editForm.reset({
@@ -210,6 +234,30 @@ export default function UsersPage() {
   const handleEditSubmit = (data: EditUserFormData) => {
     if (editingUser) {
       updateUserMutation.mutate({ id: editingUser.id, data });
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} selected user(s)?`)) {
+      bulkDeleteMutation.mutate(selectedIds);
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Select all except current user
+      setSelectedIds(users.filter(u => u.id !== currentUser?.id).map(u => u.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (userId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, userId]);
+    } else {
+      setSelectedIds(prev => prev.filter(id => id !== userId));
     }
   };
 
@@ -428,6 +476,30 @@ export default function UsersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {selectedIds.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 p-3 bg-muted rounded-md mb-4" data-testid="bulk-actions-toolbar">
+              <span className="text-sm font-medium">{selectedIds.length} selected</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleteMutation.isPending}
+                data-testid="button-bulk-delete-users"
+              >
+                <Trash2 className="mr-1 h-4 w-4" />
+                {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds([])}
+                data-testid="button-clear-selection"
+              >
+                <X className="mr-1 h-4 w-4" />
+                Clear
+              </Button>
+            </div>
+          )}
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -440,6 +512,13 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedIds.length === users.filter(u => u.id !== currentUser?.id).length && users.length > 1}
+                      onCheckedChange={handleSelectAll}
+                      data-testid="checkbox-select-all-users"
+                    />
+                  </TableHead>
                   <TableHead>Username</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
@@ -451,6 +530,14 @@ export default function UsersPage() {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(user.id)}
+                        onCheckedChange={(checked) => handleSelectOne(user.id, !!checked)}
+                        disabled={user.id === currentUser?.id}
+                        data-testid={`checkbox-user-${user.id}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{user.username || "-"}</TableCell>
                     <TableCell>
                       {user.firstName || user.lastName 

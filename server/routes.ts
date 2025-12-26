@@ -6930,6 +6930,45 @@ IMPORTANT: Include 5-8 internal links and 2-3 external links in your text sectio
     }
   });
 
+  // Bulk delete users
+  app.post("/api/users/bulk-delete", requirePermission("canManageUsers"), checkReadOnlyMode, async (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "Invalid or empty ids array" });
+      }
+
+      // Get current user ID to prevent self-deletion
+      const currentUserId = (req as any).session?.userId;
+      
+      // Filter out current user if included
+      const idsToDelete = ids.filter((id: string) => id !== currentUserId);
+      
+      if (idsToDelete.length === 0) {
+        return res.status(400).json({ error: "Cannot delete your own account" });
+      }
+
+      let deletedCount = 0;
+      for (const id of idsToDelete) {
+        try {
+          const existingUser = await storage.getUser(id);
+          if (existingUser) {
+            await storage.deleteUser(id);
+            await logAuditEvent(req, "user_delete", "user", id, `Bulk deleted user: ${existingUser.email}`, { email: existingUser.email, role: existingUser.role });
+            deletedCount++;
+          }
+        } catch (err) {
+          console.error(`Failed to delete user ${id}:`, err);
+        }
+      }
+
+      res.json({ success: true, deletedCount });
+    } catch (error) {
+      console.error("Error bulk deleting users:", error);
+      res.status(500).json({ error: "Failed to bulk delete users" });
+    }
+  });
+
   // Homepage Promotions Routes
   app.get("/api/homepage-promotions/:section", async (req, res) => {
     try {
