@@ -111,8 +111,12 @@ export default function ContentIntelligencePage() {
         <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
           <h3 className="font-medium flex items-center gap-2 mb-2">
             <Lightbulb className="h-4 w-4 text-primary" />
-            How It Works
+            איך זה עובד / How It Works
           </h3>
+          <p className="text-sm text-muted-foreground mb-2" dir="rtl">
+            המערכת מנתחת את התוכן שפורסם ומזהה הזדמנויות לשיפור: <strong>פערי תוכן</strong> (נושאים חסרים), 
+            <strong>נתונים משתנים</strong> (מחירים, שעות), <strong>אירועים</strong> לעדכון, ו<strong>אשכולות נושאים</strong> לשיפור SEO.
+          </p>
           <p className="text-sm text-muted-foreground">
             This system analyzes your published content and identifies opportunities for improvement. 
             It detects <strong>content gaps</strong> (missing topics), tracks <strong>volatile data</strong> (prices, hours that may need updates), 

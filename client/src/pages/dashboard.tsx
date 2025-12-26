@@ -692,7 +692,57 @@ export default function Dashboard() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          AREA 5: System Tools (Collapsible)
+          AREA 5: Live Activity Feed
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Flame className="h-4 w-4 text-orange-500" />
+            Live Activity
+          </CardTitle>
+          <div className="flex items-center gap-1.5" data-testid="live-activity-status">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <Badge variant="outline" className="text-xs">Real-time</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {/* Mock live activity data */}
+            {[
+              { action: "Article published", item: "Dubai Mall Complete Guide 2024", user: "Travel Expert AI", time: "2m ago", icon: CheckCircle2, color: "text-green-500" },
+              { action: "New draft created", item: "Palm Jumeirah Hotels", user: "Hospitality AI", time: "8m ago", icon: FileText, color: "text-blue-500" },
+              { action: "Translation completed", item: "Burj Khalifa Guide (Arabic)", user: "System", time: "15m ago", icon: Languages, color: "text-purple-500" },
+              { action: "SEO score improved", item: "Desert Safari Experience", user: "SEO Engine", time: "23m ago", icon: TrendingUp, color: "text-green-500" },
+              { action: "Image uploaded", item: "Dubai Marina Skyline", user: "Editor", time: "31m ago", icon: Image, color: "text-orange-500" },
+            ].map((activity, idx) => {
+              const Icon = activity.icon;
+              return (
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 p-2 -mx-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  data-testid={`live-activity-${idx}`}
+                >
+                  <div className={`p-1.5 rounded-md bg-muted ${activity.color}`}>
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">
+                      <span className="font-medium">{activity.action}</span>
+                      <span className="text-muted-foreground"> - {activity.item}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {activity.user} · {activity.time}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          AREA 6: System Tools (Collapsible)
           ═══════════════════════════════════════════════════════════════════ */}
       <Collapsible open={toolsExpanded} onOpenChange={setToolsExpanded}>
         <Card>
