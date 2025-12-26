@@ -4,29 +4,29 @@
  */
 
 import type { Express } from "express";
-import { requireAuth, requirePermission, rateLimiters } from "../security";
+import { requireAuth, requirePermission, rateLimiters } from "./security";
 import { z } from "zod";
 
 // Newsletter Template imports
-import * as templateBuilder from "../newsletter/templates/template-builder";
-import * as templateRenderer from "../newsletter/templates/template-renderer";
+import * as templateBuilder from "./newsletter/templates/template-builder";
+import * as templateRenderer from "./newsletter/templates/template-renderer";
 
 // Newsletter Features imports
-import * as segmentation from "../newsletter/segmentation";
-import * as abTesting from "../newsletter/ab-testing";
-import * as dripCampaigns from "../newsletter/drip-campaigns";
+import * as segmentation from "./newsletter/segmentation";
+import * as abTesting from "./newsletter/ab-testing";
+import * as dripCampaigns from "./newsletter/drip-campaigns";
 
 // Newsletter Integrations
-import * as mailchimp from "../newsletter/integrations/mailchimp";
-import * as klaviyo from "../newsletter/integrations/klaviyo";
+import * as mailchimp from "./newsletter/integrations/mailchimp";
+import * as klaviyo from "./newsletter/integrations/klaviyo";
 
 // Analytics imports
-import * as analyticsPro from "../analytics/analytics-pro";
-import * as realtimeDashboard from "../analytics/realtime/realtime-dashboard";
-import * as analyticsIntegrations from "../analytics/integrations";
+import * as analyticsPro from "./analytics/analytics-pro";
+import * as realtimeDashboard from "./analytics/realtime/realtime-dashboard";
+import * as analyticsIntegrations from "./analytics/integrations";
 
 // Automation imports
-import * as automationSystem from "../automation/automation-system";
+import * as automationSystem from "./automation/automation-system";
 
 // ============================================================================
 // NEWSLETTER TEMPLATE ROUTES

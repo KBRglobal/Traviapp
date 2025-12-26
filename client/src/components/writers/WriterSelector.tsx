@@ -67,8 +67,9 @@ export function WriterSelector({
       if (contentType) params.append('contentType', contentType);
       params.append('active', 'true');
       
-      const response = await apiRequest(`/api/writers?${params.toString()}`);
-      return response as { writers: AIWriter[]; total: number };
+      const response = await fetch(`/api/writers?${params.toString()}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch writers');
+      return response.json() as Promise<{ writers: AIWriter[]; total: number }>;
     },
   });
 
@@ -81,14 +82,15 @@ export function WriterSelector({
       const params = new URLSearchParams({ topic });
       if (contentType) params.append('contentType', contentType);
       
-      const response = await apiRequest(`/api/writers/recommendations?${params.toString()}`);
-      return response as { 
+      const response = await fetch(`/api/writers/recommendations?${params.toString()}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch recommendations');
+      return response.json() as Promise<{ 
         recommendations: Array<{
           writer: AIWriter;
           score: number;
           reason: string;
         }>;
-      };
+      }>;
     },
     enabled: !!topic,
   });

@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify';
  * DOMPurify configuration for HTML sanitization
  * Prevents XSS attacks while allowing safe HTML elements
  */
-const defaultConfig: DOMPurify.Config = {
+const defaultConfig = {
   ALLOWED_TAGS: [
     'p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'pre', 'code',
