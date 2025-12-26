@@ -3328,3 +3328,251 @@ export const insertHomepageSectionSchema = createInsertSchema(homepageSections).
 
 export type HomepageSectionEntry = typeof homepageSections.$inferSelect;
 export type InsertHomepageSectionEntry = z.infer<typeof insertHomepageSectionSchema>;
+
+// ============================================
+// Page Builder System - Universal Section Editor
+// ============================================
+
+// Section type enum for type safety
+export const sectionTypeEnum = pgEnum("section_type", [
+  "hero",
+  "intro_text", 
+  "highlight_grid",
+  "filter_bar",
+  "content_grid",
+  "cta",
+  "faq",
+  "testimonial",
+  "gallery",
+  "stats",
+  "features",
+  "text_image",
+  "video",
+  "newsletter",
+  "custom"
+]);
+
+// Editable Pages - defines which pages can be edited via page builder
+export const editablePages = pgTable("editable_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  pageType: varchar("page_type", { length: 50 }).notNull(), // home, category, static, landing
+  title: text("title").notNull(),
+  titleHe: text("title_he"),
+  metaTitle: text("meta_title"),
+  metaTitleHe: text("meta_title_he"),
+  metaDescription: text("meta_description"),
+  metaDescriptionHe: text("meta_description_he"),
+  isPublished: boolean("is_published").default(false),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  lastEditedBy: varchar("last_edited_by").references(() => users.id),
+}, (table) => [
+  uniqueIndex("IDX_editable_pages_slug").on(table.slug),
+  index("IDX_editable_pages_type").on(table.pageType),
+]);
+
+export const insertEditablePageSchema = createInsertSchema(editablePages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type EditablePage = typeof editablePages.$inferSelect;
+export type InsertEditablePage = z.infer<typeof insertEditablePageSchema>;
+
+// Page Sections - stores all editable sections for any page
+export const pageSections = pgTable("page_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pageId: varchar("page_id").notNull().references(() => editablePages.id, { onDelete: "cascade" }),
+  sectionType: text("section_type").notNull(),
+  sectionKey: varchar("section_key", { length: 100 }), // unique key within page for easy reference
+  
+  // Content - English
+  title: text("title"),
+  subtitle: text("subtitle"),
+  description: text("description"),
+  buttonText: text("button_text"),
+  buttonLink: text("button_link"),
+  
+  // Content - Hebrew  
+  titleHe: text("title_he"),
+  subtitleHe: text("subtitle_he"),
+  descriptionHe: text("description_he"),
+  buttonTextHe: text("button_text_he"),
+  
+  // Media
+  backgroundImage: text("background_image"),
+  backgroundVideo: text("background_video"),
+  images: jsonb("images").$type<string[]>().default([]),
+  
+  // Flexible data for complex sections
+  data: jsonb("data").$type<Record<string, unknown>>().default({}),
+  dataHe: jsonb("data_he").$type<Record<string, unknown>>().default({}),
+  
+  // Styling
+  backgroundColor: varchar("background_color", { length: 50 }),
+  textColor: varchar("text_color", { length: 50 }),
+  customCss: text("custom_css"),
+  animation: varchar("animation", { length: 50 }),
+  
+  // Layout
+  sortOrder: integer("sort_order").default(0),
+  isVisible: boolean("is_visible").default(true),
+  showOnMobile: boolean("show_on_mobile").default(true),
+  showOnDesktop: boolean("show_on_desktop").default(true),
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  lastEditedBy: varchar("last_edited_by").references(() => users.id),
+}, (table) => [
+  index("IDX_page_sections_page").on(table.pageId),
+  index("IDX_page_sections_order").on(table.pageId, table.sortOrder),
+  index("IDX_page_sections_key").on(table.pageId, table.sectionKey),
+]);
+
+export const insertPageSectionSchema = createInsertSchema(pageSections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PageSection = typeof pageSections.$inferSelect;
+export type InsertPageSection = z.infer<typeof insertPageSectionSchema>;
+
+// Section Versions - version history for undo/redo
+export const sectionVersions = pgTable("section_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sectionId: varchar("section_id").notNull().references(() => pageSections.id, { onDelete: "cascade" }),
+  versionNumber: integer("version_number").notNull(),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull(),
+  changedBy: varchar("changed_by").references(() => users.id),
+  changeDescription: text("change_description"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_section_versions_section").on(table.sectionId),
+  index("IDX_section_versions_number").on(table.sectionId, table.versionNumber),
+]);
+
+export const insertSectionVersionSchema = createInsertSchema(sectionVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type SectionVersion = typeof sectionVersions.$inferSelect;
+export type InsertSectionVersion = z.infer<typeof insertSectionVersionSchema>;
+
+// Relations
+export const editablePagesRelations = relations(editablePages, ({ many, one }) => ({
+  sections: many(pageSections),
+  lastEditor: one(users, { fields: [editablePages.lastEditedBy], references: [users.id] }),
+}));
+
+export const pageSectionsRelations = relations(pageSections, ({ one, many }) => ({
+  page: one(editablePages, { fields: [pageSections.pageId], references: [editablePages.id] }),
+  versions: many(sectionVersions),
+  lastEditor: one(users, { fields: [pageSections.lastEditedBy], references: [users.id] }),
+}));
+
+export const sectionVersionsRelations = relations(sectionVersions, ({ one }) => ({
+  section: one(pageSections, { fields: [sectionVersions.sectionId], references: [pageSections.id] }),
+  editor: one(users, { fields: [sectionVersions.changedBy], references: [users.id] }),
+}));
+
+// Section type definitions for TypeScript
+export const SECTION_TYPES = {
+  hero: {
+    name: "Hero",
+    nameHe: "באנר ראשי",
+    description: "Large banner with title, subtitle, background image",
+    fields: ["title", "subtitle", "buttonText", "buttonLink", "backgroundImage"],
+  },
+  intro_text: {
+    name: "Introduction",
+    nameHe: "טקסט פתיחה",
+    description: "Introductory text block with optional image",
+    fields: ["title", "description", "images"],
+  },
+  highlight_grid: {
+    name: "Highlight Grid",
+    nameHe: "גריד הדגשות",
+    description: "Grid of highlighted items/features",
+    fields: ["title", "data"],
+  },
+  filter_bar: {
+    name: "Filter Bar",
+    nameHe: "סרגל סינון",
+    description: "Category filter buttons",
+    fields: ["data"],
+  },
+  content_grid: {
+    name: "Content Grid",
+    nameHe: "גריד תוכן",
+    description: "Grid of content cards",
+    fields: ["title", "subtitle", "data"],
+  },
+  cta: {
+    name: "Call to Action",
+    nameHe: "קריאה לפעולה",
+    description: "Call to action block",
+    fields: ["title", "subtitle", "buttonText", "buttonLink", "backgroundImage"],
+  },
+  faq: {
+    name: "FAQ",
+    nameHe: "שאלות ותשובות",
+    description: "Frequently asked questions accordion",
+    fields: ["title", "data"],
+  },
+  testimonial: {
+    name: "Testimonials",
+    nameHe: "המלצות",
+    description: "Customer testimonials/reviews",
+    fields: ["title", "data"],
+  },
+  gallery: {
+    name: "Image Gallery",
+    nameHe: "גלריית תמונות",
+    description: "Image gallery or carousel",
+    fields: ["title", "images"],
+  },
+  stats: {
+    name: "Statistics",
+    nameHe: "סטטיסטיקות",
+    description: "Key numbers/statistics display",
+    fields: ["data"],
+  },
+  features: {
+    name: "Features",
+    nameHe: "תכונות",
+    description: "Feature list with icons",
+    fields: ["title", "data"],
+  },
+  text_image: {
+    name: "Text + Image",
+    nameHe: "טקסט + תמונה",
+    description: "Two-column text and image layout",
+    fields: ["title", "description", "images", "data"],
+  },
+  video: {
+    name: "Video",
+    nameHe: "וידאו",
+    description: "Embedded video section",
+    fields: ["title", "data"],
+  },
+  newsletter: {
+    name: "Newsletter",
+    nameHe: "ניוזלטר",
+    description: "Newsletter signup form",
+    fields: ["title", "subtitle", "buttonText"],
+  },
+  custom: {
+    name: "Custom HTML",
+    nameHe: "HTML מותאם",
+    description: "Custom HTML/code block",
+    fields: ["data"],
+  },
+} as const;
+
+export type SectionTypeName = keyof typeof SECTION_TYPES;
