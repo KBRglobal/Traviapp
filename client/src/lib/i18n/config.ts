@@ -23,7 +23,8 @@ import faCommon from '../../locales/fa/common.json';
 import itCommon from '../../locales/it/common.json';
 
 // Resources object - all 17 language translations
-const resources: Record<string, { common: typeof enCommon }> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const resources: Record<string, { common: any }> = {
   en: { common: enCommon },
   he: { common: heCommon },
   ar: { common: arCommon },
@@ -58,7 +59,7 @@ i18n
     },
 
     detection: {
-      order: ['path', 'localStorage', 'navigator'],
+      order: ['path', 'localStorage'],
       lookupFromPathIndex: 0,
       caches: ['localStorage'],
     },
