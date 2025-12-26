@@ -6,8 +6,8 @@ export function OrganizationSchema() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Travi",
-    url: "https://travi.com",
-    logo: "https://travi.com/logo.png",
+    url: "https://travi.world",
+    logo: "https://travi.world/logo.png",
     description: "Your ultimate guide to Dubai - attractions, hotels, dining, and more.",
     sameAs: [
       "https://twitter.com/travi",
@@ -236,7 +236,7 @@ export function ArticleSchema({
       name: "Travi",
       logo: {
         "@type": "ImageObject",
-        url: "https://travi.com/logo.png",
+        url: "https://travi.world/logo.png",
       },
     },
   };
