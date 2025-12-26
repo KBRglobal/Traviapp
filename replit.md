@@ -113,6 +113,14 @@ Content with these phrases will be flagged/rejected:
 - Built-in XML parser for fetching and parsing RSS feeds
 - Supports automatic article generation from feed items
 
+### GDPR Cookie Consent
+- **Cookie Consent Banner**: GDPR-compliant banner with Accept All/Reject All/Manage options
+- **Context Provider**: CookieConsentProvider manages consent state and conditional script loading
+- **localStorage Keys**: `travi_cookie_consent` (consent status), `travi_cookie_prefs` (analytics/marketing preferences)
+- **GTM Integration**: Google Tag Manager (GTM-WVXXVS6L) loads only after user grants analytics consent
+- **Footer Link**: "Cookie Settings" link allows users to modify preferences anytime
+- **Key Files**: `client/src/contexts/cookie-consent-context.tsx`, `client/src/components/cookie-consent-banner.tsx`
+
 ### UI Component Libraries
 - **Radix UI**: Accessible component primitives (dialogs, dropdowns, tabs, etc.)
 - **shadcn/ui**: Pre-styled component library (new-york style variant)
