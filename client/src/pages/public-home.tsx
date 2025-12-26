@@ -1,4 +1,4 @@
-import { Search, Star, MapPin, ChevronRight, Mail, BookOpen, Users, Globe, Building, UtensilsCrossed, Calendar, Clock, DollarSign, ArrowRight, Check, Newspaper, TrendingUp, Menu } from "lucide-react";
+import { Search, Star, MapPin, ChevronRight, Mail, BookOpen, Globe, Building, UtensilsCrossed, Calendar, Clock, DollarSign, ArrowRight, Check, TrendingUp } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -26,13 +26,13 @@ interface HomepagePromotion {
 
 const heroImage = "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=1080&fit=crop&q=80";
 
-const categories = [
-  { key: "attractions", icon: Building, count: 166, color: "#6C5CE7" },
-  { key: "hotels", icon: Building, count: 26, color: "#EC4899" },
-  { key: "dining", icon: UtensilsCrossed, count: 31, color: "#F59E0B" },
-  { key: "districts", icon: MapPin, count: 21, color: "#10B981" },
-  { key: "guides", icon: BookOpen, count: 87, color: "#3B82F6" },
-  { key: "events", icon: Calendar, count: 7, color: "#8B5CF6" },
+const categoryConfig = [
+  { key: "attractions", type: "attraction", icon: Building, color: "#6C5CE7" },
+  { key: "hotels", type: "hotel", icon: Building, color: "#EC4899" },
+  { key: "dining", type: "dining", icon: UtensilsCrossed, color: "#F59E0B" },
+  { key: "districts", type: "district", icon: MapPin, color: "#10B981" },
+  { key: "guides", type: "article", icon: BookOpen, color: "#3B82F6" },
+  { key: "events", type: "event", icon: Calendar, color: "#8B5CF6" },
 ];
 
 const topAttractions = [
@@ -182,13 +182,50 @@ export default function PublicHome() {
     ogType: "website",
   });
 
-  const { data: publishedContent = [] } = useQuery<ContentWithRelations[]>({
-    queryKey: ["/api/contents?status=published"],
+  const { data: attractionsData = [] } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/public/contents", "attraction"],
+    queryFn: () => fetch("/api/public/contents?type=attraction&limit=50").then(r => r.json()),
+  });
+
+  const { data: hotelsData = [] } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/public/contents", "hotel"],
+    queryFn: () => fetch("/api/public/contents?type=hotel&limit=50").then(r => r.json()),
+  });
+
+  const { data: diningData = [] } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/public/contents", "dining"],
+    queryFn: () => fetch("/api/public/contents?type=dining&limit=50").then(r => r.json()),
+  });
+
+  const { data: districtsData = [] } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/public/contents", "district"],
+    queryFn: () => fetch("/api/public/contents?type=district&limit=50").then(r => r.json()),
+  });
+
+  const { data: articlesData = [] } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/public/contents", "article"],
+    queryFn: () => fetch("/api/public/contents?type=article&limit=50").then(r => r.json()),
+  });
+
+  const { data: eventsData = [] } = useQuery<ContentWithRelations[]>({
+    queryKey: ["/api/public/contents", "event"],
+    queryFn: () => fetch("/api/public/contents?type=event&limit=50").then(r => r.json()),
   });
 
   const { data: featuredPromotions = [] } = useQuery<HomepagePromotion[]>({
     queryKey: ["/api/homepage-promotions/featured"],
   });
+
+  const contentCounts: Record<string, number> = {
+    attraction: attractionsData.length,
+    hotel: hotelsData.length,
+    dining: diningData.length,
+    district: districtsData.length,
+    article: articlesData.length,
+    event: eventsData.length,
+  };
+
+  const totalPublishedContent = Object.values(contentCounts).reduce((sum, count) => sum + count, 0);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -196,9 +233,12 @@ export default function PublicHome() {
     }
   };
 
-  const contentByType = (type: string) => publishedContent.filter(c => c.type === type);
-  const attractionsContent = contentByType("attraction").slice(0, 4);
-  const articlesContent = contentByType("article").slice(0, 4);
+  const attractionsContent = attractionsData.slice(0, 4);
+  const hotelsContent = hotelsData.slice(0, 4);
+  const diningContent = diningData.slice(0, 4);
+  const districtsContent = districtsData.slice(0, 3);
+  const articlesContent = articlesData.slice(0, 5);
+  const eventsContent = eventsData.slice(0, 4);
 
   return (
     <div className="min-h-screen bg-background">
@@ -342,19 +382,22 @@ export default function PublicHome() {
               <div className="flex flex-wrap items-center justify-center gap-6 text-gray-700">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-5 h-5" />
-                  <span className="font-semibold">{t("home.guidesCount") || "847 Guides"}</span>
+                  <span className="font-semibold" data-testid="stat-guides-count">
+                    {totalPublishedContent > 0 ? `${totalPublishedContent} Guides` : t("home.guidesCount") || "Loading..."}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  <span className="font-semibold">{t("home.viewsCount") || "2.3M Views"}</span>
+                  <Globe className="w-5 h-5" />
+                  <span className="font-semibold">{t("home.multiLanguage") || "17 Languages"}</span>
                 </div>
               </div>
             </div>
 
             {/* Category Quick Links */}
             <div className="mt-12 grid grid-cols-3 md:grid-cols-6 gap-3 max-w-4xl mx-auto">
-              {categories.map((cat) => {
+              {categoryConfig.map((cat) => {
                 const Icon = cat.icon;
+                const count = contentCounts[cat.type] || 0;
                 return (
                   <Link 
                     key={cat.key} 
@@ -367,7 +410,7 @@ export default function PublicHome() {
                     >
                       <Icon className="w-6 h-6 mx-auto mb-2" style={{ color: cat.color }} />
                       <div className="text-gray-800 font-medium text-sm">{t(`nav.${cat.key}`)}</div>
-                      <div className="text-gray-500 text-xs">{cat.count}</div>
+                      <div className="text-gray-500 text-xs" data-testid={`count-${cat.key}`}>{count}</div>
                     </div>
                   </Link>
                 );
@@ -492,34 +535,44 @@ export default function PublicHome() {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {districts.map((district, index) => (
-                <Link 
-                  key={index} 
-                  href={localePath(`/districts/${district.slug}`)}
-                  data-testid={`district-card-${index}`}
-                >
-                  <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
-                    <div className="aspect-video overflow-hidden relative">
-                      <img 
-                        src={district.image}
-                        alt={district.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <h3 className="absolute bottom-4 left-4 text-white font-bold text-xl">{district.name}</h3>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>{district.attractions} {t("nav.attractions").toLowerCase()}</span>
-                        <span>{district.restaurants} {t("home.restaurantsLabel") || "restaurants"}</span>
+              {(districtsContent.length > 0 ? districtsContent : districts).map((item, index) => {
+                const isContent = 'id' in item;
+                const name = isContent ? (item as ContentWithRelations).title : (item as typeof districts[0]).name;
+                const image = isContent ? (item as ContentWithRelations).heroImage : (item as typeof districts[0]).image;
+                const slug = isContent ? (item as ContentWithRelations).slug : (item as typeof districts[0]).slug;
+                const fallbackDistrict = districts[index % districts.length];
+                
+                return (
+                  <Link 
+                    key={isContent ? (item as ContentWithRelations).id : index} 
+                    href={localePath(`/districts/${slug}`)}
+                    data-testid={`district-card-${index}`}
+                  >
+                    <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
+                      <div className="aspect-video overflow-hidden relative">
+                        <img 
+                          src={image || fallbackDistrict.image}
+                          alt={name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <h3 className="absolute bottom-4 left-4 text-white font-bold text-xl">{name}</h3>
                       </div>
-                      <span className="text-primary font-medium text-sm flex items-center gap-1 mt-2">
-                        {t("home.explore") || "Explore"} <ArrowRight className="w-4 h-4" />
-                      </span>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
+                      <div className="p-4">
+                        {!isContent && (
+                          <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>{fallbackDistrict.attractions} {t("nav.attractions").toLowerCase()}</span>
+                            <span>{fallbackDistrict.restaurants} {t("home.restaurantsLabel") || "restaurants"}</span>
+                          </div>
+                        )}
+                        <span className="text-primary font-medium text-sm flex items-center gap-1 mt-2">
+                          {t("home.explore") || "Explore"} <ArrowRight className="w-4 h-4" />
+                        </span>
+                      </div>
+                    </Card>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -552,36 +605,48 @@ export default function PublicHome() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {hotels.map((hotel, index) => (
-                <Link 
-                  key={index} 
-                  href={localePath(`/hotels/${hotel.slug}`)}
-                  data-testid={`hotel-card-${index}`}
-                >
-                  <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
-                    <div className="aspect-[4/3] overflow-hidden">
-                      <img 
-                        src={hotel.image}
-                        alt={hotel.name}
-                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-semibold text-lg mb-2">{hotel.name}</h3>
-                      <div className="flex items-center gap-1 mb-1">
-                        {Array.from({ length: hotel.stars }).map((_, i) => (
-                          <Star key={i} className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                        ))}
+              {(hotelsContent.length > 0 ? hotelsContent : hotels).map((item, index) => {
+                const isContent = 'id' in item;
+                const name = isContent ? (item as ContentWithRelations).title : (item as typeof hotels[0]).name;
+                const image = isContent ? (item as ContentWithRelations).heroImage : (item as typeof hotels[0]).image;
+                const slug = isContent ? (item as ContentWithRelations).slug : (item as typeof hotels[0]).slug;
+                const fallbackHotel = hotels[index % hotels.length];
+                const stars = isContent ? ((item as ContentWithRelations).hotel?.starRating || 5) : (item as typeof hotels[0]).stars;
+                const area = isContent ? ((item as ContentWithRelations).hotel?.neighborhood || "Dubai") : (item as typeof hotels[0]).area;
+                
+                return (
+                  <Link 
+                    key={isContent ? (item as ContentWithRelations).id : index} 
+                    href={localePath(`/hotels/${slug}`)}
+                    data-testid={`hotel-card-${index}`}
+                  >
+                    <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
+                      <div className="aspect-[4/3] overflow-hidden">
+                        <img 
+                          src={image || fallbackHotel.image}
+                          alt={name}
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        />
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                        <MapPin className="w-4 h-4" />
-                        <span>{hotel.area}</span>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-lg mb-2 line-clamp-1">{name}</h3>
+                        <div className="flex items-center gap-1 mb-1">
+                          {Array.from({ length: Math.min(stars, 5) }).map((_, i) => (
+                            <Star key={i} className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                          <MapPin className="w-4 h-4" />
+                          <span>{area}</span>
+                        </div>
+                        {!isContent && (
+                          <div className="text-sm font-medium text-primary">{fallbackHotel.price}</div>
+                        )}
                       </div>
-                      <div className="text-sm font-medium text-primary">{hotel.price}</div>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
+                    </Card>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -603,30 +668,43 @@ export default function PublicHome() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Featured Article */}
               <div className="lg:col-span-2">
-                <Link href={localePath("/dubai/free-things-to-do")} data-testid="featured-article">
-                  <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
-                    <div className="aspect-video overflow-hidden">
-                      <img 
-                        src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=450&fit=crop"
-                        alt="Free things to do in Dubai"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-2xl font-bold mb-3">
-                        {t("home.featuredArticleTitle") || "70 Free Things to Do in Dubai (2024 Guide)"}
-                      </h3>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" /> Dec 15, 2024
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" /> 12 min read
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
+                {(() => {
+                  const featuredArticle = articlesContent[0];
+                  const hasFeatured = featuredArticle && 'id' in featuredArticle;
+                  const articleTitle = hasFeatured ? featuredArticle.title : t("home.featuredArticleTitle") || "70 Free Things to Do in Dubai (2024 Guide)";
+                  const articleSlug = hasFeatured ? featuredArticle.slug : "free-things-to-do";
+                  const articleImage = hasFeatured ? featuredArticle.heroImage : "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=450&fit=crop";
+                  const articleDate = hasFeatured && featuredArticle.publishedAt 
+                    ? new Date(featuredArticle.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    : "Dec 15, 2024";
+                  
+                  return (
+                    <Link href={localePath(`/articles/${articleSlug}`)} data-testid="featured-article">
+                      <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
+                        <div className="aspect-video overflow-hidden">
+                          <img 
+                            src={articleImage || "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=450&fit=crop"}
+                            alt={articleTitle}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="p-6">
+                          <h3 className="text-2xl font-bold mb-3 line-clamp-2">
+                            {articleTitle}
+                          </h3>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" /> {articleDate}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" /> {hasFeatured ? `${Math.ceil((featuredArticle.metaDescription?.length || 500) / 200)} min read` : "12 min read"}
+                            </span>
+                          </div>
+                        </div>
+                      </Card>
+                    </Link>
+                  );
+                })()}
               </div>
 
               {/* Popular Guides Sidebar */}
@@ -637,17 +715,23 @@ export default function PublicHome() {
                     {t("home.popularGuides") || "Popular Guides"}
                   </h3>
                   <ul className="space-y-3">
-                    {popularGuides.map((guide, index) => (
-                      <li key={index}>
-                        <Link 
-                          href={localePath(`/dubai/${guide.slug}`)}
-                          className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
-                        >
-                          <ChevronRight className="w-4 h-4 text-primary" />
-                          {guide.title}
-                        </Link>
-                      </li>
-                    ))}
+                    {(articlesContent.length > 0 ? articlesContent : popularGuides).map((item, index) => {
+                      const isContent = 'id' in item;
+                      const title = isContent ? (item as ContentWithRelations).title : (item as typeof popularGuides[0]).title;
+                      const slug = isContent ? (item as ContentWithRelations).slug : (item as typeof popularGuides[0]).slug;
+                      
+                      return (
+                        <li key={isContent ? (item as ContentWithRelations).id : index}>
+                          <Link 
+                            href={localePath(`/articles/${slug}`)}
+                            className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                          >
+                            <ChevronRight className="w-4 h-4 text-primary" />
+                            <span className="line-clamp-1">{title}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </Card>
 
@@ -709,33 +793,43 @@ export default function PublicHome() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {restaurants.map((restaurant, index) => (
-                <Link 
-                  key={index} 
-                  href={localePath(`/dining/${restaurant.slug}`)}
-                  data-testid={`restaurant-card-${index}`}
-                >
-                  <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
-                    <div className="aspect-[4/3] overflow-hidden">
-                      <img 
-                        src={restaurant.image}
-                        alt={restaurant.name}
-                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-semibold text-lg mb-1">{restaurant.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-1">{restaurant.cuisine}</p>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{restaurant.priceLevel}</span>
-                        <span className="text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-3 h-3" /> {restaurant.area}
-                        </span>
+              {(diningContent.length > 0 ? diningContent : restaurants).map((item, index) => {
+                const isContent = 'id' in item;
+                const name = isContent ? (item as ContentWithRelations).title : (item as typeof restaurants[0]).name;
+                const image = isContent ? (item as ContentWithRelations).heroImage : (item as typeof restaurants[0]).image;
+                const slug = isContent ? (item as ContentWithRelations).slug : (item as typeof restaurants[0]).slug;
+                const fallbackRestaurant = restaurants[index % restaurants.length];
+                const cuisine = isContent ? ((item as ContentWithRelations).dining?.cuisineType || "International") : (item as typeof restaurants[0]).cuisine;
+                const area = isContent ? ((item as ContentWithRelations).dining?.neighborhood || "Dubai") : (item as typeof restaurants[0]).area;
+                
+                return (
+                  <Link 
+                    key={isContent ? (item as ContentWithRelations).id : index} 
+                    href={localePath(`/dining/${slug}`)}
+                    data-testid={`restaurant-card-${index}`}
+                  >
+                    <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
+                      <div className="aspect-[4/3] overflow-hidden">
+                        <img 
+                          src={image || fallbackRestaurant.image}
+                          alt={name}
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        />
                       </div>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
+                      <div className="p-4">
+                        <h3 className="font-semibold text-lg mb-1 line-clamp-1">{name}</h3>
+                        <p className="text-sm text-muted-foreground mb-1">{cuisine}</p>
+                        <div className="flex items-center justify-between text-sm">
+                          {!isContent && <span className="font-medium">{fallbackRestaurant.priceLevel}</span>}
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            <MapPin className="w-3 h-3" /> {area}
+                          </span>
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -762,21 +856,37 @@ export default function PublicHome() {
                 </span>
               </div>
               <div className="divide-y">
-                {upcomingEvents.map((event, index) => (
-                  <Link 
-                    key={index} 
-                    href={localePath(`/events/${event.slug}`)}
-                    data-testid={`event-item-${index}`}
-                  >
-                    <div className="px-6 py-4 flex items-center gap-4 hover:bg-muted/50 transition-colors cursor-pointer">
-                      <div className="bg-primary/10 rounded-lg px-3 py-2 text-center min-w-[60px]">
-                        <span className="text-sm font-semibold text-primary">{event.date}</span>
+                {(eventsContent.length > 0 ? eventsContent : upcomingEvents).map((item, index) => {
+                  const isContent = 'id' in item;
+                  const title = isContent ? (item as ContentWithRelations).title : (item as typeof upcomingEvents[0]).title;
+                  const slug = isContent ? (item as ContentWithRelations).slug : (item as typeof upcomingEvents[0]).slug;
+                  const fallbackEvent = upcomingEvents[index % upcomingEvents.length];
+                  
+                  let dateStr = fallbackEvent.date;
+                  if (isContent) {
+                    const eventData = (item as ContentWithRelations).event;
+                    if (eventData?.startDate) {
+                      const d = new Date(eventData.startDate);
+                      dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    }
+                  }
+                  
+                  return (
+                    <Link 
+                      key={isContent ? (item as ContentWithRelations).id : index} 
+                      href={localePath(`/events/${slug}`)}
+                      data-testid={`event-item-${index}`}
+                    >
+                      <div className="px-6 py-4 flex items-center gap-4 hover:bg-muted/50 transition-colors cursor-pointer">
+                        <div className="bg-primary/10 rounded-lg px-3 py-2 text-center min-w-[60px]">
+                          <span className="text-sm font-semibold text-primary">{dateStr}</span>
+                        </div>
+                        <span className="font-medium line-clamp-1">{title}</span>
+                        <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground" />
                       </div>
-                      <span className="font-medium">{event.title}</span>
-                      <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground" />
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             </Card>
           </div>

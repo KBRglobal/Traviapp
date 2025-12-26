@@ -183,6 +183,12 @@ export default function ContentList({ type }: ContentListProps) {
     queryKey: [`/api/contents?type=${type}`],
   });
 
+  const { data: writersData } = useQuery<{ writers: Array<{ id: string; name: string; avatar: string }> }>({
+    queryKey: ["/api/writers"],
+  });
+
+  const writersMap = new Map(writersData?.writers?.map(w => [w.id, w]) || []);
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/contents/${id}`);
@@ -364,6 +370,25 @@ export default function ContentList({ type }: ContentListProps) {
       key: "status",
       header: "Status",
       cell: (item) => <StatusBadge status={item.status} />,
+    },
+    {
+      key: "writer",
+      header: "Writer",
+      cell: (item) => {
+        const writer = item.writerId ? writersMap.get(item.writerId) : null;
+        return writer ? (
+          <div className="flex items-center gap-2">
+            <img
+              src={writer.avatar}
+              alt={writer.name}
+              className="w-5 h-5 rounded-full"
+            />
+            <span className="text-sm text-muted-foreground truncate max-w-[120px]">{writer.name}</span>
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">-</span>
+        );
+      },
     },
     {
       key: "wordCount",

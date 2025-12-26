@@ -11,6 +11,8 @@ interface ArticleHeroProps {
   publishedAt?: Date | string | null;
   keywords?: string[];
   backHref?: string;
+  writerName?: string;
+  writerAvatar?: string;
 }
 
 export function ArticleHero({
@@ -21,6 +23,8 @@ export function ArticleHero({
   publishedAt,
   keywords = [],
   backHref = "/articles",
+  writerName,
+  writerAvatar,
 }: ArticleHeroProps) {
   const formattedDate = publishedAt
     ? new Date(publishedAt).toLocaleDateString("en-US", {
@@ -83,6 +87,21 @@ export function ArticleHero({
                 >
                   <Calendar className="w-4 h-4" />
                   <span>{formattedDate}</span>
+                </div>
+              )}
+              {writerName && (
+                <div
+                  className="flex items-center gap-2 text-white/80 text-sm"
+                  data-testid="article-hero-writer"
+                >
+                  {writerAvatar && (
+                    <img
+                      src={writerAvatar}
+                      alt={writerName}
+                      className="w-6 h-6 rounded-full"
+                    />
+                  )}
+                  <span>By {writerName}</span>
                 </div>
               )}
             </div>

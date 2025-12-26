@@ -1,13 +1,16 @@
-import { useRoute } from "wouter";
+import { useRoute, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { Loader2, MapPin, Clock, Star, Users, DollarSign, Calendar, Building, Utensils, Tag } from "lucide-react";
+import { Loader2, MapPin, Clock, Star, Users, DollarSign, Building, Utensils, Tag, ArrowLeft, Ticket, Phone, Globe, ChevronRight } from "lucide-react";
 import DOMPurify from "dompurify";
 import posthog from "posthog-js";
 import type { Content, Attraction, Hotel, Dining, District, Transport, Article, HighlightItem, RoomTypeItem, FaqItem, ContentCluster, ContentWithRelations } from "@shared/schema";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { ArticleHero, ArticleBody, TraviRecommends, RelatedArticles, NewsletterSignup } from "@/components/article";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 type ContentWithExtensions = Content & {
   attraction?: Attraction | null;
@@ -18,6 +21,15 @@ type ContentWithExtensions = Content & {
   article?: Article | null;
   cluster?: ContentCluster | null;
   clusterMembers?: Array<{ id: string; title: string; slug: string; type: string }>;
+};
+
+const contentTypeConfig: Record<string, { label: string; color: string; backHref: string; backLabel: string }> = {
+  attraction: { label: "Attraction", color: "bg-travi-blue", backHref: "/attractions", backLabel: "Attractions" },
+  hotel: { label: "Hotel", color: "bg-travi-orange", backHref: "/hotels", backLabel: "Hotels" },
+  dining: { label: "Restaurant", color: "bg-travi-pink", backHref: "/dining", backLabel: "Dining" },
+  district: { label: "District", color: "bg-travi-purple", backHref: "/districts", backLabel: "Districts" },
+  transport: { label: "Transport", color: "bg-travi-green", backHref: "/transport", backLabel: "Transport" },
+  article: { label: "Article", color: "bg-travi-green", backHref: "/articles", backLabel: "Articles" },
 };
 
 function generateContentSchema(content: ContentWithExtensions, baseUrl: string) {
@@ -62,6 +74,72 @@ function generateContentSchema(content: ContentWithExtensions, baseUrl: string) 
   }
 
   return schema;
+}
+
+function ContentHero({ 
+  content, 
+  config 
+}: { 
+  content: ContentWithExtensions; 
+  config: typeof contentTypeConfig[string];
+}) {
+  const heroImage = content.heroImage || "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=800&fit=crop";
+  
+  return (
+    <section className="relative w-full min-h-[60vh] lg:min-h-[70vh] flex flex-col" data-testid="content-hero">
+      <div className="absolute inset-0">
+        <img
+          src={heroImage}
+          alt={content.heroImageAlt || content.title}
+          className="w-full h-full object-cover"
+          data-testid="content-hero-image"
+        />
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
+
+      <div className="relative z-10 flex-1 flex flex-col">
+        <div className="p-6 lg:p-8 pt-24">
+          <Link href={config.backHref}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white/90 hover:text-white hover:bg-white/10 gap-2"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to {config.backLabel}
+            </Button>
+          </Link>
+        </div>
+
+        <div className="mt-auto p-6 lg:p-8 max-w-7xl mx-auto w-full">
+          <div className="max-w-4xl">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <Badge
+                className={`${config.color} text-white border-0 px-3 py-1`}
+                data-testid="content-type-badge"
+              >
+                {config.label}
+              </Badge>
+            </div>
+
+            <h1
+              className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-4"
+              data-testid="content-title"
+            >
+              {content.title}
+            </h1>
+
+            {content.metaDescription && (
+              <p className="text-lg text-white/90 max-w-2xl" data-testid="content-description">
+                {content.metaDescription}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function renderBlock(block: any, index: number) {
@@ -136,10 +214,10 @@ function renderBlock(block: any, index: number) {
           {data.title && <h2 className="text-2xl font-semibold mb-4">{data.title}</h2>}
           <div className="space-y-4">
             {faqs.map((item: any, i: number) => (
-              <div key={i} className="border rounded-lg p-4">
+              <Card key={i} className="p-4">
                 <h3 className="font-medium mb-2">{item.question}</h3>
                 <p className="text-muted-foreground">{item.answer}</p>
-              </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -151,12 +229,11 @@ function renderBlock(block: any, index: number) {
           {data.title && <h2 className="text-2xl font-semibold mb-2">{data.title}</h2>}
           {(data.description || data.content) && <p className="text-muted-foreground mb-4">{data.description || data.content}</p>}
           {data.buttonText && (data.buttonUrl || data.buttonLink) && (
-            <a
-              href={data.buttonUrl || data.buttonLink}
-              className="inline-block bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium"
-            >
-              {data.buttonText}
-            </a>
+            <Link href={data.buttonUrl || data.buttonLink}>
+              <Button data-testid="cta-button">
+                {data.buttonText}
+              </Button>
+            </Link>
           )}
         </div>
       );
@@ -167,10 +244,10 @@ function renderBlock(block: any, index: number) {
           {data.title && <h2 className="text-2xl font-semibold mb-4">{data.title}</h2>}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {data.items?.map((item: any, i: number) => (
-              <div key={i} className="text-center p-4 bg-muted rounded-lg">
+              <Card key={i} className="text-center p-4">
                 <div className="font-semibold">{item.label}</div>
                 <div className="text-muted-foreground">{item.value}</div>
-              </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -184,7 +261,7 @@ function renderBlock(block: any, index: number) {
           <ul className="space-y-2">
             {highlights.map((item: any, i: number) => (
               <li key={i} className="flex items-start gap-2">
-                <Star className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                <Star className="h-5 w-5 text-travi-orange mt-0.5 flex-shrink-0" />
                 <span>{typeof item === 'string' ? item : item.title || item.text}</span>
               </li>
             ))}
@@ -200,7 +277,7 @@ function renderBlock(block: any, index: number) {
           <ul className="space-y-2">
             {tips.map((item: any, i: number) => (
               <li key={i} className="flex items-start gap-2">
-                <span className="text-primary font-bold">•</span>
+                <span className="text-travi-green font-bold">•</span>
                 <span>{typeof item === 'string' ? item : item.text}</span>
               </li>
             ))}
@@ -214,135 +291,167 @@ function renderBlock(block: any, index: number) {
 }
 
 function AttractionMeta({ attraction }: { attraction: Attraction }) {
+  const metaItems = [];
+  
+  if (attraction.location) {
+    metaItems.push({ icon: MapPin, label: "Location", value: attraction.location });
+  }
+  if (attraction.duration) {
+    metaItems.push({ icon: Clock, label: "Duration", value: attraction.duration });
+  }
+  if (attraction.targetAudience && attraction.targetAudience.length > 0) {
+    metaItems.push({ icon: Users, label: "Best For", value: attraction.targetAudience.join(", ") });
+  }
+  if (attraction.priceFrom) {
+    metaItems.push({ icon: DollarSign, label: "Price", value: `From AED ${attraction.priceFrom}` });
+  }
+  
+  if (metaItems.length === 0) return null;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-y">
-      {attraction.location && (
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-muted-foreground" />
-          <span>{attraction.location}</span>
+    <section className="bg-background border-b border-border sticky top-20 z-30" data-testid="attraction-meta">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center gap-6 py-4 overflow-x-auto">
+          {metaItems.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-2 whitespace-nowrap" data-testid={`meta-${idx}`}>
+              <item.icon className="h-5 w-5 text-travi-purple" />
+              <div>
+                <span className="text-xs text-muted-foreground block">{item.label}</span>
+                <span className="text-sm font-medium text-foreground">{item.value}</span>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-      {attraction.duration && (
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-muted-foreground" />
-          <span>{attraction.duration}</span>
-        </div>
-      )}
-      {attraction.targetAudience && attraction.targetAudience.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-muted-foreground" />
-          <span>{attraction.targetAudience.join(", ")}</span>
-        </div>
-      )}
-      {attraction.priceFrom && (
-        <div className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-muted-foreground" />
-          <span>From AED {attraction.priceFrom}</span>
-        </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
 }
 
 function HotelMeta({ hotel }: { hotel: Hotel }) {
+  const metaItems = [];
+  
+  if (hotel.starRating) {
+    metaItems.push({ icon: Star, label: "Rating", value: `${hotel.starRating} Star` });
+  }
+  if (hotel.location) {
+    metaItems.push({ icon: MapPin, label: "Location", value: hotel.location });
+  }
+  if (hotel.numberOfRooms) {
+    metaItems.push({ icon: Building, label: "Rooms", value: `${hotel.numberOfRooms} Rooms` });
+  }
+  if (hotel.targetAudience && hotel.targetAudience.length > 0) {
+    metaItems.push({ icon: Users, label: "Best For", value: hotel.targetAudience.join(", ") });
+  }
+  
+  if (metaItems.length === 0) return null;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-y">
-      {hotel.starRating && (
-        <div className="flex items-center gap-2">
-          <Star className="h-5 w-5 text-muted-foreground" />
-          <span>{hotel.starRating} Star</span>
+    <section className="bg-background border-b border-border sticky top-20 z-30" data-testid="hotel-meta">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center gap-6 py-4 overflow-x-auto">
+          {metaItems.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-2 whitespace-nowrap" data-testid={`meta-${idx}`}>
+              <item.icon className="h-5 w-5 text-travi-orange" />
+              <div>
+                <span className="text-xs text-muted-foreground block">{item.label}</span>
+                <span className="text-sm font-medium text-foreground">{item.value}</span>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-      {hotel.location && (
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-muted-foreground" />
-          <span>{hotel.location}</span>
-        </div>
-      )}
-      {hotel.numberOfRooms && (
-        <div className="flex items-center gap-2">
-          <Building className="h-5 w-5 text-muted-foreground" />
-          <span>{hotel.numberOfRooms} Rooms</span>
-        </div>
-      )}
-      {hotel.targetAudience && hotel.targetAudience.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-muted-foreground" />
-          <span>{hotel.targetAudience.join(", ")}</span>
-        </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
 }
 
 function DiningMeta({ dining }: { dining: Dining }) {
+  const metaItems = [];
+  
+  if (dining.cuisineType) {
+    metaItems.push({ icon: Utensils, label: "Cuisine", value: dining.cuisineType });
+  }
+  if (dining.priceRange) {
+    metaItems.push({ icon: DollarSign, label: "Price Range", value: dining.priceRange });
+  }
+  if (dining.location) {
+    metaItems.push({ icon: MapPin, label: "Location", value: dining.location });
+  }
+  if (dining.quickInfoBar && dining.quickInfoBar.length > 0) {
+    const hours = dining.quickInfoBar.find((item) => 
+      item.label?.toLowerCase().includes("hour") || item.label?.toLowerCase().includes("time")
+    );
+    if (hours) {
+      metaItems.push({ icon: Clock, label: "Hours", value: hours.value || "See hours" });
+    }
+  }
+  
+  if (metaItems.length === 0) return null;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-y">
-      {dining.cuisineType && (
-        <div className="flex items-center gap-2">
-          <Utensils className="h-5 w-5 text-muted-foreground" />
-          <span>{dining.cuisineType}</span>
+    <section className="bg-background border-b border-border sticky top-20 z-30" data-testid="dining-meta">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center gap-6 py-4 overflow-x-auto">
+          {metaItems.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-2 whitespace-nowrap" data-testid={`meta-${idx}`}>
+              <item.icon className="h-5 w-5 text-travi-pink" />
+              <div>
+                <span className="text-xs text-muted-foreground block">{item.label}</span>
+                <span className="text-sm font-medium text-foreground">{item.value}</span>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-      {dining.priceRange && (
-        <div className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-muted-foreground" />
-          <span>{dining.priceRange}</span>
-        </div>
-      )}
-      {dining.location && (
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-muted-foreground" />
-          <span>{dining.location}</span>
-        </div>
-      )}
-      {dining.quickInfoBar && dining.quickInfoBar.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-muted-foreground" />
-          <span>
-            {dining.quickInfoBar.find((item) => item.label?.toLowerCase().includes("hour"))?.value ||
-             dining.quickInfoBar.find((item) => item.label?.toLowerCase().includes("time"))?.value ||
-             "See hours"}
-          </span>
-        </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
 }
 
 function DistrictMeta({ district }: { district: District }) {
+  const metaItems = [];
+  
   const hotelCount = district.attractionsGrid?.filter((a) => a.type?.toLowerCase().includes("hotel")).length || 0;
   const restaurantCount = district.diningHighlights?.length || 0;
   const activityCount = district.thingsToDo?.length || 0;
 
+  if (hotelCount > 0) {
+    metaItems.push({ icon: Building, label: "Hotels", value: `${hotelCount} Hotel${hotelCount !== 1 ? 's' : ''}` });
+  }
+  if (restaurantCount > 0) {
+    metaItems.push({ icon: Utensils, label: "Restaurants", value: `${restaurantCount} Restaurant${restaurantCount !== 1 ? 's' : ''}` });
+  }
+  if (activityCount > 0) {
+    metaItems.push({ icon: Star, label: "Things to Do", value: `${activityCount} Thing${activityCount !== 1 ? 's' : ''}` });
+  }
+  if (district.targetAudience && district.targetAudience.length > 0) {
+    metaItems.push({ icon: Tag, label: "Best For", value: district.targetAudience.slice(0, 2).join(", ") });
+  }
+
+  if (metaItems.length === 0) return null;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-y">
-      {hotelCount > 0 && (
-        <div className="flex items-center gap-2">
-          <Building className="h-5 w-5 text-muted-foreground" />
-          <span>{hotelCount} Hotel{hotelCount !== 1 ? 's' : ''}</span>
+    <section className="bg-background border-b border-border sticky top-20 z-30" data-testid="district-meta">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center gap-6 py-4 overflow-x-auto">
+          {metaItems.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-2 whitespace-nowrap" data-testid={`meta-${idx}`}>
+              <item.icon className="h-5 w-5 text-travi-purple" />
+              <div>
+                <span className="text-xs text-muted-foreground block">{item.label}</span>
+                <span className="text-sm font-medium text-foreground">{item.value}</span>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-      {restaurantCount > 0 && (
-        <div className="flex items-center gap-2">
-          <Utensils className="h-5 w-5 text-muted-foreground" />
-          <span>{restaurantCount} Restaurant{restaurantCount !== 1 ? 's' : ''}</span>
-        </div>
-      )}
-      {activityCount > 0 && (
-        <div className="flex items-center gap-2">
-          <Star className="h-5 w-5 text-muted-foreground" />
-          <span>{activityCount} Thing{activityCount !== 1 ? 's' : ''} to Do</span>
-        </div>
-      )}
-      {district.targetAudience && district.targetAudience.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Tag className="h-5 w-5 text-muted-foreground" />
-          <span>Best for: {district.targetAudience.slice(0, 2).join(", ")}</span>
-        </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
+}
+
+interface AIWriter {
+  id: string;
+  name: string;
+  avatar: string;
+  shortBio: string;
 }
 
 function ArticleDetailView({ content }: { content: ContentWithExtensions }) {
@@ -354,12 +463,18 @@ function ArticleDetailView({ content }: { content: ContentWithExtensions }) {
     queryKey: ["/api/contents?status=published&limit=8"],
   });
 
+  const { data: writerData } = useQuery<{ writer: AIWriter }>({
+    queryKey: ["/api/writers", content.writerId],
+    enabled: !!content.writerId,
+  });
+
+  const writer = writerData?.writer;
+
   const heroImage = content.heroImage || "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1920&h=800&fit=crop";
   const keywords = content.secondaryKeywords || content.lsiKeywords || [];
   const category = content.article?.category;
   const blocks = content.blocks || [];
 
-  // Filter related articles by matching category or overlapping keywords
   const currentKeywords = new Set([
     ...(content.secondaryKeywords || []),
     ...(content.lsiKeywords || []),
@@ -375,7 +490,6 @@ function ArticleDetailView({ content }: { content: ContentWithExtensions }) {
         ...(a.primaryKeyword ? [a.primaryKeyword] : []),
       ].map(k => k.toLowerCase());
       
-      // Calculate relevance score: +3 for category match, +1 for each keyword match
       let score = 0;
       if (category && a.article?.category === category) {
         score += 3;
@@ -395,9 +509,9 @@ function ArticleDetailView({ content }: { content: ContentWithExtensions }) {
         score,
       };
     })
-    .filter(a => a.score > 0) // Only include articles with some relevance
-    .sort((a, b) => b.score - a.score) // Sort by relevance score
-    .slice(0, 8); // Take top 8 for RelatedArticles component to slice to 4
+    .filter(a => a.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
 
   const recommendationItems = recommendations
     .filter((r) => r.id !== content.id && r.type !== "article")
@@ -422,6 +536,8 @@ function ArticleDetailView({ content }: { content: ContentWithExtensions }) {
         category={category || undefined}
         publishedAt={content.publishedAt}
         keywords={keywords}
+        writerName={writer?.name}
+        writerAvatar={writer?.avatar}
       />
 
       <ArticleBody
@@ -447,9 +563,61 @@ function ArticleDetailView({ content }: { content: ContentWithExtensions }) {
   );
 }
 
+function RelatedContentSection({ content, type }: { content: ContentWithExtensions; type: string }) {
+  const { data: relatedContent = [] } = useQuery<ContentWithRelations[]>({
+    queryKey: [`/api/contents?type=${type}&status=published&limit=5`],
+  });
+
+  const filtered = relatedContent.filter(c => c.slug !== content.slug).slice(0, 4);
+  
+  if (filtered.length === 0) return null;
+
+  const config = contentTypeConfig[type];
+
+  return (
+    <section className="py-16 bg-muted/30" data-testid="section-related">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-end justify-between mb-8 gap-4">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+            More {config.backLabel}
+          </h2>
+          <Link href={config.backHref}>
+            <Button variant="outline" className="rounded-full" data-testid="button-view-all">
+              View All <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {filtered.map((item) => (
+            <Link key={item.id} href={`/${item.type}/${item.slug}`} data-testid={`related-card-${item.id}`}>
+              <Card className="overflow-hidden hover-elevate cursor-pointer h-full">
+                <div className="aspect-[4/3]">
+                  <img
+                    src={item.heroImage || "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400"}
+                    alt={item.heroImageAlt || item.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="p-4">
+                  <h3 className="font-semibold text-foreground line-clamp-2 mb-2">{item.title}</h3>
+                  {item.metaDescription && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{item.metaDescription}</p>
+                  )}
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function PublicContentViewer() {
   const [, params] = useRoute("/:type/:slug");
   const slug = params?.slug;
+  const type = params?.type;
   const trackedRef = useRef<string | null>(null);
 
   const { data: content, isLoading, error } = useQuery<ContentWithExtensions>({
@@ -508,19 +676,27 @@ export default function PublicContentViewer() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" data-testid="loading-state">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="min-h-screen flex items-center justify-center bg-background" data-testid="loading-state">
+        <Loader2 className="h-8 w-8 animate-spin text-travi-purple" />
       </div>
     );
   }
 
   if (error || !content) {
     return (
-      <div className="min-h-screen flex items-center justify-center" data-testid="error-state">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Content Not Found</h1>
-          <p className="text-muted-foreground">The page you're looking for doesn't exist.</p>
+      <div className="min-h-screen bg-background" data-testid="error-state">
+        <PublicNav variant="default" />
+        <div className="pt-32 text-center px-6">
+          <h1 className="text-2xl font-bold mb-4">Content Not Found</h1>
+          <p className="text-muted-foreground mb-6">The page you're looking for doesn't exist.</p>
+          <Link href="/">
+            <Button data-testid="button-go-home">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go to Homepage
+            </Button>
+          </Link>
         </div>
+        <PublicFooter />
       </div>
     );
   }
@@ -529,143 +705,143 @@ export default function PublicContentViewer() {
     return <ArticleDetailView content={content} />;
   }
 
+  const config = contentTypeConfig[content.type] || contentTypeConfig.attraction;
   const blocks = content.blocks || [];
   const hasBlocks = blocks.length > 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      {hasBlocks ? (
-        <div>
-          {blocks.map((block: any, index: number) => (
-            <div key={index} className={block.type === "hero" ? "" : "max-w-4xl mx-auto px-4"}>
-              {renderBlock(block, index)}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          {content.heroImage && (
-            <img
-              src={content.heroImage}
-              alt={content.heroImageAlt || content.title}
-              className="w-full h-[400px] object-cover rounded-lg mb-8"
-            />
-          )}
-          <h1 className="text-4xl font-bold mb-4">{content.title}</h1>
-          
-          {content.attraction && <AttractionMeta attraction={content.attraction} />}
-          {content.hotel && <HotelMeta hotel={content.hotel} />}
-          {content.dining && <DiningMeta dining={content.dining} />}
-          {content.district && <DistrictMeta district={content.district} />}
+    <div className="min-h-screen bg-background" data-testid="content-viewer">
+      <PublicNav variant="transparent" />
 
-          {content.metaDescription && (
-            <p className="text-xl text-muted-foreground my-6">{content.metaDescription}</p>
-          )}
+      <ContentHero content={content} config={config} />
 
-          {content.attraction?.highlights && content.attraction.highlights.length > 0 && (
-            <div className="py-6">
-              <h2 className="text-2xl font-semibold mb-4">Highlights</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {content.attraction.highlights.map((item: HighlightItem, i: number) => (
-                  <div key={i} className="flex items-start gap-3 p-4 bg-muted rounded-lg">
-                    {item.image && (
-                      <img src={item.image} alt={item.title} className="w-16 h-16 object-cover rounded" />
-                    )}
-                    <div>
-                      <h3 className="font-medium">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      {content.attraction && <AttractionMeta attraction={content.attraction} />}
+      {content.hotel && <HotelMeta hotel={content.hotel} />}
+      {content.dining && <DiningMeta dining={content.dining} />}
+      {content.district && <DistrictMeta district={content.district} />}
 
-          {content.attraction?.visitorTips && content.attraction.visitorTips.length > 0 && (
-            <div className="py-6 bg-muted/50 rounded-lg p-6">
-              <h2 className="text-2xl font-semibold mb-4">Visitor Tips</h2>
-              <ul className="space-y-2">
-                {content.attraction.visitorTips.map((tip: string, i: number) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      <main className="bg-background">
+        {hasBlocks ? (
+          <div className="max-w-4xl mx-auto px-6 py-12">
+            {blocks.map((block: any, index: number) => renderBlock(block, index))}
+          </div>
+        ) : (
+          <div className="max-w-4xl mx-auto px-6 py-12">
+            {content.attraction?.highlights && content.attraction.highlights.length > 0 && (
+              <section className="py-8" data-testid="section-highlights">
+                <h2 className="text-2xl font-bold mb-6">Highlights</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {content.attraction.highlights.map((item: HighlightItem, i: number) => (
+                    <Card key={i} className="flex items-start gap-4 p-4" data-testid={`highlight-${i}`}>
+                      {item.image && (
+                        <img src={item.image} alt={item.title} className="w-20 h-20 object-cover rounded-lg flex-shrink-0" />
+                      )}
+                      <div>
+                        <h3 className="font-semibold text-foreground">{item.title}</h3>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
 
-          {content.attraction?.faq && content.attraction.faq.length > 0 && (
-            <div className="py-6">
-              <h2 className="text-2xl font-semibold mb-4">Frequently Asked Questions</h2>
-              <div className="space-y-4">
-                {content.attraction.faq.map((item: FaqItem, i: number) => (
-                  <div key={i} className="border rounded-lg p-4">
-                    <h3 className="font-medium mb-2">{item.question}</h3>
-                    <p className="text-muted-foreground">{item.answer}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            {content.attraction?.visitorTips && content.attraction.visitorTips.length > 0 && (
+              <section className="py-8" data-testid="section-tips">
+                <h2 className="text-2xl font-bold mb-6">Visitor Tips</h2>
+                <Card className="p-6 bg-travi-green/5 border-travi-green/20">
+                  <ul className="space-y-3">
+                    {content.attraction.visitorTips.map((tip: string, i: number) => (
+                      <li key={i} className="flex items-start gap-3" data-testid={`tip-${i}`}>
+                        <Star className="w-5 h-5 text-travi-green flex-shrink-0 mt-0.5" />
+                        <span className="text-foreground">{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              </section>
+            )}
 
-          {content.hotel?.amenities && content.hotel.amenities.length > 0 && (
-            <div className="py-6">
-              <h2 className="text-2xl font-semibold mb-4">Amenities</h2>
-              <div className="flex flex-wrap gap-2">
-                {content.hotel.amenities.map((amenity: string, i: number) => (
-                  <span key={i} className="bg-muted px-3 py-1 rounded-full text-sm">
-                    {amenity}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+            {content.attraction?.faq && content.attraction.faq.length > 0 && (
+              <section className="py-8" data-testid="section-faq">
+                <h2 className="text-2xl font-bold mb-6">Frequently Asked Questions</h2>
+                <div className="space-y-4">
+                  {content.attraction.faq.map((item: FaqItem, i: number) => (
+                    <Card key={i} className="p-5" data-testid={`faq-${i}`}>
+                      <h3 className="font-semibold text-foreground mb-2">{item.question}</h3>
+                      <p className="text-muted-foreground">{item.answer}</p>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
 
-          {content.hotel?.roomTypes && content.hotel.roomTypes.length > 0 && (
-            <div className="py-6">
-              <h2 className="text-2xl font-semibold mb-4">Room Types</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {content.hotel.roomTypes.map((room: RoomTypeItem, i: number) => (
-                  <div key={i} className="bg-muted p-4 rounded-lg">
-                    {room.image && (
-                      <img src={room.image} alt={room.title} className="w-full h-32 object-cover rounded mb-3" />
-                    )}
-                    <h3 className="font-medium">{room.title}</h3>
-                    {room.price && <p className="text-primary font-semibold">{room.price}</p>}
-                    {room.features && room.features.length > 0 && (
-                      <ul className="text-sm text-muted-foreground mt-2">
-                        {room.features.map((f: string, fi: number) => (
-                          <li key={fi}>• {f}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            {content.hotel?.amenities && content.hotel.amenities.length > 0 && (
+              <section className="py-8" data-testid="section-amenities">
+                <h2 className="text-2xl font-bold mb-6">Amenities</h2>
+                <div className="flex flex-wrap gap-2">
+                  {content.hotel.amenities.map((amenity: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="px-3 py-1" data-testid={`amenity-${i}`}>
+                      {amenity}
+                    </Badge>
+                  ))}
+                </div>
+              </section>
+            )}
 
-          {content.hotel?.highlights && content.hotel.highlights.length > 0 && (
-            <div className="py-6">
-              <h2 className="text-2xl font-semibold mb-4">Highlights</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {content.hotel.highlights.map((item: HighlightItem, i: number) => (
-                  <div key={i} className="flex items-start gap-3 p-4 bg-muted rounded-lg">
-                    {item.image && (
-                      <img src={item.image} alt={item.title} className="w-16 h-16 object-cover rounded" />
-                    )}
-                    <div>
-                      <h3 className="font-medium">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+            {content.hotel?.roomTypes && content.hotel.roomTypes.length > 0 && (
+              <section className="py-8" data-testid="section-room-types">
+                <h2 className="text-2xl font-bold mb-6">Room Types</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {content.hotel.roomTypes.map((room: RoomTypeItem, i: number) => (
+                    <Card key={i} className="overflow-hidden" data-testid={`room-${i}`}>
+                      {room.image && (
+                        <img src={room.image} alt={room.title} className="w-full h-40 object-cover" />
+                      )}
+                      <div className="p-4">
+                        <h3 className="font-semibold text-foreground">{room.title}</h3>
+                        {room.price && <p className="text-travi-purple font-bold mt-1">{room.price}</p>}
+                        {room.features && room.features.length > 0 && (
+                          <ul className="text-sm text-muted-foreground mt-2 space-y-1">
+                            {room.features.map((f: string, fi: number) => (
+                              <li key={fi}>• {f}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {content.hotel?.highlights && content.hotel.highlights.length > 0 && (
+              <section className="py-8" data-testid="section-hotel-highlights">
+                <h2 className="text-2xl font-bold mb-6">Highlights</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {content.hotel.highlights.map((item: HighlightItem, i: number) => (
+                    <Card key={i} className="flex items-start gap-4 p-4" data-testid={`hotel-highlight-${i}`}>
+                      {item.image && (
+                        <img src={item.image} alt={item.title} className="w-20 h-20 object-cover rounded-lg flex-shrink-0" />
+                      )}
+                      <div>
+                        <h3 className="font-semibold text-foreground">{item.title}</h3>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </main>
+
+      <RelatedContentSection content={content} type={content.type} />
+
+      <NewsletterSignup />
+
+      <PublicFooter />
     </div>
   );
 }
