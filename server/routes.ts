@@ -2157,7 +2157,7 @@ export async function registerRoutes(
 
         // Check if MFA is required - ONLY if user has actually enrolled in 2FA
         // Users who haven't set up 2FA should be able to log in normally
-        const requiresMfa = user.totpEnabled && user.totpSecret;
+        const requiresMfa = Boolean(user.totpEnabled && user.totpSecret);
 
         // Set up session
         const sessionUser = {
@@ -2644,6 +2644,9 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Verification code is required" });
       }
 
+      // Clean the code (remove spaces and dashes)
+      const cleanCode = String(code).replace(/[\s-]/g, "").trim();
+
       // Rate limiting check
       const now = Date.now();
       const attempts = totpAttempts.get(userId);
@@ -2671,8 +2674,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "TOTP is not enabled for this user" });
       }
 
-      // Verify the TOTP code
-      const isValid = authenticator.verify({ token: code, secret: user.totpSecret });
+      // Verify the TOTP code (using cleaned code without spaces/dashes)
+      const isValid = authenticator.verify({ token: cleanCode, secret: user.totpSecret });
       
       if (!isValid) {
         // Track failed attempt
