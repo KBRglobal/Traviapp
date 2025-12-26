@@ -3107,3 +3107,61 @@ export type InsertAbTestEvent = z.infer<typeof insertAbTestEventSchema>;
 // Export ContentType for use in AI Writers system
 export type ContentType = typeof contents.$inferSelect.type;
 
+// ============================================================================
+// REAL ESTATE PAGES - CMS EDITABLE CONTENT FOR STATIC PAGES
+// ============================================================================
+
+export const realEstatePageCategoryEnum = pgEnum("real_estate_page_category", [
+  "guide",
+  "calculator",
+  "comparison",
+  "case_study",
+  "location",
+  "developer",
+  "pillar"
+]);
+
+export const realEstatePages = pgTable("real_estate_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pageKey: varchar("page_key").notNull().unique(),
+  category: realEstatePageCategoryEnum("category").notNull(),
+  title: text("title").notNull(),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  heroTitle: text("hero_title"),
+  heroSubtitle: text("hero_subtitle"),
+  introText: text("intro_text"),
+  sections: jsonb("sections").$type<Array<{
+    id: string;
+    type: string;
+    title?: string;
+    content?: string;
+    data?: unknown;
+  }>>().default([]),
+  faqs: jsonb("faqs").$type<Array<{
+    question: string;
+    answer: string;
+  }>>().default([]),
+  relatedLinks: jsonb("related_links").$type<Array<{
+    title: string;
+    path: string;
+    description?: string;
+  }>>().default([]),
+  isActive: boolean("is_active").notNull().default(true),
+  lastEditedBy: varchar("last_edited_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_real_estate_pages_category").on(table.category),
+  index("IDX_real_estate_pages_active").on(table.isActive),
+]);
+
+export const insertRealEstatePageSchema = createInsertSchema(realEstatePages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type RealEstatePage = typeof realEstatePages.$inferSelect;
+export type InsertRealEstatePage = z.infer<typeof insertRealEstatePageSchema>;
+

@@ -128,6 +128,11 @@ const contentItems = [
     url: "/admin/off-plan",
     icon: Building,
   },
+  {
+    title: "Real Estate",
+    url: "/admin/real-estate",
+    icon: Home,
+  },
 ];
 
 const managementItems: Array<{
