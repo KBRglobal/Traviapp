@@ -2155,8 +2155,9 @@ export async function registerRoutes(
         const deviceInfo = await deviceFingerprint.registerDevice(user.id, fingerprint, ip);
         const isNewDevice = deviceInfo.loginCount === 1;
 
-        // Check if MFA is required (new device, high risk, or user has 2FA enabled)
-        const requiresMfa = contextResult.requiresMfa || user.totpEnabled;
+        // Check if MFA is required - ONLY if user has actually enrolled in 2FA
+        // Users who haven't set up 2FA should be able to log in normally
+        const requiresMfa = user.totpEnabled && user.totpSecret;
 
         // Set up session
         const sessionUser = {
