@@ -229,7 +229,11 @@ export default function AuditLogs() {
           ) : filteredLogs.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
               <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No audit logs found</p>
+              <p className="font-medium">No audit logs found</p>
+              <p className="text-sm mt-2 max-w-md mx-auto">
+                Audit logs record user actions like creating, editing, and publishing content.
+                As team members work in the system, their actions will be logged here for accountability and review.
+              </p>
             </div>
           ) : (
             <div className="divide-y">

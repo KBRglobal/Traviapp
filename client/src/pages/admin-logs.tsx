@@ -48,6 +48,7 @@ interface LogEntry {
   category: LogCategory;
   message: string;
   rawMessage?: string;
+  details?: Record<string, unknown>;
 }
 
 interface LogStats {
@@ -384,9 +385,13 @@ export default function AdminLogs() {
                   <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
               ) : filteredLogs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-gray-500 font-mono">
-                  <span className="text-cyan-400">$</span>
-                  <p className="mt-2">No logs found</p>
+                <div className="flex flex-col items-center justify-center py-10 text-gray-500 font-mono text-center px-4">
+                  <Server className="h-10 w-10 text-gray-600 mb-3" />
+                  <p className="text-gray-400 font-medium">No logs recorded yet</p>
+                  <p className="text-sm mt-2 max-w-md text-gray-500">
+                    System logs capture server activity including API requests, AI operations, RSS processing, and errors. 
+                    Logs will appear automatically as the system processes requests.
+                  </p>
                 </div>
               ) : (
                 <ScrollArea className="h-[500px]">
