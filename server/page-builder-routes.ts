@@ -253,8 +253,8 @@ router.post("/sections", isAuthenticated, async (req: Request, res: Response) =>
   }
 });
 
-// PUT /api/page-builder/sections/:id - Update section (with version history)
-router.put("/sections/:id", isAuthenticated, async (req: Request, res: Response) => {
+// Shared handler for updating sections (used by both PUT and PATCH)
+async function updateSectionHandler(req: Request, res: Response) {
   try {
     const authReq = req as Request & { user?: { claims?: { sub?: string } } };
     const userId = authReq.user?.claims?.sub;
@@ -323,7 +323,13 @@ router.put("/sections/:id", isAuthenticated, async (req: Request, res: Response)
       heGuide: "איך זה עובד: אירעה שגיאה בעדכון הסקציה"
     });
   }
-});
+}
+
+// PUT /api/page-builder/sections/:id - Update section (with version history)
+router.put("/sections/:id", isAuthenticated, updateSectionHandler);
+
+// PATCH /api/page-builder/sections/:id - Update section (partial updates)
+router.patch("/sections/:id", isAuthenticated, updateSectionHandler);
 
 // DELETE /api/page-builder/sections/:id - Delete section
 router.delete("/sections/:id", isAuthenticated, async (req: Request, res: Response) => {
