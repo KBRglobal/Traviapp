@@ -14,6 +14,8 @@ import { Loader2 } from "lucide-react";
 import { LocaleProvider } from "@/lib/i18n/LocaleRouter";
 import { FavoritesProvider } from "@/hooks/use-favorites";
 import { LiveEditProvider } from "@/components/live-edit";
+import { CookieConsentProvider } from "@/contexts/cookie-consent-context";
+import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 
 // Lazy load all pages for better performance
 const ComingSoon = lazy(() => import("@/pages/coming-soon"));
@@ -538,22 +540,25 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <LocaleProvider>
-        <FavoritesProvider>
-          <TooltipProvider>
-            <Suspense fallback={<PageLoader />}>
-              {isAdminRoute ? (
-                <AdminLayout />
-              ) : (
-                <LiveEditProvider>
-                  <PublicRouter />
-                </LiveEditProvider>
-              )}
-            </Suspense>
-            <Toaster />
-          </TooltipProvider>
-        </FavoritesProvider>
-      </LocaleProvider>
+      <CookieConsentProvider>
+        <LocaleProvider>
+          <FavoritesProvider>
+            <TooltipProvider>
+              <Suspense fallback={<PageLoader />}>
+                {isAdminRoute ? (
+                  <AdminLayout />
+                ) : (
+                  <LiveEditProvider>
+                    <PublicRouter />
+                  </LiveEditProvider>
+                )}
+              </Suspense>
+              <Toaster />
+              <CookieConsentBanner />
+            </TooltipProvider>
+          </FavoritesProvider>
+        </LocaleProvider>
+      </CookieConsentProvider>
     </QueryClientProvider>
   );
 }
