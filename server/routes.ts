@@ -103,6 +103,7 @@ import { registerImageRoutes } from "./routes/image-routes";
 import { registerLogRoutes } from "./routes/log-routes";
 import { registerSEORoutes } from "./routes/seo-routes";
 import { registerAutomationRoutes } from "./automation-routes";
+import { enforceArticleSEO } from "./seo-enforcement";
 import { registerContentIntelligenceRoutes } from "./content-intelligence-routes";
 import { registerAutoPilotRoutes } from "./auto-pilot-routes";
 import { registerEnhancementRoutes } from "./enhancement-routes";
@@ -5048,9 +5049,12 @@ Return JSON only:
         console.error("[AI Article] Error fetching image:", imageError);
       }
       
+      // ENFORCE SEO REQUIREMENTS before sending response
+      const enforcedArticle = enforceArticleSEO(generatedArticle);
+      
       // Add image to response
       res.json({
-        ...generatedArticle,
+        ...enforcedArticle,
         heroImage
       });
     } catch (error) {
