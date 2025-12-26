@@ -36,7 +36,7 @@ export function PublicFooter() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, source: "footer" }),
       });
 
       const data = await response.json();

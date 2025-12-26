@@ -204,7 +204,7 @@ export function PublicNav({
       {/* Mobile Menu Drawer - Slides from right, always accessible */}
       <nav 
         id="mobile-menu"
-        className={`lg:hidden fixed top-0 ${isRTL ? 'left-0' : 'right-0'} h-full w-[85%] max-w-[320px] z-[101] bg-background shadow-2xl transition-transform duration-300 ease-out ${
+        className={`lg:hidden fixed top-0 ${isRTL ? 'left-0' : 'right-0'} h-full w-[85%] max-w-[320px] z-[101] bg-background shadow-2xl transition-transform duration-300 ease-out flex flex-col ${
           mobileMenuOpen 
             ? "translate-x-0" 
             : isRTL ? "-translate-x-full" : "translate-x-full"
