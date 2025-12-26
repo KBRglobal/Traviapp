@@ -678,7 +678,7 @@ export type InsertUiTranslation = z.infer<typeof insertUiTranslationSchema>;
 export type UiTranslation = typeof uiTranslations.$inferSelect;
 
 // Homepage Promotions table - for curating homepage sections
-export const homepageSectionEnum = pgEnum("homepage_section", ["featured", "attractions", "hotels", "articles", "trending"]);
+export const homepageSectionEnum = pgEnum("homepage_section", ["featured", "attractions", "hotels", "articles", "trending", "dining", "events"]);
 
 export const homepagePromotions = pgTable("homepage_promotions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1709,7 +1709,7 @@ export const insertHomepagePromotionSchema = createInsertSchema(homepagePromotio
 });
 export type InsertHomepagePromotion = z.infer<typeof insertHomepagePromotionSchema>;
 export type HomepagePromotion = typeof homepagePromotions.$inferSelect;
-export type HomepageSection = "featured" | "attractions" | "hotels" | "articles" | "trending";
+export type HomepageSection = "featured" | "attractions" | "hotels" | "articles" | "trending" | "dining" | "events";
 
 export const insertContentViewSchema = createInsertSchema(contentViews).omit({
   id: true,

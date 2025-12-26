@@ -34,10 +34,12 @@ import {
   Building2,
   FileText,
   TrendingUp,
+  UtensilsCrossed,
+  Calendar,
 } from "lucide-react";
 import type { Content } from "@shared/schema";
 
-type HomepageSection = "featured" | "attractions" | "hotels" | "articles" | "trending";
+type HomepageSection = "featured" | "attractions" | "hotels" | "articles" | "trending" | "dining" | "events";
 
 interface HomepagePromotion {
   id: string;
@@ -55,7 +57,9 @@ const SECTIONS: { value: HomepageSection; label: string; icon: typeof Star }[] =
   { value: "featured", label: "Featured", icon: Star },
   { value: "attractions", label: "Attractions", icon: MapPin },
   { value: "hotels", label: "Hotels", icon: Building2 },
-  { value: "articles", label: "News", icon: FileText },
+  { value: "dining", label: "Restaurants", icon: UtensilsCrossed },
+  { value: "events", label: "Events", icon: Calendar },
+  { value: "articles", label: "Guides", icon: FileText },
   { value: "trending", label: "Trending", icon: TrendingUp },
 ];
 
@@ -79,6 +83,8 @@ function PromotionsList({ section }: { section: HomepageSection }) {
     
     if (section === "attractions") return c.type === "attraction" && matchesSearch && notAlreadyAdded;
     if (section === "hotels") return c.type === "hotel" && matchesSearch && notAlreadyAdded;
+    if (section === "dining") return c.type === "dining" && matchesSearch && notAlreadyAdded;
+    if (section === "events") return c.type === "event" && matchesSearch && notAlreadyAdded;
     if (section === "articles") return c.type === "article" && matchesSearch && notAlreadyAdded;
     return matchesSearch && notAlreadyAdded;
   });

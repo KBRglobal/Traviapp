@@ -6910,7 +6910,7 @@ IMPORTANT: Include 5-8 internal links and 2-3 external links in your text sectio
   app.get("/api/homepage-promotions/:section", async (req, res) => {
     try {
       const section = req.params.section as HomepageSection;
-      const validSections = ["featured", "attractions", "hotels", "articles", "trending"];
+      const validSections = ["featured", "attractions", "hotels", "articles", "trending", "dining", "events"];
       if (!validSections.includes(section)) {
         return res.status(400).json({ error: "Invalid section" });
       }
@@ -6986,7 +6986,7 @@ IMPORTANT: Include 5-8 internal links and 2-3 external links in your text sectio
   app.post("/api/homepage-promotions/reorder", requirePermission("canEdit"), checkReadOnlyMode, async (req, res) => {
     try {
       const reorderSchema = z.object({
-        section: z.enum(["featured", "attractions", "hotels", "articles", "trending"]),
+        section: z.enum(["featured", "attractions", "hotels", "articles", "trending", "dining", "events"]),
         orderedIds: z.array(z.string().uuid()),
       });
       const { section, orderedIds } = reorderSchema.parse(req.body);
