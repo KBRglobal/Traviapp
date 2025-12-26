@@ -103,7 +103,7 @@ import { registerImageRoutes } from "./routes/image-routes";
 import { registerLogRoutes } from "./routes/log-routes";
 import { registerSEORoutes } from "./routes/seo-routes";
 import { registerAutomationRoutes } from "./automation-routes";
-import { enforceArticleSEO } from "./seo-enforcement";
+import { enforceArticleSEO, enforceWriterEngineSEO } from "./seo-enforcement";
 import { registerContentIntelligenceRoutes } from "./content-intelligence-routes";
 import { registerAutoPilotRoutes } from "./auto-pilot-routes";
 import { registerEnhancementRoutes } from "./enhancement-routes";
@@ -5128,7 +5128,9 @@ Return valid JSON-LD that can be embedded in a webpage.`,
         length: 'long',
       });
 
-      res.json({ ...result, _system: 'ai-writers' });
+      // Apply SEO enforcement before sending
+      const enforced = enforceWriterEngineSEO(result);
+      res.json({ ...enforced, _system: 'ai-writers' });
     } catch (error) {
       console.error("Error generating hotel content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate hotel content";
@@ -5154,7 +5156,9 @@ Return valid JSON-LD that can be embedded in a webpage.`,
         length: 'long',
       });
 
-      res.json({ ...result, _system: 'ai-writers' });
+      // Apply SEO enforcement before sending
+      const enforced = enforceWriterEngineSEO(result);
+      res.json({ ...enforced, _system: 'ai-writers' });
     } catch (error) {
       console.error("Error generating attraction content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate attraction content";
@@ -5277,7 +5281,9 @@ Output format:
         length: 'long',
       });
 
-      res.json({ ...result, _system: 'ai-writers' });
+      // Apply SEO enforcement before sending
+      const enforced = enforceWriterEngineSEO(result);
+      res.json({ ...enforced, _system: 'ai-writers' });
     } catch (error) {
       console.error("Error generating dining content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate dining content";
@@ -5303,7 +5309,9 @@ Output format:
         length: 'long',
       });
 
-      res.json({ ...result, _system: 'ai-writers' });
+      // Apply SEO enforcement before sending
+      const enforced = enforceWriterEngineSEO(result);
+      res.json({ ...enforced, _system: 'ai-writers' });
     } catch (error) {
       console.error("Error generating district content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate district content";
@@ -5553,7 +5561,9 @@ Format: Return ONLY a JSON array of 3 different sets. Each element is a string w
         additionalContext: category ? `Category: ${category}` : undefined,
       });
 
-      res.json({ ...result, _system: 'ai-writers' });
+      // Apply SEO enforcement before sending
+      const enforced = enforceWriterEngineSEO(result);
+      res.json({ ...enforced, _system: 'ai-writers' });
     } catch (error) {
       console.error("Error generating article content:", error);
       const message = error instanceof Error ? error.message : "Failed to generate article content";

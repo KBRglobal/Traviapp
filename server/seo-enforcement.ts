@@ -578,21 +578,151 @@ function injectExternalLinksOnce(html: string, count: number): string {
 
 /**
  * Apply SEO enforcement to writer-engine style content
+ * Works with aiWritersContentGenerator output format
  */
-export function enforceWriterEngineSEO(parsedContent: {
-  title: string;
-  metaDescription: string;
-  intro: string;
-  body: string;
-  conclusion: string;
-}): typeof parsedContent {
+export function enforceWriterEngineSEO(result: any): any {
+  if (!result) return result;
+  
   console.log("[SEO] Enforcing SEO requirements on writer-engine content...");
   
-  return {
-    title: fixTitle(parsedContent.title),
-    metaDescription: fixMetaDescription(parsedContent.metaDescription, parsedContent.intro),
-    intro: removeClichesFromText(parsedContent.intro),
-    body: injectExternalLinks(injectInternalLinks(removeClichesFromText(parsedContent.body))),
-    conclusion: removeClichesFromText(parsedContent.conclusion),
-  };
+  // Deep clone to avoid mutating original
+  const enforced = JSON.parse(JSON.stringify(result));
+  
+  // Fix title (if present)
+  if (enforced.title) {
+    enforced.title = fixTitle(enforced.title);
+  }
+  
+  // Fix metaDescription (if present)
+  if (enforced.metaDescription !== undefined) {
+    enforced.metaDescription = fixMetaDescription(enforced.metaDescription || "", enforced.intro || "");
+  }
+  
+  // Remove clichés from intro
+  if (enforced.intro) {
+    enforced.intro = removeClichesFromText(enforced.intro);
+  }
+  
+  // Remove clichés and inject links into body
+  if (enforced.body) {
+    let body = removeClichesFromText(enforced.body);
+    
+    // Count existing links
+    const existingInternal = countInternalLinks(body);
+    const existingExternal = countExternalLinks(body);
+    
+    // Inject internal links if needed
+    if (existingInternal < SEO_REQUIREMENTS.minInternalLinks) {
+      const deficit = SEO_REQUIREMENTS.minInternalLinks - existingInternal;
+      body = injectInternalLinksToBody(body, deficit);
+      console.log(`[SEO] Injected ${deficit} internal links into body`);
+    }
+    
+    // Inject external links if needed  
+    if (existingExternal < SEO_REQUIREMENTS.minExternalLinks) {
+      const deficit = SEO_REQUIREMENTS.minExternalLinks - existingExternal;
+      body = injectExternalLinksToBody(body, deficit);
+      console.log(`[SEO] Injected ${deficit} external links into body`);
+    }
+    
+    enforced.body = body;
+  }
+  
+  // Fix content.metaDescription if it exists (from writerEngine format)
+  if (enforced.content?.metaDescription !== undefined) {
+    enforced.content.metaDescription = fixMetaDescription(
+      enforced.content.metaDescription || "",
+      enforced.content.intro || ""
+    );
+  }
+  
+  // Fix content.title if it exists
+  if (enforced.content?.title) {
+    enforced.content.title = fixTitle(enforced.content.title);
+  }
+  
+  // Remove clichés from content.intro
+  if (enforced.content?.intro) {
+    enforced.content.intro = removeClichesFromText(enforced.content.intro);
+  }
+  
+  // Process content.body
+  if (enforced.content?.body) {
+    let body = removeClichesFromText(enforced.content.body);
+    
+    const existingInternal = countInternalLinks(body);
+    const existingExternal = countExternalLinks(body);
+    
+    if (existingInternal < SEO_REQUIREMENTS.minInternalLinks) {
+      const deficit = SEO_REQUIREMENTS.minInternalLinks - existingInternal;
+      body = injectInternalLinksToBody(body, deficit);
+    }
+    
+    if (existingExternal < SEO_REQUIREMENTS.minExternalLinks) {
+      const deficit = SEO_REQUIREMENTS.minExternalLinks - existingExternal;
+      body = injectExternalLinksToBody(body, deficit);
+    }
+    
+    enforced.content.body = body;
+  }
+  
+  // Process content.conclusion
+  if (enforced.content?.conclusion) {
+    enforced.content.conclusion = removeClichesFromText(enforced.content.conclusion);
+  }
+  
+  console.log("[SEO] Writer-engine enforcement complete");
+  return enforced;
+}
+
+/**
+ * Inject internal links into body content (single pass)
+ */
+function injectInternalLinksToBody(body: string, count: number): string {
+  const paragraphs = body.match(/<p[^>]*>[\s\S]*?<\/p>/gi);
+  if (!paragraphs || paragraphs.length === 0) return body;
+  
+  const linksToAdd = FALLBACK_INTERNAL_LINKS.slice(0, count);
+  let modified = body;
+  
+  for (let i = 0; i < linksToAdd.length && i < paragraphs.length; i++) {
+    const link = linksToAdd[i];
+    const para = paragraphs[i];
+    
+    if (!modified.includes(link.url)) {
+      const linkHtml = `<a href="${link.url}">${link.anchor}</a>`;
+      const newPara = para.replace(/<\/p>/i, ` For more information, see our ${linkHtml}.</p>`);
+      modified = modified.replace(para, newPara);
+    }
+  }
+  
+  return modified;
+}
+
+/**
+ * Inject external links into body content (single pass)
+ */
+function injectExternalLinksToBody(body: string, count: number): string {
+  const paragraphs = body.match(/<p[^>]*>[\s\S]*?<\/p>/gi);
+  if (!paragraphs || paragraphs.length === 0) return body;
+  
+  const linksToAdd = AUTHORITATIVE_EXTERNAL_LINKS.slice(0, count);
+  let modified = body;
+  
+  // Find paragraphs in the second half of content for external links
+  const startIdx = Math.floor(paragraphs.length / 2);
+  
+  for (let i = 0; i < linksToAdd.length; i++) {
+    const link = linksToAdd[i];
+    const paraIdx = Math.min(startIdx + i, paragraphs.length - 1);
+    const para = paragraphs[paraIdx];
+    
+    if (!modified.includes(link.url)) {
+      const linkHtml = `<a href="${link.url}" target="_blank" rel="${link.rel}">${link.anchor}</a>`;
+      const newPara = para.replace(/<\/p>/i, ` Learn more at ${linkHtml}.</p>`);
+      modified = modified.replace(para, newPara);
+    }
+  }
+  
+  return modified;
 }
