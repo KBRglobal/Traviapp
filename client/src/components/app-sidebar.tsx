@@ -36,7 +36,6 @@ import {
   Send,
   Calendar,
   CalendarDays,
-  Route,
   Network,
   Tags,
   Languages,
@@ -113,11 +112,6 @@ const contentItems = [
     title: "Events",
     url: "/admin/events",
     icon: Calendar,
-  },
-  {
-    title: "Itineraries",
-    url: "/admin/itineraries",
-    icon: Route,
   },
   {
     title: "Landing Pages",

@@ -138,6 +138,9 @@ const ContentIntelligencePage = lazy(() => import("@/pages/admin/content-intelli
 const SecurityPage = lazy(() => import("@/pages/admin/security"));
 const WritersManagement = lazy(() => import("@/pages/admin/writers/WritersManagement"));
 const NewsroomDashboard = lazy(() => import("@/pages/admin/writers/NewsroomDashboard"));
+const OffPlanManagement = lazy(() => import("@/pages/admin/off-plan-management"));
+const LandingPagesManagement = lazy(() => import("@/pages/admin/landing-pages-management"));
+const DistrictsManagement = lazy(() => import("@/pages/admin/districts-management"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Login = lazy(() => import("@/pages/login"));
 const AccessDenied = lazy(() => import("@/pages/access-denied"));
@@ -182,9 +185,6 @@ function AdminArticles() {
 function AdminEvents() {
   return <ContentList type="event" />;
 }
-function AdminItineraries() {
-  return <ContentList type="itinerary" />;
-}
 function AdminLandingPages() {
   return <ContentList type="landing_page" />;
 }
@@ -209,7 +209,8 @@ function AdminRouter() {
         <Route path="/admin/dining" component={AdminDining} />
         <Route path="/admin/dining/new" component={ContentEditor} />
         <Route path="/admin/dining/:id" component={ContentEditor} />
-        <Route path="/admin/districts" component={AdminDistricts} />
+        <Route path="/admin/districts" component={DistrictsManagement} />
+        <Route path="/admin/districts/listings" component={AdminDistricts} />
         <Route path="/admin/districts/new" component={ContentEditor} />
         <Route path="/admin/districts/:id" component={ContentEditor} />
         <Route path="/admin/transport" component={AdminTransport} />
@@ -221,16 +222,15 @@ function AdminRouter() {
         <Route path="/admin/events" component={AdminEvents} />
         <Route path="/admin/events/new" component={ContentEditor} />
         <Route path="/admin/events/:id" component={ContentEditor} />
-        <Route path="/admin/itineraries" component={AdminItineraries} />
-        <Route path="/admin/itineraries/new" component={ContentEditor} />
-        <Route path="/admin/itineraries/:id" component={ContentEditor} />
-        <Route path="/admin/landing-pages" component={AdminLandingPages} />
+        <Route path="/admin/landing-pages" component={LandingPagesManagement} />
+        <Route path="/admin/landing-pages/listings" component={AdminLandingPages} />
         <Route path="/admin/landing-pages/new" component={ContentEditor} />
         <Route path="/admin/landing-pages/:id" component={ContentEditor} />
         <Route path="/admin/case-studies" component={AdminCaseStudies} />
         <Route path="/admin/case-studies/new" component={ContentEditor} />
         <Route path="/admin/case-studies/:id" component={ContentEditor} />
-        <Route path="/admin/off-plan" component={AdminOffPlan} />
+        <Route path="/admin/off-plan" component={OffPlanManagement} />
+        <Route path="/admin/off-plan/listings" component={AdminOffPlan} />
         <Route path="/admin/off-plan/new" component={ContentEditor} />
         <Route path="/admin/off-plan/:id" component={ContentEditor} />
         <Route path="/admin/rss-feeds" component={RssFeeds} />
@@ -345,7 +345,6 @@ const publicRoutes = [
   { path: "/articles/:slug", component: PublicContentViewer },
   { path: "/events", component: PublicEvents },
   { path: "/events/:slug", component: PublicContentViewer },
-  { path: "/itineraries/:slug", component: PublicContentViewer },
   { path: "/dubai-real-estate", component: PublicOffPlan },
   { path: "/dubai-off-plan-properties", component: PublicOffPlan },
   { path: "/dubai-off-plan-investment-guide", component: OffPlanInvestmentGuide },
