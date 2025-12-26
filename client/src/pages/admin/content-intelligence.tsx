@@ -104,6 +104,18 @@ export default function ContentIntelligencePage() {
         <p className="text-muted-foreground mt-1">
           AI-powered insights for content optimization and gap analysis
         </p>
+        <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
+          <h3 className="font-medium flex items-center gap-2 mb-2">
+            <Lightbulb className="h-4 w-4 text-primary" />
+            How It Works
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            This system analyzes your published content and identifies opportunities for improvement. 
+            It detects <strong>content gaps</strong> (missing topics), tracks <strong>volatile data</strong> (prices, hours that may need updates), 
+            monitors <strong>events</strong> to keep content fresh, and suggests <strong>topic clusters</strong> for better SEO structure.
+            The more content you publish, the smarter the analysis becomes.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -234,8 +246,11 @@ export default function ContentIntelligencePage() {
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No content gaps detected</p>
-                    <p className="text-sm mt-2">Your content coverage looks comprehensive</p>
+                    <p className="font-medium">No content gaps detected</p>
+                    <p className="text-sm mt-2 max-w-md mx-auto">
+                      Gap analysis works best with published content. As you publish more articles, 
+                      attractions, and hotels, the system will identify missing topics and SEO opportunities.
+                    </p>
                   </div>
                 )}
               </ScrollArea>
@@ -275,7 +290,11 @@ export default function ContentIntelligencePage() {
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No items on watchlist</p>
+                    <p className="font-medium">No items on watchlist</p>
+                    <p className="text-sm mt-2 max-w-md mx-auto">
+                      The watchlist tracks content with prices, opening hours, or other data that changes frequently.
+                      When you add attractions or hotels with pricing info, they'll appear here for monitoring.
+                    </p>
                   </div>
                 )}
               </ScrollArea>
@@ -319,7 +338,11 @@ export default function ContentIntelligencePage() {
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No events tracked</p>
+                    <p className="font-medium">No events tracked</p>
+                    <p className="text-sm mt-2 max-w-md mx-auto">
+                      Events are automatically detected from your content. Articles about festivals, exhibitions, 
+                      or time-limited attractions will appear here so you can update them when dates change.
+                    </p>
                   </div>
                 )}
               </ScrollArea>
@@ -341,9 +364,10 @@ export default function ContentIntelligencePage() {
             <CardContent>
               <div className="text-center py-12 text-muted-foreground">
                 <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Select a content item to see recommendations</p>
-                <p className="text-sm mt-2">
-                  Recommendations are based on topic clusters and SERP analysis
+                <p className="font-medium">AI-Powered Content Suggestions</p>
+                <p className="text-sm mt-2 max-w-md mx-auto">
+                  Based on your existing content and topic clusters, this feature suggests what articles 
+                  to write next for maximum SEO impact. Recommendations improve as you add more content.
                 </p>
               </div>
             </CardContent>
