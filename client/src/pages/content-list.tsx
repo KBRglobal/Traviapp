@@ -44,7 +44,7 @@ import {
   Filter,
   X,
   UtensilsCrossed,
-  Map,
+  Map as MapIcon,
   Train,
   Calendar,
   Route,
@@ -106,7 +106,7 @@ const typeConfig = {
   district: {
     title: "Districts",
     singular: "District",
-    icon: Map,
+    icon: MapIcon,
     basePath: "/admin/districts",
     wordTarget: "~2000 words",
   },
