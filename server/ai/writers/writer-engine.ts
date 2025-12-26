@@ -281,8 +281,10 @@ export async function generateContent(
       const generatedContent = response.choices[0]?.message?.content || "";
       parsedContent = parseGeneratedContent(generatedContent);
       
-      // Fix meta description length
+      // STRICT SEO ENFORCEMENT: Fix title, meta description, and remove clichés
+      parsedContent = fixTitle(parsedContent);
       parsedContent = fixMetaDescription(parsedContent);
+      parsedContent = removeClichesFromContent(parsedContent);
       
       // Evaluate SEO compliance
       compliance = evaluateSeoCompliance(parsedContent, internalLinks.length);
@@ -369,6 +371,142 @@ export async function generateContent(
     console.error("Error generating content:", error);
     throw new Error(`Failed to generate content with writer ${writer.name}`);
   }
+}
+
+/**
+ * Fix title length - enforce strict 50-60 character limit
+ * Strategy: Replace clichés with professional alternatives, then truncate if needed
+ */
+function fixTitle(parsedContent: { title: string; metaDescription: string; intro: string; body: string; conclusion: string }) {
+  let title = parsedContent.title;
+  const originalTitle = title;
+  
+  // Replace clichés with professional alternatives (don't just remove them)
+  const titleReplacements: Record<string, string> = {
+    'secret tips revealed': 'Practical Guide',
+    'must-visit': 'Top',
+    'must visit': 'Top',
+    'hidden gem': 'Local',
+    'hidden gems': 'Local',
+    'ultimate guide': 'Complete Guide',
+    'everything you need to know': 'Guide',
+    'you won\'t believe': '',
+    'best kept secret': 'Local',
+    'world-class': 'Premier',
+    'breathtaking': 'Stunning',
+  };
+  
+  for (const [cliche, replacement] of Object.entries(titleReplacements)) {
+    const regex = new RegExp(cliche, 'gi');
+    if (regex.test(title)) {
+      title = title.replace(regex, replacement).replace(/\s+/g, ' ').trim();
+    }
+  }
+  
+  // Clean up leftover punctuation artifacts
+  title = title.replace(/:\s*$/g, '').replace(/\|\s*$/g, '').replace(/\s+/g, ' ').trim();
+  
+  // If title is too long, truncate intelligently
+  if (title.length > SEO_REQUIREMENTS.titleMaxLength) {
+    // Strategy 1: Cut at separator if result is valid length
+    const separators = [' | ', ' - ', ': '];
+    for (const sep of separators) {
+      if (title.includes(sep)) {
+        const firstPart = title.split(sep)[0].trim();
+        if (firstPart.length >= SEO_REQUIREMENTS.titleMinLength && firstPart.length <= SEO_REQUIREMENTS.titleMaxLength) {
+          title = firstPart;
+          break;
+        }
+      }
+    }
+    
+    // Strategy 2: Still too long? Smart truncate at word boundary
+    if (title.length > SEO_REQUIREMENTS.titleMaxLength) {
+      // Find a good cut point between 50-57 chars (leaving room for "...")
+      const maxCut = SEO_REQUIREMENTS.titleMaxLength - 3;
+      let cutPoint = maxCut;
+      
+      // Try to cut at a word boundary
+      while (cutPoint > SEO_REQUIREMENTS.titleMinLength && title[cutPoint] !== ' ') {
+        cutPoint--;
+      }
+      
+      if (cutPoint >= SEO_REQUIREMENTS.titleMinLength) {
+        title = title.substring(0, cutPoint).trim();
+      } else {
+        // Fallback: just truncate and add ellipsis
+        title = title.substring(0, maxCut).trim() + '...';
+      }
+    }
+  }
+  
+  // If title became too short after fixes, use original with smart truncation
+  if (title.length < SEO_REQUIREMENTS.titleMinLength) {
+    console.log(`[SEO] Title too short after fixes (${title.length} chars). Using smartly truncated original.`);
+    if (originalTitle.length > SEO_REQUIREMENTS.titleMaxLength) {
+      const maxCut = SEO_REQUIREMENTS.titleMaxLength;
+      let cutPoint = maxCut;
+      while (cutPoint > 45 && originalTitle[cutPoint] !== ' ') {
+        cutPoint--;
+      }
+      title = originalTitle.substring(0, cutPoint).trim();
+    } else {
+      title = originalTitle;
+    }
+  }
+  
+  console.log(`[SEO] Title: "${title}" (${title.length} chars)`);
+  return { ...parsedContent, title };
+}
+
+/**
+ * Remove clichés and banned phrases from content body
+ */
+function removeClichesFromContent(parsedContent: { title: string; metaDescription: string; intro: string; body: string; conclusion: string }) {
+  let intro = parsedContent.intro;
+  let body = parsedContent.body;
+  let conclusion = parsedContent.conclusion;
+  let metaDesc = parsedContent.metaDescription;
+  
+  // Replacement map for clichés
+  const replacements: Record<string, string> = {
+    'must-visit': 'popular',
+    'must visit': 'popular',
+    'world-class': 'internationally recognized',
+    'world class': 'internationally recognized',
+    'hidden gem': 'lesser-known spot',
+    'hidden gems': 'lesser-known spots',
+    'breathtaking': 'impressive',
+    'awe-inspiring': 'remarkable',
+    'jaw-dropping': 'remarkable',
+    'unforgettable': 'memorable',
+    'once-in-a-lifetime': 'rare',
+    'once in a lifetime': 'rare',
+    'bucket list': 'popular destination',
+    'paradise on earth': 'beautiful location',
+    'jewel in the crown': 'highlight',
+    'like no other': 'distinctive',
+    'best kept secret': 'lesser-known',
+    'off the beaten path': 'less crowded',
+    'sun-kissed': 'sunny',
+    'picture-perfect': 'scenic',
+    'secret tips revealed': 'practical tips',
+    'you won\'t believe': 'notably',
+    'mind-blowing': 'impressive',
+    'epic adventure': 'adventure',
+    'ultimate guide': 'comprehensive guide',
+    'everything you need to know': 'essential information',
+  };
+  
+  for (const [cliche, replacement] of Object.entries(replacements)) {
+    const regex = new RegExp(cliche, 'gi');
+    intro = intro.replace(regex, replacement);
+    body = body.replace(regex, replacement);
+    conclusion = conclusion.replace(regex, replacement);
+    metaDesc = metaDesc.replace(regex, replacement);
+  }
+  
+  return { ...parsedContent, intro, body, conclusion, metaDescription: metaDesc };
 }
 
 /**
