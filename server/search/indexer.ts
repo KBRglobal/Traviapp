@@ -86,7 +86,7 @@ export const searchIndexer = {
         ${content.heroImage || null},
         ${'en'},
         ${null},
-        ${embeddingVector ? sql`${embeddingVector}::vector` : null},
+        ${embeddingVector},
         NOW()
       )
       ON CONFLICT (content_id) 
