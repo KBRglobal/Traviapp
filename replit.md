@@ -132,3 +132,38 @@ The public homepage features a playful, inviting design:
 ### UI Component Libraries (continued)
 - **react-day-picker**: Date picker component
 - **vaul**: Drawer component
+
+## Admin Panel Structure
+
+### Core Content Management
+- Dashboard, Attractions, Hotels, Dining, Districts, Transport, Articles, Events, Landing Pages, Case Studies, Off-Plan, Real Estate
+
+### Automation Section
+- **Auto-Pilot**: Automated content scheduling and publishing, RSS feed processing, AI article generation
+- **Content Intelligence**: Content clustering, gap analysis, topic recommendations
+- **AI Newsroom**: Virtual newsroom with 10 AI writers, each with unique personality and writing style
+- **AI Writers**: Manage individual AI writer profiles and assignments
+
+### Monetization Section
+- **Premium Content**: Paywall management, subscription tiers, preview percentages
+- **Business Listings**: Featured business placements with performance tracking
+- **Lead Management**: Lead capture funnel from inquiry to conversion
+- **Affiliate Dashboard**: Automatic affiliate link insertion and commission tracking (Booking.com, GetYourGuide, TripAdvisor)
+
+### Enterprise Section
+- **Teams**: Collaborative team management with role-based access
+- **Workflows**: Multi-step approval processes (Writer → Editor → SEO Review → Publish)
+- **Webhooks**: External service integrations with event notifications
+- **Activity Feed**: Real-time audit log of all CMS actions
+
+### Advanced Analytics Section
+- **Customer Journey**: Visitor path tracking, content funnel optimization
+- **Semantic Search**: AI embeddings for content discovery and internal linking suggestions
+- **Plagiarism Check**: Content originality scanning against web sources
+- **Live Console**: Real-time system monitoring with log filtering
+
+### Design Principles
+- Every admin page includes Hebrew "How It Works" / "איך זה עובד" guidance sections
+- Stats cards with key metrics at the top of each page
+- Scrollable lists for content items with action buttons
+- Dark mode support with proper contrast

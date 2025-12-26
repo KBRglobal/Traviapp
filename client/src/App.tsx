@@ -143,6 +143,25 @@ const LandingPagesManagement = lazy(() => import("@/pages/admin/landing-pages-ma
 const DistrictsManagement = lazy(() => import("@/pages/admin/districts-management"));
 const RealEstateManagement = lazy(() => import("@/pages/admin/real-estate-management"));
 const RealEstateEditor = lazy(() => import("@/pages/admin/real-estate-editor"));
+
+// Monetization pages
+const MonetizationPremium = lazy(() => import("@/pages/admin/monetization/premium-content"));
+const MonetizationListings = lazy(() => import("@/pages/admin/monetization/business-listings"));
+const MonetizationLeads = lazy(() => import("@/pages/admin/monetization/lead-management"));
+const MonetizationAffiliates = lazy(() => import("@/pages/admin/monetization/affiliate-dashboard"));
+
+// Enterprise pages
+const EnterpriseTeams = lazy(() => import("@/pages/admin/enterprise/teams"));
+const EnterpriseWorkflows = lazy(() => import("@/pages/admin/enterprise/workflows"));
+const EnterpriseWebhooks = lazy(() => import("@/pages/admin/enterprise/webhooks"));
+const EnterpriseActivity = lazy(() => import("@/pages/admin/enterprise/activity-feed"));
+
+// Advanced Analytics pages
+const CustomerJourney = lazy(() => import("@/pages/admin/analytics/customer-journey"));
+const SemanticSearchAdmin = lazy(() => import("@/pages/admin/analytics/semantic-search"));
+const PlagiarismCheck = lazy(() => import("@/pages/admin/analytics/plagiarism-check"));
+const LiveConsole = lazy(() => import("@/pages/admin/console"));
+
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Login = lazy(() => import("@/pages/login"));
 const AccessDenied = lazy(() => import("@/pages/access-denied"));
@@ -264,6 +283,25 @@ function AdminRouter() {
         <Route path="/admin/security" component={SecurityPage} />
         <Route path="/admin/writers" component={WritersManagement} />
         <Route path="/admin/writers/newsroom" component={NewsroomDashboard} />
+        
+        {/* Monetization routes */}
+        <Route path="/admin/monetization/premium" component={MonetizationPremium} />
+        <Route path="/admin/monetization/listings" component={MonetizationListings} />
+        <Route path="/admin/monetization/leads" component={MonetizationLeads} />
+        <Route path="/admin/monetization/affiliates" component={MonetizationAffiliates} />
+        
+        {/* Enterprise routes */}
+        <Route path="/admin/enterprise/teams" component={EnterpriseTeams} />
+        <Route path="/admin/enterprise/workflows" component={EnterpriseWorkflows} />
+        <Route path="/admin/enterprise/webhooks" component={EnterpriseWebhooks} />
+        <Route path="/admin/enterprise/activity" component={EnterpriseActivity} />
+        
+        {/* Advanced Analytics routes */}
+        <Route path="/admin/analytics/journey" component={CustomerJourney} />
+        <Route path="/admin/analytics/search" component={SemanticSearchAdmin} />
+        <Route path="/admin/analytics/plagiarism" component={PlagiarismCheck} />
+        <Route path="/admin/console" component={LiveConsole} />
+        
         <Route component={NotFound} />
       </Switch>
     </Suspense>

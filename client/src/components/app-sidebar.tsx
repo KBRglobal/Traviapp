@@ -49,6 +49,22 @@ import {
   Brain,
   PenTool,
   Lock,
+  Newspaper,
+  DollarSign,
+  Crown,
+  Store,
+  Target,
+  UsersRound,
+  GitBranch,
+  Webhook,
+  Activity,
+  Route,
+  Radar,
+  Terminal,
+  BookOpen,
+  MessageSquare,
+  Workflow,
+  Eye,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -264,10 +280,112 @@ const automationItems: Array<{
     requiredPermission: "canViewAnalytics",
   },
   {
+    title: "AI Newsroom",
+    url: "/admin/writers/newsroom",
+    icon: Newspaper,
+    requiredPermission: "canCreate",
+  },
+  {
     title: "AI Writers",
     url: "/admin/writers",
     icon: PenTool,
     requiredPermission: "canCreate",
+  },
+];
+
+const monetizationItems: Array<{
+  title: string;
+  url: string;
+  icon: typeof Settings;
+  requiredPermission?: PermissionKey;
+}> = [
+  {
+    title: "Premium Content",
+    url: "/admin/monetization/premium",
+    icon: Crown,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Business Listings",
+    url: "/admin/monetization/listings",
+    icon: Store,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Lead Management",
+    url: "/admin/monetization/leads",
+    icon: Target,
+    requiredPermission: "canViewAnalytics",
+  },
+  {
+    title: "Affiliate Dashboard",
+    url: "/admin/monetization/affiliates",
+    icon: DollarSign,
+    requiredPermission: "canAccessAffiliates",
+  },
+];
+
+const enterpriseItems: Array<{
+  title: string;
+  url: string;
+  icon: typeof Settings;
+  requiredPermission?: PermissionKey;
+}> = [
+  {
+    title: "Teams",
+    url: "/admin/enterprise/teams",
+    icon: UsersRound,
+    requiredPermission: "canManageUsers",
+  },
+  {
+    title: "Workflows",
+    url: "/admin/enterprise/workflows",
+    icon: Workflow,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Webhooks",
+    url: "/admin/enterprise/webhooks",
+    icon: Webhook,
+    requiredPermission: "canManageSettings",
+  },
+  {
+    title: "Activity Feed",
+    url: "/admin/enterprise/activity",
+    icon: Activity,
+    requiredPermission: "canViewAuditLogs",
+  },
+];
+
+const advancedAnalyticsItems: Array<{
+  title: string;
+  url: string;
+  icon: typeof Settings;
+  requiredPermission?: PermissionKey;
+}> = [
+  {
+    title: "Customer Journey",
+    url: "/admin/analytics/journey",
+    icon: Route,
+    requiredPermission: "canViewAnalytics",
+  },
+  {
+    title: "Semantic Search",
+    url: "/admin/analytics/search",
+    icon: Radar,
+    requiredPermission: "canViewAnalytics",
+  },
+  {
+    title: "Plagiarism Check",
+    url: "/admin/analytics/plagiarism",
+    icon: Eye,
+    requiredPermission: "canViewAnalytics",
+  },
+  {
+    title: "Live Console",
+    url: "/admin/console",
+    icon: Terminal,
+    requiredPermission: "canManageSettings",
   },
 ];
 
@@ -345,6 +463,30 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const visibleAutomationItems = permissionsLoading
     ? automationItems.filter((item) => !item.requiredPermission)
     : automationItems.filter((item) => {
+        if (!item.requiredPermission) return true;
+        return hasPermission(item.requiredPermission);
+      });
+
+  // Filter monetization items based on permissions
+  const visibleMonetizationItems = permissionsLoading
+    ? monetizationItems.filter((item) => !item.requiredPermission)
+    : monetizationItems.filter((item) => {
+        if (!item.requiredPermission) return true;
+        return hasPermission(item.requiredPermission);
+      });
+
+  // Filter enterprise items based on permissions
+  const visibleEnterpriseItems = permissionsLoading
+    ? enterpriseItems.filter((item) => !item.requiredPermission)
+    : enterpriseItems.filter((item) => {
+        if (!item.requiredPermission) return true;
+        return hasPermission(item.requiredPermission);
+      });
+
+  // Filter advanced analytics items based on permissions
+  const visibleAdvancedAnalyticsItems = permissionsLoading
+    ? advancedAnalyticsItems.filter((item) => !item.requiredPermission)
+    : advancedAnalyticsItems.filter((item) => {
         if (!item.requiredPermission) return true;
         return hasPermission(item.requiredPermission);
       });
@@ -444,6 +586,78 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleAutomationItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      data-testid={`nav-${item.title.toLowerCase().replace(" ", "-")}`}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {visibleMonetizationItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Monetization</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleMonetizationItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      data-testid={`nav-${item.title.toLowerCase().replace(" ", "-")}`}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {visibleEnterpriseItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Enterprise</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleEnterpriseItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      data-testid={`nav-${item.title.toLowerCase().replace(" ", "-")}`}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {visibleAdvancedAnalyticsItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Advanced Analytics</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleAdvancedAnalyticsItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
