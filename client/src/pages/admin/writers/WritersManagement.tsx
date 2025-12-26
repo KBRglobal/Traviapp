@@ -117,12 +117,6 @@ export default function WritersManagement() {
               Newsroom Dashboard
             </Link>
           </Button>
-          <Button asChild variant="outline">
-            <Link href="/admin/writers/assignments">
-              <FileText className="mr-2 h-4 w-4" />
-              Assignments
-            </Link>
-          </Button>
         </div>
       </div>
 
@@ -249,9 +243,7 @@ export default function WritersManagement() {
                 <WriterCard
                   key={writer.id}
                   writer={writer}
-                  onView={(w) => window.location.href = `/admin/writers/${w.slug}`}
-                  onEdit={(w) => console.log('Edit', w)}
-                  showActions={true}
+                  showActions={false}
                   variant={viewMode === 'grid' ? 'default' : 'detailed'}
                 />
               ))}

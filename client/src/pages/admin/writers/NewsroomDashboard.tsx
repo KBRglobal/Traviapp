@@ -48,8 +48,8 @@ export default function NewsroomDashboard() {
   const { data: statsData } = useQuery({
     queryKey: ['writer-stats'],
     queryFn: async () => {
-      const response = await apiRequest('/api/writers/stats');
-      return response as { stats: WriterStats[] };
+      const response = await apiRequest('GET', '/api/writers/stats');
+      return response.json() as Promise<{ stats: WriterStats[] }>;
     },
   });
 
@@ -57,8 +57,8 @@ export default function NewsroomDashboard() {
   const { data: writersData } = useQuery({
     queryKey: ['writers'],
     queryFn: async () => {
-      const response = await apiRequest('/api/writers');
-      return response as { writers: any[]; total: number };
+      const response = await apiRequest('GET', '/api/writers');
+      return response.json() as Promise<{ writers: any[]; total: number }>;
     },
   });
 
@@ -110,9 +110,9 @@ export default function NewsroomDashboard() {
           </div>
         </div>
         <Button asChild>
-          <Link href="/admin/writers/assignments">
+          <Link href="/admin/contents?filter=unassigned">
             <FileText className="mr-2 h-4 w-4" />
-            New Assignment
+            Assign Content
           </Link>
         </Button>
       </div>
