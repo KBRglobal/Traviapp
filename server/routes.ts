@@ -108,8 +108,6 @@ import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
 import { registerDocUploadRoutes } from "./doc-upload-routes";
 import { registerSearchRoutes } from "./search/routes";
 import translateRouter from "./routes/translate";
-// Agent B Routes disabled - modules not yet implemented
-// import { registerAgentBRoutes } from "./agent-b-routes";
 import { registerWriterRoutes } from "./ai/writers/routes";
 import { getStorageManager } from "./services/storage-adapter";
 import { uploadImage, uploadImageFromUrl } from "./services/image-service";
@@ -9163,12 +9161,6 @@ IMPORTANT: Include a "faq" block with "faqs" array containing 5 Q&A objects with
   // CUSTOMER JOURNEY ANALYTICS (Page views, clicks, scroll, conversions, heatmaps)
   // ============================================================================
   registerCustomerJourneyRoutes(app);
-
-  // ============================================================================
-  // AGENT B ROUTES - Newsletter, Analytics & Integrations
-  // Disabled - modules not yet implemented (mailchimp, klaviyo, etc.)
-  // ============================================================================
-  // registerAgentBRoutes(app);
 
   // ============================================================================
   // AI WRITERS ROUTES - Virtual Newsroom with 10 AI writers

@@ -5,7 +5,7 @@
 
 import { db } from "./db";
 import { contents, translations, tags, contentTags, siteSettings, abTests as abTestsTable } from "@shared/schema";
-import { eq, desc, and, sql, like, or, ne, gt, lt, inArray } from "drizzle-orm";
+import { eq, desc, and, sql, like, or, gt, lt, inArray } from "drizzle-orm";
 import { DUBAI_AREAS } from "./services/image-seo-service";
 
 // ============================================================================
@@ -347,139 +347,6 @@ export const serpGapFinder = {
     }
 
     return results.sort((a, b) => b.gaps.length - a.gaps.length);
-  },
-};
-
-// ============================================================================
-// NEXT BEST ARTICLE RECOMMENDATION
-// ============================================================================
-
-interface ArticleRecommendation {
-  contentId: string;
-  recommendations: Array<{
-    id: string;
-    title: string;
-    slug: string;
-    type: string;
-    reason: string;
-    score: number;
-  }>;
-}
-
-export const articleRecommendations = {
-  /**
-   * Get recommendations for a specific content
-   */
-  async getRecommendations(contentId: string, limit = 3): Promise<ArticleRecommendation | null> {
-    const [content] = await db.select().from(contents).where(eq(contents.id, contentId));
-    if (!content) return null;
-
-    const contentText = `${content.title} ${JSON.stringify(content.blocks || [])}`.toLowerCase();
-
-    // Detect area from content
-    let detectedArea: string | null = null;
-    for (const [areaKey, areaData] of Object.entries(DUBAI_AREAS)) {
-      if (areaData.landmarks.some((id: string) => contentText.includes(id.toLowerCase()))) {
-        detectedArea = areaKey;
-        break;
-      }
-    }
-
-    // Get all other published content
-    const otherContent = await db.select({
-      id: contents.id,
-      title: contents.title,
-      slug: contents.slug,
-      type: contents.type,
-      blocks: contents.blocks,
-    })
-    .from(contents)
-    .where(and(
-      eq(contents.status, "published"),
-      ne(contents.id, contentId)
-    ));
-
-    // Score each piece of content
-    const scored = otherContent.map(other => {
-      let score = 0;
-      const reasons: string[] = [];
-      const otherText = `${other.title} ${JSON.stringify(other.blocks || [])}`.toLowerCase();
-
-      // Same area bonus
-      if (detectedArea) {
-        const areaData = DUBAI_AREAS[detectedArea as keyof typeof DUBAI_AREAS];
-        if (areaData && areaData.landmarks.some((id: string) => otherText.includes(id.toLowerCase()))) {
-          score += 40;
-          reasons.push(`Same area: ${areaData.name}`);
-        }
-      }
-
-      // Complementary content type bonus
-      const complementary: Record<string, string[]> = {
-        hotel: ["restaurant", "attraction", "itinerary"],
-        restaurant: ["hotel", "attraction"],
-        attraction: ["hotel", "restaurant", "itinerary"],
-        article: ["hotel", "restaurant", "attraction"],
-        itinerary: ["hotel", "restaurant", "attraction"],
-      };
-      if (complementary[content.type]?.includes(other.type)) {
-        score += 30;
-        reasons.push(`Complementary: ${other.type}`);
-      }
-
-      // Same type penalty (avoid too similar)
-      if (other.type === content.type) {
-        score -= 10;
-      }
-
-      // Keyword overlap
-      const contentWords = new Set(contentText.split(/\s+/).filter(w => w.length > 4));
-      const otherWords = new Set(otherText.split(/\s+/).filter(w => w.length > 4));
-      const overlap = Array.from(contentWords).filter(w => otherWords.has(w)).length;
-      if (overlap > 5) {
-        score += Math.min(overlap * 2, 20);
-        reasons.push("Related topics");
-      }
-
-      return {
-        id: other.id,
-        title: other.title,
-        slug: other.slug,
-        type: other.type,
-        score,
-        reason: reasons.join(", ") || "Related content",
-      };
-    });
-
-    // Sort by score and return top recommendations
-    const recommendations = scored
-      .filter(s => s.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
-
-    return {
-      contentId,
-      recommendations,
-    };
-  },
-
-  /**
-   * Generate recommendation blocks for all content
-   */
-  async generateAllRecommendations(): Promise<Map<string, ArticleRecommendation>> {
-    const allContent = await db.select({ id: contents.id })
-      .from(contents)
-      .where(eq(contents.status, "published"));
-
-    const results = new Map<string, ArticleRecommendation>();
-    for (const content of allContent) {
-      const rec = await this.getRecommendations(content.id);
-      if (rec) {
-        results.set(content.id, rec);
-      }
-    }
-
-    return results;
   },
 };
 
@@ -1338,7 +1205,7 @@ export const contentROI = {
 export const contentIntelligence = {
   clusters: topicClusterBuilder,
   gaps: serpGapFinder,
-  recommendations: articleRecommendations,
+  // recommendations moved to content-enhancement.ts (use contentEnhancement.related)
   priceWatch: priceWatchlist,
   events: eventCalendarSync,
   imageConsistency,

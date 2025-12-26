@@ -1,16 +1,69 @@
 /**
  * Enterprise Security Layer
- * 
+ *
  * Centralized security module providing:
- * - Rate limiting
+ * - Rate limiting (advanced-security.ts - better implementation)
  * - Helmet security headers
  * - Attack detection (SQL injection, XSS)
  * - Request validation
- * - Comprehensive security middleware setup
+ * - 2FA / TOTP (advanced-security.ts)
+ * - Audit logging (advanced-security.ts - better implementation)
+ * - CAPTCHA (advanced-security.ts)
+ * - Device fingerprinting (enterprise-security.ts)
+ * - Contextual auth (enterprise-security.ts)
+ * - ABAC policies (enterprise-security.ts)
+ * - Password security (enterprise-security.ts)
+ * - RBAC (security.ts)
+ * - CORS, CSRF, SSRF protection (security.ts)
+ *
+ * This file re-exports the BEST implementation of each feature
+ * from the three security modules.
  */
 
 import helmet from 'helmet';
 import type { Express, Request, Response, NextFunction } from 'express';
+
+// Re-export the best implementation from each module
+// From security.ts (core middleware)
+export {
+  requireAuth,
+  requirePermission,
+  requireOwnContentOrPermission,
+  checkReadOnlyMode,
+  safeMode,
+  getUserId,
+  // Keep for backward compatibility - will be deprecated
+  rateLimiters,
+  checkAiUsageLimit,
+  // Core security
+  securityHeaders,
+  corsMiddleware,
+  sanitizeInput,
+  validateMediaUpload,
+  validateUrlForSSRF,
+  validateAnalyticsRequest,
+  recordFailedAttempt,
+  sessionConfig,
+} from '../security';
+
+// From advanced-security.ts (better rate limiting, 2FA, audit)
+export {
+  rateLimiter,      // Better rate limiting with action-specific configs
+  twoFactorAuth,    // Full 2FA implementation
+  auditLogger,      // Better audit logging with severity levels
+  captcha,          // CAPTCHA verification
+} from '../advanced-security';
+
+// From enterprise-security.ts (enterprise features)
+export {
+  deviceFingerprint,    // Device tracking and trust
+  contextualAuth,       // Risk-based authentication
+  abac,                 // Attribute-based access control
+  passwordSecurity,     // Password hashing and validation
+  sessionSecurity,      // Session management
+  exponentialBackoff,   // Backoff for failed attempts
+  threatIntelligence,   // Threat detection
+} from '../enterprise-security';
 
 // ============================================================================
 // INPUT VALIDATION - Inlined from validators.ts

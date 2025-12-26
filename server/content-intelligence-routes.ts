@@ -6,6 +6,7 @@
 import type { Express, Request, Response } from "express";
 import { requirePermission, requireAuth } from "./security";
 import { contentIntelligence } from "./content-intelligence";
+import { contentEnhancement } from "./content-enhancement";
 
 export function registerContentIntelligenceRoutes(app: Express) {
 
@@ -100,18 +101,17 @@ export function registerContentIntelligenceRoutes(app: Express) {
   // NEXT BEST ARTICLE RECOMMENDATIONS
   // ============================================================================
 
-  // Get recommendations for content
+  // Get recommendations for content (using content-enhancement's better implementation)
   app.get("/api/intelligence/recommendations/:contentId", requireAuth, async (req, res) => {
     try {
       const { contentId } = req.params;
       const limit = parseInt(req.query.limit as string) || 3;
-      const recommendations = await contentIntelligence.recommendations.getRecommendations(contentId, limit);
+      const recommendations = await contentEnhancement.related.findRelated(contentId, limit);
 
-      if (!recommendations) {
-        return res.status(404).json({ error: "Content not found" });
-      }
-
-      res.json(recommendations);
+      res.json({
+        contentId,
+        recommendations: recommendations || []
+      });
     } catch (error) {
       console.error("[Intelligence] Error getting recommendations:", error);
       res.status(500).json({ error: "Failed to get recommendations" });
