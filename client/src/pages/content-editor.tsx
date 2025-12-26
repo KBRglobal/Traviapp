@@ -459,6 +459,44 @@ function MediaLibraryPicker({
   );
 }
 
+function ContentLockIndicator({ contentId }: { contentId: string }) {
+  const { data: lockData } = useQuery<{
+    isLocked: boolean;
+    lockedBy?: { name: string; avatar?: string };
+    lockedAt?: string;
+  }>({
+    queryKey: ["/api/content-locks", contentId],
+    refetchInterval: 30000,
+  });
+
+  if (!lockData?.isLocked) return null;
+
+  return (
+    <div 
+      className="flex items-center gap-2 px-2 py-1 bg-yellow-100 dark:bg-yellow-950/50 border border-yellow-300 dark:border-yellow-800 rounded-md"
+      data-testid="content-lock-indicator"
+    >
+      <Lock className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+      <div className="flex items-center gap-2">
+        {lockData.lockedBy?.avatar ? (
+          <img 
+            src={lockData.lockedBy.avatar} 
+            alt={lockData.lockedBy.name}
+            className="h-5 w-5 rounded-full object-cover border border-yellow-400"
+          />
+        ) : (
+          <div className="h-5 w-5 rounded-full bg-yellow-200 dark:bg-yellow-800 flex items-center justify-center text-xs font-medium text-yellow-700 dark:text-yellow-200">
+            {lockData.lockedBy?.name?.charAt(0) || "?"}
+          </div>
+        )}
+        <span className="text-xs font-medium text-yellow-700 dark:text-yellow-400">
+          {lockData.lockedBy?.name || "Someone"} is editing
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function ContentEditor() {
   const [, attractionMatch] = useRoute("/admin/attractions/:id");
   const [, hotelMatch] = useRoute("/admin/hotels/:id");
@@ -2134,6 +2172,11 @@ export default function ContentEditor() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Content Locking Indicator - Shows when other editors are working on this content */}
+          {contentId && !isNew && (
+            <ContentLockIndicator contentId={contentId} />
           )}
 
         </div>

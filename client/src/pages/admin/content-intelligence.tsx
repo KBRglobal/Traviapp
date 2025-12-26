@@ -15,7 +15,11 @@ import {
   Lightbulb,
   BarChart3,
   Network,
+  Link2,
+  ExternalLink,
+  ArrowRight,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ContentGap {
   contentId: string;
@@ -187,20 +191,24 @@ export default function ContentIntelligencePage() {
       </div>
 
       <Tabs defaultValue="gaps" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="gaps" className="gap-2">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="gaps" className="gap-2" data-testid="tab-content-gaps">
             <Search className="h-4 w-4" />
             Content Gaps
           </TabsTrigger>
-          <TabsTrigger value="watchlist" className="gap-2">
+          <TabsTrigger value="internal-links" className="gap-2" data-testid="tab-internal-links">
+            <Link2 className="h-4 w-4" />
+            Internal Links
+          </TabsTrigger>
+          <TabsTrigger value="watchlist" className="gap-2" data-testid="tab-watchlist">
             <AlertCircle className="h-4 w-4" />
             Watchlist
           </TabsTrigger>
-          <TabsTrigger value="events" className="gap-2">
+          <TabsTrigger value="events" className="gap-2" data-testid="tab-events">
             <Calendar className="h-4 w-4" />
             Events
           </TabsTrigger>
-          <TabsTrigger value="recommendations" className="gap-2">
+          <TabsTrigger value="recommendations" className="gap-2" data-testid="tab-recommendations">
             <Lightbulb className="h-4 w-4" />
             Recommendations
           </TabsTrigger>
@@ -253,6 +261,94 @@ export default function ContentIntelligencePage() {
                     </p>
                   </div>
                 )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="internal-links">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="h-5 w-5" />
+                Internal Linking Suggestions
+              </CardTitle>
+              <CardDescription>
+                AI-powered recommendations for internal links to improve SEO and user experience
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-4">
+                  {/* Mock internal linking suggestions */}
+                  {[
+                    {
+                      sourceTitle: "Top 10 Dubai Attractions",
+                      sourceSlug: "/attractions/top-10-dubai",
+                      suggestions: [
+                        { targetTitle: "Burj Khalifa Guide", targetSlug: "/attractions/burj-khalifa", anchor: "Burj Khalifa", reason: "Mentioned but not linked" },
+                        { targetTitle: "Dubai Mall Complete Guide", targetSlug: "/attractions/dubai-mall", anchor: "Dubai Mall", reason: "Related topic" },
+                        { targetTitle: "Dubai Fountain Show Times", targetSlug: "/attractions/dubai-fountain", anchor: "Dubai Fountain", reason: "Geographic proximity" },
+                      ]
+                    },
+                    {
+                      sourceTitle: "Dubai Marina Hotels",
+                      sourceSlug: "/hotels/dubai-marina",
+                      suggestions: [
+                        { targetTitle: "Dubai Marina Guide", targetSlug: "/districts/dubai-marina", anchor: "Dubai Marina", reason: "District context" },
+                        { targetTitle: "JBR Beach Guide", targetSlug: "/attractions/jbr-beach", anchor: "JBR Beach", reason: "Nearby attraction" },
+                      ]
+                    },
+                    {
+                      sourceTitle: "Desert Safari Experience",
+                      sourceSlug: "/attractions/desert-safari",
+                      suggestions: [
+                        { targetTitle: "Best Time to Visit Dubai", targetSlug: "/articles/best-time-dubai", anchor: "best time to visit", reason: "Seasonal relevance" },
+                        { targetTitle: "Dubai Day Trips", targetSlug: "/articles/dubai-day-trips", anchor: "day trips", reason: "Content cluster" },
+                      ]
+                    },
+                  ].map((item, idx) => (
+                    <Card key={idx} className="border-l-4 border-l-blue-500" data-testid={`card-link-suggestion-${idx}`}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="font-medium">{item.sourceTitle}</h4>
+                            <p className="text-xs text-muted-foreground">{item.sourceSlug}</p>
+                          </div>
+                          <Badge variant="outline">{item.suggestions.length} suggestions</Badge>
+                        </div>
+                        <div className="space-y-2">
+                          {item.suggestions.map((sug, sugIdx) => (
+                            <div
+                              key={sugIdx}
+                              className="flex items-center justify-between gap-4 p-2 rounded-md bg-muted/30"
+                              data-testid={`link-suggestion-${idx}-${sugIdx}`}
+                            >
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">{sug.targetTitle}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Anchor: "<span className="text-blue-600">{sug.anchor}</span>" - {sug.reason}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Button variant="outline" size="sm" data-testid={`button-add-link-${idx}-${sugIdx}`}>
+                                  <Link2 className="h-3 w-3 mr-1" />
+                                  Add Link
+                                </Button>
+                                <Button variant="ghost" size="icon" data-testid={`button-preview-${idx}-${sugIdx}`}>
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </ScrollArea>
             </CardContent>
           </Card>

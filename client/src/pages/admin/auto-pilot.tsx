@@ -18,7 +18,13 @@ import {
   Languages,
   FileText,
   TrendingUp,
+  Star,
+  ThumbsUp,
+  ThumbsDown,
+  Eye,
+  Lightbulb,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface AutoPilotStatus {
   isRunning: boolean;
@@ -257,6 +263,112 @@ export default function AutoPilotPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quality Score Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5" />
+            AI Content Quality Scores
+          </CardTitle>
+          <CardDescription>
+            Quality analysis for recently AI-generated content
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4 p-4 bg-muted/50 rounded-lg border">
+            <h3 className="font-medium flex items-center gap-2 mb-2">
+              <Lightbulb className="h-4 w-4 text-primary" />
+              איך זה עובד / How It Works
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Each AI-generated article receives a quality score based on SEO compliance, readability, 
+              link density, and content guidelines. Articles scoring below 70% are flagged for review.
+              <br />
+              <span className="text-xs">
+                כל מאמר שנוצר על ידי הבינה המלאכותית מקבל ציון איכות המבוסס על עמידה בדרישות SEO, 
+                קריאות, צפיפות קישורים והנחיות תוכן.
+              </span>
+            </p>
+          </div>
+          <ScrollArea className="h-[300px]">
+            <div className="space-y-4">
+              {/* Mock quality score data */}
+              {[
+                { title: "Ultimate Guide to Burj Khalifa 2024", score: 92, seo: 95, readability: 89, links: 88, writer: "Travel Expert AI" },
+                { title: "Dubai Mall Shopping Experience", score: 87, seo: 90, readability: 85, links: 82, writer: "Local Guide AI" },
+                { title: "Desert Safari Adventures", score: 78, seo: 82, readability: 75, links: 70, writer: "Adventure Writer AI" },
+                { title: "Palm Jumeirah Hotels Review", score: 65, seo: 60, readability: 70, links: 65, writer: "Hospitality AI", flagged: true },
+                { title: "Dubai Marina Nightlife Guide", score: 84, seo: 88, readability: 80, links: 82, writer: "Lifestyle AI" },
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`p-4 rounded-lg border ${item.flagged ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" : ""}`}
+                  data-testid={`quality-item-${idx}`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-medium">{item.title}</h4>
+                      <p className="text-xs text-muted-foreground">by {item.writer}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {item.flagged && (
+                        <Badge variant="outline" className="text-yellow-600 border-yellow-500">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Review Needed
+                        </Badge>
+                      )}
+                      <div className="flex items-center gap-1">
+                        <Star className={`h-4 w-4 ${item.score >= 80 ? "text-green-500" : item.score >= 70 ? "text-yellow-500" : "text-red-500"}`} />
+                        <span className={`text-lg font-bold ${item.score >= 80 ? "text-green-600" : item.score >= 70 ? "text-yellow-600" : "text-red-600"}`}>
+                          {item.score}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-muted-foreground">SEO</span>
+                        <span className="font-medium">{item.seo}%</span>
+                      </div>
+                      <Progress value={item.seo} className="h-1.5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-muted-foreground">Readability</span>
+                        <span className="font-medium">{item.readability}%</span>
+                      </div>
+                      <Progress value={item.readability} className="h-1.5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-muted-foreground">Links</span>
+                        <span className="font-medium">{item.links}%</span>
+                      </div>
+                      <Progress value={item.links} className="h-1.5" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <Button variant="outline" size="sm" data-testid={`button-review-${idx}`}>
+                      <Eye className="h-3 w-3 mr-1" />
+                      Review
+                    </Button>
+                    <Button variant="ghost" size="sm" data-testid={`button-approve-${idx}`}>
+                      <ThumbsUp className="h-3 w-3 mr-1" />
+                      Approve
+                    </Button>
+                    <Button variant="ghost" size="sm" data-testid={`button-reject-${idx}`}>
+                      <ThumbsDown className="h-3 w-3 mr-1" />
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
