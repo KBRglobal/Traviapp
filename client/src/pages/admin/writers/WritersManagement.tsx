@@ -117,6 +117,12 @@ export default function WritersManagement() {
               Newsroom Dashboard
             </Link>
           </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/writers/newsroom">
+              <FileText className="mr-2 h-4 w-4" />
+              Assignments
+            </Link>
+          </Button>
         </div>
       </div>
 

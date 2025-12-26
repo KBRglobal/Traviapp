@@ -269,10 +269,9 @@ export default function NewsroomDashboard() {
                   <p className="text-sm mt-2">
                     Create your first assignment to get started
                   </p>
-                  <Button className="mt-4" asChild>
-                    <Link href="/admin/writers/assignments">
-                      Create Assignment
-                    </Link>
+                  <Button className="mt-4" onClick={() => setAssignmentDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Assignment
                   </Button>
                 </div>
               ) : (

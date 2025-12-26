@@ -113,8 +113,16 @@ export function AssignmentDialog({ open, onOpenChange }: AssignmentDialogProps) 
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      setSelectedWriter(null);
+      setSelectedContent(null);
+    }
+    onOpenChange(isOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
