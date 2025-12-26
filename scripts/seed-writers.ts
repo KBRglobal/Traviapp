@@ -1,71 +1,37 @@
-/**
- * Seed AI Writers
- * 
- * Populates the database with the 10 AI writers
- */
-
-import { db } from "../server/db";
-import { aiWriters } from "@shared/schema";
-import { AI_WRITERS } from "../server/ai/writers/writer-registry";
-import { eq } from "drizzle-orm";
+import { db } from '../server/db';
+import { aiWriters } from '@shared/schema';
+import { WRITERS, CATEGORY_LABELS } from '@shared/writers.config';
+import { eq } from 'drizzle-orm';
 
 async function seedWriters() {
-  console.log("🌱 Seeding AI Writers...");
-
-  try {
-    for (const writer of AI_WRITERS) {
-      // Check if writer already exists
-      const existing = await db
-        .select()
-        .from(aiWriters)
-        .where(eq(aiWriters.id, writer.id))
-        .limit(1);
-
-      if (existing.length > 0) {
-        console.log(`  ⏭️  Skipping ${writer.name} (already exists)`);
-        continue;
-      }
-
-      // Insert writer
+  let seededCount = 0;
+  for (const w of WRITERS) {
+    const existing = await db.select().from(aiWriters).where(eq(aiWriters.id, w.id));
+    
+    if (existing.length === 0) {
       await db.insert(aiWriters).values({
-        id: writer.id,
-        name: writer.name,
-        slug: writer.slug,
-        avatar: writer.avatar,
-        nationality: writer.nationality,
-        age: writer.age,
-        expertise: writer.expertise,
-        personality: writer.personality,
-        writingStyle: writer.writingStyle,
-        voiceCharacteristics: writer.voiceCharacteristics,
-        samplePhrases: writer.samplePhrases,
-        bio: writer.bio,
-        shortBio: writer.shortBio,
-        socialMedia: writer.socialMedia || null,
-        contentTypes: writer.contentTypes,
-        languages: writer.languages,
-        isActive: writer.isActive,
-        articleCount: writer.articleCount,
+        id: w.id,
+        name: w.name,
+        slug: w.id,
+        avatar: w.avatar,
+        nationality: w.nationality,
+        age: w.age,
+        expertise: w.expertise,
+        personality: w.voice.personality,
+        writingStyle: w.writingStyle.tone,
+        bio: w.background,
+        shortBio: w.background.substring(0, 200) + '...',
+        contentTypes: [CATEGORY_LABELS[w.category]],
+        languages: ['en'],
+        isActive: true,
+        articleCount: 0
       });
-
-      console.log(`  ✅ Added ${writer.name}`);
+      seededCount++;
+      console.log(`Seeded writer: ${w.name}`);
     }
-
-    console.log("\n✨ Seeding completed successfully!");
-    console.log(`📊 Total writers: ${AI_WRITERS.length}`);
-  } catch (error) {
-    console.error("❌ Error seeding writers:", error);
-    throw error;
   }
+  console.log(`Total seeded: ${seededCount} writers`);
+  process.exit(0);
 }
 
-// Run the seed function
-seedWriters()
-  .then(() => {
-    console.log("Done!");
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error("Failed to seed:", error);
-    process.exit(1);
-  });
+seedWriters().catch(console.error);
