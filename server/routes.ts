@@ -110,6 +110,7 @@ import { registerEnhancementRoutes } from "./enhancement-routes";
 import { registerCustomerJourneyRoutes } from "./customer-journey-routes";
 import { registerDocUploadRoutes } from "./doc-upload-routes";
 import { registerSearchRoutes } from "./search/routes";
+import { searchIndexer } from "./search/indexer";
 import translateRouter from "./routes/translate";
 // Agent B Routes disabled - modules not yet implemented
 // import { registerAgentBRoutes } from "./agent-b-routes";
@@ -3083,6 +3084,13 @@ export async function registerRoutes(
         createdAt: new Date().toISOString(),
       }).catch(err => console.error("[Webhook] content.created trigger failed:", err));
 
+      // Index content for search if created as published
+      if (parsed.status === "published") {
+        searchIndexer.indexContent(content.id)
+          .then(() => console.log(`[Search] Indexed new content: ${content.id}`))
+          .catch(err => console.error(`[Search] Indexing failed for ${content.id}:`, err));
+      }
+
       res.status(201).json(fullContent);
     } catch (error) {
       console.error("Error creating content:", error);
@@ -3195,6 +3203,13 @@ export async function registerRoutes(
         previousStatus: existingContent.status,
         updatedAt: new Date().toISOString(),
       }).catch(err => console.error(`[Webhook] ${webhookEvent} trigger failed:`, err));
+
+      // Index content for search when published
+      if (fullContent?.status === "published") {
+        searchIndexer.indexContent(req.params.id)
+          .then(() => console.log(`[Search] Indexed content: ${req.params.id}`))
+          .catch(err => console.error(`[Search] Indexing failed for ${req.params.id}:`, err));
+      }
 
       res.json(fullContent);
     } catch (error) {

@@ -38,6 +38,9 @@ export interface ContentGenerationResult {
   keywords?: string[];
   writerId: string;
   writerName: string;
+  writerAvatar: string;
+  writerBio: string;
+  writerNationality: string;
   generatedByAI: boolean;
   writerVoiceScore: number;
   confidence: number;
@@ -101,6 +104,9 @@ export async function generate(
     keywords: request.keywords,
     writerId: writer.id,
     writerName: writer.name,
+    writerAvatar: writer.avatar,
+    writerBio: writer.shortBio,
+    writerNationality: writer.nationality,
     generatedByAI: true,
     writerVoiceScore: voiceScore,
     confidence: 0.85 // Base confidence, can be adjusted based on various factors
