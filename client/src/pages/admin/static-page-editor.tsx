@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import DOMPurify from "dompurify";
+import mammoth from "mammoth";
 import {
   DndContext,
   closestCenter,
@@ -70,6 +71,7 @@ import {
   Quote,
   Loader2,
   ClipboardPaste,
+  FileUp,
 } from "lucide-react";
 
 interface StaticPageBlock {
@@ -722,6 +724,7 @@ export default function StaticPageEditor() {
   const [activeTab, setActiveTab] = useState<"en" | "he">("en");
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     slug: "",
@@ -930,6 +933,56 @@ export default function StaticPageEditor() {
     }
   }, [toast]);
 
+  const importDocumentFromFile = useCallback(async (file: File) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      const html = result.value;
+      
+      if (!html.trim()) {
+        toast({ title: "Empty document", description: "The document appears to be empty", variant: "destructive" });
+        return;
+      }
+      
+      const newBlocks = parseDocumentToBlocks(html);
+      
+      if (newBlocks.length === 0) {
+        toast({ title: "No content detected", description: "Could not parse the document content", variant: "destructive" });
+        return;
+      }
+      
+      setFormData((prev) => ({
+        ...prev,
+        blocks: [...prev.blocks, ...newBlocks],
+      }));
+      setExpandedBlocks((prev) => {
+        const next = new Set(prev);
+        newBlocks.forEach((block) => next.add(block.id));
+        return next;
+      });
+      setHasChanges(true);
+      toast({ 
+        title: "Document imported", 
+        description: `Added ${newBlocks.length} blocks from ${file.name}` 
+      });
+    } catch (error) {
+      console.error("Error importing DOCX:", error);
+      toast({ 
+        title: "Import failed", 
+        description: "Could not read the document. Make sure it's a valid DOCX file.", 
+        variant: "destructive" 
+      });
+    }
+  }, [toast]);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      importDocumentFromFile(file);
+      e.target.value = "";
+    }
+  }, [importDocumentFromFile]);
+
   const handlePreview = useCallback(() => {
     window.open(`/${formData.slug}`, "_blank");
   }, [formData.slug]);
@@ -1104,14 +1157,38 @@ export default function StaticPageEditor() {
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="text-lg font-semibold">Content Blocks</h2>
                     <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        onClick={importDocumentFromClipboard}
-                        data-testid="button-import-document"
-                      >
-                        <ClipboardPaste className="h-4 w-4 mr-2" />
-                        Import Document
-                      </Button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept=".docx,.doc"
+                        onChange={handleFileSelect}
+                        data-testid="input-file-upload"
+                      />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" data-testid="button-import-document">
+                            <FileUp className="h-4 w-4 mr-2" />
+                            Import Document
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem onClick={() => fileInputRef.current?.click()} data-testid="import-from-file">
+                            <FileUp className="h-4 w-4 mr-2" />
+                            <div>
+                              <div className="font-medium">Upload DOCX File</div>
+                              <div className="text-xs text-muted-foreground">Import from Word document</div>
+                            </div>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={importDocumentFromClipboard} data-testid="import-from-clipboard">
+                            <ClipboardPaste className="h-4 w-4 mr-2" />
+                            <div>
+                              <div className="font-medium">Paste from Clipboard</div>
+                              <div className="text-xs text-muted-foreground">Copy from Word or Google Docs</div>
+                            </div>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button data-testid="button-add-block">
@@ -1149,10 +1226,30 @@ export default function StaticPageEditor() {
                           Paste a document from Word/Google Docs or add blocks manually
                         </p>
                         <div className="flex items-center justify-center gap-3 flex-wrap">
-                          <Button variant="outline" onClick={importDocumentFromClipboard} data-testid="button-import-first-document">
-                            <ClipboardPaste className="h-4 w-4 mr-2" />
-                            Import Document
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" data-testid="button-import-first-document">
+                                <FileUp className="h-4 w-4 mr-2" />
+                                Import Document
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56">
+                              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                                <FileUp className="h-4 w-4 mr-2" />
+                                <div>
+                                  <div className="font-medium">Upload DOCX File</div>
+                                  <div className="text-xs text-muted-foreground">Import from Word document</div>
+                                </div>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={importDocumentFromClipboard}>
+                                <ClipboardPaste className="h-4 w-4 mr-2" />
+                                <div>
+                                  <div className="font-medium">Paste from Clipboard</div>
+                                  <div className="text-xs text-muted-foreground">Copy from Word or Google Docs</div>
+                                </div>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button data-testid="button-add-first-block">
