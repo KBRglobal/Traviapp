@@ -136,14 +136,71 @@ function getDefaultBlockData(type: StaticPageBlock["type"]): Record<string, unkn
   }
 }
 
+function detectWordHeadingLevel(el: HTMLElement): number | null {
+  const className = el.className || "";
+  if (/MsoHeading1|Heading1/i.test(className)) return 1;
+  if (/MsoHeading2|Heading2/i.test(className)) return 2;
+  if (/MsoHeading3|Heading3/i.test(className)) return 3;
+  if (/MsoTitle|Title/i.test(className)) return 1;
+  
+  const style = el.getAttribute("style") || "";
+  const fontSizeMatch = style.match(/font-size:\s*(\d+)/i);
+  const fontWeight = style.match(/font-weight:\s*(\d+|bold)/i);
+  if (fontSizeMatch && fontWeight) {
+    const size = parseInt(fontSizeMatch[1], 10);
+    const isBold = fontWeight[1] === "bold" || parseInt(fontWeight[1], 10) >= 600;
+    if (isBold && size >= 18) return 2;
+    if (isBold && size >= 14) return 3;
+  }
+  return null;
+}
+
+function isBoldOnlyParagraph(el: HTMLElement): boolean {
+  const textContent = el.textContent?.trim() || "";
+  if (!textContent || textContent.length > 150) return false;
+  
+  const cloned = el.cloneNode(true) as HTMLElement;
+  const links = cloned.querySelectorAll("a");
+  links.forEach(a => {
+    const span = document.createElement("span");
+    span.innerHTML = a.innerHTML;
+    a.replaceWith(span);
+  });
+  
+  const boldContent = cloned.querySelectorAll("b, strong");
+  if (boldContent.length === 0) return false;
+  
+  let boldText = "";
+  boldContent.forEach(b => { boldText += b.textContent || ""; });
+  const normalizedBold = boldText.replace(/\s+/g, "").toLowerCase();
+  const normalizedFull = textContent.replace(/\s+/g, "").toLowerCase();
+  
+  return normalizedBold === normalizedFull && normalizedFull.length > 0;
+}
+
 function cleanPastedHtml(html: string): string {
   const tempDiv = document.createElement("div");
   tempDiv.innerHTML = html;
 
   const removeElements = tempDiv.querySelectorAll(
-    'meta, style, script, link, title, xml, o\\:p, [style*="mso"], font[face], font[size]'
+    'meta, style, script, link, title, xml, o\\:p, font[face], font[size]'
   );
   removeElements.forEach((el) => el.remove());
+
+  const paragraphs = tempDiv.querySelectorAll("p");
+  paragraphs.forEach((p) => {
+    const headingLevel = detectWordHeadingLevel(p);
+    if (headingLevel) {
+      const tag = headingLevel === 1 ? "h2" : (headingLevel === 2 ? "h2" : "h3");
+      const h = document.createElement(tag);
+      h.innerHTML = p.innerHTML;
+      p.replaceWith(h);
+    } else if (isBoldOnlyParagraph(p)) {
+      const h = document.createElement("h2");
+      h.textContent = p.textContent?.trim() || "";
+      p.replaceWith(h);
+    }
+  });
 
   const allElements = tempDiv.querySelectorAll("*");
   allElements.forEach((el) => {
