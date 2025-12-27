@@ -1,26 +1,31 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  FileText, Plus, Trash2, Edit2, Save, Lightbulb, Eye, Globe
+  FileText, Plus, Trash2, Edit2, Lightbulb, Eye, Globe
 } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface StaticPageBlock {
+  id: string;
+  type: string;
+  data: unknown;
+}
 
 interface StaticPage {
   id: string;
@@ -31,6 +36,7 @@ interface StaticPage {
   metaDescription: string | null;
   content: string | null;
   contentHe: string | null;
+  blocks: StaticPageBlock[];
   isActive: boolean;
   showInFooter: boolean;
   createdAt: string;
@@ -39,44 +45,11 @@ interface StaticPage {
 
 export default function StaticPagesPage() {
   const { toast } = useToast();
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [editingPage, setEditingPage] = useState<StaticPage | null>(null);
-  const [newPage, setNewPage] = useState({
-    slug: "",
-    title: "",
-    titleHe: "",
-    metaTitle: "",
-    metaDescription: "",
-    content: "",
-    contentHe: "",
-    showInFooter: false,
-  });
+  const [, navigate] = useLocation();
+  const [deletePageId, setDeletePageId] = useState<string | null>(null);
 
   const { data: pages, isLoading } = useQuery<StaticPage[]>({
     queryKey: ["/api/site-config/pages"],
-  });
-
-  const createPageMutation = useMutation({
-    mutationFn: async (data: Partial<StaticPage>) => {
-      return apiRequest("POST", "/api/site-config/pages", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/site-config/pages"] });
-      toast({ title: "Page created" });
-      setShowCreateDialog(false);
-      setNewPage({ slug: "", title: "", titleHe: "", metaTitle: "", metaDescription: "", content: "", contentHe: "", showInFooter: false });
-    },
-  });
-
-  const updatePageMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<StaticPage> }) => {
-      return apiRequest("PUT", `/api/site-config/pages/${id}`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/site-config/pages"] });
-      toast({ title: "Page updated" });
-      setEditingPage(null);
-    },
   });
 
   const deletePageMutation = useMutation({
@@ -86,6 +59,7 @@ export default function StaticPagesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/site-config/pages"] });
       toast({ title: "Page deleted" });
+      setDeletePageId(null);
     },
   });
 
@@ -128,7 +102,7 @@ export default function StaticPagesPage() {
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-page">
+        <Button onClick={() => navigate("/admin/static-pages/new")} data-testid="button-create-page">
           <Plus className="h-4 w-4 mr-2" />
           Create Page
         </Button>
@@ -169,14 +143,19 @@ export default function StaticPagesPage() {
                     <Globe className="h-4 w-4" />
                     <span>/{page.slug}</span>
                   </div>
-                  {page.showInFooter && (
-                    <Badge variant="outline">Shows in footer</Badge>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {page.showInFooter && (
+                      <Badge variant="outline">Shows in footer</Badge>
+                    )}
+                    {page.blocks && page.blocks.length > 0 && (
+                      <Badge variant="outline">{page.blocks.length} blocks</Badge>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 pt-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setEditingPage(page)}
+                      onClick={() => navigate(`/admin/static-pages/edit/${page.id}`)}
                       data-testid={`button-edit-page-${page.slug}`}
                     >
                       <Edit2 className="h-4 w-4 mr-1" />
@@ -195,7 +174,7 @@ export default function StaticPagesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => deletePageMutation.mutate(page.id)}
+                      onClick={() => setDeletePageId(page.id)}
                       data-testid={`button-delete-page-${page.slug}`}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
@@ -208,207 +187,26 @@ export default function StaticPagesPage() {
         </div>
       )}
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create Static Page</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Slug (URL path)</Label>
-                <Input
-                  placeholder="privacy-policy"
-                  value={newPage.slug}
-                  onChange={(e) => setNewPage({ ...newPage, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-                  data-testid="input-page-slug"
-                />
-              </div>
-              <div className="flex items-end gap-4">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={newPage.showInFooter}
-                    onCheckedChange={(checked) => setNewPage({ ...newPage, showInFooter: checked })}
-                  />
-                  <Label>Show in footer</Label>
-                </div>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Title (English)</Label>
-                <Input
-                  placeholder="Privacy Policy"
-                  value={newPage.title}
-                  onChange={(e) => setNewPage({ ...newPage, title: e.target.value })}
-                  data-testid="input-page-title"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Title (Hebrew)</Label>
-                <Input
-                  placeholder="מדיניות פרטיות"
-                  value={newPage.titleHe}
-                  onChange={(e) => setNewPage({ ...newPage, titleHe: e.target.value })}
-                  dir="rtl"
-                  data-testid="input-page-title-he"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Meta Title</Label>
-              <Input
-                placeholder="Privacy Policy | Travi Dubai"
-                value={newPage.metaTitle}
-                onChange={(e) => setNewPage({ ...newPage, metaTitle: e.target.value })}
-                data-testid="input-page-meta-title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Meta Description</Label>
-              <Textarea
-                placeholder="Read our privacy policy..."
-                value={newPage.metaDescription}
-                onChange={(e) => setNewPage({ ...newPage, metaDescription: e.target.value })}
-                rows={2}
-                data-testid="input-page-meta-desc"
-              />
-            </div>
-            <Tabs defaultValue="en">
-              <TabsList>
-                <TabsTrigger value="en">Content (English)</TabsTrigger>
-                <TabsTrigger value="he">Content (Hebrew)</TabsTrigger>
-              </TabsList>
-              <TabsContent value="en">
-                <Textarea
-                  placeholder="Page content in English..."
-                  value={newPage.content}
-                  onChange={(e) => setNewPage({ ...newPage, content: e.target.value })}
-                  rows={8}
-                  data-testid="input-page-content"
-                />
-              </TabsContent>
-              <TabsContent value="he">
-                <Textarea
-                  placeholder="תוכן הדף בעברית..."
-                  value={newPage.contentHe}
-                  onChange={(e) => setNewPage({ ...newPage, contentHe: e.target.value })}
-                  rows={8}
-                  dir="rtl"
-                  data-testid="input-page-content-he"
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-            <Button onClick={() => createPageMutation.mutate(newPage)} disabled={createPageMutation.isPending} data-testid="button-save-page">
-              <Save className="h-4 w-4 mr-2" />
-              Create Page
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!editingPage} onOpenChange={() => setEditingPage(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Page: {editingPage?.title}</DialogTitle>
-          </DialogHeader>
-          {editingPage && (
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Slug</Label>
-                  <Input
-                    value={editingPage.slug}
-                    onChange={(e) => setEditingPage({ ...editingPage, slug: e.target.value })}
-                  />
-                </div>
-                <div className="flex items-end gap-4">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={editingPage.isActive}
-                      onCheckedChange={(checked) => setEditingPage({ ...editingPage, isActive: checked })}
-                    />
-                    <Label>Active</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={editingPage.showInFooter}
-                      onCheckedChange={(checked) => setEditingPage({ ...editingPage, showInFooter: checked })}
-                    />
-                    <Label>Footer</Label>
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Title (English)</Label>
-                  <Input
-                    value={editingPage.title}
-                    onChange={(e) => setEditingPage({ ...editingPage, title: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Title (Hebrew)</Label>
-                  <Input
-                    value={editingPage.titleHe || ""}
-                    onChange={(e) => setEditingPage({ ...editingPage, titleHe: e.target.value })}
-                    dir="rtl"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Meta Title</Label>
-                <Input
-                  value={editingPage.metaTitle || ""}
-                  onChange={(e) => setEditingPage({ ...editingPage, metaTitle: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Meta Description</Label>
-                <Textarea
-                  value={editingPage.metaDescription || ""}
-                  onChange={(e) => setEditingPage({ ...editingPage, metaDescription: e.target.value })}
-                  rows={2}
-                />
-              </div>
-              <Tabs defaultValue="en">
-                <TabsList>
-                  <TabsTrigger value="en">Content (English)</TabsTrigger>
-                  <TabsTrigger value="he">Content (Hebrew)</TabsTrigger>
-                </TabsList>
-                <TabsContent value="en">
-                  <Textarea
-                    value={editingPage.content || ""}
-                    onChange={(e) => setEditingPage({ ...editingPage, content: e.target.value })}
-                    rows={10}
-                  />
-                </TabsContent>
-                <TabsContent value="he">
-                  <Textarea
-                    value={editingPage.contentHe || ""}
-                    onChange={(e) => setEditingPage({ ...editingPage, contentHe: e.target.value })}
-                    rows={10}
-                    dir="rtl"
-                  />
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingPage(null)}>Cancel</Button>
-            <Button
-              onClick={() => editingPage && updatePageMutation.mutate({ id: editingPage.id, data: editingPage })}
-              disabled={updatePageMutation.isPending}
+      <AlertDialog open={!!deletePageId} onOpenChange={() => setDeletePageId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Page</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this page? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletePageId && deletePageMutation.mutate(deletePageId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
             >
-              <Save className="h-4 w-4 mr-2" />
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

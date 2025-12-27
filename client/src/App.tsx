@@ -142,6 +142,7 @@ const SiteSettingsPage = lazy(() => import("@/pages/admin/site-settings"));
 const NavigationManagerPage = lazy(() => import("@/pages/admin/navigation-manager"));
 const FooterManagerPage = lazy(() => import("@/pages/admin/footer-manager"));
 const StaticPagesPage = lazy(() => import("@/pages/admin/static-pages"));
+const StaticPageEditorPage = lazy(() => import("@/pages/admin/static-page-editor"));
 const PageBuilderPage = lazy(() => import("@/pages/admin/page-builder"));
 const WritersManagement = lazy(() => import("@/pages/admin/writers/WritersManagement"));
 const NewsroomDashboard = lazy(() => import("@/pages/admin/writers/NewsroomDashboard"));
@@ -292,6 +293,8 @@ function AdminRouter() {
         <Route path="/admin/navigation" component={NavigationManagerPage} />
         <Route path="/admin/footer" component={FooterManagerPage} />
         <Route path="/admin/static-pages" component={StaticPagesPage} />
+        <Route path="/admin/static-pages/new" component={StaticPageEditorPage} />
+        <Route path="/admin/static-pages/edit/:id" component={StaticPageEditorPage} />
         <Route path="/admin/page-builder" component={PageBuilderPage} />
         <Route path="/admin/writers" component={WritersManagement} />
         <Route path="/admin/writers/newsroom" component={NewsroomDashboard} />
