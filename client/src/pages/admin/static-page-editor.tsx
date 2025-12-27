@@ -735,7 +735,7 @@ export default function StaticPageEditor() {
   });
 
   const { data: page, isLoading } = useQuery<StaticPage>({
-    queryKey: ["/api/site-config/pages", pageId],
+    queryKey: ["/api/site-config/pages/by-id", pageId],
     enabled: !!pageId && !isNew,
   });
 

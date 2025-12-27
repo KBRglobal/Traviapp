@@ -225,6 +225,21 @@ router.get("/pages", async (_req: Request, res: Response) => {
   }
 });
 
+// Get page by ID (for admin editor)
+router.get("/pages/by-id/:id", async (req: Request, res: Response) => {
+  try {
+    const [page] = await db.select().from(staticPages).where(eq(staticPages.id, req.params.id));
+    if (!page) {
+      return res.status(404).json({ error: "Page not found" });
+    }
+    res.json(page);
+  } catch (error) {
+    console.error("Error fetching page by ID:", error);
+    res.status(500).json({ error: "Failed to fetch page" });
+  }
+});
+
+// Get page by slug (for public pages)
 router.get("/pages/:slug", async (req: Request, res: Response) => {
   try {
     const [page] = await db.select().from(staticPages).where(eq(staticPages.slug, req.params.slug));
