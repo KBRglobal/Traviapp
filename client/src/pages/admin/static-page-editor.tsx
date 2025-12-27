@@ -69,6 +69,7 @@ import {
   Image,
   Quote,
   Loader2,
+  ClipboardPaste,
 } from "lucide-react";
 
 interface StaticPageBlock {
@@ -196,6 +197,91 @@ function cleanPastedHtml(html: string): string {
   });
 }
 
+function parseDocumentToBlocks(html: string): StaticPageBlock[] {
+  const cleanedHtml = cleanPastedHtml(html);
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = cleanedHtml;
+  
+  const blocks: StaticPageBlock[] = [];
+  let currentTextContent = "";
+  
+  const flushTextContent = () => {
+    if (currentTextContent.trim()) {
+      const cleaned = currentTextContent.trim().replace(/<p>\s*<\/p>/g, "");
+      if (cleaned) {
+        blocks.push({
+          id: generateBlockId(),
+          type: "text",
+          data: { content: cleaned, contentHe: "" },
+        });
+      }
+      currentTextContent = "";
+    }
+  };
+  
+  const processNode = (node: ChildNode) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim();
+      if (text) {
+        currentTextContent += `<p>${text}</p>`;
+      }
+      return;
+    }
+    
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    
+    const el = node as HTMLElement;
+    const tagName = el.tagName.toLowerCase();
+    
+    if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(tagName)) {
+      flushTextContent();
+      const headingText = el.textContent?.trim() || "";
+      if (headingText) {
+        const level = tagName === "h1" || tagName === "h2" ? "h2" : "h3";
+        blocks.push({
+          id: generateBlockId(),
+          type: "heading",
+          data: { level, content: headingText, contentHe: "" },
+        });
+      }
+    } else if (tagName === "p") {
+      const innerHTML = el.innerHTML.trim();
+      if (innerHTML) {
+        currentTextContent += `<p>${innerHTML}</p>`;
+      }
+    } else if (tagName === "div" || tagName === "span" || tagName === "section" || tagName === "article") {
+      for (const child of Array.from(el.childNodes)) {
+        processNode(child);
+      }
+    } else if (["ul", "ol"].includes(tagName)) {
+      currentTextContent += el.outerHTML;
+    } else if (tagName === "br") {
+      currentTextContent += "<br>";
+    } else {
+      for (const child of Array.from(el.childNodes)) {
+        processNode(child);
+      }
+    }
+  };
+  
+  for (const child of Array.from(tempDiv.childNodes)) {
+    processNode(child);
+  }
+  
+  flushTextContent();
+  
+  return blocks;
+}
+
+function normalizeBlocks(blocks: StaticPageBlock[]): StaticPageBlock[] {
+  return blocks.map(block => {
+    if (block.type === "heading" && block.data.level === "h1") {
+      return { ...block, data: { ...block.data, level: "h2" } };
+    }
+    return block;
+  });
+}
+
 function SortableBlock({
   block,
   isExpanded,
@@ -257,7 +343,7 @@ function SortableBlock({
               </button>
               <Icon className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium flex-1">{blockConfig?.label}</span>
-              <Badge variant="outline" size="sm">{block.type}</Badge>
+              <Badge variant="outline" className="text-xs">{block.type}</Badge>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="icon" data-testid={`toggle-block-${block.id}`}>
                   {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -320,6 +406,9 @@ function BlockEditor({
     case "heading":
       return (
         <div className="space-y-3">
+          <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+            Note: The page title is automatically rendered as H1. Use H2 for main sections and H3 for subsections.
+          </p>
           <div className="space-y-2">
             <Label>Heading Level</Label>
             <Select
@@ -330,8 +419,8 @@ function BlockEditor({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="h2">H2</SelectItem>
-                <SelectItem value="h3">H3</SelectItem>
+                <SelectItem value="h2">H2 - Section</SelectItem>
+                <SelectItem value="h3">H3 - Subsection</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -510,10 +599,10 @@ function BlockEditor({
               data-testid={`image-caption-${block.id}`}
             />
           </div>
-          {data.url && (
+          {typeof data.url === "string" && data.url && (
             <div className="mt-2">
               <img
-                src={data.url as string}
+                src={data.url}
                 alt={(data.alt as string) || "Preview"}
                 className="max-h-32 rounded border object-cover"
               />
@@ -603,7 +692,7 @@ export default function StaticPageEditor() {
         metaDescription: page.metaDescription || "",
         isActive: page.isActive,
         showInFooter: page.showInFooter,
-        blocks: (page.blocks || []) as StaticPageBlock[],
+        blocks: normalizeBlocks((page.blocks || []) as StaticPageBlock[]),
       });
     }
   }, [page]);
@@ -617,10 +706,11 @@ export default function StaticPageEditor() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      const normalizedData = { ...data, blocks: normalizeBlocks(data.blocks) };
       if (isNew) {
-        return apiRequest("POST", "/api/site-config/pages", data);
+        return apiRequest("POST", "/api/site-config/pages", normalizedData);
       }
-      return apiRequest("PUT", `/api/site-config/pages/${pageId}`, data);
+      return apiRequest("PUT", `/api/site-config/pages/${pageId}`, normalizedData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/site-config/pages"] });
@@ -639,6 +729,7 @@ export default function StaticPageEditor() {
     mutationFn: async () => {
       return apiRequest("PUT", `/api/site-config/pages/${pageId}`, {
         ...formData,
+        blocks: normalizeBlocks(formData.blocks),
         isActive: true,
       });
     },
@@ -725,6 +816,62 @@ export default function StaticPageEditor() {
       return next;
     });
   }, []);
+
+  const importDocumentFromClipboard = useCallback(async () => {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      let html = "";
+      let plainText = "";
+      
+      for (const item of clipboardItems) {
+        if (item.types.includes("text/html")) {
+          const blob = await item.getType("text/html");
+          html = await blob.text();
+        }
+        if (item.types.includes("text/plain")) {
+          const blob = await item.getType("text/plain");
+          plainText = await blob.text();
+        }
+      }
+      
+      if (!html && plainText) {
+        html = plainText.split("\n").filter(line => line.trim()).map(line => `<p>${line}</p>`).join("");
+      }
+      
+      if (!html) {
+        toast({ title: "No content in clipboard", description: "Copy content from Word or Google Docs first", variant: "destructive" });
+        return;
+      }
+      
+      const newBlocks = parseDocumentToBlocks(html);
+      
+      if (newBlocks.length === 0) {
+        toast({ title: "No content detected", description: "Could not parse the clipboard content", variant: "destructive" });
+        return;
+      }
+      
+      setFormData((prev) => ({
+        ...prev,
+        blocks: [...prev.blocks, ...newBlocks],
+      }));
+      setExpandedBlocks((prev) => {
+        const next = new Set(prev);
+        newBlocks.forEach((block) => next.add(block.id));
+        return next;
+      });
+      setHasChanges(true);
+      toast({ 
+        title: "Document imported", 
+        description: `Added ${newBlocks.length} blocks (${newBlocks.filter(b => b.type === "heading").length} headings, ${newBlocks.filter(b => b.type === "text").length} text sections)` 
+      });
+    } catch (error) {
+      toast({ 
+        title: "Clipboard access denied", 
+        description: "Please allow clipboard access or use Ctrl+V in a text block", 
+        variant: "destructive" 
+      });
+    }
+  }, [toast]);
 
   const handlePreview = useCallback(() => {
     window.open(`/${formData.slug}`, "_blank");
@@ -897,15 +1044,24 @@ export default function StaticPageEditor() {
                 </Card>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <h2 className="text-lg font-semibold">Content Blocks</h2>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button data-testid="button-add-block">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Block
-                        </Button>
-                      </DropdownMenuTrigger>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={importDocumentFromClipboard}
+                        data-testid="button-import-document"
+                      >
+                        <ClipboardPaste className="h-4 w-4 mr-2" />
+                        Import Document
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button data-testid="button-add-block">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Block
+                          </Button>
+                        </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
                         {blockTypes.map((blockType) => (
                           <DropdownMenuItem
@@ -923,7 +1079,8 @@ export default function StaticPageEditor() {
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
-                    </DropdownMenu>
+                      </DropdownMenu>
+                    </div>
                   </div>
 
                   {formData.blocks.length === 0 ? (
@@ -932,15 +1089,20 @@ export default function StaticPageEditor() {
                         <Type className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                         <h3 className="text-lg font-medium mb-2">No content blocks</h3>
                         <p className="text-muted-foreground mb-4">
-                          Add blocks to build your page content
+                          Paste a document from Word/Google Docs or add blocks manually
                         </p>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button data-testid="button-add-first-block">
-                              <Plus className="h-4 w-4 mr-2" />
-                              Add First Block
-                            </Button>
-                          </DropdownMenuTrigger>
+                        <div className="flex items-center justify-center gap-3 flex-wrap">
+                          <Button variant="outline" onClick={importDocumentFromClipboard} data-testid="button-import-first-document">
+                            <ClipboardPaste className="h-4 w-4 mr-2" />
+                            Import Document
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button data-testid="button-add-first-block">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Block
+                              </Button>
+                            </DropdownMenuTrigger>
                           <DropdownMenuContent className="w-56">
                             {blockTypes.map((blockType) => (
                               <DropdownMenuItem
@@ -957,7 +1119,8 @@ export default function StaticPageEditor() {
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuContent>
-                        </DropdownMenu>
+                          </DropdownMenu>
+                        </div>
                       </CardContent>
                     </Card>
                   ) : (
