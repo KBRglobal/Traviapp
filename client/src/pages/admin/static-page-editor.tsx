@@ -29,6 +29,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { SUPPORTED_LOCALES } from "@shared/schema";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -72,6 +82,7 @@ import {
   Loader2,
   ClipboardPaste,
   FileUp,
+  Languages,
 } from "lucide-react";
 
 interface StaticPageBlock {
@@ -721,10 +732,13 @@ export default function StaticPageEditor() {
   const isNew = matchNew;
   const pageId = paramsEdit?.id;
 
-  const [activeTab, setActiveTab] = useState<"en" | "he">("en");
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showTranslateDialog, setShowTranslateDialog] = useState(false);
+  const [translationProgress, setTranslationProgress] = useState(0);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationStatus, setTranslationStatus] = useState<string>("");
 
   const [formData, setFormData] = useState({
     slug: "",
@@ -800,6 +814,47 @@ export default function StaticPageEditor() {
       setHasChanges(false);
     },
   });
+
+  const translateToAllLanguages = useCallback(async () => {
+    if (!pageId) {
+      toast({ title: "Save the page first", description: "Please save the page before translating", variant: "destructive" });
+      return;
+    }
+
+    setShowTranslateDialog(true);
+    setIsTranslating(true);
+    setTranslationProgress(0);
+
+    const targetLocales = SUPPORTED_LOCALES.filter(l => l.code !== 'en');
+    const totalLocales = targetLocales.length;
+    let completed = 0;
+
+    try {
+      for (const locale of targetLocales) {
+        setTranslationStatus(`Translating to ${locale.name} (${locale.nativeName})...`);
+        
+        await apiRequest("POST", `/api/site-config/pages/${pageId}/translate`, {
+          targetLocale: locale.code,
+          title: formData.title,
+          metaTitle: formData.metaTitle,
+          metaDescription: formData.metaDescription,
+          blocks: formData.blocks,
+        });
+        
+        completed++;
+        setTranslationProgress(Math.round((completed / totalLocales) * 100));
+      }
+
+      setTranslationStatus("Translation complete!");
+      toast({ title: "Translation complete", description: `Translated to ${totalLocales} languages` });
+      queryClient.invalidateQueries({ queryKey: ["/api/site-config/pages"] });
+    } catch (error) {
+      toast({ title: "Translation failed", description: "Some translations may have failed", variant: "destructive" });
+      setTranslationStatus("Translation failed");
+    } finally {
+      setIsTranslating(false);
+    }
+  }, [pageId, formData, toast]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
@@ -1055,19 +1110,31 @@ export default function StaticPageEditor() {
               Save Draft
             </Button>
             {!isNew && (
-              <Button
-                size="sm"
-                onClick={() => publishMutation.mutate()}
-                disabled={publishMutation.isPending || formData.isActive}
-                data-testid="button-publish"
-              >
-                {publishMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4 mr-2" />
-                )}
-                {formData.isActive ? "Published" : "Publish"}
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={translateToAllLanguages}
+                  disabled={isTranslating || hasChanges}
+                  data-testid="button-translate"
+                >
+                  <Languages className="h-4 w-4 mr-2" />
+                  Translate to All Languages
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => publishMutation.mutate()}
+                  disabled={publishMutation.isPending || formData.isActive}
+                  data-testid="button-publish"
+                >
+                  {publishMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  {formData.isActive ? "Published" : "Publish"}
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -1077,15 +1144,12 @@ export default function StaticPageEditor() {
         <div className="h-full flex">
           <ScrollArea className="flex-1 p-6">
             <div className="max-w-3xl mx-auto space-y-6">
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "en" | "he")}>
-                <TabsList className="mb-4">
-                  <TabsTrigger value="en" data-testid="tab-english">English</TabsTrigger>
-                  <TabsTrigger value="he" data-testid="tab-hebrew">עברית (Hebrew)</TabsTrigger>
-                </TabsList>
-
                 <Card className="mb-6">
                   <CardHeader>
                     <CardTitle className="text-base">Page Settings</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Edit content in English. Use "Translate to All Languages" button to auto-translate to 16 languages.
+                    </p>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2">
@@ -1101,14 +1165,11 @@ export default function StaticPageEditor() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>{activeTab === "he" ? "Title (Hebrew)" : "Title (English)"}</Label>
+                        <Label>Title</Label>
                         <Input
-                          value={activeTab === "he" ? formData.titleHe : formData.title}
-                          onChange={(e) =>
-                            updateFormField(activeTab === "he" ? "titleHe" : "title", e.target.value)
-                          }
-                          dir={activeTab === "he" ? "rtl" : "ltr"}
-                          placeholder={activeTab === "he" ? "כותרת הדף" : "Page title"}
+                          value={formData.title}
+                          onChange={(e) => updateFormField("title", e.target.value)}
+                          placeholder="Page title"
                           data-testid="input-title"
                         />
                       </div>
@@ -1296,18 +1357,52 @@ export default function StaticPageEditor() {
                             onDelete={() => deleteBlock(block.id)}
                             onDuplicate={() => duplicateBlock(block.id)}
                             onUpdate={(data) => updateBlock(block.id, data)}
-                            activeTab={activeTab}
+                            activeTab="en"
                           />
                         ))}
                       </SortableContext>
                     </DndContext>
                   )}
                 </div>
-              </Tabs>
             </div>
           </ScrollArea>
         </div>
       </div>
+
+      <Dialog open={showTranslateDialog} onOpenChange={setShowTranslateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Languages className="h-5 w-5" />
+              Translating to All Languages
+            </DialogTitle>
+            <DialogDescription>
+              Translating content to {SUPPORTED_LOCALES.filter(l => l.code !== 'en').length} languages using AI
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <Progress value={translationProgress} className="h-2" />
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{translationStatus}</span>
+              <span className="font-medium">{translationProgress}%</span>
+            </div>
+            {translationProgress === 100 && !isTranslating && (
+              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md p-3 text-sm text-green-800 dark:text-green-200">
+                All translations complete! The page is now available in {SUPPORTED_LOCALES.filter(l => l.code !== 'en').length} languages.
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowTranslateDialog(false)}
+              disabled={isTranslating}
+            >
+              {isTranslating ? "Please wait..." : "Close"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

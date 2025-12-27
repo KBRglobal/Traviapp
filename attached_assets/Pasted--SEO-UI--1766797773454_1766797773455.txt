@@ -1,0 +1,250 @@
+מצוין. אנחנו עושים את זה מסודר, מקצועי, וברמת אפיון מוצר + SEO + עיצוב
+בלי קוד, בלי UI סופי — מוקאפ עיצובי בלבד.
+
+להלן המסמך.
+
+⸻
+
+📄 homepage_new — אפיון ויזואלי + תוכני + SEO
+
+(עמוד פנימי, לא עמוד הבית הרשמי, נגיש רק בקישור)
+
+⸻
+
+🧭 הגדרת העמוד
+
+שם פנימי: homepage_new
+סטטוס: Experimental / Internal Preview
+גישה: רק באמצעות URL ישיר (לא מקושר מניווט ראשי)
+מטרה:
+	•	ניסוי עיצובי לפורטל הגלובלי
+	•	הכנה לארכיטקטורה רב־יעדית
+	•	בדיקת UX של ניווט בלבד
+	•	בסיס עתידי להחלפת עמוד הבית
+
+⸻
+
+🎯 מטרות עמוד (מה כן / מה לא)
+
+כן
+	•	להציג את Travi כפלטפורמה גלובלית
+	•	לאפשר ניווט ליעדים
+	•	לשדר מוצר בשל, סקיילבילי
+	•	לשמור על SEO “נקי”
+
+לא
+	•	❌ לא למכור יעד
+	•	❌ לא להתחרות בעמודי יעד
+	•	❌ לא להכיל תוכן עומק
+	•	❌ לא להיות עמוד SEO ראשי
+
+⸻
+
+🎨 אפיון ויזואלי (Visual Direction)
+
+שפת עיצוב כללית
+	•	Clean, airy, optimistic
+	•	SaaS-first, Travel-second
+	•	Friendly premium (לא luxury)
+	•	הרבה white/sky space
+	•	Rounded UI
+	•	Soft gradients
+	•	Icons קלים, לא כבדים
+
+⸻
+
+Background
+	•	גרדיאנט שמיים / כחול בהיר
+	•	עננים רכים / blur עדין
+	•	ללא תמונות עיר ספציפיות
+	•	ללא landmarks
+
+⚠️ חשוב: אפס זיהוי של עיר ברקע
+
+⸻
+
+Typography
+	•	כותרת גדולה, מרכזית
+	•	Sans-serif מודרני
+	•	משקל bold ל-H1
+	•	משקל regular לשאר
+
+⸻
+
+Color System
+	•	Primary: כחול / סגול בהיר
+	•	Accent: ורוד־סגלגל (CTA)
+	•	Neutral: לבן / אפור בהיר
+	•	ללא צבעים “עירוניים” (זהב, מדבר, וכו’)
+
+⸻
+
+🧱 מבנה העמוד (Sections)
+
+⸻
+
+Section 1 — Hero (Brand Layer)
+
+מה מופיע
+	•	לוגו Travi
+	•	H1 מרכזי
+	•	Subline קצר
+	•	חיפוש / CTA
+
+טקסט (Placeholder)
+
+H1:
+
+Discover the World Like a Local
+
+Subline:
+
+A global travel platform with local expertise in 17 languages
+
+רכיב פעולה
+	•	Search Bar או
+	•	CTA: “Choose Your Destination”
+
+ללא autocomplete כבד
+ללא אזכור עיר
+
+⸻
+
+Section 2 — Destinations Overview (Navigation Core)
+
+כותרת
+
+Explore Destinations
+
+Grid של כרטיסים
+	•	Dubai — Active
+	•	Paris — Coming Soon
+	•	London — Coming Soon
+	•	Tokyo — Coming Soon
+	•	New York — Coming Soon
+
+כרטיס יעד כולל
+	•	שם יעד
+	•	סטטוס Badge:
+	•	Active
+	•	Coming Soon
+	•	ללא תיאור
+	•	ללא טקסט ארוך
+
+התנהגות
+	•	Active → קליק פעיל
+	•	Coming Soon → disabled / tooltip
+
+⸻
+
+Section 3 — Platform Value (Trust Layer)
+
+מטרה
+
+לתת טקסט מינימלי שגוגל יכול לקרוא
+אבל לא “לשאוב” SEO מהיעדים.
+
+כותרת
+
+A Global Travel Platform Built for Local Discovery
+
+פסקה (80–100 מילים, לא יותר)
+
+Travi is a global travel platform designed to help travelers
+explore destinations through local knowledge. Each destination
+on Travi is treated as a dedicated guide, offering attractions,
+hotels, districts, dining, and practical insights — all curated
+by local experts and available in multiple languages.
+
+✔ טקסט כללי
+✔ בלי עיר
+✔ בלי מילות מפתח תחרותיות
+
+⸻
+
+Section 4 — Language Awareness
+
+הצגה
+
+שורה פשוטה, לא Dropdown אגרסיבי:
+
+Available in: English · עברית · العربية · Français · Deutsch · …
+
+
+⸻
+
+Section 5 — Footer Minimal
+	•	About
+	•	Destinations
+	•	Contact
+	•	Privacy
+	•	Terms
+
+ללא בלוג
+ללא תוכן עומק
+
+⸻
+
+🔍 אפיון SEO (Safe Mode)
+
+Meta
+
+<title>Travi – Discover the World Like a Local</title>
+<meta name="description"
+content="Travi is a global travel platform offering local expert guides
+and destination insights in multiple languages." />
+
+
+⸻
+
+Headings Structure
+	•	H1: אחד בלבד
+	•	H2: 2–3 מקסימום
+	•	אין H3+
+
+⸻
+
+Internal Links
+	•	✔ קישור אחד ל-Dubai
+	•	❌ Coming Soon עם nofollow או disabled
+	•	❌ אין קישורים לעמודי תוכן
+
+⸻
+
+Indexing
+
+<meta name="robots" content="index, follow" />
+
+כן index — כי זה עמוד מערכת
+אבל בלי SEO תחרותי
+
+⸻
+
+🎨 PROMPT — עיצוב בלבד (Mockup Only)
+
+Design Prompt (EN):
+
+Design-only mockup of a global travel portal internal homepage called “homepage_new” for a brand named Travi.
+Light, airy SaaS-style layout with a soft sky-blue gradient background and subtle clouds.
+No city imagery, no landmarks, no destination-specific visuals.
+Large centered headline: “Discover the World Like a Local” with a short supporting line below.
+Rounded central search bar or CTA button.
+Grid of destination cards showing Dubai as Active and all other destinations marked as “Coming Soon”.
+Friendly premium UI, clean spacing, rounded elements, pastel accents, modern typography.
+Desktop web interface, realistic UI mockup, design only, no functional elements.
+
+Negative Prompt:
+
+no luxury hotel vibe, no city photos, no landmarks, no dark theme, no clutter, no mobile view, no illustrations, no wireframes
+
+⸻
+
+🧠 סיכום חד
+	•	homepage_new = ניווט + מותג
+	•	SEO: מינימלי, בטוח, לא תחרותי
+	•	כל הכוח עובר ל־/{destination}
+	•	מוכן להחליף Home בעתיד בלי לשבור כלום
+
+אם תרצה —
+השלב הבא ההגיוני:
+אפיון ויזואלי לעמוד יעד (Dubai Home) או UX השוואתי בין homepage_new ל-Home הקיים

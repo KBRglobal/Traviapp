@@ -3267,6 +3267,16 @@ export const insertFooterLinkSchema = createInsertSchema(footerLinks).omit({
 export type FooterLink = typeof footerLinks.$inferSelect;
 export type InsertFooterLink = z.infer<typeof insertFooterLinkSchema>;
 
+// Static Page Translation structure for multi-language support
+export interface StaticPageTranslation {
+  title?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  blocks?: Array<{ id: string; type: string; data: unknown }>;
+  sourceHash?: string;
+  translatedAt?: string;
+}
+
 // Static Pages (Terms, Privacy, About, Contact, etc.)
 export const staticPages = pgTable("static_pages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3282,6 +3292,7 @@ export const staticPages = pgTable("static_pages", {
     type: string;
     data: unknown;
   }>>().default([]),
+  translations: jsonb("translations").$type<Record<string, StaticPageTranslation>>().default({}),
   isActive: boolean("is_active").default(true),
   showInFooter: boolean("show_in_footer").default(false),
   lastEditedBy: varchar("last_edited_by").references(() => users.id),

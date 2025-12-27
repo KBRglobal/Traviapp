@@ -286,6 +286,120 @@ router.delete("/pages/:id", async (req: Request, res: Response) => {
   }
 });
 
+// Translate page to a specific language
+router.post("/pages/:id/translate", async (req: Request, res: Response) => {
+  try {
+    const { targetLocale, title, metaTitle, metaDescription, blocks } = req.body;
+    
+    if (!targetLocale) {
+      return res.status(400).json({ error: "targetLocale is required" });
+    }
+
+    // Lazy import translation service to avoid circular dependencies
+    const { translateText } = await import("./services/translation-service");
+    
+    // Helper to translate with fallback
+    const translateWithFallback = async (text: string, contentType: "title" | "description" | "body"): Promise<string> => {
+      if (!text || text.trim() === "") return text;
+      const result = await translateText({
+        text,
+        sourceLocale: "en",
+        targetLocale,
+        contentType,
+      });
+      return result.success ? result.translatedText : text;
+    };
+    
+    // Translate title and meta fields with fallbacks
+    const translatedTitleText = await translateWithFallback(title || "", "title");
+    const translatedMetaTitleText = await translateWithFallback(metaTitle || "", "title");
+    const translatedMetaDescriptionText = await translateWithFallback(metaDescription || "", "description");
+
+    // Recursive helper to translate nested data
+    const translateValue = async (value: unknown, key: string): Promise<unknown> => {
+      if (typeof value === "string" && value.trim() !== "") {
+        // Skip URLs and technical fields
+        if (key.toLowerCase().includes("url") || key.toLowerCase().includes("src") || 
+            key.toLowerCase().includes("image") || key.toLowerCase().includes("icon")) {
+          return value;
+        }
+        return await translateWithFallback(value, key.toLowerCase().includes("title") ? "title" : "body");
+      } else if (Array.isArray(value)) {
+        return await Promise.all(
+          value.map(async (item: unknown) => {
+            if (typeof item === "string" && item.trim() !== "") {
+              // Handle string arrays (like tips, localTips, etc.)
+              return await translateWithFallback(item, "body");
+            } else if (typeof item === "object" && item !== null) {
+              // Handle object arrays (like FAQ items)
+              const translatedItem: Record<string, unknown> = {};
+              for (const [itemKey, itemValue] of Object.entries(item as Record<string, unknown>)) {
+                translatedItem[itemKey] = await translateValue(itemValue, itemKey);
+              }
+              return translatedItem;
+            }
+            return item;
+          })
+        );
+      } else if (typeof value === "object" && value !== null) {
+        // Handle nested objects
+        const translatedObj: Record<string, unknown> = {};
+        for (const [objKey, objValue] of Object.entries(value as Record<string, unknown>)) {
+          translatedObj[objKey] = await translateValue(objValue, objKey);
+        }
+        return translatedObj;
+      }
+      return value;
+    };
+
+    // Translate blocks
+    const translatedBlocks = await Promise.all(
+      (blocks || []).map(async (block: { id: string; type: string; data: Record<string, unknown> }) => {
+        const translatedData: Record<string, unknown> = {};
+        
+        for (const [key, value] of Object.entries(block.data)) {
+          translatedData[key] = await translateValue(value, key);
+        }
+        
+        return { ...block, data: translatedData };
+      })
+    );
+
+    // Get current page
+    const [page] = await db.select().from(staticPages).where(eq(staticPages.id, req.params.id));
+    if (!page) {
+      return res.status(404).json({ error: "Page not found" });
+    }
+
+    // Update translations JSONB
+    const currentTranslations = (page.translations as Record<string, unknown>) || {};
+    const updatedTranslations = {
+      ...currentTranslations,
+      [targetLocale]: {
+        title: translatedTitleText,
+        metaTitle: translatedMetaTitleText,
+        metaDescription: translatedMetaDescriptionText,
+        blocks: translatedBlocks,
+        translatedAt: new Date().toISOString(),
+      },
+    };
+
+    // Save to database
+    await db.update(staticPages)
+      .set({ translations: updatedTranslations, updatedAt: new Date() })
+      .where(eq(staticPages.id, req.params.id));
+
+    res.json({ 
+      success: true, 
+      locale: targetLocale,
+      title: translatedTitleText 
+    });
+  } catch (error) {
+    console.error("Error translating page:", error);
+    res.status(500).json({ error: "Failed to translate page" });
+  }
+});
+
 // ============================================================================
 // HOMEPAGE SECTIONS
 // ============================================================================
