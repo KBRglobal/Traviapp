@@ -85,6 +85,15 @@ interface QuoteBlockData {
   source?: string;
 }
 
+interface HeadingBlockData {
+  level?: "h2" | "h3";
+  content?: string;
+}
+
+interface DividerBlockData {
+  style?: "line" | "dots" | "space";
+}
+
 interface BannerBlockData {
   title?: string;
   subtitle?: string;
@@ -172,6 +181,46 @@ function TextBlock({ data }: { data: TextBlockData }) {
       />
     </Card>
   );
+}
+
+function HeadingBlock({ data }: { data: HeadingBlockData }) {
+  if (!data.content) return null;
+  
+  const level = data.level || "h2";
+  
+  if (level === "h3") {
+    return (
+      <h3 className="font-heading text-xl font-semibold mt-6 mb-3" data-testid="block-heading">
+        {data.content}
+      </h3>
+    );
+  }
+  
+  return (
+    <h2 className="font-heading text-2xl font-bold mt-8 mb-4" data-testid="block-heading">
+      {data.content}
+    </h2>
+  );
+}
+
+function DividerBlock({ data }: { data: DividerBlockData }) {
+  const style = data.style || "line";
+  
+  if (style === "space") {
+    return <div className="h-8" data-testid="block-divider" />;
+  }
+  
+  if (style === "dots") {
+    return (
+      <div className="flex items-center justify-center gap-2 py-4" data-testid="block-divider">
+        <span className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+        <span className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+        <span className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+      </div>
+    );
+  }
+  
+  return <hr className="border-t border-border my-6" data-testid="block-divider" />;
 }
 
 function ImageBlock({ data }: { data: ImageBlockData }) {
@@ -642,6 +691,10 @@ export function ContentBlocksRenderer({ blocks }: ContentBlocksRendererProps) {
             return <HeroBlock key={block.id} data={block.data as HeroBlockData} />;
           case "text":
             return <TextBlock key={block.id} data={block.data as TextBlockData} />;
+          case "heading":
+            return <HeadingBlock key={block.id} data={block.data as HeadingBlockData} />;
+          case "divider":
+            return <DividerBlock key={block.id} data={block.data as DividerBlockData} />;
           case "image":
             return <ImageBlock key={block.id} data={block.data as ImageBlockData} />;
           case "gallery":

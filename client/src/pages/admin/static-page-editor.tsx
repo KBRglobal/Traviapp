@@ -125,7 +125,7 @@ function getDefaultBlockData(type: StaticPageBlock["type"]): Record<string, unkn
     case "cta":
       return { text: "", textHe: "", link: "", variant: "primary" };
     case "divider":
-      return {};
+      return { style: "line" };
     case "image":
       return { url: "", alt: "", altHe: "", caption: "", captionHe: "" };
     case "quote":
